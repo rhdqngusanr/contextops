@@ -81,7 +81,10 @@ function Do-Install {
         -Argument ("-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"{0}`"" -f $loopPs1) `
         -WorkingDirectory $root
 
-    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    #  ⚠ -User 를 명시해야 한다. 빼면 비관리자 세션에서 "Access is denied" 로 죽는다
+    #    (실측 2026-09-03). 스케줄러는 「누구로 등록하는지」가 불명확하면 관리자 권한을 요구한다.
+    $me = "{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $me
 
     # 비정상 종료면 재시작. 정상 종료(바퀴 다 돌았거나 STOP)면 그대로 둔다.
     $settings = New-ScheduledTaskSettingsSet `
@@ -94,8 +97,17 @@ function Do-Install {
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
-        -Settings $settings -Description "ContextOps 자율 개발 루프 (loop/loop.ps1)" | Out-Null
+    try {
+        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
+            -User $me -RunLevel Limited `
+            -Settings $settings -Description "ContextOps 자율 개발 루프 (loop/loop.ps1)" -ErrorAction Stop | Out-Null
+    } catch {
+        Say "작업 스케줄러 등록에 실패했다: $($_.Exception.Message)" "Red"
+        Say "" 
+        Say "그래도 루프는 켤 수 있다 — ctl.ps1 start 가 창 없이 띄운다." "Yellow"
+        Say "다만 **로그아웃·재부팅을 못 넘는다.** 넘기려면 관리자 PowerShell 에서 install 을 한 번 돌려라." "DarkGray"
+        return
+    }
 
     Say "등록했다: 작업 [$taskName] (로그인 시 시작 · 비정상 종료 시 3회 재시작)" "Green"
     Say "아직 안 켰다. 시험 주행부터: ctl.ps1 dryrun" "Yellow"
@@ -167,12 +179,23 @@ function Do-Start {
 
     if (Test-Path $stopFile) { Remove-Item $stopFile -Force }
 
-    if (-not (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue)) {
-        Say "작업이 등록돼 있지 않다 — 먼저 ctl.ps1 install" "Red"
+    if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
+        Start-ScheduledTask -TaskName $taskName
+        Say "켰다. 창을 닫아도, 껐다 켜도 계속 돈다." "Green"
+        Say "지켜보기: ctl.ps1 status" "DarkGray"
         return
     }
-    Start-ScheduledTask -TaskName $taskName
-    Say "켰다. 창을 닫아도, 껐다 켜도 계속 돈다." "Green"
+
+    #  ★ 작업이 없어도 켤 수 있게 한다. 스케줄러 등록은 환경에 따라 관리자 권한을
+    #    요구하는데, 그것 때문에 루프를 아예 못 돌리면 도구가 쓸모없다.
+    #  ⚠ 대신 이 판은 **로그아웃·재부팅을 못 넘는다.** 그건 정직하게 말한다.
+    #    (중복 실행은 걱정 없다 — loop.ps1 이 뮤텍스로 스스로 막는다.)
+    Say "작업이 등록돼 있지 않다 — 창 없이 직접 띄운다." "Yellow"
+    $p = Start-Process powershell -PassThru -WindowStyle Hidden `
+            -ArgumentList ("-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"{0}`"" -f $loopPs1) `
+            -WorkingDirectory $root
+    Say "켰다 (PID $($p.Id)). 이 창을 닫아도 계속 돈다." "Green"
+    Say "⚠ 다만 로그아웃·재부팅은 못 넘는다 — 넘기려면 관리자 PowerShell 에서 ctl.ps1 install" "DarkGray"
     Say "지켜보기: ctl.ps1 status" "DarkGray"
 }
 
