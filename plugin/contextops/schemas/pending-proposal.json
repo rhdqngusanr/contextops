@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "changed_paths": {
+      "minItems": 1,
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "hint": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    }
+  },
+  "required": [
+    "changed_paths",
+    "hint"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400,
+      "pattern": "^(?!\\/)(?!.*\\.\\.)(?![a-zA-Z]:)[^\\0]+$"
+    }
+  }
+}

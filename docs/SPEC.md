@@ -416,12 +416,19 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 |---|---|---|
 | `setup` (npx contextops) | 브라우저 열어 로그인 → 프로젝트 선택 → 토큰 발급·저장 → `claude plugin marketplace add`/`install` 안내 출력(자동 실행은 사용자 확인 후) → `project.json` 작성 → "Claude Code를 열고 /contextops:init 을 실행하세요" | 0/10 로그인 실패/30 config |
 | `scan` | 결정론 스캔 → `.contextops/cache/scan.json` (파일 목록·언어·엔트리·인프라 파일·env 키 이름·의존성·제외 목록). 본문 없음 | 0 |
-| `validate <json>` | `schemas/*.json`으로 로컬 검증, 오류 위치 출력 | 0/2 |
+| `validate <json>` | **같은 Zod 계약**으로 로컬 검증(번들에 포함), 오류 위치 출력. `--schema <이름>` | 0/2 |
 | `upload-draft <json>` | batch-draft POST, 결과 요약 출력 | 0/20 network |
 | `status` | manifest 비교 → applied/outdated/modified 출력 | 0 |
 | `sync [--check] [--force]` | §8.5 | 0/1 modified/20 |
 | `propose [--from-pending]` | 초안 미리보기 → 확인 → POST | 0 |
 | `progress --milestone --criterion --evidence... --summary` | ProgressEvent POST (client_event_id 자동) | 0 |
+
+⚠ 위 표에 없는 코드가 하나 있다: **64 = 잘못된 사용**(모르는 명령·모르는 플래그·필수 인자 없음).
+sysexits 의 `EX_USAGE` 다. 없으면 그런 실수가 0(성공)이나 30(설정 문제)으로 나가고 둘 다 거짓말이다.
+값은 직렬화된다 — 순서를 바꾸지 말고 끝에만 더해라. 정본은 `plugin/contextops/src/cli/exit.ts`.
+
+⚠ `upload-draft`·`propose` 는 `--dry-run` 을 받는다 — 보내지 않고 **보낼 payload 를 그대로** 낸다.
+init Skill 5단계의 「사용자 확인」이 모델의 서술이 아니라 실제 payload 이게 하는 자리다.
 
 ### 8.4 Skills
 
@@ -435,7 +442,7 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 ---
 1. `node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" scan` 실행 → `.contextops/cache/scan.json` 읽기.
 2. scan의 entrypoints·infra·data·deps·docs 후보 중 최대 15개 파일을 골라 읽는다. `.env*`, `*secret*`, `*.pem`, `node_modules`, `dist` 금지.
-3. `$CLAUDE_PLUGIN_ROOT/schemas/context-item-draft.json` 스키마로 `architecture / domain / constraint / open_question` 항목을 작성해 `.contextops/cache/draft.json`에 저장. 규칙: 코드에서 확인한 사실만, 각 항목에 repository_path source_ref 필수, 이유·계획·정책은 만들지 말고 open_question으로.
+3. `$CLAUDE_PLUGIN_ROOT/schemas/context-item-draft.json` **작성 안내서**(판정은 `validate` 의 Zod 가 한다)로 `architecture / domain / constraint / open_question` 항목을 작성해 `.contextops/cache/draft.json`에 저장. 규칙: 코드에서 확인한 사실만, 각 항목에 repository_path source_ref 필수, 이유·계획·정책은 만들지 말고 open_question으로.
 4. `... validate .contextops/cache/draft.json` 실행, 실패하면 오류 위치를 고쳐 1회 재시도.
 5. 사용자에게 전송될 항목 수·경로 목록·"코드 본문 0건"을 보여주고 명시적 확인을 받는다.
 6. 확인 후 `... upload-draft .contextops/cache/draft.json`. 결과와 웹 링크를 출력한다.
@@ -446,7 +453,8 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 `skills/propose/SKILL.md`: `pending-proposal.json`이 있으면 그걸, 없으면 `git diff`(working tree 기본, 사용자가 범위 지정 가능)와 관련 파일을 읽어 Proposal JSON 작성(operation·target_item_id·evidence path:line·relates_to milestone). validate → 사용자 미리보기 → `propose` 실행.
 
 ### 8.5 sync 절차 (결정론)
-1. preflight: project.json·토큰·디스크 쓰기 가능·manifest 서명(sha256) 확인
+1. preflight: project.json·토큰·디스크 쓰기 가능·로컬 `manifest.json` 이 계약과 맞는지 확인
+   (⚠ 발행자 키 서명은 **아직 없다** — Manifest 스키마에 서명 칸이 없다. 넣으려면 §2.1·§3 을 같이 고쳐야 한다)
 2. latest manifest GET(If-None-Match) → 같으면 "최신" 종료
 3. 로컬 managed 파일 hash 계산 → manifest와 비교 → modified 파일 목록
 4. 변경 파일만 `cache/<semver>/`로 다운로드 → sha256 검증(불일치 시 즉시 중단, exit 20)

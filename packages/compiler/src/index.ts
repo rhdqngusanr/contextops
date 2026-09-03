@@ -18,3 +18,7 @@ export { manifestHash, normalizeText, sha256, snapshotHash } from './hash'
 export { parseTraceTag, traceLines, type TraceTag } from './tag'
 export { COMPILER_VERSION } from './version'
 export { TEMPLATE_VERSION } from '../templates'
+//  🔴 Pack 이 agent 에게 가르치는 **CLI 사용법** (SPEC §4.3). 플러그인 쪽 시험이
+//     「여기 적힌 플래그를 CLI 가 실제로 받는가」를 잰다 — 갈리면 팀 전체의 진행
+//     보고가 **조용히** 멈춘다 (실패를 보는 사람이 아무도 없다).
+export { PROGRESS_REPORT } from '../templates/progress-report'

@@ -14,6 +14,13 @@
     "`node ${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs` 가 그대로 돌아야 한다.",
     "★ 소스와 갈리지 않게 test/bundle.test.ts 가 방금 빌드한 바이트와 대조한다."
   ],
+  "_comment_devdeps": [
+    "@contextops/compiler 는 **시험 전용**이다 — Pack 이 agent 에게 가르치는 CLI 사용법",
+    "  (SPEC §4.3 의 고정 문단)과 이 CLI 의 플래그 표가 같은지 test/progress.test.ts 가 잰다.",
+    "  갈리면 팀 전체의 진행 보고가 **조용히** 멈춘다 — 실패를 보는 사람이 아무도 없다.",
+    "⚠ 번들에는 안 들어간다: scripts/build.ts 의 entry 는 src/cli/main.ts 하나이고,",
+    "  거기서 compiler 를 import 하지 않는다 (test/bundle.test.ts 가 바이트로 잰다)."
+  ],
   "scripts": {
     "build": "tsx scripts/build.ts",
     "test": "vitest run"
@@ -23,6 +30,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@contextops/compiler": "workspace:*",
     "@types/node": "catalog:",
     "esbuild": "catalog:",
     "tsx": "catalog:",

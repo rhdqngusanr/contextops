@@ -1,10 +1,13 @@
 import { flagHelp, parseArgs, type FlagSpecs, type Flags } from './args'
 import type { Cli } from './cli'
 import { EXIT } from './exit'
+import { PROGRESS_FLAGS, runProgress } from './progress'
+import { PROPOSE_FLAGS, runPropose } from './propose'
 import { SCAN_FLAGS, runScan } from './scan'
 import { SETUP_FLAGS, runSetup } from './setup'
 import { STATUS_FLAGS, runStatus } from './status'
 import { SYNC_FLAGS, runSync } from './sync'
+import { UPLOAD_DRAFT_FLAGS, runUploadDraft } from './upload-draft'
 import { VALIDATE_FLAGS, runValidate } from './validate'
 
 // =====================================================================
@@ -17,9 +20,8 @@ import { VALIDATE_FLAGS, runValidate } from './validate'
 //    ④ SPEC §8.3 의 표와 이 표가 같은지 본다 — 다르면 FINDINGS 에 적는다
 //
 //  ⚠ **아직 안 만든 명령을 여기 적지 마라.** 표에 있으면 `--help` 가 「할 수 있다」고
-//    말하는 것이고, 사람은 그걸 믿고 부른다. SPEC §8.3 에는 8개가 있고 여기 다섯뿐인
-//    것이 지금의 사실이다 (나머지 셋은 docs/PLAN.md P2 **셋째** 행:
-//    `upload-draft` · `propose` · `progress`).
+//    말하는 것이고, 사람은 그걸 믿고 부른다. 지금은 SPEC §8.3 의 여덟이 다 있다 —
+//    `test/commands.test.ts` 가 이 표와 SPEC 의 표가 같은지 잰다.
 // =====================================================================
 
 export type Command = {
@@ -59,6 +61,24 @@ export const COMMANDS: Record<string, Command> = {
     usage: 'contextops sync [--check] [--force]',
     flags: SYNC_FLAGS,
     run: runSync,
+  },
+  'upload-draft': {
+    summary: '초안(cache/draft.json)을 서버로 올린다 — 코드 본문은 나가지 않는다',
+    usage: 'contextops upload-draft [<json>] [--dry-run]',
+    flags: UPLOAD_DRAFT_FLAGS,
+    run: runUploadDraft,
+  },
+  propose: {
+    summary: '제안 초안을 공식 버전 기준으로 올린다 (기준 버전·요청 id 는 CLI 가 붙인다)',
+    usage: 'contextops propose [<json>] [--from-pending] [--dry-run]',
+    flags: PROPOSE_FLAGS,
+    run: runPropose,
+  },
+  progress: {
+    summary: '마일스톤 진행을 보고한다 — 근거는 경로와 줄 번호뿐이다',
+    usage: 'contextops progress --milestone <ID> --summary "<한 줄>" [--criterion …] [--evidence …]',
+    flags: PROGRESS_FLAGS,
+    run: runProgress,
   },
 }
 

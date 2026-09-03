@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { ContextItem, ContextItemDraft } from './item'
 import { Manifest } from './manifest'
-import { ContextItemDraftFile } from './plugin'
+import { ContextItemDraftFile, PendingProposalFile, ProposalDraftFile } from './plugin'
 import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
 
 // =====================================================================
@@ -36,7 +36,11 @@ export const JSON_SCHEMA_FILES = {
   //  init Skill 이 쓰는 `.contextops/cache/draft.json` 그 자체 (`contextops validate` 의 기본).
   'draft': ContextItemDraftFile,
   'batch-draft': ContextItemsBatchDraft,
+  //  propose Skill 이 쓰는 `.contextops/cache/proposal.json` (기준 버전·요청 id 는 CLI 가 붙인다).
+  'proposal-draft': ProposalDraftFile,
   'proposal': Proposal,
+  //  Stop 훅이 남기는 힌트. 사람이 열어 고칠 수 있어야 해서 계약을 같이 낸다.
+  'pending-proposal': PendingProposalFile,
   'progress-event': ProgressEvent,
   'sync-report': SyncReport,
   'manifest': Manifest,

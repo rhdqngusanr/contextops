@@ -23,6 +23,8 @@ export const LOCAL_FILES = {
   manifest: `${LOCAL_DIR}/manifest.json`,
   scan: `${LOCAL_DIR}/cache/scan.json`,
   draft: `${LOCAL_DIR}/cache/draft.json`,
+  /** propose Skill 이 쓰는 제안 초안 (`ProposalDraftFile`). 보내고 나면 남겨 둔다 — 사람이 다시 읽는다. */
+  proposalDraft: `${LOCAL_DIR}/cache/proposal.json`,
   pendingProposal: `${LOCAL_DIR}/pending-proposal.json`,
   /** 보내지 못한 sync 보고. 다음 `status` 가 재전송한다 (SPEC §8.5 8단계). */
   syncReceipt: `${LOCAL_DIR}/cache/sync-receipt.json`,
@@ -69,6 +71,20 @@ export function resolveRoot(cwd: string, dir: string | undefined): string {
 /** 저장소 루트 기준 절대 경로. */
 export function repoFile(root: string, which: LocalFile): string {
   return join(root, ...LOCAL_FILES[which].split('/'))
+}
+
+/**
+ * `<repo>/.contextops/cache/progress-<session>.json` — 「이번 세션은 이미 보고했다」 (SPEC §8.6).
+ *
+ * ⚠ 이름이 세션마다 다르므로 `LOCAL_FILES` 표에 못 넣는다. 자리를 아는 곳은 이 함수
+ *   하나이고, **훅도 같은 규칙으로 찾는다** (`scripts/stop.mjs` — 번들이 아니라
+ *   import 를 못 해서 규칙을 그쪽에도 적었다. 고칠 때 둘을 같이 고쳐라 ·
+ *   `test/progress.test.ts` 가 둘이 같은 이름을 내는지 잰다).
+ * ⚠ 세션 id 는 사람이 준 문자열이다 — 경로 구분자를 쓰면 캐시 폴더 밖을 가리킬 수 있다.
+ *   그래서 안전한 글자만 남긴다.
+ */
+export function progressMarkerFile(root: string, sessionId: string): string {
+  return join(root, ...CACHE_DIR.split('/'), `progress-${sessionId.replace(/[^A-Za-z0-9_-]/g, '_')}.json`)
 }
 
 /**

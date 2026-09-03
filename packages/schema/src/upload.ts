@@ -61,6 +61,24 @@ export const ContextItemsBatchDraft = z.object({
   scan_summary: ScanSummary,
 }).strict()
 
+/**
+ * 같은 엔드포인트의 **응답** (SPEC §5 「{accepted, rejected[{index, issues}]}」).
+ *
+ * ★ 왜 응답까지 계약으로 두나 — 이걸 읽는 것은 사람이 아니라 **플러그인과 Skill** 이다
+ *   (`upload-draft` 가 거절 목록을 모델에게 보여 주고 고치게 한다). 손으로 캐스트하면
+ *   서버가 모양을 바꾼 날 `undefined.length` 로 죽고, 사람은 「업로드가 깨졌다」로 읽는다.
+ * ⚠ `index` 는 **보낸 배열의 자리**다. 항목 id 가 아니다 — 거절 사유가 id 인 경우
+ *   (중복·이미 있음) id 를 못 믿기 때문이다.
+ */
+export const ContextItemsBatchDraftResult = z.object({
+  accepted: z.array(z.object({ index: z.int().min(0), id: z.string() }).strict()),
+  rejected: z.array(z.object({
+    index: z.int().min(0),
+    issues: z.array(z.object({ path: z.string(), message: z.string() }).strict()),
+  }).strict()),
+}).strict()
+export type ContextItemsBatchDraftResult = z.infer<typeof ContextItemsBatchDraftResult>
+
 // ---------------------------------------------------------------------
 //  Proposal
 // ---------------------------------------------------------------------

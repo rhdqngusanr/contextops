@@ -13,6 +13,7 @@ import { homedir } from "node:os";
 // src/cli/args.ts
 function parseArgs(argv, specs, env) {
   const values = /* @__PURE__ */ new Map();
+  const lists = /* @__PURE__ */ new Map();
   const bools = /* @__PURE__ */ new Set();
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
@@ -35,11 +36,13 @@ function parseArgs(argv, specs, env) {
     if (next === void 0 || next.startsWith("--")) {
       return { ok: false, message: `--${name} \uC5D0 \uAC12\uC774 \uC5C6\uB2E4` };
     }
-    values.set(name, next);
+    if (spec.kind === "list") lists.set(name, [...lists.get(name) ?? [], next]);
+    else values.set(name, next);
   }
   return {
     ok: true,
     flags: {
+      list: (name) => lists.get(name) ?? [],
       value: (name) => {
         const given = values.get(name);
         if (given !== void 0) return given;
@@ -55,7 +58,7 @@ function parseArgs(argv, specs, env) {
 }
 function flagHelp(specs) {
   return Object.entries(specs).map(([name, spec]) => {
-    const shape = spec.kind === "bool" ? `--${name}` : `--${name} <\uAC12>`;
+    const shape = spec.kind === "bool" ? `--${name}` : spec.kind === "list" ? `--${name} <\uAC12>\u2026` : `--${name} <\uAC12>`;
     const env = spec.env === void 0 ? "" : ` (\uD658\uACBD\uBCC0\uC218 ${spec.env})`;
     return `    ${shape.padEnd(22)} ${spec.help}${env}`;
   });
@@ -82,9 +85,8 @@ var EXIT = {
   USAGE: 64
 };
 
-// src/cli/scan.ts
-import { readdirSync } from "node:fs";
-import { basename as pathBasename, extname, isAbsolute as isAbsolute2, join as join3 } from "node:path";
+// src/cli/progress.ts
+import { randomUUID } from "node:crypto";
 
 // ../../node_modules/.pnpm/zod@4.5.4/node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -19140,6 +19142,13 @@ var ContextItemsBatchDraft = external_exports.object({
   repo: RepoName,
   scan_summary: ScanSummary
 }).strict();
+var ContextItemsBatchDraftResult = external_exports.object({
+  accepted: external_exports.array(external_exports.object({ index: external_exports.int().min(0), id: external_exports.string() }).strict()),
+  rejected: external_exports.array(external_exports.object({
+    index: external_exports.int().min(0),
+    issues: external_exports.array(external_exports.object({ path: external_exports.string(), message: external_exports.string() }).strict())
+  }).strict())
+}).strict();
 var PROPOSAL_OPERATIONS = ["add", "update", "deprecate"];
 var ProposalItem = external_exports.object({
   operation: external_exports.enum(PROPOSAL_OPERATIONS),
@@ -19358,6 +19367,16 @@ var SyncReceiptFile = external_exports.object({
   api_origin: ApiOrigin,
   report: SyncReport
 }).strict();
+var PendingProposalFile = external_exports.object({
+  changed_paths: external_exports.array(RepoPath).min(1).max(50),
+  hint: external_exports.string().min(1).max(300)
+}).strict();
+var ProgressMarkerFile = external_exports.object({
+  session_id: external_exports.string().min(1).max(200),
+  milestone_id: external_exports.union([MilestoneId, external_exports.literal("none")]),
+  status: external_exports.enum(PROGRESS_STATUSES)
+}).strict();
+var ProposalDraftFile = Proposal.omit({ base_version_id: true, client_request_id: true }).strict();
 
 // ../../packages/schema/src/json-schema.ts
 var JSON_SCHEMA_FILES = {
@@ -19366,11 +19385,90 @@ var JSON_SCHEMA_FILES = {
   //  init Skill 이 쓰는 `.contextops/cache/draft.json` 그 자체 (`contextops validate` 의 기본).
   "draft": ContextItemDraftFile,
   "batch-draft": ContextItemsBatchDraft,
+  //  propose Skill 이 쓰는 `.contextops/cache/proposal.json` (기준 버전·요청 id 는 CLI 가 붙인다).
+  "proposal-draft": ProposalDraftFile,
   "proposal": Proposal,
+  //  Stop 훅이 남기는 힌트. 사람이 열어 고칠 수 있어야 해서 계약을 같이 낸다.
+  "pending-proposal": PendingProposalFile,
   "progress-event": ProgressEvent,
   "sync-report": SyncReport,
   "manifest": Manifest
 };
+
+// src/cli/api.ts
+function apiUrl(origin, path) {
+  return `${origin}/api/v1/${path.replace(/^\//, "")}`;
+}
+async function send(cli2, method, origin, path, token, init = {}) {
+  try {
+    const response = await cli2.fetch(apiUrl(origin, path), {
+      method,
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...init.body === void 0 ? {} : { "content-type": "application/json" },
+        ...init.headers ?? {}
+      },
+      ...init.body === void 0 ? {} : { body: JSON.stringify(init.body) }
+    });
+    return { response };
+  } catch (err) {
+    return { unreachable: err instanceof Error ? err.message : "\uC54C \uC218 \uC5C6\uB294 \uC774\uC720" };
+  }
+}
+async function envelope(response) {
+  if (response.status === 304) return { kind: "not_modified" };
+  const text = await response.text().catch(() => "");
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return {
+      kind: "unreachable",
+      message: `${response.status} \uC751\uB2F5\uC774 JSON \uBD09\uD22C\uAC00 \uC544\uB2C8\uB2E4 \u2014 \uC774 \uC8FC\uC18C\uAC00 ContextOps \uC11C\uBC84\uAC00 \uB9DE\uB098`
+    };
+  }
+  if (response.ok) {
+    if (typeof body !== "object" || body === null || !("data" in body)) {
+      return {
+        kind: "unreachable",
+        message: `${response.status} \uC751\uB2F5\uC5D0 data \uBD09\uD22C\uAC00 \uC5C6\uB2E4 \u2014 \uC774 \uC8FC\uC18C\uAC00 ContextOps \uC11C\uBC84\uAC00 \uB9DE\uB098`
+      };
+    }
+    return {
+      kind: "ok",
+      status: response.status,
+      data: body.data,
+      etag: response.headers.get("etag") ?? void 0
+    };
+  }
+  const failure = ApiFailure.safeParse(body);
+  return failure.success ? { kind: "failed", status: response.status, code: failure.data.error.code, message: failure.data.error.message } : { kind: "failed", status: response.status, code: "UNKNOWN", message: `${response.status} \uC751\uB2F5` };
+}
+async function apiGet(cli2, origin, path, token, headers) {
+  const sent = await send(cli2, "GET", origin, path, token, { headers: headers ?? {} });
+  if ("unreachable" in sent) return { kind: "unreachable", message: sent.unreachable };
+  return envelope(sent.response);
+}
+async function apiPost(cli2, origin, path, token, body) {
+  const sent = await send(cli2, "POST", origin, path, token, { body });
+  if ("unreachable" in sent) return { kind: "unreachable", message: sent.unreachable };
+  return envelope(sent.response);
+}
+async function apiGetText(cli2, origin, path, token) {
+  const sent = await send(cli2, "GET", origin, path, token);
+  if ("unreachable" in sent) return { kind: "unreachable", message: sent.unreachable };
+  const { response } = sent;
+  const text = await response.text().catch(() => "");
+  if (response.ok) return { kind: "ok", text };
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return { kind: "failed", status: response.status, code: "UNKNOWN", message: `${response.status} \uC751\uB2F5` };
+  }
+  const failure = ApiFailure.safeParse(body);
+  return failure.success ? { kind: "failed", status: response.status, code: failure.data.error.code, message: failure.data.error.message } : { kind: "failed", status: response.status, code: "UNKNOWN", message: `${response.status} \uC751\uB2F5` };
+}
 
 // src/cli/fsx.ts
 import { createHash } from "node:crypto";
@@ -19429,6 +19527,9 @@ function describeIssues(error61) {
   });
 }
 
+// src/cli/managed.ts
+import { join as join3 } from "node:path";
+
 // src/cli/paths.ts
 import { isAbsolute, join as join2 } from "node:path";
 var LOCAL_DIR = ".contextops";
@@ -19437,6 +19538,8 @@ var LOCAL_FILES = {
   manifest: `${LOCAL_DIR}/manifest.json`,
   scan: `${LOCAL_DIR}/cache/scan.json`,
   draft: `${LOCAL_DIR}/cache/draft.json`,
+  /** propose Skill 이 쓰는 제안 초안 (`ProposalDraftFile`). 보내고 나면 남겨 둔다 — 사람이 다시 읽는다. */
+  proposalDraft: `${LOCAL_DIR}/cache/proposal.json`,
   pendingProposal: `${LOCAL_DIR}/pending-proposal.json`,
   /** 보내지 못한 sync 보고. 다음 `status` 가 재전송한다 (SPEC §8.5 8단계). */
   syncReceipt: `${LOCAL_DIR}/cache/sync-receipt.json`,
@@ -19454,8 +19557,91 @@ function resolveRoot(cwd, dir) {
 function repoFile(root, which) {
   return join2(root, ...LOCAL_FILES[which].split("/"));
 }
+function progressMarkerFile(root, sessionId) {
+  return join2(root, ...CACHE_DIR.split("/"), `progress-${sessionId.replace(/[^A-Za-z0-9_-]/g, "_")}.json`);
+}
 function credentialsFile(home) {
   return join2(home, LOCAL_DIR, "credentials.json");
+}
+
+// src/cli/managed.ts
+var MANAGED_PATHS = [
+  { pattern: /^CLAUDE\.md$/, what: "Claude Code \uAC00 \uC77D\uB294 \uD300 \uADDC\uCE59", sample: "CLAUDE.md" },
+  { pattern: /^AGENTS\.md$/, what: "AGENTS.md \uADDC\uC57D\uC744 \uC77D\uB294 \uB3C4\uAD6C\uB4E4", sample: "AGENTS.md" },
+  {
+    pattern: /^\.claude\/rules\/[^/]+\.md$/,
+    what: "Claude Code \uC758 scoped \uADDC\uCE59",
+    sample: ".claude/rules/domain-refund.md"
+  },
+  { pattern: /^\.cursor\/rules\/[^/]+\.mdc$/, what: "Cursor \uC758 \uADDC\uCE59", sample: ".cursor/rules/team.mdc" },
+  //  ⚠ 우리 자신의 상태 파일. Manifest 의 files 에는 없지만 sync 가 마지막에 쓴다.
+  {
+    pattern: new RegExp(`^${LOCAL_FILES.manifest.replace(/[.]/g, "\\.")}$`),
+    what: "\uC801\uC6A9\uB41C \uBC84\uC804\uC758 Manifest",
+    sample: LOCAL_FILES.manifest
+  }
+];
+function checkWritable(root, path) {
+  if (!RepoPath.safeParse(path).success) {
+    return { ok: false, reason: "\uC800\uC7A5\uC18C \uC0C1\uB300 \uACBD\uB85C\uAC00 \uC544\uB2C8\uB2E4 (\uC808\uB300\uACBD\uB85C\xB7\uC0C1\uC704 \uC774\uB3D9 \uAE08\uC9C0)" };
+  }
+  if (path.includes("\\")) return { ok: false, reason: "\uACBD\uB85C \uAD6C\uBD84\uC790\uB294 / \uD558\uB098\uB2E4" };
+  if (!MANAGED_PATHS.some((m) => m.pattern.test(path))) {
+    return { ok: false, reason: "sync \uAC00 \uAD00\uB9AC\uD558\uB294 \uD30C\uC77C\uC774 \uC544\uB2C8\uB2E4 (SPEC \xA78.5 allowlist)" };
+  }
+  if (hasSymlink(root, path)) return { ok: false, reason: "\uC2EC\uBCFC\uB9AD \uB9C1\uD06C\uB2E4 \u2014 \uC800\uC7A5\uC18C \uBC16\uC744 \uAC00\uB9AC\uD0AC \uC218 \uC788\uB2E4" };
+  return { ok: true };
+}
+function readLocalManifest(root) {
+  const text = readTextIfExists(repoFile(root, "manifest"));
+  if (text === void 0) return void 0;
+  try {
+    const parsed = Manifest.safeParse(JSON.parse(text));
+    return parsed.success ? parsed.data : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function inspectFiles(root, manifest) {
+  return manifest.files.map((f) => ({
+    path: f.path,
+    expected: f.sha256,
+    actual: sha256OfFile(join3(root, ...f.path.split("/")))
+  }));
+}
+var isMissing = (s) => s.actual === void 0;
+var isChanged = (s) => s.actual !== void 0 && s.actual !== s.expected;
+function judge(root, local, official) {
+  if (local === void 0) {
+    return {
+      status: "unknown",
+      line: official === void 0 ? "\uC544\uC9C1 sync \uD55C \uC801\uC774 \uC5C6\uB2E4 (\uC11C\uBC84\uC5D0\uB3C4 \uBABB \uB2FF\uC558\uB2E4)" : `\uC544\uC9C1 sync \uD55C \uC801\uC774 \uC5C6\uB2E4 \u2014 \uACF5\uC2DD v${official.context_version}`,
+      modified: [],
+      missing: []
+    };
+  }
+  const states = inspectFiles(root, local);
+  const modified = states.filter(isChanged).map((s) => s.path);
+  const missing = states.filter(isMissing).map((s) => s.path);
+  if (modified.length > 0 || missing.length > 0) {
+    const parts = [
+      modified.length > 0 ? `${modified.length}\uAC1C\uAC00 \uC190\uC73C\uB85C \uBC14\uB00C\uC5C8\uB2E4` : "",
+      missing.length > 0 ? `${missing.length}\uAC1C\uAC00 \uC5C6\uB2E4` : ""
+    ].filter((p) => p.length > 0);
+    return { status: "modified", line: `v${local.context_version} \u2014 ${parts.join(" \xB7 ")}`, modified, missing };
+  }
+  if (official === void 0) {
+    return { status: "applied", line: `v${local.context_version} \uC801\uC6A9\uB428 (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)`, modified, missing };
+  }
+  if (official.manifest_hash === local.manifest_hash) {
+    return { status: "applied", line: `v${local.context_version} \uCD5C\uC2E0\uC774\uB2E4`, modified, missing };
+  }
+  return {
+    status: "outdated",
+    line: `v${local.context_version} \u2192 \uACF5\uC2DD v${official.context_version} \uC774 \uB098\uC654\uB2E4`,
+    modified,
+    missing
+  };
 }
 
 // src/cli/config.ts
@@ -19503,6 +19689,229 @@ function saveCredential(home, origin, projectId, credential, chmod) {
 function findCredential(credentials, origin, projectId) {
   return credentials[origin]?.[projectId];
 }
+
+// src/cli/session.ts
+function readyOrExplain(cli2, flags) {
+  const root = resolveRoot(cli2.cwd, flags.value("dir"));
+  const config2 = readProjectConfig(root);
+  if (config2.state === "missing") {
+    cli2.io.err(`${LOCAL_FILES.project} \uC774 \uC5C6\uB2E4 \u2014 \uBA3C\uC800 contextops setup \uC744 \uC2E4\uD589\uD574\uB77C.`);
+    return { ok: false, code: EXIT.CONFIG };
+  }
+  if (config2.state === "invalid") {
+    cli2.io.err(`${LOCAL_FILES.project} \uC774 \uACC4\uC57D\uACFC \uB9DE\uC9C0 \uC54A\uB294\uB2E4:`);
+    for (const line of config2.problems) cli2.io.err(`  ${line}`);
+    return { ok: false, code: EXIT.CONFIG };
+  }
+  const credentials = readCredentials(cli2.home);
+  if (credentials.state === "invalid") {
+    cli2.io.err(`credentials.json \uC744 \uC77D\uC744 \uC218 \uC5C6\uB2E4 (${credentials.problems.join(" \xB7 ")})`);
+    return { ok: false, code: EXIT.CONFIG };
+  }
+  const credential = credentials.state === "ok" ? findCredential(credentials.value, config2.value.api_origin, config2.value.project_id) : void 0;
+  if (credential === void 0) {
+    cli2.io.err(`\uC774 \uD504\uB85C\uC81D\uD2B8\uC758 \uAE30\uAE30 \uD1A0\uD070\uC774 \uC5C6\uB2E4 (${config2.value.api_origin}) \u2014 contextops setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C.`);
+    return { ok: false, code: EXIT.CONFIG };
+  }
+  return { ok: true, ready: { root, config: config2.value, token: credential.token } };
+}
+function reportFailure(cli2, code, message) {
+  if (code === "UNAUTHORIZED") {
+    cli2.io.err("\uD1A0\uD070\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uB2E4 (\uB9CC\uB8CC\xB7\uCDE8\uC18C\uB410\uC744 \uC218 \uC788\uB2E4) \u2014 contextops setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C.");
+    return EXIT.CONFIG;
+  }
+  if (code === "FORBIDDEN") {
+    cli2.io.err("\uC774 \uD504\uB85C\uC81D\uD2B8\uC5D0 \uB300\uD55C \uAD8C\uD55C\uC774 \uC5C6\uB2E4.");
+    return EXIT.CONFIG;
+  }
+  if (code === "NOT_FOUND") {
+    cli2.io.err("\uC11C\uBC84\uC5D0 \uADF8\uB7F0 \uAC83\uC774 \uC5C6\uB2E4 \u2014 \uC6F9\uC5D0\uC11C \uBA3C\uC800 \uB9CC\uB4E4\uC5B4\uB77C.");
+    return EXIT.CONFIG;
+  }
+  if (code === "VALIDATION_FAILED") {
+    cli2.io.err(`\uC11C\uBC84\uAC00 \uACC4\uC57D \uC704\uBC18\uC73C\uB85C \uAC70\uC808\uD588\uB2E4 \u2014 ${message}`);
+    return EXIT.INVALID;
+  }
+  cli2.io.err(`\uC11C\uBC84\uAC00 \uAC70\uC808\uD588\uB2E4 \u2014 ${code}: ${message}`);
+  return EXIT.NETWORK;
+}
+
+// src/cli/progress.ts
+var PROGRESS_FLAGS = {
+  "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
+  "milestone": { kind: "value", help: "\uB9C8\uC77C\uC2A4\uD1A4 ID (\uD574\uB2F9 \uC5C6\uC73C\uBA74 none)" },
+  "criterion": { kind: "value", help: "done_when \uBB38\uC7A5 \uD558\uB098" },
+  "evidence": { kind: "list", help: "\uADFC\uAC70 <path> \xB7 <path:12> \xB7 <path:12-30> (\uC5EC\uB7EC \uBC88)" },
+  "commit": { kind: "value", help: "\uADFC\uAC70\uAC00 \uAC00\uB9AC\uD0A4\uB294 \uCEE4\uBC0B sha (40\uC790)" },
+  "summary": { kind: "value", help: "\uD55C \uC904 \uC694\uC57D (\uD544\uC218)" },
+  "status": { kind: "value", help: `\uC0C1\uD0DC (${PROGRESS_STATUSES.join("\xB7")} \xB7 \uAE30\uBCF8\uC740 \uC544\uB798 \uD45C)` },
+  "source": { kind: "value", help: `\uBCF4\uACE0 \uC8FC\uCCB4 (${PROGRESS_SOURCES.join("\xB7")} \xB7 \uAE30\uBCF8 agent)` },
+  "session": { kind: "value", help: "\uC138\uC158 id \u2014 \uAC19\uC740 \uC138\uC158\uC5D0\uC11C Stop \uD6C5\uC774 \uACB9\uCCD0 \uBCF4\uACE0\uD558\uC9C0 \uC54A\uAC8C", env: "CLAUDE_SESSION_ID" }
+};
+function defaultStatus(milestone, criterion) {
+  if (milestone === "none") return "none";
+  return criterion === void 0 ? "in_progress" : "criterion_done";
+}
+function parseEvidence(raw, commit) {
+  const at = raw.lastIndexOf(":");
+  const tail = at === -1 ? "" : raw.slice(at + 1);
+  const lines = /^(\d+)(?:-(\d+))?$/.exec(tail);
+  const path = lines === null ? raw : raw.slice(0, at);
+  return {
+    path,
+    ...lines === null ? {} : { start_line: Number(lines[1]) },
+    ...lines?.[2] === void 0 ? {} : { end_line: Number(lines[2]) },
+    ...commit === void 0 ? {} : { commit_sha: commit }
+  };
+}
+async function runProgress(cli2, flags) {
+  const ready = readyOrExplain(cli2, flags);
+  if (!ready.ok) return ready.code;
+  const { root, config: config2, token } = ready.ready;
+  const milestone = flags.value("milestone");
+  const summary = flags.value("summary");
+  if (milestone === void 0 || summary === void 0) {
+    cli2.io.err("--milestone \uACFC --summary \uB294 \uD544\uC218\uB2E4 (\uD574\uB2F9 \uC5C6\uC73C\uBA74 --milestone none).");
+    return EXIT.USAGE;
+  }
+  const criterion = flags.value("criterion");
+  const local = readLocalManifest(root);
+  const contextVersion = local?.context_version ?? "unknown";
+  const candidate = {
+    milestone_id: milestone,
+    status: flags.value("status") ?? defaultStatus(milestone, criterion),
+    ...criterion === void 0 ? {} : { criterion },
+    evidence: flags.list("evidence").map((raw) => parseEvidence(raw, flags.value("commit"))),
+    summary,
+    context_version: contextVersion,
+    source: flags.value("source") ?? "agent",
+    //  ⚠ 서버가 이 값으로 중복을 지운다 (`POST /progress` 는 멱등이다). 여기서 만들면
+    //    재시도마다 새 id 가 되지만, 재시도는 실패한 뒤이므로 중복이 아니다.
+    client_event_id: randomUUID()
+  };
+  const parsed = ProgressEvent.safeParse(candidate);
+  if (!parsed.success) {
+    cli2.io.err("\uBCF4\uACE0\uAC00 \uACC4\uC57D\uACFC \uB9DE\uC9C0 \uC54A\uB294\uB2E4:");
+    for (const line of describeIssues(parsed.error)) cli2.io.err(`  ${line}`);
+    return EXIT.INVALID;
+  }
+  const body = parsed.data;
+  const sent = await apiPost(cli2, config2.api_origin, `projects/${config2.project_id}/progress`, token, body);
+  if (sent.kind === "unreachable") {
+    cli2.io.err(`\uC11C\uBC84\uC5D0 \uB2FF\uC9C0 \uBABB\uD588\uB2E4 \u2014 ${sent.message}`);
+    return EXIT.NETWORK;
+  }
+  if (sent.kind === "not_modified") {
+    cli2.io.err("\uC11C\uBC84\uAC00 304 \uB85C \uB2F5\uD588\uB2E4 \u2014 \uC774 \uBA85\uB839\uC740 \uADF8\uB7F4 \uC218 \uC5C6\uB2E4.");
+    return EXIT.NETWORK;
+  }
+  if (sent.kind === "failed") return reportFailure(cli2, sent.code, sent.message);
+  cli2.io.out(`\uBCF4\uACE0\uD588\uB2E4 \u2014 ${body.milestone_id} \xB7 ${body.status} \xB7 \uADFC\uAC70 ${body.evidence.length}\uAC74 \xB7 v${body.context_version}`);
+  const session = flags.value("session");
+  if (session !== void 0 && session.length > 0) {
+    const marker = {
+      session_id: session,
+      milestone_id: body.milestone_id,
+      status: body.status
+    };
+    writeJsonFile(progressMarkerFile(root, session), marker);
+  }
+  return EXIT.OK;
+}
+
+// src/cli/propose.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
+import { rmSync } from "node:fs";
+import { isAbsolute as isAbsolute2, join as join4 } from "node:path";
+var PROPOSE_FLAGS = {
+  "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
+  "from-pending": { kind: "bool", help: "\uBCF4\uB0B8 \uB4A4 Stop \uD6C5\uC774 \uB0A8\uAE34 \uD78C\uD2B8\uB97C \uCE58\uC6B4\uB2E4" },
+  "dry-run": { kind: "bool", help: "\uBCF4\uB0B4\uC9C0 \uC54A\uB294\uB2E4 \u2014 \uBCF4\uB0BC \uAC83\uC744 \uC694\uC57D\uB9CC \uD55C\uB2E4" }
+};
+async function runPropose(cli2, flags) {
+  const ready = readyOrExplain(cli2, flags);
+  if (!ready.ok) return ready.code;
+  const { root, config: config2, token } = ready.ready;
+  const target = flags.positional[0];
+  const path = target === void 0 ? repoFile(root, "proposalDraft") : isAbsolute2(target) ? target : join4(cli2.cwd, target);
+  const text = readTextIfExists(path);
+  if (text === void 0) {
+    cli2.io.err(`\uC81C\uC548 \uCD08\uC548\uC774 \uC5C6\uB2E4: ${path}`);
+    cli2.io.err("  \u2192 /contextops:propose \uAC00 \uC774 \uD30C\uC77C\uC744 \uC4F4\uB2E4.");
+    return EXIT.CONFIG;
+  }
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    cli2.io.err(`${path} \uAC00 JSON \uC774 \uC544\uB2C8\uB2E4 \u2014 ${err instanceof Error ? err.message : "\uD30C\uC2F1 \uC2E4\uD328"}`);
+    return EXIT.INVALID;
+  }
+  const draft = ProposalDraftFile.safeParse(raw);
+  if (!draft.success) {
+    cli2.io.err(`${path} \uAC00 proposal-draft \uACC4\uC57D\uACFC \uB9DE\uC9C0 \uC54A\uB294\uB2E4:`);
+    for (const line of describeIssues(draft.error)) cli2.io.err(`  ${line}`);
+    return EXIT.INVALID;
+  }
+  cli2.io.out(`\uC81C\uC548: ${draft.data.title}`);
+  for (const item of draft.data.items) {
+    const what = item.operation === "add" ? item.draft?.id ?? "\uC0C8 \uD56D\uBAA9" : item.target_item_id ?? "?";
+    cli2.io.out(`  ${item.operation.padEnd(10)} ${what} \xB7 \uADFC\uAC70 ${item.evidence.length}\uAC74`);
+  }
+  if (draft.data.relates_to.length > 0) cli2.io.out(`  \uB9C8\uC77C\uC2A4\uD1A4 ${draft.data.relates_to.join(" \xB7 ")}`);
+  if (flags.bool("dry-run")) {
+    cli2.io.out("--dry-run \uC774\uB77C \uBCF4\uB0B4\uC9C0 \uC54A\uC558\uB2E4.");
+    return EXIT.OK;
+  }
+  const versions = await apiGet(cli2, config2.api_origin, `projects/${config2.project_id}/versions?limit=1`, token);
+  if (versions.kind === "unreachable") {
+    cli2.io.err(`\uC11C\uBC84\uC5D0 \uB2FF\uC9C0 \uBABB\uD588\uB2E4 \u2014 ${versions.message}`);
+    return EXIT.NETWORK;
+  }
+  if (versions.kind === "not_modified") {
+    cli2.io.err("\uC11C\uBC84\uAC00 304 \uB85C \uB2F5\uD588\uB2E4 \u2014 \uC774 \uC694\uCCAD\uC740 \uADF8\uB7F4 \uC218 \uC5C6\uB2E4.");
+    return EXIT.NETWORK;
+  }
+  if (versions.kind === "failed") return reportFailure(cli2, versions.code, versions.message);
+  const official = officialVersionId(versions.data);
+  if (official === void 0) {
+    cli2.io.err("\uC544\uC9C1 \uACF5\uC2DD \uBC84\uC804\uC774 \uC5C6\uB2E4 \u2014 \uC6F9\uC5D0\uC11C \uCCAB \uBC84\uC804\uC744 \uBC1C\uD589\uD55C \uB4A4\uC5D0 \uC81C\uC548\uD560 \uC218 \uC788\uB2E4.");
+    return EXIT.CONFIG;
+  }
+  const body = { ...draft.data, base_version_id: official, client_request_id: randomUUID2() };
+  const sent = await apiPost(cli2, config2.api_origin, `projects/${config2.project_id}/proposals`, token, body);
+  if (sent.kind === "unreachable") {
+    cli2.io.err(`\uC11C\uBC84\uC5D0 \uB2FF\uC9C0 \uBABB\uD588\uB2E4 \u2014 ${sent.message}`);
+    return EXIT.NETWORK;
+  }
+  if (sent.kind === "not_modified") {
+    cli2.io.err("\uC11C\uBC84\uAC00 304 \uB85C \uB2F5\uD588\uB2E4 \u2014 \uC774 \uBA85\uB839\uC740 \uADF8\uB7F4 \uC218 \uC5C6\uB2E4.");
+    return EXIT.NETWORK;
+  }
+  if (sent.kind === "failed") return reportFailure(cli2, sent.code, sent.message);
+  const id = idOf(sent.data);
+  cli2.io.out(`\uC81C\uC548\uC744 \uC62C\uB838\uB2E4 \u2014 \uD56D\uBAA9 ${body.items.length}\uAC1C \xB7 \uAE30\uC900 v${official.slice(0, 8)}`);
+  if (id !== void 0) cli2.io.out(`  \u2192 ${config2.api_origin}/p/${config2.project_id}/proposals/${id}`);
+  if (flags.bool("from-pending")) {
+    rmSync(repoFile(root, "pendingProposal"), { force: true });
+    cli2.io.out(`  ${LOCAL_FILES.pendingProposal} \uC744 \uCE58\uC6E0\uB2E4.`);
+  }
+  return EXIT.OK;
+}
+function officialVersionId(data) {
+  if (typeof data !== "object" || data === null) return void 0;
+  const value = data.official_version_id;
+  return typeof value === "string" && value.length > 0 ? value : void 0;
+}
+function idOf(data) {
+  if (typeof data !== "object" || data === null) return void 0;
+  const value = data.id;
+  return typeof value === "string" ? value : void 0;
+}
+
+// src/cli/scan.ts
+import { readdirSync } from "node:fs";
+import { basename as pathBasename, extname, isAbsolute as isAbsolute3, join as join5 } from "node:path";
 
 // src/cli/scan-tables.ts
 var LANGUAGE_BY_EXT = {
@@ -19684,7 +20093,7 @@ function walk(root) {
     const rel = stack.pop() ?? "";
     let entries;
     try {
-      entries = readdirSync(join3(root, rel), { withFileTypes: true });
+      entries = readdirSync(join5(root, rel), { withFileTypes: true });
     } catch {
       out.excluded.add(note(`${rel || "."}/ (\uC77D\uC744 \uC218 \uC5C6\uC74C)`));
       continue;
@@ -19755,7 +20164,7 @@ function scanRepo(root, repoName) {
     if (depthOf(path) > 2) continue;
     const reader = DEPENDENCY_READERS[basename(path)];
     if (reader === void 0) continue;
-    const text = readTextIfExists(join3(root, path));
+    const text = readTextIfExists(join5(root, path));
     if (text === void 0) continue;
     dependencies.push(...reader(text));
     if (basename(path) === "package.json") {
@@ -19764,7 +20173,7 @@ function scanRepo(root, repoName) {
   }
   const envKeys = [];
   for (const path of walked.envFiles) {
-    const text = readTextIfExists(join3(root, path));
+    const text = readTextIfExists(join5(root, path));
     if (text !== void 0) envKeys.push(...envKeysOf(text));
   }
   const excluded = sorted(walked.excluded);
@@ -19807,7 +20216,7 @@ async function runScan(cli2, flags) {
     return EXIT.CONFIG;
   }
   const outFlag = flags.value("out");
-  const outPath = outFlag === void 0 ? repoFile(root, "scan") : isAbsolute2(outFlag) ? outFlag : join3(cli2.cwd, outFlag);
+  const outPath = outFlag === void 0 ? repoFile(root, "scan") : isAbsolute3(outFlag) ? outFlag : join5(cli2.cwd, outFlag);
   writeJsonFile(outPath, result);
   const s = result.summary;
   cli2.io.out(`${outPath}`);
@@ -19821,216 +20230,27 @@ async function runScan(cli2, flags) {
 // src/cli/setup.ts
 import { basename as basename2 } from "node:path";
 
-// src/cli/api.ts
-function apiUrl(origin, path) {
-  return `${origin}/api/v1/${path.replace(/^\//, "")}`;
-}
-async function send(cli2, method, origin, path, token, init = {}) {
-  try {
-    const response = await cli2.fetch(apiUrl(origin, path), {
-      method,
-      headers: {
-        authorization: `Bearer ${token}`,
-        ...init.body === void 0 ? {} : { "content-type": "application/json" },
-        ...init.headers ?? {}
-      },
-      ...init.body === void 0 ? {} : { body: JSON.stringify(init.body) }
-    });
-    return { response };
-  } catch (err) {
-    return { unreachable: err instanceof Error ? err.message : "\uC54C \uC218 \uC5C6\uB294 \uC774\uC720" };
-  }
-}
-async function envelope(response) {
-  if (response.status === 304) return { kind: "not_modified" };
-  const text = await response.text().catch(() => "");
-  let body;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return {
-      kind: "unreachable",
-      message: `${response.status} \uC751\uB2F5\uC774 JSON \uBD09\uD22C\uAC00 \uC544\uB2C8\uB2E4 \u2014 \uC774 \uC8FC\uC18C\uAC00 ContextOps \uC11C\uBC84\uAC00 \uB9DE\uB098`
-    };
-  }
-  if (response.ok) {
-    if (typeof body !== "object" || body === null || !("data" in body)) {
-      return {
-        kind: "unreachable",
-        message: `${response.status} \uC751\uB2F5\uC5D0 data \uBD09\uD22C\uAC00 \uC5C6\uB2E4 \u2014 \uC774 \uC8FC\uC18C\uAC00 ContextOps \uC11C\uBC84\uAC00 \uB9DE\uB098`
-      };
-    }
-    return {
-      kind: "ok",
-      status: response.status,
-      data: body.data,
-      etag: response.headers.get("etag") ?? void 0
-    };
-  }
-  const failure = ApiFailure.safeParse(body);
-  return failure.success ? { kind: "failed", status: response.status, code: failure.data.error.code, message: failure.data.error.message } : { kind: "failed", status: response.status, code: "UNKNOWN", message: `${response.status} \uC751\uB2F5` };
-}
-async function apiGet(cli2, origin, path, token, headers) {
-  const sent = await send(cli2, "GET", origin, path, token, { headers: headers ?? {} });
-  if ("unreachable" in sent) return { kind: "unreachable", message: sent.unreachable };
-  return envelope(sent.response);
-}
-async function apiPost(cli2, origin, path, token, body) {
-  const sent = await send(cli2, "POST", origin, path, token, { body });
-  if ("unreachable" in sent) return { kind: "unreachable", message: sent.unreachable };
-  return envelope(sent.response);
-}
-async function apiGetText(cli2, origin, path, token) {
-  const sent = await send(cli2, "GET", origin, path, token);
-  if ("unreachable" in sent) return { kind: "unreachable", message: sent.unreachable };
-  const { response } = sent;
-  const text = await response.text().catch(() => "");
-  if (response.ok) return { kind: "ok", text };
-  let body;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return { kind: "failed", status: response.status, code: "UNKNOWN", message: `${response.status} \uC751\uB2F5` };
-  }
-  const failure = ApiFailure.safeParse(body);
-  return failure.success ? { kind: "failed", status: response.status, code: failure.data.error.code, message: failure.data.error.message } : { kind: "failed", status: response.status, code: "UNKNOWN", message: `${response.status} \uC751\uB2F5` };
-}
-
 // src/cli/sync.ts
-import { mkdirSync as mkdirSync2, readdirSync as readdirSync2, rmSync } from "node:fs";
-import { dirname as dirname2, join as join5 } from "node:path";
-
-// src/cli/managed.ts
-import { join as join4 } from "node:path";
-var MANAGED_PATHS = [
-  { pattern: /^CLAUDE\.md$/, what: "Claude Code \uAC00 \uC77D\uB294 \uD300 \uADDC\uCE59", sample: "CLAUDE.md" },
-  { pattern: /^AGENTS\.md$/, what: "AGENTS.md \uADDC\uC57D\uC744 \uC77D\uB294 \uB3C4\uAD6C\uB4E4", sample: "AGENTS.md" },
-  {
-    pattern: /^\.claude\/rules\/[^/]+\.md$/,
-    what: "Claude Code \uC758 scoped \uADDC\uCE59",
-    sample: ".claude/rules/domain-refund.md"
-  },
-  { pattern: /^\.cursor\/rules\/[^/]+\.mdc$/, what: "Cursor \uC758 \uADDC\uCE59", sample: ".cursor/rules/team.mdc" },
-  //  ⚠ 우리 자신의 상태 파일. Manifest 의 files 에는 없지만 sync 가 마지막에 쓴다.
-  {
-    pattern: new RegExp(`^${LOCAL_FILES.manifest.replace(/[.]/g, "\\.")}$`),
-    what: "\uC801\uC6A9\uB41C \uBC84\uC804\uC758 Manifest",
-    sample: LOCAL_FILES.manifest
-  }
-];
-function checkWritable(root, path) {
-  if (!RepoPath.safeParse(path).success) {
-    return { ok: false, reason: "\uC800\uC7A5\uC18C \uC0C1\uB300 \uACBD\uB85C\uAC00 \uC544\uB2C8\uB2E4 (\uC808\uB300\uACBD\uB85C\xB7\uC0C1\uC704 \uC774\uB3D9 \uAE08\uC9C0)" };
-  }
-  if (path.includes("\\")) return { ok: false, reason: "\uACBD\uB85C \uAD6C\uBD84\uC790\uB294 / \uD558\uB098\uB2E4" };
-  if (!MANAGED_PATHS.some((m) => m.pattern.test(path))) {
-    return { ok: false, reason: "sync \uAC00 \uAD00\uB9AC\uD558\uB294 \uD30C\uC77C\uC774 \uC544\uB2C8\uB2E4 (SPEC \xA78.5 allowlist)" };
-  }
-  if (hasSymlink(root, path)) return { ok: false, reason: "\uC2EC\uBCFC\uB9AD \uB9C1\uD06C\uB2E4 \u2014 \uC800\uC7A5\uC18C \uBC16\uC744 \uAC00\uB9AC\uD0AC \uC218 \uC788\uB2E4" };
-  return { ok: true };
-}
-function readLocalManifest(root) {
-  const text = readTextIfExists(repoFile(root, "manifest"));
-  if (text === void 0) return void 0;
-  try {
-    const parsed = Manifest.safeParse(JSON.parse(text));
-    return parsed.success ? parsed.data : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function inspectFiles(root, manifest) {
-  return manifest.files.map((f) => ({
-    path: f.path,
-    expected: f.sha256,
-    actual: sha256OfFile(join4(root, ...f.path.split("/")))
-  }));
-}
-var isMissing = (s) => s.actual === void 0;
-var isChanged = (s) => s.actual !== void 0 && s.actual !== s.expected;
-function judge(root, local, official) {
-  if (local === void 0) {
-    return {
-      status: "unknown",
-      line: official === void 0 ? "\uC544\uC9C1 sync \uD55C \uC801\uC774 \uC5C6\uB2E4 (\uC11C\uBC84\uC5D0\uB3C4 \uBABB \uB2FF\uC558\uB2E4)" : `\uC544\uC9C1 sync \uD55C \uC801\uC774 \uC5C6\uB2E4 \u2014 \uACF5\uC2DD v${official.context_version}`,
-      modified: [],
-      missing: []
-    };
-  }
-  const states = inspectFiles(root, local);
-  const modified = states.filter(isChanged).map((s) => s.path);
-  const missing = states.filter(isMissing).map((s) => s.path);
-  if (modified.length > 0 || missing.length > 0) {
-    const parts = [
-      modified.length > 0 ? `${modified.length}\uAC1C\uAC00 \uC190\uC73C\uB85C \uBC14\uB00C\uC5C8\uB2E4` : "",
-      missing.length > 0 ? `${missing.length}\uAC1C\uAC00 \uC5C6\uB2E4` : ""
-    ].filter((p) => p.length > 0);
-    return { status: "modified", line: `v${local.context_version} \u2014 ${parts.join(" \xB7 ")}`, modified, missing };
-  }
-  if (official === void 0) {
-    return { status: "applied", line: `v${local.context_version} \uC801\uC6A9\uB428 (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)`, modified, missing };
-  }
-  if (official.manifest_hash === local.manifest_hash) {
-    return { status: "applied", line: `v${local.context_version} \uCD5C\uC2E0\uC774\uB2E4`, modified, missing };
-  }
-  return {
-    status: "outdated",
-    line: `v${local.context_version} \u2192 \uACF5\uC2DD v${official.context_version} \uC774 \uB098\uC654\uB2E4`,
-    modified,
-    missing
-  };
-}
-
-// src/cli/sync.ts
+import { mkdirSync as mkdirSync2, readdirSync as readdirSync2, rmSync as rmSync2 } from "node:fs";
+import { dirname as dirname2, join as join6 } from "node:path";
 var SYNC_FLAGS = {
   "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
   "check": { kind: "bool", help: "\uC0C1\uD0DC\uB9CC \uBCF8\uB2E4 \u2014 \uD30C\uC77C\uC744 \uD558\uB098\uB3C4 \uBC14\uAFB8\uC9C0 \uC54A\uB294\uB2E4" },
   "force": { kind: "bool", help: "\uC190\uC73C\uB85C \uBC14\uB010 \uD30C\uC77C\uB3C4 \uB36E\uC5B4\uC4F4\uB2E4 (backup \uC740 \uB0A8\uB294\uB2E4)" }
 };
 function preflight(cli2, flags) {
-  const root = resolveRoot(cli2.cwd, flags.value("dir"));
-  const config2 = readProjectConfig(root);
-  if (config2.state === "missing") {
-    cli2.io.err(`${LOCAL_FILES.project} \uC774 \uC5C6\uB2E4 \u2014 \uBA3C\uC800 contextops setup \uC744 \uC2E4\uD589\uD574\uB77C.`);
-    return { ok: false, code: EXIT.CONFIG };
-  }
-  if (config2.state === "invalid") {
-    cli2.io.err(`${LOCAL_FILES.project} \uC774 \uACC4\uC57D\uACFC \uB9DE\uC9C0 \uC54A\uB294\uB2E4:`);
-    for (const line of config2.problems) cli2.io.err(`  ${line}`);
-    return { ok: false, code: EXIT.CONFIG };
-  }
-  const credentials = readCredentials(cli2.home);
-  if (credentials.state === "invalid") {
-    cli2.io.err(`credentials.json \uC744 \uC77D\uC744 \uC218 \uC5C6\uB2E4 (${credentials.problems.join(" \xB7 ")})`);
-    return { ok: false, code: EXIT.CONFIG };
-  }
-  const credential = credentials.state === "ok" ? findCredential(credentials.value, config2.value.api_origin, config2.value.project_id) : void 0;
-  if (credential === void 0) {
-    cli2.io.err(`\uC774 \uD504\uB85C\uC81D\uD2B8\uC758 \uAE30\uAE30 \uD1A0\uD070\uC774 \uC5C6\uB2E4 (${config2.value.api_origin}) \u2014 contextops setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C.`);
-    return { ok: false, code: EXIT.CONFIG };
-  }
+  const session = readyOrExplain(cli2, flags);
+  if (!session.ok) return session;
   try {
-    const probe = join5(root, ...CACHE_DIR.split("/"), ".writable");
+    const probe = join6(session.ready.root, ...CACHE_DIR.split("/"), ".writable");
     mkdirSync2(dirname2(probe), { recursive: true });
     atomicWriteFile(probe, "");
-    rmSync(probe, { force: true });
+    rmSync2(probe, { force: true });
   } catch (err) {
     cli2.io.err(`${LOCAL_DIR}/ \uC5D0 \uC4F8 \uC218 \uC5C6\uB2E4 \u2014 ${err instanceof Error ? err.message : "\uC54C \uC218 \uC5C6\uB294 \uC774\uC720"}`);
     return { ok: false, code: EXIT.CONFIG };
   }
-  return { ok: true, ready: { root, config: config2.value, token: credential.token } };
-}
-function reportFailure(cli2, code, message) {
-  if (code === "UNAUTHORIZED") {
-    cli2.io.err("\uD1A0\uD070\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uB2E4 (\uB9CC\uB8CC\xB7\uCDE8\uC18C\uB410\uC744 \uC218 \uC788\uB2E4) \u2014 contextops setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C.");
-    return EXIT.CONFIG;
-  }
-  if (code === "NOT_FOUND") {
-    cli2.io.err("\uC544\uC9C1 \uBC1C\uD589\uB41C \uBC84\uC804\uC774 \uC5C6\uB2E4 \u2014 \uC6F9\uC5D0\uC11C \uCCAB \uBC84\uC804\uC744 \uBC1C\uD589\uD574\uB77C.");
-    return EXIT.CONFIG;
-  }
-  cli2.io.err(`\uC11C\uBC84\uAC00 \uAC70\uC808\uD588\uB2E4 \u2014 ${code}: ${message}`);
-  return EXIT.NETWORK;
+  return session;
 }
 function printStatus(cli2, s) {
   cli2.io.out(`${s.status}: ${s.line}`);
@@ -20038,7 +20258,7 @@ function printStatus(cli2, s) {
   for (const path of s.missing) cli2.io.out(`  \u2717 ${path} \u2014 \uC5C6\uB2E4`);
 }
 function ensureLocalGitignore(root) {
-  const path = join5(root, LOCAL_DIR, ".gitignore");
+  const path = join6(root, LOCAL_DIR, ".gitignore");
   if (readTextIfExists(path) !== void 0) return;
   const lines = [
     "# contextops \uAC00 \uB9CC\uB4E0 \uD30C\uC77C\uB4E4 (SPEC \xA78.2). manifest.json\xB7project.json \uC740 \uCEE4\uBC0B\uD55C\uB2E4.",
@@ -20048,7 +20268,7 @@ function ensureLocalGitignore(root) {
   atomicWriteFile(path, lines.join("\n"));
 }
 function pruneBackups(root) {
-  const dir = join5(root, ...BACKUP_DIR.split("/"));
+  const dir = join6(root, ...BACKUP_DIR.split("/"));
   let names;
   try {
     names = readdirSync2(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
@@ -20056,7 +20276,7 @@ function pruneBackups(root) {
     return;
   }
   for (const name of names.slice(0, Math.max(0, names.length - BACKUP_KEEP))) {
-    rmSync(join5(dir, name), { recursive: true, force: true });
+    rmSync2(join6(dir, name), { recursive: true, force: true });
   }
 }
 function stamp(now) {
@@ -20134,29 +20354,29 @@ async function runSync(cli2, flags) {
       return EXIT.NETWORK;
     }
     wanted.push({ path: file2.path, text: got.text });
-    atomicWriteFile(join5(root, ...CACHE_DIR.split("/"), semver, ...file2.path.split("/")), got.text);
+    atomicWriteFile(join6(root, ...CACHE_DIR.split("/"), semver, ...file2.path.split("/")), got.text);
   }
   ensureLocalGitignore(root);
   const from = local?.context_version ?? "none";
   const backupRel = `${BACKUP_DIR}/${stamp(/* @__PURE__ */ new Date())}-${from}-to-${semver}`;
-  const backupDir = join5(root, ...backupRel.split("/"));
+  const backupDir = join6(root, ...backupRel.split("/"));
   const backedUp = [];
   for (const rel of [...wanted.map((w) => w.path), LOCAL_FILES.manifest]) {
-    const before = readTextIfExists(join5(root, ...rel.split("/")));
+    const before = readTextIfExists(join6(root, ...rel.split("/")));
     if (before === void 0) continue;
-    atomicWriteFile(join5(backupDir, ...rel.split("/")), before);
+    atomicWriteFile(join6(backupDir, ...rel.split("/")), before);
     backedUp.push({ path: rel, text: before });
   }
-  for (const file2 of wanted) atomicWriteFile(join5(root, ...file2.path.split("/")), file2.text);
+  for (const file2 of wanted) atomicWriteFile(join6(root, ...file2.path.split("/")), file2.text);
   atomicWriteFile(repoFile(root, "manifest"), `${JSON.stringify(official, null, 2)}
 `);
   const after = judge(root, official, official);
   if (after.status !== "applied") {
     cli2.io.err("\uC801\uC6A9 \uB4A4 \uB2E4\uC2DC \uC7B0 \uD574\uC2DC\uAC00 \uB9DE\uC9C0 \uC54A\uB294\uB2E4 \u2014 backup \uC5D0\uC11C \uC804\uBD80 \uB418\uB3CC\uB9B0\uB2E4.");
-    for (const b of backedUp) atomicWriteFile(join5(root, ...b.path.split("/")), b.text);
+    for (const b of backedUp) atomicWriteFile(join6(root, ...b.path.split("/")), b.text);
     const had = new Set(backedUp.map((b) => b.path));
-    for (const w of wanted) if (!had.has(w.path)) rmSync(join5(root, ...w.path.split("/")), { force: true });
-    if (!had.has(LOCAL_FILES.manifest)) rmSync(repoFile(root, "manifest"), { force: true });
+    for (const w of wanted) if (!had.has(w.path)) rmSync2(join6(root, ...w.path.split("/")), { force: true });
+    if (!had.has(LOCAL_FILES.manifest)) rmSync2(repoFile(root, "manifest"), { force: true });
     cli2.io.err(`\uB418\uB3CC\uB838\uB2E4. \uBC1B\uC740 \uB0B4\uC6A9\uC740 ${backupRel}/ \uC606\uC758 ${CACHE_DIR}/${semver}/ \uC5D0 \uC788\uB2E4.`);
     return EXIT.NETWORK;
   }
@@ -20176,7 +20396,7 @@ async function report(cli2, root, origin, token, projectId, manifest, status) {
   };
   const sent = await apiPost(cli2, origin, `projects/${projectId}/sync-reports`, token, body);
   if (sent.kind === "ok") {
-    rmSync(repoFile(root, "syncReceipt"), { force: true });
+    rmSync2(repoFile(root, "syncReceipt"), { force: true });
     cli2.io.out(`  \uC11C\uBC84\uC5D0 ${status} \uB85C \uBCF4\uACE0\uD588\uB2E4`);
     return EXIT.OK;
   }
@@ -20298,7 +20518,7 @@ async function runSetup(cli2, flags) {
 }
 
 // src/cli/status.ts
-import { rmSync as rmSync2 } from "node:fs";
+import { rmSync as rmSync3 } from "node:fs";
 var STATUS_FLAGS = {
   "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
   "offline": { kind: "bool", help: "\uC11C\uBC84\uC5D0 \uBB3B\uC9C0 \uC54A\uB294\uB2E4 \u2014 \uB85C\uCEEC \uD30C\uC77C\uB9CC \uBCF8\uB2E4" }
@@ -20362,12 +20582,108 @@ async function resendReceipt(cli2, root, token) {
     receipt.report
   );
   if (sent.kind !== "ok") return;
-  rmSync2(repoFile(root, "syncReceipt"), { force: true });
+  rmSync3(repoFile(root, "syncReceipt"), { force: true });
   cli2.io.out(`  \uBC00\uB838\uB358 \uBCF4\uACE0 1\uAC74\uC744 \uBCF4\uB0C8\uB2E4 (v${receipt.report.version} \xB7 ${receipt.report.status})`);
 }
 
+// src/cli/upload-draft.ts
+import { isAbsolute as isAbsolute4, join as join7 } from "node:path";
+var UPLOAD_DRAFT_FLAGS = {
+  "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
+  "scan": { kind: "value", help: `\uC2A4\uCE94 \uACB0\uACFC (\uAE30\uBCF8: ${LOCAL_FILES.scan})` },
+  "dry-run": { kind: "bool", help: "\uBCF4\uB0B4\uC9C0 \uC54A\uB294\uB2E4 \u2014 \uBCF4\uB0BC payload \uC694\uC57D\uB9CC \uB0B8\uB2E4" }
+};
+function readContract(cli2, path, what, parse3) {
+  const text = readTextIfExists(path);
+  if (text === void 0) {
+    cli2.io.err(`${what} \uC774 \uC5C6\uB2E4: ${path}`);
+    return EXIT.CONFIG;
+  }
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    cli2.io.err(`${path} \uAC00 JSON \uC774 \uC544\uB2C8\uB2E4 \u2014 ${err instanceof Error ? err.message : "\uD30C\uC2F1 \uC2E4\uD328"}`);
+    return EXIT.INVALID;
+  }
+  const parsed = parse3(raw);
+  if (!parsed.success) {
+    cli2.io.err(`${path} \uAC00 \uACC4\uC57D\uACFC \uB9DE\uC9C0 \uC54A\uB294\uB2E4:`);
+    for (const line of describeIssues(parsed.error)) cli2.io.err(`  ${line}`);
+    return EXIT.INVALID;
+  }
+  return parsed.data;
+}
+var isCode = (value) => typeof value === "number";
+async function runUploadDraft(cli2, flags) {
+  const ready = readyOrExplain(cli2, flags);
+  if (!ready.ok) return ready.code;
+  const { root, config: config2, token } = ready.ready;
+  const target = flags.positional[0];
+  const draftPath = target === void 0 ? repoFile(root, "draft") : isAbsolute4(target) ? target : join7(cli2.cwd, target);
+  const scanFlag = flags.value("scan");
+  const scanPath = scanFlag === void 0 ? repoFile(root, "scan") : isAbsolute4(scanFlag) ? scanFlag : join7(cli2.cwd, scanFlag);
+  const draft = readContract(cli2, draftPath, "\uCD08\uC548", (raw) => ContextItemDraftFile.safeParse(raw));
+  if (isCode(draft)) return draft;
+  const scan = readContract(cli2, scanPath, "\uC2A4\uCE94 \uACB0\uACFC", (raw) => ScanResult.safeParse(raw));
+  if (isCode(scan)) {
+    if (scan === EXIT.CONFIG) cli2.io.err("  \u2192 contextops scan \uC744 \uBA3C\uC800 \uC2E4\uD589\uD574\uB77C.");
+    return scan;
+  }
+  const body = {
+    items: draft.items,
+    repo: scan.repo,
+    scan_summary: scan.summary
+  };
+  cli2.io.out(`\uBCF4\uB0BC \uD56D\uBAA9 ${body.items.length}\uAC1C \xB7 \uB808\uD3EC ${body.repo} \xB7 \uC2A4\uCE94 \uD30C\uC77C ${body.scan_summary.file_count}\uAC1C`);
+  for (const item of body.items) cli2.io.out(`  ${item.type.padEnd(14)} ${item.id}`);
+  cli2.io.out(`\uADFC\uAC70 \uACBD\uB85C ${sourcePaths(body).length}\uACF3 \xB7 \uCF54\uB4DC \uBCF8\uBB38 0\uAC74 (\uACC4\uC57D\uC5D0 \uB2F4\uC744 \uC790\uB9AC\uAC00 \uC5C6\uB2E4)`);
+  if (flags.bool("dry-run")) {
+    cli2.io.out("--dry-run \uC774\uB77C \uBCF4\uB0B4\uC9C0 \uC54A\uC558\uB2E4.");
+    return EXIT.OK;
+  }
+  const sent = await apiPost(
+    cli2,
+    config2.api_origin,
+    `projects/${config2.project_id}/context-items/batch-draft`,
+    token,
+    body
+  );
+  if (sent.kind === "unreachable") {
+    cli2.io.err(`\uC11C\uBC84\uC5D0 \uB2FF\uC9C0 \uBABB\uD588\uB2E4 \u2014 ${sent.message}`);
+    return EXIT.NETWORK;
+  }
+  if (sent.kind === "not_modified") {
+    cli2.io.err("\uC11C\uBC84\uAC00 304 \uB85C \uB2F5\uD588\uB2E4 \u2014 \uC774 \uBA85\uB839\uC740 \uADF8\uB7F4 \uC218 \uC5C6\uB2E4.");
+    return EXIT.NETWORK;
+  }
+  if (sent.kind === "failed") return reportFailure(cli2, sent.code, sent.message);
+  const result = ContextItemsBatchDraftResult.safeParse(sent.data);
+  if (!result.success) {
+    cli2.io.err("\uC11C\uBC84 \uC751\uB2F5\uC774 \uACC4\uC57D\uACFC \uB9DE\uC9C0 \uC54A\uB294\uB2E4 \u2014 \uC11C\uBC84 \uBC84\uC804\uC774 \uB2E4\uB97C \uC218 \uC788\uB2E4.");
+    return EXIT.NETWORK;
+  }
+  const { accepted, rejected } = result.data;
+  cli2.io.out(`\uBC1B\uC544\uB4E4\uC5EC\uC9C4 \uD56D\uBAA9 ${accepted.length}\uAC1C \xB7 \uAC70\uC808 ${rejected.length}\uAC1C`);
+  for (const bad of rejected) {
+    const id = body.items[bad.index]?.id ?? `#${bad.index}`;
+    for (const issue2 of bad.issues) cli2.io.err(`  \u2717 ${id} \u2014 ${issue2.path}: ${issue2.message}`);
+  }
+  if (accepted.length > 0) cli2.io.out(`  \u2192 ${config2.api_origin}/p/${config2.project_id}/context \uC5D0\uC11C \uD655\uC778\uD574\uB77C`);
+  return accepted.length === 0 ? EXIT.INVALID : EXIT.OK;
+}
+function sourcePaths(body) {
+  const paths = /* @__PURE__ */ new Set();
+  for (const item of body.items) {
+    for (const ref of item.source_refs) {
+      if (ref.kind === "repository_path") paths.add(ref.path);
+    }
+  }
+  return [...paths];
+}
+
 // src/cli/validate.ts
-import { isAbsolute as isAbsolute3, join as join6 } from "node:path";
+import { isAbsolute as isAbsolute5, join as join8 } from "node:path";
 var DEFAULT_SCHEMA = "draft";
 var VALIDATE_FLAGS = {
   "schema": { kind: "value", help: `\uACC4\uC57D \uC774\uB984 (\uAE30\uBCF8: ${DEFAULT_SCHEMA})` }
@@ -20388,7 +20704,7 @@ async function runValidate(cli2, flags) {
     cli2.io.err(`\uC4F8 \uC218 \uC788\uB294 \uC774\uB984: ${SCHEMA_NAMES.join(" \xB7 ")}`);
     return EXIT.USAGE;
   }
-  const path = isAbsolute3(target) ? target : join6(cli2.cwd, target);
+  const path = isAbsolute5(target) ? target : join8(cli2.cwd, target);
   const text = readTextIfExists(path);
   if (text === void 0) {
     cli2.io.err(`\uD30C\uC77C\uC774 \uC5C6\uB2E4: ${path}`);
@@ -20443,6 +20759,24 @@ var COMMANDS = {
     usage: "contextops sync [--check] [--force]",
     flags: SYNC_FLAGS,
     run: runSync
+  },
+  "upload-draft": {
+    summary: "\uCD08\uC548(cache/draft.json)\uC744 \uC11C\uBC84\uB85C \uC62C\uB9B0\uB2E4 \u2014 \uCF54\uB4DC \uBCF8\uBB38\uC740 \uB098\uAC00\uC9C0 \uC54A\uB294\uB2E4",
+    usage: "contextops upload-draft [<json>] [--dry-run]",
+    flags: UPLOAD_DRAFT_FLAGS,
+    run: runUploadDraft
+  },
+  propose: {
+    summary: "\uC81C\uC548 \uCD08\uC548\uC744 \uACF5\uC2DD \uBC84\uC804 \uAE30\uC900\uC73C\uB85C \uC62C\uB9B0\uB2E4 (\uAE30\uC900 \uBC84\uC804\xB7\uC694\uCCAD id \uB294 CLI \uAC00 \uBD99\uC778\uB2E4)",
+    usage: "contextops propose [<json>] [--from-pending] [--dry-run]",
+    flags: PROPOSE_FLAGS,
+    run: runPropose
+  },
+  progress: {
+    summary: "\uB9C8\uC77C\uC2A4\uD1A4 \uC9C4\uD589\uC744 \uBCF4\uACE0\uD55C\uB2E4 \u2014 \uADFC\uAC70\uB294 \uACBD\uB85C\uC640 \uC904 \uBC88\uD638\uBFD0\uC774\uB2E4",
+    usage: 'contextops progress --milestone <ID> --summary "<\uD55C \uC904>" [--criterion \u2026] [--evidence \u2026]',
+    flags: PROGRESS_FLAGS,
+    run: runProgress
   }
 };
 function helpText() {

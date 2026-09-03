@@ -1,17 +1,17 @@
 import { mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { Manifest, SyncReceiptFile, type ProjectConfig, type SyncReport } from '@contextops/schema'
+import { Manifest, SyncReceiptFile, type SyncReport } from '@contextops/schema'
 
 import { apiGet, apiGetText, apiPost } from './api'
 import type { FlagSpecs, Flags } from './args'
 import type { Cli } from './cli'
-import { findCredential, readCredentials, readProjectConfig } from './config'
 import { EXIT } from './exit'
 import { atomicWriteFile, readTextIfExists, sha256OfText, writeJsonFile } from './fsx'
 import { checkWritable, judge, readLocalManifest, type LocalStatus } from './managed'
+import { readyOrExplain, reportFailure, type Session } from './session'
 import {
   BACKUP_DIR, BACKUP_KEEP, CACHE_DIR, IGNORED_LOCAL_PATHS, LOCAL_DIR, LOCAL_FILES,
-  repoFile, resolveRoot,
+  repoFile,
 } from './paths'
 
 // =====================================================================
@@ -36,42 +36,16 @@ export const SYNC_FLAGS: FlagSpecs = {
   'force': { kind: 'bool', help: '손으로 바뀐 파일도 덮어쓴다 (backup 은 남는다)' },
 }
 
-/** preflight 가 모은 것. 여기까지 왔으면 「누구로 어디에 말할지」가 정해졌다. */
-type Ready = { root: string; config: ProjectConfig; token: string }
-
-type Preflight = { ok: true; ready: Ready } | { ok: false; code: number }
-
-function preflight(cli: Cli, flags: Flags): Preflight {
-  const root = resolveRoot(cli.cwd, flags.value('dir'))
-
-  const config = readProjectConfig(root)
-  if (config.state === 'missing') {
-    cli.io.err(`${LOCAL_FILES.project} 이 없다 — 먼저 contextops setup 을 실행해라.`)
-    return { ok: false, code: EXIT.CONFIG }
-  }
-  if (config.state === 'invalid') {
-    cli.io.err(`${LOCAL_FILES.project} 이 계약과 맞지 않는다:`)
-    for (const line of config.problems) cli.io.err(`  ${line}`)
-    return { ok: false, code: EXIT.CONFIG }
-  }
-
-  const credentials = readCredentials(cli.home)
-  if (credentials.state === 'invalid') {
-    cli.io.err(`credentials.json 을 읽을 수 없다 (${credentials.problems.join(' · ')})`)
-    return { ok: false, code: EXIT.CONFIG }
-  }
-  const credential = credentials.state === 'ok'
-    ? findCredential(credentials.value, config.value.api_origin, config.value.project_id)
-    : undefined
-  if (credential === undefined) {
-    cli.io.err(`이 프로젝트의 기기 토큰이 없다 (${config.value.api_origin}) — contextops setup 을 다시 실행해라.`)
-    return { ok: false, code: EXIT.CONFIG }
-  }
+function preflight(cli: Cli, flags: Flags): Session {
+  const session = readyOrExplain(cli, flags)
+  if (!session.ok) return session
 
   //  🔴 디스크 쓰기 가능 확인 (SPEC §8.5 1단계). **여기서 못 쓰면 5단계에서 못 쓴다** —
   //     차이는 그때는 이미 backup 을 만들려던 중이라는 것뿐이다.
+  //     ⚠ sync 만 이걸 한다. 읽기만 하는 명령까지 probe 를 하면 읽기 전용
+  //       체크아웃에서 `status` 가 못 돈다 (`session.ts` 주석).
   try {
-    const probe = join(root, ...CACHE_DIR.split('/'), '.writable')
+    const probe = join(session.ready.root, ...CACHE_DIR.split('/'), '.writable')
     mkdirSync(dirname(probe), { recursive: true })
     atomicWriteFile(probe, '')
     rmSync(probe, { force: true })
@@ -80,21 +54,7 @@ function preflight(cli: Cli, flags: Flags): Preflight {
     return { ok: false, code: EXIT.CONFIG }
   }
 
-  return { ok: true, ready: { root, config: config.value, token: credential.token } }
-}
-
-/** 서버 실패를 종료 코드로 옮긴다. `setup` 과 같은 뜻을 쓴다 (`exit.ts` 표). */
-function reportFailure(cli: Cli, code: string, message: string): number {
-  if (code === 'UNAUTHORIZED') {
-    cli.io.err('토큰이 유효하지 않다 (만료·취소됐을 수 있다) — contextops setup 을 다시 실행해라.')
-    return EXIT.CONFIG
-  }
-  if (code === 'NOT_FOUND') {
-    cli.io.err('아직 발행된 버전이 없다 — 웹에서 첫 버전을 발행해라.')
-    return EXIT.CONFIG
-  }
-  cli.io.err(`서버가 거절했다 — ${code}: ${message}`)
-  return EXIT.NETWORK
+  return session
 }
 
 /** 상태 판정을 사람이 읽는 줄로. `status` 도 같은 모양을 쓴다. */

@@ -7,7 +7,13 @@
 // =====================================================================
 
 export type FlagSpec = {
-  kind: 'value' | 'bool'
+  /**
+   * `value` 는 마지막 것이 이긴다 · `list` 는 준 만큼 다 모은다 · `bool` 은 값을 안 받는다.
+   * ★ 왜 `list` 가 따로 있나 — `--evidence` 는 여러 번 준다 (`progress`). 그걸 `value`
+   *   로 받으면 **앞의 근거가 조용히 사라진다.** 근거가 사라지는 것은 P7 이 끊기는 것이라
+   *   「마지막 것이 이긴다」로 뭉갤 수 없다.
+   */
+  kind: 'value' | 'bool' | 'list'
   help: string
   /** 플래그가 없을 때 볼 환경변수. **자리는 여기 한 곳뿐이다.** */
   env?: string
@@ -19,6 +25,8 @@ export type Flags = {
   /** 플래그 → 환경변수 → `undefined` 순으로 찾는다. */
   value(name: string): string | undefined
   bool(name: string): boolean
+  /** `kind: 'list'` 플래그에 준 값 전부. 안 줬으면 빈 배열이다. */
+  list(name: string): string[]
   /** 플래그가 아닌 인자들 (`validate <file>` 의 파일 경로 같은 것). */
   positional: string[]
 }
@@ -29,6 +37,7 @@ export type ParseResult =
 
 export function parseArgs(argv: string[], specs: FlagSpecs, env: Record<string, string | undefined>): ParseResult {
   const values = new Map<string, string>()
+  const lists = new Map<string, string[]>()
   const bools = new Set<string>()
   const positional: string[] = []
 
@@ -55,12 +64,14 @@ export function parseArgs(argv: string[], specs: FlagSpecs, env: Record<string, 
     if (next === undefined || next.startsWith('--')) {
       return { ok: false, message: `--${name} 에 값이 없다` }
     }
-    values.set(name, next)
+    if (spec.kind === 'list') lists.set(name, [...(lists.get(name) ?? []), next])
+    else values.set(name, next)
   }
 
   return {
     ok: true,
     flags: {
+      list: (name) => lists.get(name) ?? [],
       value: (name) => {
         const given = values.get(name)
         if (given !== undefined) return given
@@ -78,7 +89,7 @@ export function parseArgs(argv: string[], specs: FlagSpecs, env: Record<string, 
 /** `--help` 본문. 표가 곧 도움말이라 둘이 갈라질 수가 없다. */
 export function flagHelp(specs: FlagSpecs): string[] {
   return Object.entries(specs).map(([name, spec]) => {
-    const shape = spec.kind === 'bool' ? `--${name}` : `--${name} <값>`
+    const shape = spec.kind === 'bool' ? `--${name}` : spec.kind === 'list' ? `--${name} <값>…` : `--${name} <값>`
     const env = spec.env === undefined ? '' : ` (환경변수 ${spec.env})`
     return `    ${shape.padEnd(22)} ${spec.help}${env}`
   })

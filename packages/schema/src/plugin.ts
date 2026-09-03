@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { DeviceToken, RepoName, RepoPath } from './common'
+import { DeviceToken, MilestoneId, RepoName, RepoPath } from './common'
 import { ContextItemDraft } from './item'
-import { MAX_DRAFT_ITEMS, SCAN_LIMITS, ScanSummary, SyncReport } from './upload'
+import { MAX_DRAFT_ITEMS, PROGRESS_STATUSES, Proposal, SCAN_LIMITS, ScanSummary, SyncReport } from './upload'
 
 // =====================================================================
 //  플러그인이 **로컬 디스크에 두는 파일들**의 계약 (docs/SPEC.md §8.2)
@@ -117,3 +117,47 @@ export const SyncReceiptFile = z.object({
   report: SyncReport,
 }).strict()
 export type SyncReceiptFile = z.infer<typeof SyncReceiptFile>
+
+/**
+ * `<repo>/.contextops/pending-proposal.json` — **Stop 훅이 남긴 힌트** (SPEC §8.6).
+ *
+ * ★ 왜 제안 그 자체가 아니라 힌트인가 — 훅에는 LLM 이 없다. 무엇이 바뀌었는지만
+ *   알고, **왜 바뀌었는지는 모른다.** 제안 본문을 훅이 지어내면 그건 근거 없는 줄이고
+ *   P7 이 끊긴다. 그래서 경로 목록과 한 줄짜리 이유만 남기고, 제안은 다음 세션의
+ *   propose Skill 이 사람과 함께 쓴다.
+ * ⚠ `.strict()` 다 — 훅이 파일 본문을 여기 담을 자리가 없다 (P1).
+ */
+export const PendingProposalFile = z.object({
+  changed_paths: z.array(RepoPath).min(1).max(50),
+  hint: z.string().min(1).max(300),
+}).strict()
+export type PendingProposalFile = z.infer<typeof PendingProposalFile>
+
+/**
+ * `<repo>/.contextops/cache/progress-<session>.json` — **이번 세션에 이미 보고했다**는 표시.
+ *
+ * ★ 왜 있나 — 같은 세션에서 agent 가 `progress` 를 부른 뒤 Stop 훅이 또 보고하면
+ *   Roadmap 의 근거 개수가 부풀고 「근거 3건」이 사실은 같은 작업 하나가 된다 (P7).
+ *   훅은 이 파일이 있으면 조용히 물러선다 (SPEC §8.6).
+ * ⚠ 파일 이름이 세션마다 다르므로 `LOCAL_FILES` 표에 없다 — 자리의 정본은
+ *   `plugin/contextops/src/cli/paths.ts` 의 `progressMarkerFile()` 하나다.
+ */
+export const ProgressMarkerFile = z.object({
+  session_id: z.string().min(1).max(200),
+  milestone_id: z.union([MilestoneId, z.literal('none')]),
+  status: z.enum(PROGRESS_STATUSES),
+}).strict()
+export type ProgressMarkerFile = z.infer<typeof ProgressMarkerFile>
+
+/**
+ * `<repo>/.contextops/cache/proposal.json` — propose Skill 이 쓰고 `propose` 가 읽는다.
+ *
+ * ★ 왜 `Proposal` 을 그대로 안 쓰나 — 그 body 에는 `base_version_id` 와
+ *   `client_request_id` 가 있다. 둘 다 **모델이 알 수 없는 값**이다:
+ *   기준 버전은 서버가 「지금 공식이 무엇인가」로 답하고, 요청 id 는 재시도를 위한
+ *   기계값이다. 모델이 쓰는 파일에 그 칸을 두면 **지어낸 uuid 로 남의 버전을 기준
+ *   삼는** 제안이 생긴다. 초안은 내용만 적고, 둘은 `propose` 가 붙인다.
+ *   (`ContextItemDraftFile` 이 `scan_summary` 를 빼는 것과 같은 이유다.)
+ */
+export const ProposalDraftFile = Proposal.omit({ base_version_id: true, client_request_id: true }).strict()
+export type ProposalDraftFile = z.infer<typeof ProposalDraftFile>
