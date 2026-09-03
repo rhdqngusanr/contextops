@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
   CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, ItemId,
-  MilestoneId, RepoPath, Scope, SourceRef, type ItemType,
+  MilestoneId, Question, RepoPath, Scope, SourceRef, type ItemType,
 } from './common'
 import { nonEmpty } from './table'
 
@@ -210,7 +210,7 @@ export type AiContextItemDraft = {
 export const AiStructureOutput = z.object({
   items: z.array(AiContextItemDraft).max(AI_MAX_ITEMS_PER_CHUNK),
   open_questions: z.array(z.object({
-    question: z.string().min(3).max(500),
+    question: Question,
     span: AiSourceSpan,
   }).strict()).max(AI_MAX_OPEN_QUESTIONS_PER_CHUNK),
 }).strict()

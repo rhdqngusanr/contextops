@@ -224,11 +224,19 @@ describe('빈도 제한 — AI_FEATURE_LIMITS 의 줄마다 결과가 갈린다'
       .rejects.toMatchObject({ code: 'VALIDATION_FAILED' })
   })
 
-  it('conflict 는 빈도 상한이 없다 — 그건 표의 `rate: null` 이 정한 것이다', async () => {
-    expect(AI_FEATURE_LIMITS.conflict.rate).toBeNull()
+  it('conflict 도 프로젝트마다 센다 — §7.2 가 「탐지 한 번」으로 정했다', async () => {
+    //  ⚠ 15바퀴까지 이 칸은 `rate: null`(상한 없음)이었다. §7.2 를 만든 바퀴가
+    //     「무엇마다 세나」를 정하면서 채웠다 (SPEC §7.5 · FINDINGS 51).
+    const rate = AI_FEATURE_LIMITS.conflict.rate
+    expect(rate).toEqual({ calls: 10, windowSeconds: 3600, scope: 'project' })
     const ctx = { projectId: PROJECT, inputChars: 10, now: NOW }
-    for (let i = 0; i < 12; i++) await withBudget('conflict', ctx, fakeCall(1, 1))
-    expect((await db.select().from(aiUsage)).length).toBe(12)
+    for (let i = 0; i < rate!.calls; i++) await withBudget('conflict', ctx, fakeCall(1, 1))
+    expect((await db.select().from(aiUsage)).length).toBe(rate!.calls)
+    await expect(withBudget('conflict', ctx, fakeCall(1, 1)))
+      .rejects.toMatchObject({ code: 'RATE_LIMITED' })
+    //  창이 지나면 다시 된다 — 상한은 「영원히 막는 것」이 아니라 폭주를 끊는 것이다.
+    const later = new Date(NOW.getTime() + rate!.windowSeconds * 1000 + 1)
+    await withBudget('conflict', { ...ctx, now: later }, fakeCall(1, 1))
   })
 
   it('던지는 것은 전부 ApiError 다 — 라우트가 봉투로 낼 수 있어야 한다 (SPEC §5)', async () => {

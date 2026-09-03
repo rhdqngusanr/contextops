@@ -377,8 +377,12 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 ### 7.2 충돌·오래됨 탐지 `detectConflicts(projectId, changedItemIds)`
 - 입력: 변경된 항목 + 같은 type/scope의 기존 active 항목(최대 40개, body 요약 300자).
-- 출력: `conflicts: [{kind, a_item_id, b_item_id?, question, severity}]`. kind 규칙: `contradiction`(양립 불가), `stale`(날짜·버전이 더 최신 항목에 의해 무효), `duplicate`(같은 개념), `doc_vs_code`(문서 항목 vs 코드 origin 항목).
+- 출력: `conflicts: [{kind, a_item_id, b_item_id?, question, severity}]`. kind 규칙: `contradiction`(양립 불가), `stale`(날짜·버전이 더 최신 항목에 의해 무효), `duplicate`(같은 개념), `doc_vs_code`(문서 항목 vs 코드 origin 항목). 🔴 종류별 규칙(탐지가 내는가 · 두 쪽이 필요한가 · 모델에게 주는 한 줄)의 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표다 — 프롬프트가 그 표를 **읽어서** 싣는다. `CONFLICT_KINDS` 5종 중 `open_question` 만 `detected:false` 이고 그것은 §7.1 이 만든다.
+- `a_item_id`·`b_item_id` 는 uuid 가 아니라 `item_<slug>` 다. 🔴 **프롬프트에 실리지 않은 id 가 오면 재시도한다** — 모델이 지어낸 id 는 남의 항목을 가리키고 그게 P7 이 무너지는 자리다. 같은 짝의 중복·자기 자신과의 충돌·「바뀐 항목이 한쪽도 없는 짝」도 같은 재시도로 간다.
+- `severity` 는 `high`·`medium`·`low` 3단계이고 정본은 `CONFLICT_SEVERITIES` 다 (화면 4 는 카드 10장만 보여 주므로 결과를 심각도 내림차순으로 낸다). ⚠ SPEC 은 원래 이 필드의 **이름만** 적었다 — 값은 이 저장소에 이미 있는 3단계 사다리와 같은 낱말로 정했다.
 - LLM은 "최신이 맞다"를 판단하지 않는다. 질문만 만든다.
+- 🔴 **`detectConflicts()` 한 번이 `withBudget('conflict')` 한 번이고 LLM 왕복도 한 번(+재시도 1회)이다.** 장부(`ai_usage`)의 행 수가 곧 빈도이므로, 항목을 나눠 여러 번 부르면 §7.5 의 상한이 「탐지 N회」가 아니라 「묶음 N개」가 된다 (§7.1 의 「문서 하나」와 같은 자리의 결정).
+- 수치(후보 40개 · body 300자 · 재시도 1회)의 정본은 `apps/web/src/lib/ai/conflict.ts` 의 상수다.
 
 ### 7.3 질의 `ask(projectId, question)`
 - 입력: active 항목 전체(project당 상한 150개, 초과 시 type별 priority 상위) + 질문. 벡터 DB 없음.
@@ -390,11 +394,11 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 ### 7.5 예산 가드 `budget.ts`
 - 환경변수 `AI_DAILY_BUDGET_USD`(기본 3), `AI_MAX_INPUT_TOKENS`(기본 60k/`withBudget` 한 번). 토큰 추정 = chars/2.5(ko) 보수적. ⚠ 「한 번」은 LLM 왕복이 아니라 **문 하나를 지나는 일 하나**다 — 문서 구조화는 문서 하나가 한 번이고 그 안에 chunk 호출이 여럿 있다 (§7.1).
 - 초과 시 `BUDGET_EXCEEDED` → 화면은 "오늘의 AI 예산 소진 — 샘플 결과를 보여드립니다"로 픽스처 결과 표시.
-- Rate limit: IP·사용자당 분당 3회(`/ask`, `/demo`), 문서 구조화는 프로젝트당 시간당 5회. Claude Console 월 한도는 운영자가 $30 설정.
+- Rate limit: IP·사용자당 분당 3회(`/ask`, `/demo`), 문서 구조화는 프로젝트당 시간당 5회, **충돌 탐지는 프로젝트당 시간당 10회**. Claude Console 월 한도는 운영자가 $30 설정.
 - 🔴 **공개 API 는 `withBudget(feature, ctx, fn)` 하나다.** `feature` 는 §7.1~§7.4 의 넷(`structure`·`conflict`·`ask`·`demo`)이고 정본 표는 `apps/web/src/lib/ai/features.ts` 다 — 기능별 빈도 상한·모델 정가·기본 한도가 전부 그 표에 있다. 빈도 초과는 `RATE_LIMITED`, 입력·하루 상한 초과는 `BUDGET_EXCEEDED`.
 - 하루치와 창(window)은 **`ai_usage` 표**(§2)로 센다 — 프로세스 메모리에 세면 서버리스에서 인스턴스마다 따로 세고 콜드 스타트마다 0으로 돌아간다. 그 표에는 프롬프트·응답 본문이 들어갈 칸이 없고, 행위자는 sha256 으로만 남는다 (P1 · §11).
 - **실패한 호출도 장부에 남는다**(추정치로). 안 남기면 계속 실패하는 루프가 장부 밖에서 예산을 태운다.
-- ⚠ `conflict` 에는 빈도 상한이 **없다** — §7.2 가 「무엇마다 세나」를 정하기 전에는 숫자를 지어내지 않는다. 그동안은 하루 예산이 막는다.
+- ⚠ `conflict` 의 「무엇마다 세나」는 §7.2 가 정했다 — **탐지 한 번(= 바뀐 항목 묶음 하나)** 이고 열쇠는 프로젝트다. 사람이 누르는 것이 아니라 서버가 부르는 기능이라 사용자 단위로 셀 열쇠가 없다. 이 상한은 예산을 대신하는 것이 아니라 폭주를 끊는 것이다 — 돈을 막는 것은 여전히 하루 예산이다.
 
 ---
 

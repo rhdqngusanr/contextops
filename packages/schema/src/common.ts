@@ -85,6 +85,13 @@ export const ITEM_ID_BODY_MAX = 40
 /** `item_<slug>` (SPEC §3). */
 export const ItemId = z.string().regex(new RegExp(`^item_[a-z0-9_]{3,${ITEM_ID_BODY_MAX}}$`))
 
+/**
+ * 사람에게 보여 줄 **질문 한 줄** (SPEC §7.1 `open_questions` · §7.2 충돌 카드 · §9 화면 4).
+ * ★ 왜 원자로 올렸나 — 같은 길이 제한이 §7.1 출력과 §7.2 출력 **두 곳**에 있었다.
+ *   한쪽만 넓히면 모델이 낸 긴 질문이 한 기능에서만 통과한다.
+ */
+export const Question = z.string().min(3).max(500)
+
 /** `BS-M1` 또는 `M1` (SPEC §3 RoadmapData). */
 export const MilestoneId = z.string().regex(/^[A-Z]{1,4}-M\d{1,2}$|^M\d{1,2}$/)
 

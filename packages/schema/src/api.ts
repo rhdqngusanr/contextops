@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, RepoName, Scope, Semver, SourceRef } from './common'
+import {
+  CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, ItemId,
+  Question, RepoName, Scope, Semver, SourceRef,
+} from './common'
 import { ContextItemDraft } from './item'
 import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
 
@@ -149,6 +152,124 @@ export type ConflictStatus = (typeof CONFLICT_STATUSES)[number]
  */
 export const CONFLICT_CHOICES = ['a', 'b', 'both', 'dismiss'] as const
 export type ConflictChoice = (typeof CONFLICT_CHOICES)[number]
+
+// ---------------------------------------------------------------------
+//  §7.2 충돌 탐지가 내는 모양 — 종류별로 갈리는 것은 **아래 표 하나**에만 있다
+//
+//  ⚠ 이 계약은 **외부 입력**이다 (LLM 응답). 그래서 라우트 body 와 같은 곳에 둔다 —
+//    「모든 외부 입력은 packages/schema 로 파싱한다」(CLAUDE.md). §7.1 의
+//    `AiStructureOutput`(item.ts)과 같은 이유다.
+// ---------------------------------------------------------------------
+
+/** 충돌 종류 하나의 규칙. 프롬프트·검증·화면이 이 표를 **읽기만** 한다. */
+export interface ConflictKindRule {
+  /**
+   * §7.2 **탐지가 이 종류를 낼 수 있나.** `false` 면 다른 곳이 만든다 —
+   * 어디가 만드는지는 `madeBy` 에 적는다.
+   */
+  readonly detected: boolean
+  /** 두 항목이 어긋나는 종류인가. `true` 면 `b_item_id` 가 **있어야** 한다. */
+  readonly needsB: boolean
+  /** 이 종류를 만드는 자리 한 줄. `detected` 가 `false` 인 줄이 특히 중요하다. */
+  readonly madeBy: string
+  /**
+   * 모델에게 주는 한 줄 정의. **§7.2 의 프롬프트가 이 문장을 그대로 싣는다** —
+   * 여기 없는 종류는 모델이 배우지 못하고, 배우지 못한 종류는 영원히 0건이다.
+   */
+  readonly hint: string
+}
+
+/**
+ * 🔴 **충돌 종류별 규칙의 정본 표** (SPEC §7.2 「kind 규칙」).
+ *
+ * ★ 새 종류를 더하는 절차 — 넷이고, 앞의 둘은 기계가 막아 준다:
+ *   ① `CONFLICT_KINDS` **끝에** 값 추가 (중간에 끼우지 마라 — `conflicts.kind` 로 직렬화된다)
+ *   ② 이 표에 한 줄  ← ①만 하면 여기서 타입 검사가 막힌다
+ *   ③ `pnpm --filter web db:generate` (pgEnum 값이 늘었다)
+ *   ④ `detected: true` 로 더했으면 `test/scope-and-enums.test.ts` 의 「탐지 종류는
+ *      전부 프롬프트에 실린다」가 그 줄을 요구한다
+ *
+ * ⚠ `detected` 가 `false` 인 줄은 **§7.2 의 출력 enum 에서 빠진다.** 모델이 낼 수
+ *   없는 종류를 도구 스키마에 실으면, 모델은 그 이름을 골라 놓고 우리 검증에서
+ *   버려진다 — 재시도가 늘고 재시도는 곧 돈이다.
+ */
+export const CONFLICT_KIND_RULES = {
+  contradiction: {
+    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    hint: '양립할 수 없다 — 둘 다 지키면 모순이 되는 두 항목이다.',
+  },
+  stale: {
+    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    hint: '한쪽의 날짜·버전이 다른 쪽에 의해 무효가 됐다. **어느 쪽이 맞는지는 판단하지 마라.**',
+  },
+  duplicate: {
+    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    hint: '같은 개념을 두 항목이 각각 적었다.',
+  },
+  doc_vs_code: {
+    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    hint: '문서에서 온 항목(origin=doc)과 코드에서 온 항목(origin=code)이 서로 다른 말을 한다.',
+  },
+  //  ⚠ 이 종류만 `detected: false` 다. §7.1 이 문서를 읽다 「판단이 필요하다」고 남긴
+  //     질문이고, 두 항목이 어긋난 것이 아니라 **한쪽도 아직 없는** 것이다.
+  open_question: {
+    detected: false, needsB: false, madeBy: '§7.1 문서 구조화의 `open_questions`',
+    hint: '',
+  },
+  //  ⚠ `as const` 여야 `detected` 가 `true`/`false` **리터럴**로 남고, 아래
+  //     `DetectedConflictKind` 가 표에서 타입으로 파생될 수 있다. `satisfies` 는
+  //     빠진 줄을 그대로 막아 준다 (`Record` 주석과 같은 보호다).
+} as const satisfies Record<ConflictKind, ConflictKindRule>
+
+/** 표의 `detected: true` 인 줄만 모은 **타입**. 손으로 다시 적지 마라. */
+export type DetectedConflictKind = {
+  [K in ConflictKind]: (typeof CONFLICT_KIND_RULES)[K]['detected'] extends true ? K : never
+}[ConflictKind]
+
+/** 같은 것을 **값**으로. 위 타입과 이 배열은 같은 표에서 나온다. */
+export const DETECTED_CONFLICT_KINDS = CONFLICT_KINDS.filter(
+  //  ⚠ 표를 읽는 순간 `detected` 가 `boolean` 으로 넓어져서 TS 가 이 좁힘을 스스로
+  //     증명하지 못한다. 위 타입과 **같은 표**를 보고 있으므로 뜻은 어긋날 수 없다.
+  (k): k is DetectedConflictKind => CONFLICT_KIND_RULES[k].detected,
+)
+
+/**
+ * 충돌 카드의 심각도 3단계.
+ *
+ * ⚠ SPEC §7.2 는 `severity` 라는 **이름만** 적고 값을 적지 않는다. 지어내는 대신
+ *   이 저장소에 이미 있는 3단계 사다리(`CONFIDENCE_LEVELS`)와 **같은 낱말**을 쓴다.
+ * ★ 왜 `CONFIDENCE_LEVELS` 를 그대로 재사용하지 않나 — 뜻이 다르다. 확신 단계가
+ *   늘어야 할 이유와 충돌 심각도가 늘어야 할 이유는 서로 상관이 없고, 하나로 묶으면
+ *   한쪽 때문에 다른 쪽이 바뀐다.
+ */
+export const CONFLICT_SEVERITIES = ['high', 'medium', 'low'] as const
+export type ConflictSeverity = (typeof CONFLICT_SEVERITIES)[number]
+
+/**
+ * 심각도 → 정렬 순서 (큰 값이 먼저). **화면 4 는 카드 10장만 보여 준다** —
+ * 무엇이 앞에 오는지가 곧 사람이 무엇을 먼저 보는가다.
+ */
+export const CONFLICT_SEVERITY_RANK: Record<ConflictSeverity, number> = { high: 2, medium: 1, low: 0 }
+
+/** §7.2 한 번이 낼 수 있는 충돌 수 상한 — 넘으면 계약 위반으로 1회 재시도한다. */
+export const AI_MAX_CONFLICTS = 20
+
+/** 🔴 §7.2 의 출력 그 자체. 도구(tool use)의 `input_schema` 가 이것에서 나온다. */
+export const AiConflict = z.object({
+  kind: z.enum(DETECTED_CONFLICT_KINDS),
+  //  ⚠ uuid 가 아니라 `item_<slug>` 다. 모델은 프롬프트에 실린 id 만 쓸 수 있고,
+  //     실리지 않은 id 는 서버가 「없는 항목」으로 잡아 재시도한다 (P7).
+  a_item_id: ItemId,
+  b_item_id: ItemId.optional(),
+  question: Question,
+  severity: z.enum(CONFLICT_SEVERITIES),
+}).strict()
+export type AiConflict = z.infer<typeof AiConflict>
+
+export const AiConflictOutput = z.object({
+  conflicts: z.array(AiConflict).max(AI_MAX_CONFLICTS),
+}).strict()
+export type AiConflictOutput = z.infer<typeof AiConflictOutput>
 
 // ---------------------------------------------------------------------
 //  요청 body — 전부 `.strict()` 다 (P1 · SPEC §3.1)

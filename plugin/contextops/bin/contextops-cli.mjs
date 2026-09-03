@@ -18990,6 +18990,7 @@ var DeviceToken = external_exports.string().regex(
 );
 var ITEM_ID_BODY_MAX = 40;
 var ItemId = external_exports.string().regex(new RegExp(`^item_[a-z0-9_]{3,${ITEM_ID_BODY_MAX}}$`));
+var Question = external_exports.string().min(3).max(500);
 var MilestoneId = external_exports.string().regex(/^[A-Z]{1,4}-M\d{1,2}$|^M\d{1,2}$/);
 var CalendarDate = external_exports.iso.date();
 var Semver = external_exports.string().regex(/^\d+\.\d+\.\d+$/, "major.minor.\uC218\uC815 \uC138 \uC790\uB9AC\uC5EC\uC57C \uD55C\uB2E4");
@@ -19127,7 +19128,7 @@ var AiContextItemDraft = external_exports.discriminatedUnion("type", variantsOf(
 var AiStructureOutput = external_exports.object({
   items: external_exports.array(AiContextItemDraft).max(AI_MAX_ITEMS_PER_CHUNK),
   open_questions: external_exports.array(external_exports.object({
-    question: external_exports.string().min(3).max(500),
+    question: Question,
     span: AiSourceSpan
   }).strict()).max(AI_MAX_OPEN_QUESTIONS_PER_CHUNK)
 }).strict();
@@ -19252,6 +19253,62 @@ var SOURCE_DOCUMENT_KINDS = ["goal", "policy", "roadmap", "adr", "notes", "wiki"
 var CONFLICT_KINDS = ["contradiction", "stale", "duplicate", "doc_vs_code", "open_question"];
 var CONFLICT_STATUSES = ["open", "resolved", "dismissed"];
 var CONFLICT_CHOICES = ["a", "b", "both", "dismiss"];
+var CONFLICT_KIND_RULES = {
+  contradiction: {
+    detected: true,
+    needsB: true,
+    madeBy: "\xA77.2 \uD0D0\uC9C0",
+    hint: "\uC591\uB9BD\uD560 \uC218 \uC5C6\uB2E4 \u2014 \uB458 \uB2E4 \uC9C0\uD0A4\uBA74 \uBAA8\uC21C\uC774 \uB418\uB294 \uB450 \uD56D\uBAA9\uC774\uB2E4."
+  },
+  stale: {
+    detected: true,
+    needsB: true,
+    madeBy: "\xA77.2 \uD0D0\uC9C0",
+    hint: "\uD55C\uCABD\uC758 \uB0A0\uC9DC\xB7\uBC84\uC804\uC774 \uB2E4\uB978 \uCABD\uC5D0 \uC758\uD574 \uBB34\uD6A8\uAC00 \uB410\uB2E4. **\uC5B4\uB290 \uCABD\uC774 \uB9DE\uB294\uC9C0\uB294 \uD310\uB2E8\uD558\uC9C0 \uB9C8\uB77C.**"
+  },
+  duplicate: {
+    detected: true,
+    needsB: true,
+    madeBy: "\xA77.2 \uD0D0\uC9C0",
+    hint: "\uAC19\uC740 \uAC1C\uB150\uC744 \uB450 \uD56D\uBAA9\uC774 \uAC01\uAC01 \uC801\uC5C8\uB2E4."
+  },
+  doc_vs_code: {
+    detected: true,
+    needsB: true,
+    madeBy: "\xA77.2 \uD0D0\uC9C0",
+    hint: "\uBB38\uC11C\uC5D0\uC11C \uC628 \uD56D\uBAA9(origin=doc)\uACFC \uCF54\uB4DC\uC5D0\uC11C \uC628 \uD56D\uBAA9(origin=code)\uC774 \uC11C\uB85C \uB2E4\uB978 \uB9D0\uC744 \uD55C\uB2E4."
+  },
+  //  ⚠ 이 종류만 `detected: false` 다. §7.1 이 문서를 읽다 「판단이 필요하다」고 남긴
+  //     질문이고, 두 항목이 어긋난 것이 아니라 **한쪽도 아직 없는** 것이다.
+  open_question: {
+    detected: false,
+    needsB: false,
+    madeBy: "\xA77.1 \uBB38\uC11C \uAD6C\uC870\uD654\uC758 `open_questions`",
+    hint: ""
+  }
+  //  ⚠ `as const` 여야 `detected` 가 `true`/`false` **리터럴**로 남고, 아래
+  //     `DetectedConflictKind` 가 표에서 타입으로 파생될 수 있다. `satisfies` 는
+  //     빠진 줄을 그대로 막아 준다 (`Record` 주석과 같은 보호다).
+};
+var DETECTED_CONFLICT_KINDS = CONFLICT_KINDS.filter(
+  //  ⚠ 표를 읽는 순간 `detected` 가 `boolean` 으로 넓어져서 TS 가 이 좁힘을 스스로
+  //     증명하지 못한다. 위 타입과 **같은 표**를 보고 있으므로 뜻은 어긋날 수 없다.
+  (k) => CONFLICT_KIND_RULES[k].detected
+);
+var CONFLICT_SEVERITIES = ["high", "medium", "low"];
+var AI_MAX_CONFLICTS = 20;
+var AiConflict = external_exports.object({
+  kind: external_exports.enum(DETECTED_CONFLICT_KINDS),
+  //  ⚠ uuid 가 아니라 `item_<slug>` 다. 모델은 프롬프트에 실린 id 만 쓸 수 있고,
+  //     실리지 않은 id 는 서버가 「없는 항목」으로 잡아 재시도한다 (P7).
+  a_item_id: ItemId,
+  b_item_id: ItemId.optional(),
+  question: Question,
+  severity: external_exports.enum(CONFLICT_SEVERITIES)
+}).strict();
+var AiConflictOutput = external_exports.object({
+  conflicts: external_exports.array(AiConflict).max(AI_MAX_CONFLICTS)
+}).strict();
 var Slug = external_exports.string().min(2).max(60).regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "\uC18C\uBB38\uC790\xB7\uC22B\uC790\xB7\uD558\uC774\uD508\uB9CC");
 var Name = external_exports.string().min(1).max(120);
 var CreateTeam = external_exports.object({ name: Name, slug: Slug }).strict();

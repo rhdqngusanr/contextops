@@ -57,11 +57,16 @@ export interface AiFeatureLimit {
 export const AI_FEATURE_LIMITS: Record<AiFeature, AiFeatureLimit> = {
   //  §7.5 「문서 구조화는 프로젝트당 시간당 5회」
   structure: { spec: '§7.1', rate: { calls: 5, windowSeconds: 3600, scope: 'project' } },
-  //  ⚠ SPEC §7.5 에 충돌 탐지의 빈도 상한이 **없다.** 지어내지 않는다 —
-  //    이 기능은 사람이 누르는 것이 아니라 항목이 바뀔 때 서버가 부르는 것이라
-  //    창 단위 상한이 무엇을 뜻하는지 §7.2 가 정하기 전에는 답이 없다.
-  //    그동안은 하루 예산이 막는다 (docs/feedback/FINDINGS.md).
-  conflict: { spec: '§7.2', rate: null },
+  //  §7.5 「충돌 탐지는 프로젝트당 시간당 10회」 — **§7.2 를 만든 바퀴가 정했다.**
+  //  ★ 왜 프로젝트·시간인가 — 이 기능은 사람이 누르는 것이 아니라 **항목이 바뀐
+  //    묶음마다** 서버가 부른다 (`detectConflicts()` 한 번 = 장부 한 줄). 그러니
+  //    세는 열쇠는 사람이 아니라 프로젝트이고, 창은 structure 와 같은 한 시간이다 —
+  //    두 기능이 다른 창을 쓰면 「이 프로젝트가 이번 시간에 AI 를 얼마나 썼나」를
+  //    한 눈으로 볼 수 없다.
+  //  ★ 왜 10인가 — 한 프로젝트가 한 시간에 열 번 넘게 항목 묶음을 바꿔 올리는 것은
+  //    사람의 작업 리듬이 아니라 **루프**다. 그리고 10회면 하루 예산($3)보다
+  //    먼저 걸리지 않는다 — 이 상한은 예산을 대신하는 것이 아니라 폭주를 끊는 것이다.
+  conflict: { spec: '§7.2', rate: { calls: 10, windowSeconds: 3600, scope: 'project' } },
   //  §7.5 「IP·사용자당 분당 3회(`/ask`, `/demo`)」
   ask: { spec: '§7.3', rate: { calls: 3, windowSeconds: 60, scope: 'actor' } },
   //  §7.4 「게스트 IP당 일 5회」 — 분당 3회(§7.5)보다 이쪽이 좁아서 이 값을 쓴다.
