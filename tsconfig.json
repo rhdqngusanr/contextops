@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": [
+    "루트 자체의 파일(패키지에 속하지 않는 설정 파일)을 검사한다.",
+    "★ 왜 있나 — vitest.base.ts 는 워크스페이스 패키지가 아니라서 `pnpm -r exec tsc`",
+    "  가 절대 보지 않는다. 검사되지 않는 설정 파일은 조용히 틀린다."
+  ],
+  "extends": "./tsconfig.base.json",
+  "include": ["vitest.base.ts"]
+}

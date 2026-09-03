@@ -89,7 +89,9 @@ if (-not $hasWorkspace) {
     Add-Layer "typecheck" "SKIP" "앞 층이 빨갛다"
     Add-Layer "test"      "SKIP" "앞 층이 빨갛다"
 } else {
-    $r = Invoke-Layer "typecheck" "pnpm -r exec tsc --noEmit"
+    #  ⚠ 검사 명령을 여기 적지 마라 — 루트 package.json 의 스크립트가 정본이다.
+    #    여기와 .github/workflows/ci.yml 에 각각 적으면 셋이 갈라진다.
+    $r = Invoke-Layer "typecheck" "pnpm typecheck"
     if ($r.code -eq 0) { Add-Layer "typecheck" "OK" "$($r.sec)초" }
     else               { Add-Layer "typecheck" "FAIL" (Get-LastLines $r.log) }
 
@@ -97,7 +99,7 @@ if (-not $hasWorkspace) {
     if ($red -gt 0) {
         Add-Layer "test" "SKIP" "앞 층이 빨갛다"
     } else {
-        $r = Invoke-Layer "test" "pnpm -r test"
+        $r = Invoke-Layer "test" "pnpm test"
         if ($r.code -eq 0) { Add-Layer "test" "OK" "$($r.sec)초" }
         else               { Add-Layer "test" "FAIL" (Get-LastLines $r.log) }
     }

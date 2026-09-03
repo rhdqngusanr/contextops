@@ -1,0 +1,38 @@
+# GitHub 위에서 도는 검사.
+#
+# ★ 무엇을 검사할지는 여기에 적지 않는다 — 루트 package.json 의 스크립트와
+#   tools/*.ps1 이 정본이고, 이 파일은 그걸 부르기만 한다.
+#   ⚠ 검사 내용을 여기에도 적으면 로컬(tools/ci.ps1)과 갈라지고, 둘 중 어느
+#     쪽이 진짜인지 아무도 모르게 된다.
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 절대 원칙 P1~P7 (docs/SPEC.md §0.1)
+        shell: pwsh
+        run: ./tools/principles.ps1
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 노드 버전의 정본은 .nvmrc 하나다. 여기에 숫자를 적지 마라.
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      # TODO(P2 · docs/PLAN.md): plugin/contextops 가 생기면 `claude plugin validate` 층을 더한다.

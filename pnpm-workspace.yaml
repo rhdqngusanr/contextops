@@ -1,0 +1,23 @@
+# 워크스페이스 멤버. 저장소 구조의 정본은 docs/SPEC.md §1.1 이다.
+#
+# ★ 새 패키지를 더하는 절차 — 아래 glob 이 이미 덮으므로 packages: 는 안 고쳐도 된다.
+#   패키지 폴더에 셋을 둔다:
+#     ① package.json     — "test": "vitest run" · devDependency 는 "catalog:" 로
+#     ② tsconfig.json    — ../../tsconfig.base.json 을 extends
+#     ③ vitest.config.ts — `export { default } from '../../vitest.base'` 한 줄
+#   공개 API 는 src/index.ts 하나로만 내보낸다 (CLAUDE.md).
+#   ★ 왜 셋인가 — tools/ci.ps1 의 typecheck 층은 `pnpm typecheck`, test 층은
+#     `pnpm test` 이고 둘 다 워크스페이스 멤버만 돈다. 셋 중 하나라도 없으면
+#     그 패키지는 **검사 없이 초록**이 된다. 설정값은 ②③ 이 가리키는 정본
+#     파일에만 적어라 — 패키지에 직접 적으면 조용히 갈라진다.
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "plugin/contextops"
+
+# 의존성 버전의 정본. 패키지는 "catalog:" 라고만 쓴다.
+# ★ 왜 — 같은 버전을 패키지마다 적으면 한쪽만 올라가고 조용히 갈라진다.
+#   버전 고정표는 docs/SPEC.md §1.2 다.
+catalog:
+  typescript: ^5.9.3
+  vitest: ^4.1.11
