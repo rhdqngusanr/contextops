@@ -138,8 +138,10 @@
       ① ✅ **예산 가드** (`fdf098b`) — `withBudget()` · AI 경계(`lib/ai/client.ts`) ·
       `ai_usage` 장부 · `AI_FEATURES`/`AI_FEATURE_LIMITS`/`AI_MODELS` 표.
       `principles.ps1` 의 **P3·P3b 가 SKIP 에서 켜졌다** (OK 7 → OK 9).
-      ② ⬜ **`structureDocument`** (SPEC §7.1) — 지금은 `withBudget()` 소비처가 0곳이다
-      (FINDINGS 49). 같은 바퀴에 `AI_OUTPUT_INVALID` 를 에러 표에 더해라 (FINDINGS 48).
+      ② ✅ **`structureDocument`** (`34eb766`) — `lib/ai/structure.ts` · `lib/ai/prompt.ts` ·
+      `AiStructureOutput`(§7.1 출력 계약) · `AI_OUTPUT_INVALID`(FINDINGS 48). 시험 24개.
+      `withBudget()` 이 제품 소비처를 가졌다 (FINDINGS 49 닫음). 에러 코드 **11종 전부**
+      내는 자리를 가졌다. ⚠ **API 키가 없어 스텁으로만 쟀다** — 진짜 응답은 못 봤다.
       ③ ⬜ **`detectConflicts`** (SPEC §7.2) — 충돌을 **만드는** 코드가 여기서 생긴다
       (FINDINGS 28·25·29·31 이 전부 이 행을 기다린다). 빈도 상한도 여기서 정한다 (FINDINGS 51).
 - [ ] **웹 화면 3·4** — 가져오기 · 정리 · 질문 카드 10장

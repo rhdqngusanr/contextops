@@ -29,7 +29,39 @@
 
 ## 다음에 고칠 것
 
-### 48. SPEC §7 이 쓰라는 `AI_OUTPUT_INVALID` 가 **에러 코드 표에 없다**   [구멍]
+### 52. `structureDocument()` 를 **부르는 라우트가 없다**   [구멍]
+- **증상**: §7.1 을 만들었는데 `grep -rn "structureDocument" apps/web/src packages plugin`
+  → `lib/ai/structure.ts` 밖에서 **0건**이다. SPEC §5 는 `POST /projects/{id}/documents`
+  가 「document + **구조화 job 시작**(§7.1)」이라고 적는데, 라우트는 문서만 만들고
+  주석으로 「아직이다」라고 적어 뒀다. 즉 FINDINGS 49(소비처 0곳)가 **한 겹 위로
+  올라갔을 뿐** 사람이 문서를 올려도 항목이 생기지 않는다.
+- **근거**: 이번 바퀴 직접 grep · `apps/web/src/app/api/v1/projects/[id]/documents/route.ts:17`
+  의 주석 「구조화 job 시작 (§7.1)도 아직이다」
+- **정본**: `docs/SPEC.md` §5 · §7.1 · §9 화면 3
+- **고칠 방향**: 화면 3(가져오기)이 주인이다. ⚠ **동기로 부르지 마라** — 12 chunk 짜리
+  문서는 한 요청 안에서 끝나지 않는다. SPEC §9 화면 3 이 「구조화 진행 표시(polling)」
+  라고 적은 것이 그 뜻이다. job 상태를 어디에 둘지가 그 바퀴의 첫 결정이다.
+  ⚠ 키가 없으면 `client.ts` 가 던진다 — 그 갈래를 §7.5 의 「픽스처 결과」로 받는 것도
+  라우트·화면의 일이다 (lib 은 던지는 데까지가 제 일이다).
+- **상태**: 대기 (P3 둘째 행 「웹 화면 3·4」가 주인)
+
+### 53. 도구 `input_schema` 의 `$defs` 이름이 **아무 뜻이 없다**   [격차]
+- **증상**: §7.1 이 모델에게 주는 JSON Schema 는 `z.toJSONSchema(..., {reused:'ref'})`
+  가 낸 것이라 재사용 조각의 이름이 `__schema0` ~ `__schema23` 이다. **이 파일은
+  모델이 읽는 지시서**인데(SPEC §7 「input_schema = 해당 Zod 의 JSON Schema」)
+  이름이 뜻을 하나도 안 나른다. 「`__schema4` 를 채워라」는 「scope 를 채워라」보다
+  약한 지시다 — 출력 품질이 떨어지면 재시도가 늘고 재시도는 곧 돈이다.
+- **근거**: 이번 바퀴 직접 출력 — `$defs` 24개 · 전체 11,485바이트 ·
+  `items.items.$ref = "#/$defs/__schema0"` · `span` 정의는 `__schema15` 를 다시 참조
+- **정본**: `docs/SPEC.md` §7
+- **고칠 방향**: Zod 의 `.meta({ id: 'Scope' })` 로 이름을 주면 `$defs` 키가 그 이름이
+  된다. ⚠ **`packages/schema` 를 고치면 `plugin/contextops/schemas/*.json` 이 통째로
+  바뀐다** (같은 `toJsonSchemaOf` 를 쓴다) — `json-schema.test.ts` 가 표류로 잡으므로
+  산출물을 같이 커밋해야 한다. ⚠ 이름은 **모델에게 주는 힌트**라서 바꾸면
+  「진짜로 나아졌나」를 잴 방법이 지금은 없다 (키가 없다). 키가 생긴 뒤에 해라.
+- **상태**: 대기 (🙋 API 키 다음)
+
+### 48. ✅ SPEC §7 이 쓰라는 `AI_OUTPUT_INVALID` 가 **에러 코드 표에 없다**   [구멍]
 - **증상**: §7 공통 규약은 「출력은 Zod 로 재검증, 실패 시 오류 위치를 넣어 1회 재시도,
   재실패 시 `AI_OUTPUT_INVALID`」다. 그런데 `ERROR_CODES` 10종에 그 이름이 없다
   (`UNAUTHORIZED`·`FORBIDDEN`·`NOT_FOUND`·`VALIDATION_FAILED`·`STALE_BASE`·
@@ -48,9 +80,12 @@
 - **왜 이번 바퀴에 안 했나**: 이번 바퀴의 일은 예산 가드였고, 코드를 더하면 소비처가
   없는 채로 `WITHOUT_OWNER` 에 한 줄이 새로 생긴다 — 방금 비운 표를 도로 채우게 된다.
   **§7.1 과 같은 바퀴에 해라.**
-- **상태**: 대기 (P3 첫 행 ②가 주인)
+- **상태**: ✅ `34eb766` — `ERROR_CODES` 끝에 한 줄 · `ERROR_STATUS` 502(상류가 계약을
+  어긴 것이지 우리가 터진 게 아니다) · `ERROR_HINT` 화면 문구. **소비처와 같은 바퀴에
+  넣었다** — `lib/ai/structure.ts` 가 재시도 뒤에 던지므로 `WITHOUT_OWNER` 는 여전히
+  비어 있고 에러 코드 **11종 전부**가 내는 자리를 가졌다.
 
-### 49. `withBudget()` 에 **소비처가 0곳**이다   [구멍]
+### 49. ✅ `withBudget()` 에 **소비처가 0곳**이다   [구멍]
 - **증상**: 이번 바퀴에 예산 가드를 만들었고 시험 18개가 잰다. 그런데
   `grep -rn "withBudget" apps/web/src | grep -v lib/ai/` → **0건**이다.
   라우트도 서비스도 아직 아무도 안 부른다. `AI_FEATURES` 4종(`structure`·`conflict`·
@@ -62,7 +97,9 @@
 - **고칠 방향**: PLAN P3 첫 행의 ②(`structureDocument`)·③(`detectConflicts`)가 주인이다.
   그 둘이 `withBudget('structure'|'conflict', …)` 로 부르면 닫힌다.
   ⚠ 지금 소비처를 급히 만들지 마라 — 부를 내용(프롬프트·Zod 출력 계약)이 §7.1 의 일이다.
-- **상태**: 대기 (P3 첫 행 ②·③이 주인 · 다음 바퀴)
+- **상태**: ✅ `34eb766` — `structureDocument()` 가 `withBudget('structure', …)` 로 부른다.
+  ⚠ **아직 `conflict`·`ask`·`demo` 는 부르는 자리가 없다** (③·§7.3·§7.4). 그리고 라우트가
+  `structureDocument` 를 아직 안 부른다 — 같은 구멍이 한 겹 위에 남았다 (**FINDINGS 52**).
 
 ### 50. `principles.ps1` 의 P3 가 **주석의 글자**를 호출부로 센다   [격차]
 - **증상**: P3 검사는 `messages\.create|messages\.stream` 이 **문자열로** 나오는 파일을
@@ -77,7 +114,13 @@
   ⚠ 게이트를 좁히는 변경이므로 **갈리는 것을 보고** 넣어라 — 주석만 고쳐서 FAIL 이
   나는지, 진짜 호출부를 만들어서 OK 가 되는지 둘 다 확인한 뒤 커밋한다.
   ⚠ 같은 무딤이 P2 검사에도 있다 (`Get-SourceFiles` 를 그대로 쓴다) — 같이 봐라.
-- **상태**: 대기 (값싸다 · 게이트는 문서보다 강하다)
+- **🔴 이번 바퀴에 더 위험해졌다** (`34eb766`): 이제 `lib/ai/client.ts` 의 `callClaude()`
+  를 부르는 **제품 파일이 생겼다**(`structure.ts`). P3 검사는 `messages.create` 라는
+  **글자**가 있는 파일만 호출부로 세므로 `structure.ts` 는 아예 세어지지 않는다 —
+  즉 **누구든 `callClaude()` 를 직접 부르면서 `withBudget` 을 건너뛰어도 게이트가
+  초록이다.** 고칠 때 셀 대상을 `messages\.create` 에서 `callClaude|messages\.create`
+  로 넓혀라 (예외는 `lib/ai/{client,budget}.ts` 그대로).
+- **상태**: 대기 (값싸다 · 게이트는 문서보다 강하다 · **이제 급하다**)
 
 ### 51. SPEC §7.5 에 **충돌 탐지의 빈도 상한이 없다**   [격차]
 - **증상**: §7.5 의 Rate limit 은 `/ask`·`/demo`(분당 3회)와 문서 구조화(프로젝트당

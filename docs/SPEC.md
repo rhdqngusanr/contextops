@@ -370,8 +370,10 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 ### 7.1 문서 구조화 `structureDocument(docVersion)`
 - 입력: heading 기준 chunk(6~10k자). chunk마다 항목 추출 → 전체 title/type 중복 병합 후보 표시.
-- 출력 스키마: `{ items: ContextItemDraft[], open_questions: [{question, source_ref}] }`. `source_ref.start_char/end_char`는 chunk offset을 문서 offset으로 변환해 검증(범위 밖이면 재시도).
-- 예산: 문서당 최대 12 chunk.
+- 출력 스키마: `{ items: ContextItemDraft[], open_questions: [{question, source_ref}] }`. `source_ref.start_char/end_char`는 chunk offset을 문서 offset으로 변환해 검증(범위 밖이면 재시도). 🔴 모델이 내는 계약은 `AiStructureOutput`(`packages/schema`)이다 — 초안에서 **근거만 chunk 기준 span 으로 바꾼 것**이고, `document_version_id`·`owner_id` 는 모델이 아니라 서버가 채운다 (모델이 uuid 를 지어내면 근거가 남의 문서를 가리킨다 · P7).
+- 예산: 문서당 최대 12 chunk. 🔴 **한 문서의 모든 chunk 호출은 `withBudget` 한 번 안에서 일어나고 장부에는 합계로 한 줄이 남는다** — chunk 마다 부르면 §7.5 의 「프로젝트당 시간당 5회」가 문서가 아니라 chunk 를 세어 6조각짜리 문서 하나가 상한을 넘긴다. 12 chunk × 10,000자 ≈ 48,000 토큰이라 `AI_MAX_INPUT_TOKENS`(60k) 안이다 — 두 숫자는 맞물려 있으니 한쪽을 고치면 다른 쪽을 같이 봐라.
+- 12 chunk 를 넘는 문서는 앞 12개만 읽고 **읽은 조각 수·전체 조각 수를 결과에 낸다.** 조용히 자르지 않는다 (화면이 사람에게 말해야 한다).
+- 수치(6~10k자 · 12 chunk · 재시도 1회)의 정본은 `apps/web/src/lib/ai/structure.ts` 의 상수다.
 
 ### 7.2 충돌·오래됨 탐지 `detectConflicts(projectId, changedItemIds)`
 - 입력: 변경된 항목 + 같은 type/scope의 기존 active 항목(최대 40개, body 요약 300자).
@@ -386,7 +388,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - 픽스처의 문서·코드 항목(고정 JSON)을 7.2에 넣어 충돌 카드 3장 생성. 결과는 24h 캐시. 게스트 IP당 일 5회.
 
 ### 7.5 예산 가드 `budget.ts`
-- 환경변수 `AI_DAILY_BUDGET_USD`(기본 3), `AI_MAX_INPUT_TOKENS`(기본 60k/호출). 토큰 추정 = chars/2.5(ko) 보수적.
+- 환경변수 `AI_DAILY_BUDGET_USD`(기본 3), `AI_MAX_INPUT_TOKENS`(기본 60k/`withBudget` 한 번). 토큰 추정 = chars/2.5(ko) 보수적. ⚠ 「한 번」은 LLM 왕복이 아니라 **문 하나를 지나는 일 하나**다 — 문서 구조화는 문서 하나가 한 번이고 그 안에 chunk 호출이 여럿 있다 (§7.1).
 - 초과 시 `BUDGET_EXCEEDED` → 화면은 "오늘의 AI 예산 소진 — 샘플 결과를 보여드립니다"로 픽스처 결과 표시.
 - Rate limit: IP·사용자당 분당 3회(`/ask`, `/demo`), 문서 구조화는 프로젝트당 시간당 5회. Claude Console 월 한도는 운영자가 $30 설정.
 - 🔴 **공개 API 는 `withBudget(feature, ctx, fn)` 하나다.** `feature` 는 §7.1~§7.4 의 넷(`structure`·`conflict`·`ask`·`demo`)이고 정본 표는 `apps/web/src/lib/ai/features.ts` 다 — 기능별 빈도 상한·모델 정가·기본 한도가 전부 그 표에 있다. 빈도 초과는 `RATE_LIMITED`, 입력·하루 상한 초과는 `BUDGET_EXCEEDED`.
