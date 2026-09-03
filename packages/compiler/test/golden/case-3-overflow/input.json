@@ -1,0 +1,1694 @@
+{
+  "snapshot": {
+    "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
+    "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+    "context_version": "3.0.0",
+    "generated_at": "2026-09-03T00:00:00.000Z",
+    "items": [
+      {
+        "id": "item_pl_mission",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "mission",
+        "title": "결제 신뢰성",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 100,
+        "source_refs": [
+          {
+            "kind": "manual",
+            "note": "팀장 승인 2026-09-01"
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "statement": "결제를 안전하고 예측 가능하게 만든다."
+        }
+      },
+      {
+        "id": "item_pl_m1",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "roadmap",
+        "title": "규칙 정리",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 90,
+        "source_refs": [
+          {
+            "kind": "manual",
+            "note": "로드맵 회의"
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "milestone_id": "PL-M1",
+          "paths": [
+            "src/payment"
+          ],
+          "done_when": [
+            "정책이 파일 하나로 모인다"
+          ],
+          "dependencies": []
+        }
+      },
+      {
+        "id": "item_pl_rule_01",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 01",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule01.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[01] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_02",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 02",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule02.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[02] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_03",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 03",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule03.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[03] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_04",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 04",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule04.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[04] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_05",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 05",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule05.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[05] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_06",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 06",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule06.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[06] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_07",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 07",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule07.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[07] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_08",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 08",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule08.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[08] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_09",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 09",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule09.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[09] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_10",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 10",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule10.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[10] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_11",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 11",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule11.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[11] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_12",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 12",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule12.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[12] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_13",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 13",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule13.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[13] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_14",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 14",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule14.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[14] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_15",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 15",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule15.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[15] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_16",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 16",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule16.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[16] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_17",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 17",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule17.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[17] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_18",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 18",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule18.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[18] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_19",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 19",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule19.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[19] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_20",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 20",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule20.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[20] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_21",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 21",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule21.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[21] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_22",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 22",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule22.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[22] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_23",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 23",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule23.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[23] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_24",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 24",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule24.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[24] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_25",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 25",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule25.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[25] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_26",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 26",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule26.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[26] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_27",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 27",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule27.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[27] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_28",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 28",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule28.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[28] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_29",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 29",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule29.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[29] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_30",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 30",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule30.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[30] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_31",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 31",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule31.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[31] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_32",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 32",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule32.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[32] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_33",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 33",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule33.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[33] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_34",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 34",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule34.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[34] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_35",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 35",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule35.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[35] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_36",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 36",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule36.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[36] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_37",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 37",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule37.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[37] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_38",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 38",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule38.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[38] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_39",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 39",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule39.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[39] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_40",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 40",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule40.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[40] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_41",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 41",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule41.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[41] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_42",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 42",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule42.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[42] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_43",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 43",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule43.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[43] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_44",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 44",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule44.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[44] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_45",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 45",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule45.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[45] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_46",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 46",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule46.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[46] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_47",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 47",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule47.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[47] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_48",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 48",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule48.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[48] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_49",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 49",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule49.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[49] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_50",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 50",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule50.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[50] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_51",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 51",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule51.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[51] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_52",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 52",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule52.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[52] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_rule_53",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 53",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule53.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[53] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "review"
+        }
+      },
+      {
+        "id": "item_pl_rule_54",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 54",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule54.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "[54] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "must",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_rule_55",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 55",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule55.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "[55] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "should",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_rule_56",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "결제 규칙 56",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/payment/rule56.ts",
+            "start_line": 1,
+            "end_line": 20
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "[56] 결제 요청은 idempotency key 를 반드시 함께 보내고, 같은 key 로 들어온 요청은 이미 처리된 결과를 그대로 돌려준다. 재시도는 지수 백오프로 최대 3회까지만 하며, 그 사이에 상태를 바꾸는 부수효과를 만들지 않는다. 실패를 삼키지 말고 원인 코드를 그대로 올려 보내고, 사용자에게 보이는 문구는 화면 계층에서만 정한다.",
+          "severity": "may",
+          "enforcement": "hook"
+        }
+      }
+    ]
+  },
+  "project": {
+    "name": "paylab"
+  },
+  "templateVersion": "1.0",
+  "compilerVersion": "0.1.0"
+}

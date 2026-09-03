@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "compiler_version": "0.1.0",
+  "template_version": "1.0",
+  "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
+  "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+  "context_version": "3.0.0",
+  "generated_at": "2026-09-03T00:00:00.000Z",
+  "snapshot_hash": "605d072034ba5b267257ab24149b6322738e31cb27de2f922618b21661e7adc4",
+  "files": [
+    {
+      "path": ".claude/rules/policies.md",
+      "sha256": "4dd7479925dbd2e4211835a6382ce8e74f16265b449c57969232b5fef7fc641e",
+      "size": 32256,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_rule_01",
+        "item_pl_rule_02",
+        "item_pl_rule_03",
+        "item_pl_rule_04",
+        "item_pl_rule_05",
+        "item_pl_rule_06",
+        "item_pl_rule_07",
+        "item_pl_rule_08",
+        "item_pl_rule_09",
+        "item_pl_rule_10",
+        "item_pl_rule_11",
+        "item_pl_rule_12",
+        "item_pl_rule_13",
+        "item_pl_rule_14",
+        "item_pl_rule_15",
+        "item_pl_rule_16",
+        "item_pl_rule_17",
+        "item_pl_rule_18",
+        "item_pl_rule_19",
+        "item_pl_rule_20",
+        "item_pl_rule_21",
+        "item_pl_rule_22",
+        "item_pl_rule_23",
+        "item_pl_rule_24",
+        "item_pl_rule_25",
+        "item_pl_rule_26",
+        "item_pl_rule_27",
+        "item_pl_rule_28",
+        "item_pl_rule_29",
+        "item_pl_rule_30",
+        "item_pl_rule_31",
+        "item_pl_rule_32",
+        "item_pl_rule_33",
+        "item_pl_rule_34",
+        "item_pl_rule_35",
+        "item_pl_rule_36",
+        "item_pl_rule_37",
+        "item_pl_rule_38",
+        "item_pl_rule_39",
+        "item_pl_rule_40",
+        "item_pl_rule_41",
+        "item_pl_rule_42",
+        "item_pl_rule_43",
+        "item_pl_rule_44",
+        "item_pl_rule_45",
+        "item_pl_rule_46",
+        "item_pl_rule_47",
+        "item_pl_rule_48",
+        "item_pl_rule_49",
+        "item_pl_rule_50",
+        "item_pl_rule_51",
+        "item_pl_rule_52",
+        "item_pl_rule_53",
+        "item_pl_rule_54",
+        "item_pl_rule_55",
+        "item_pl_rule_56"
+      ]
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "6cd2394da899bbf8c0f1d3be2ed95f0327ea1dccfcb1e157f64cc01809114bb2",
+      "size": 544,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_m1",
+        "item_pl_mission"
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "PL-M1",
+      "paths": [
+        "src/payment"
+      ],
+      "done_when": [
+        "정책이 파일 하나로 모인다"
+      ]
+    }
+  ],
+  "excluded": [],
+  "manifest_hash": "5b23e45fb6e17501107e9142d984462952cbd4819066482f24d1509d2718cff7"
+}

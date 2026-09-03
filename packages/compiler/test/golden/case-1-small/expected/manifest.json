@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "compiler_version": "0.1.0",
+  "template_version": "1.0",
+  "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
+  "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+  "context_version": "1.0.0",
+  "generated_at": "2026-09-03T00:00:00.000Z",
+  "snapshot_hash": "31ece449c962cb7a5d656f5f026317bb9eb48b648de3d5764895820abe47ccf8",
+  "files": [
+    {
+      "path": ".claude/rules/architecture.md",
+      "sha256": "cc5ca40c22c7e0e118127b828274460c8135e376a1f7237ae9497531a724d1dd",
+      "size": 710,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_adr_retry",
+        "item_pl_arch_gateway"
+      ]
+    },
+    {
+      "path": ".claude/rules/decisions.md",
+      "sha256": "07a3e5f8820722a669fae002e069d3344032bfe180bd3ade2350aa5d9112f8ef",
+      "size": 577,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_adr_retry"
+      ]
+    },
+    {
+      "path": ".claude/rules/domain-payment.md",
+      "sha256": "b60084f94d7e670b280b1d36ff003561014a159bf2182b74653e4986ed3ce1a8",
+      "size": 485,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_domain_pay"
+      ]
+    },
+    {
+      "path": ".claude/rules/workflow.md",
+      "sha256": "b89ba5886c20fb39fb4798b4eca9790b183403ba0f4ac9cc31bb9a5e96eadd77",
+      "size": 1143,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_wf_payment"
+      ]
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "7ea1c7fd8d764e986ab0fab97792bc29a2eaa0e136b2b71e948e37e87bc379a2",
+      "size": 1825,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_arch_gateway",
+        "item_pl_constraint_pii",
+        "item_pl_goal_fail",
+        "item_pl_m1",
+        "item_pl_m2",
+        "item_pl_mission",
+        "item_pl_policy_refund"
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "PL-M1",
+      "paths": [
+        "src/payment/retry.ts",
+        "src/payment/gateway.ts"
+      ],
+      "done_when": [
+        "재시도 횟수가 문서와 코드에서 같다",
+        "중복 결제 재현 테스트가 초록이다"
+      ]
+    },
+    {
+      "id": "PL-M2",
+      "paths": [
+        "src/refund"
+      ],
+      "done_when": [
+        "환불 처리 시간이 대시보드에 나온다"
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "item_id": "item_pl_goal_latency",
+      "reason": "폐기(deprecated)됐다 — 이력은 웹에 남고 Pack 에서는 빠진다"
+    },
+    {
+      "item_id": "item_pl_q_sla",
+      "reason": "open_question 은 Pack 에 나가지 않는다 — 웹에서 답한 뒤 다른 타입으로 승격된다"
+    }
+  ],
+  "manifest_hash": "ff41bfdb40850d0d1c8e6aca58028aee9b2a72f1a7db603b50942320277e3a8f"
+}

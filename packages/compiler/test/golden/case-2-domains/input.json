@@ -1,0 +1,308 @@
+{
+  "snapshot": {
+    "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
+    "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+    "context_version": "2.1.0",
+    "generated_at": "2026-09-03T00:00:00.000Z",
+    "items": [
+      {
+        "id": "item_pl_mission",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "mission",
+        "title": "결제 신뢰성",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 100,
+        "source_refs": [
+          {
+            "kind": "manual",
+            "note": "팀장 승인 2026-09-01"
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "statement": "결제를 안전하고 예측 가능하게 만든다."
+        }
+      },
+      {
+        "id": "item_pl_dom_payment",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "domain",
+        "title": "결제 도메인",
+        "body": "결제 요청부터 청구까지를 한 도메인으로 본다.",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 70,
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "document_version_id": "b1a7d9e0-0000-4000-8000-0000000000a1",
+            "start_char": 100,
+            "end_char": 400,
+            "heading_path": [
+              "용어",
+              "결제"
+            ]
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "name": "payment",
+          "glossary": [
+            {
+              "term": "PaymentIntent",
+              "meaning": "결제 요청 한 건"
+            }
+          ],
+          "invariants": [
+            "환불 금액은 결제 금액을 넘지 않는다"
+          ]
+        }
+      },
+      {
+        "id": "item_pl_dom_refund",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "domain",
+        "title": "환불 도메인",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 60,
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "document_version_id": "b1a7d9e0-0000-4000-8000-0000000000a1",
+            "start_char": 400,
+            "end_char": 620,
+            "heading_path": [
+              "용어",
+              "환불"
+            ]
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "name": "refund",
+          "glossary": [
+            {
+              "term": "Chargeback",
+              "meaning": "카드사가 강제로 되돌리는 환불"
+            }
+          ],
+          "invariants": [
+            "환불은 원 결제와 같은 통화로만 한다"
+          ]
+        }
+      },
+      {
+        "id": "item_pl_dom_ledger",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "domain",
+        "title": "정산 도메인",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 50,
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "document_version_id": "b1a7d9e0-0000-4000-8000-0000000000a1",
+            "start_char": 620,
+            "end_char": 800,
+            "heading_path": [
+              "용어",
+              "정산"
+            ]
+          },
+          {
+            "kind": "repository_path",
+            "repo": "paylab-ledger",
+            "path": "src/ledger/append.ts",
+            "start_line": 8
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "name": "ledger",
+          "glossary": [],
+          "invariants": [
+            "원장은 append-only 다"
+          ]
+        }
+      },
+      {
+        "id": "item_pl_policy_ledger_ro",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "원장 수정 금지",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "domain",
+          "value": "ledger"
+        },
+        "priority": 90,
+        "source_refs": [
+          {
+            "kind": "repository_path",
+            "repo": "paylab-api",
+            "path": "src/ledger/append.ts",
+            "start_line": 1,
+            "end_line": 40
+          }
+        ],
+        "tags": [],
+        "confidence": "high",
+        "revision": 1,
+        "data": {
+          "rule": "원장 테이블에 UPDATE 를 쓰지 않는다",
+          "severity": "must",
+          "enforcement": "hook"
+        }
+      },
+      {
+        "id": "item_pl_policy_migration",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "마이그레이션 리뷰",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "path",
+          "value": "migrations/**"
+        },
+        "priority": 88,
+        "source_refs": [
+          {
+            "kind": "manual",
+            "note": "2026-06-02 사고 후 합의"
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "rule": "migrations 아래 변경은 owner 리뷰를 받는다",
+          "severity": "must",
+          "enforcement": "permission"
+        }
+      },
+      {
+        "id": "item_pl_policy_infra",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "policy",
+        "title": "인프라 변경 공지",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "path",
+          "value": "infra/**"
+        },
+        "priority": 60,
+        "source_refs": [
+          {
+            "kind": "manual",
+            "note": "운영 합의"
+          }
+        ],
+        "tags": [],
+        "confidence": "low",
+        "revision": 1,
+        "data": {
+          "rule": "infra 아래를 고치면 배포 채널에 미리 알린다",
+          "severity": "should",
+          "enforcement": "none"
+        }
+      },
+      {
+        "id": "item_pl_constraint_migration",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "constraint",
+        "title": "되돌릴 수 있는 마이그레이션",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "path",
+          "value": "migrations/**"
+        },
+        "priority": 70,
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "document_version_id": "b1a7d9e0-0000-4000-8000-0000000000a2",
+            "start_char": 900,
+            "end_char": 1000,
+            "heading_path": [
+              "제약"
+            ]
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "statement": "모든 마이그레이션은 down 을 함께 쓴다",
+          "expiry": "2027-01-01"
+        }
+      },
+      {
+        "id": "item_pl_m1",
+        "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+        "type": "roadmap",
+        "title": "정산 원장 분리",
+        "body": "",
+        "status": "active",
+        "scope": {
+          "kind": "project"
+        },
+        "priority": 80,
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "document_version_id": "b1a7d9e0-0000-4000-8000-0000000000a2",
+            "start_char": 1100,
+            "end_char": 1300,
+            "heading_path": [
+              "로드맵"
+            ]
+          }
+        ],
+        "tags": [],
+        "confidence": "medium",
+        "revision": 1,
+        "data": {
+          "milestone_id": "M1",
+          "paths": [
+            "src/ledger"
+          ],
+          "done_when": [
+            "원장이 별도 테이블로 나뉜다"
+          ],
+          "dependencies": []
+        }
+      }
+    ]
+  },
+  "project": {
+    "name": "paylab"
+  },
+  "templateVersion": "1.0",
+  "compilerVersion": "0.1.0"
+}

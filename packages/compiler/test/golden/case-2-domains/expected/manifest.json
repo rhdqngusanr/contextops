@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "compiler_version": "0.1.0",
+  "template_version": "1.0",
+  "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
+  "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
+  "context_version": "2.1.0",
+  "generated_at": "2026-09-03T00:00:00.000Z",
+  "snapshot_hash": "b8eac9fbd9cc5f6ccd79b644d6f758599bc80c217e7f0f8f0d43c470e4b860cc",
+  "files": [
+    {
+      "path": ".claude/rules/domain-ledger.md",
+      "sha256": "949bcc807273b4b5a2c2861644b4620ef4f7081a82b1ad93ca306261b9fe738f",
+      "size": 539,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_dom_ledger",
+        "item_pl_policy_ledger_ro"
+      ]
+    },
+    {
+      "path": ".claude/rules/domain-payment.md",
+      "sha256": "c477136fc897a9fa7ec9b905ea6d9ef7174cf649ac4cedc0791fd4f8f79acb1c",
+      "size": 430,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_dom_payment"
+      ]
+    },
+    {
+      "path": ".claude/rules/domain-refund.md",
+      "sha256": "90f04dfe761403d1beb1dac53c5042fdad83ae3182d6198406e1a23e2331e930",
+      "size": 382,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_dom_refund"
+      ]
+    },
+    {
+      "path": ".claude/rules/scoped-infra.md",
+      "sha256": "5171888534cc3d371f034e32148154d4fd4aab511d76783a9e132af6347f4a22",
+      "size": 375,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_policy_infra"
+      ]
+    },
+    {
+      "path": ".claude/rules/scoped-migrations.md",
+      "sha256": "a0aeaa83c5f5bea6e953e59209888a09510298eeb1c90d0a27328d5679fbbe3a",
+      "size": 572,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_constraint_migration",
+        "item_pl_policy_migration"
+      ]
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "5e895a62a03ec0984dcc72e281f68a2664dd38c805a50824a6f0fcf85acad1fc",
+      "size": 577,
+      "target": "claude",
+      "source_item_ids": [
+        "item_pl_m1",
+        "item_pl_mission"
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "paths": [
+        "src/ledger"
+      ],
+      "done_when": [
+        "원장이 별도 테이블로 나뉜다"
+      ]
+    }
+  ],
+  "excluded": [],
+  "manifest_hash": "cc281ba54b333daa861ce09bdf98fcecb2b94f665079343c5830562ad860af68"
+}
