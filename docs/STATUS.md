@@ -5,87 +5,185 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 11바퀴 · `9c4d5d2`_
+_마지막 갱신: 2026-09-04 · 루프 12바퀴 · `f688724`_
 
 ---
 
 ## 지금 어디인가
 
-**P2 둘째 행이 끝났다 — 플러그인이 Pack 을 실제로 적용한다.** `sync`·`status` 와
-SessionStart 훅이 들어갔고, **관통이 6단계**가 됐다. 새 `sync` 단계는
-`plugin/contextops/scripts/walkthrough-sync.ts` 가 **배포되는 번들을 진짜 소켓으로**
-돌려 16개 검사를 낸다 (`.ci/walkthrough-sync.json`).
+**P2 가 끝났다 — 플러그인이 다 됐다.** CLI 는 SPEC §8.3 의 **여덟이 전부** 있고,
+Skill 셋(`init`·`sync`·`propose`)과 훅 둘(SessionStart·Stop)이 들어갔다.
+**관통이 7단계**가 됐다 — 새 `payload` 단계가 **GATE 2 의 P1 증거**를 낸다.
 
-다음은 **P2 셋째 행 — `init` Skill · `upload-draft` · `propose` Skill · `progress` · Stop 훅**
-이고 그게 **GATE 2** 다. 그 행이 관통의 `payload` 단계를 켠다.
+다음은 **P3 첫 행 — 서버측 AI (`structureDocument` · `detectConflicts` · 예산 가드)** 다.
+⚠ 그 전에 **FINDINGS 43** 이 있다 (아래 「다음 바퀴가 할 일」).
 
 | 있는 것 | 없는 것 |
 |---|---|
-| `loop/` · `tools/` · pnpm workspace + catalog | **CLI 명령 3개** — `upload-draft`·`propose`·`progress` |
-| `packages/schema` (계약 전부 · 로컬 파일 계약 포함 · 테스트 106) | **훅 1개**(`stop.mjs`) · **Skill 3개** |
-| `packages/compiler` (파이프라인 7단계 · 테스트 124 · 태그 읽기) | Supabase 프로젝트 (🙋 사람) · Vercel |
-| `apps/web` — 라우트 28개 · 테스트 **125** | 서버측 AI (`structureDocument`·`detectConflicts`) |
-| 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | 웹 화면 **1·3·4·6·8·9** |
-| **`plugin/contextops` — 번들 + `setup`·`scan`·`validate`·`sync`·`status` · 테스트 99** | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
-| **`hooks/hooks.json` + `scripts/session-start.mjs`** (P6 을 두 겹으로 잠갔다) | 충돌을 **만드는** 코드 (P3 · FINDINGS 28) |
-| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
+| `loop/` · `tools/` · pnpm workspace + catalog | 서버측 AI (`structureDocument`·`detectConflicts`) · 예산 가드 |
+| `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 108) | Supabase 프로젝트 (🙋 사람) · Vercel |
+| `packages/compiler` (파이프라인 7단계 · 테스트 124 · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
+| `apps/web` — 라우트 28개 · 테스트 124 | 충돌을 **만드는** 코드 (P3 · FINDINGS 28) |
+| 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
+| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
+| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | 🔴 **`workflow.md` 가 안 나가는 저장소가 있다** (FINDINGS 43) |
 
-검사 층: `principles OK 7 · typecheck 5초·멤버 4 · test 37초·멤버 4 · build 32초 ·
-walkthrough` → **GREEN**. 관통 **6단계**(fixture·compile·api·publish·scan·**sync**).
-남은 SKIP 둘의 prereq 는 `apps/web/scripts/walkthrough-payload.ts`(P2 셋째 행) ·
+검사 층: `principles OK 7 · typecheck 6초·멤버 4 · test 44초·멤버 4 · build 19초 ·
+walkthrough 47초` → **GREEN**. 관통 **7단계**
+(fixture·compile·api·publish·scan·**payload**·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`.
 
 ## 다음 바퀴가 할 일
 
-`docs/PLAN.md` **P2 셋째 행** = 🔴 **GATE 2**: `init` Skill · `upload-draft` ·
-`propose` Skill · `progress` · Stop 훅. 정본은 `SPEC.md` §8.3·§8.4·§8.6.
-완료 기준은 「Claude Code 에서 `init` → 웹 승인 → `sync` 관통 · **업로드 payload 캡처에
-코드 본문 0건**(P1)」이다.
+🔴 **`docs/feedback/FINDINGS.md` 43 이 맨 위다 — 이번 바퀴가 만든 `progress` 가
+거기 걸려 있다.**
+
+컴파일러는 `workflow` **타입 항목이 있을 때만** `.claude/rules/workflow.md` 를 만든다.
+그런데 SPEC §4.3 의 진행 보고 문단(= agent 에게 `progress` 사용법을 가르치는 유일한
+자리)은 그 파일에만 있다. paylab 픽스처에는 `workflow` 항목이 없어서 **이번 관통이
+만든 Pack 에 workflow.md 가 아예 없다** (`.ci/walkthrough-pack/` 에 파일 셋뿐).
+즉 **Roadmap 이 영원히 agent 보고 0건**이고 화면은 「아직 보고가 없다」로 멀쩡히 뜬다.
+
+선택지 둘과 각각의 대가는 FINDINGS 43 에 적어 뒀다. ⚠ ①(항목 없어도 workflow.md 를
+만든다)은 `ManifestFile.source_item_ids` 의 `.min(1)`(P7)과 부딪힌다 — **계약을
+건드리는 결정**이다. 어느 쪽이든 **golden 이 빨개지므로 `TEMPLATE_VERSION` 을 올려라.**
+
+그 다음이 `docs/PLAN.md` **P3 첫 행**(서버 AI · SPEC §7).
 
 **시작하기 전에 아는 것 (이번 바퀴가 깔아 둔 자리):**
 
-- 명령을 더하는 절차는 `src/cli/commands.ts` 의 표 옆 주석에 있다 — **네 걸음**이고
-  표 밖에서 할 일은 없다. 이번에 그 절차로 둘(`sync`·`status`)을 더했고 맞았다.
+- **명령을 더하는 절차는 `src/cli/commands.ts` 의 표 옆 주석**에 있다 — 네 걸음.
+  이번에 그 절차로 셋을 더했고 맞았다. 이제 `test/commands.test.ts` 가 **SPEC §8.3 의
+  표와 이 표를 대조**하므로, 한쪽만 늘면 빨개진다.
+- **Skill 을 더할 때는 `skills/<이름>/SKILL.md` 하나면 된다.** `test/skills.test.ts` 가
+  그 문서에서 명령줄을 뽑아 `COMMANDS`·플래그 표·`JSON_SCHEMA_FILES`·`EXIT` 와 대조한다.
+  🔴 **SKILL.md 는 컴파일도 import 도 안 되는 텍스트인데 모델이 그대로 실행한다** —
+  틀린 이름은 사용자의 기계에서만 조용히 실패한다. 그래서 이 게이트가 있다.
 - **훅을 더하는 절차는 `hooks/hooks.json` 의 `_comment` 에 있다 — 네 걸음.**
-  `tools/principles.ps1` 의 P6 검사는 이제 **hooks.json 이 가리키는 것 전부**를 세므로
-  `stop.mjs` 를 그 표에 적는 순간 게이트가 저절로 그 파일도 검사한다.
-  ⚠ 없는 파일을 가리키면 **FAIL** 이다 (사용자가 매 세션 오류를 보는 것도 고장이다).
-- 🔴 **첫 결정은 `stop.mjs` 다 — 그 훅은 파일을 쓴다 (FINDINGS 42).**
-  SPEC §0.1 P6 의 **문장**은 「Hook 은 파일을 변경하지 않는다」인데 **검증 칸**은
-  `session-start.mjs` 하나만 지목하고, §8.6 의 `stop.mjs` 는 `pending-proposal.json` 을
-  쓴다고 적혀 있다. 이번 바퀴에 P6 게이트를 **hooks.json 이 가리키는 것 전부**로 넓혔으니
-  `stop.mjs` 를 그 표에 적는 순간 **CI 가 빨개진다.** 그게 의도다 — 결정하고 들어가라.
-  ⚠ 결정을 코드에 몰래 담지 마라. 어느 쪽이든 **SPEC 한 줄과 게이트가 같이** 바뀐다.
-  선택지와 각각의 대가는 FINDINGS 42 에 적어 뒀다.
-- 파일을 쓰는 문은 `src/cli/fsx.ts` 하나다: `atomicWriteFile`(같은 볼륨 temp → rename) ·
-  `writeSecretFile`(0600) · `sha256OfText`/`sha256OfFile` · `hasSymlink`. 숫자는 거기 상수뿐이다.
-- 서버와 말하는 문은 `src/cli/api.ts` 다 — `apiGet`(봉투) · `apiPost`(봉투) ·
-  `apiGetText`(Pack 본문, **봉투가 아니다**). 갈래는 넷: `ok`·`not_modified`·`failed`·`unreachable`.
-  🔴 **`ok.data` 는 봉투를 벗긴 안쪽이다.** 벗기는 자리는 `envelope()` 하나다 (아래 함정).
-- **sync 가 손대도 되는 파일의 정본은 `src/cli/managed.ts` 의 `MANAGED_PATHS` 표**다.
-  줄마다 `sample` 이 있고 시험이 「자기 sample 만 맞춘다」를 잰다 — 새 대상을 더할 때
-  `sample` 을 빼먹으면 타입 검사가 막는다.
-- 상태 판정은 `managed.ts` 의 `judge()` **하나**다. `sync --check`·`status`·관통이 같이 쓴다.
+  🔴 **파일을 쓰는 훅이면 `_writes` 에 경로를 선언해야 한다** (P6 의 새 정의).
+  선언이 없으면 `principles.ps1` 이, 선언 밖에 쓰면 `test/hooks.test.ts` 가 빨개진다.
+- **서버로 말하는 문은 `src/cli/session.ts` 하나다** — `readyOrExplain()`(설정·토큰) ·
+  `reportFailure()`(서버 코드 → 종료 코드). 새 명령은 이 둘로 시작한다.
+  ⚠ **디스크 쓰기 probe 는 sync 에만 있다.** 읽기만 하는 명령이 probe 를 하면
+  읽기 전용 체크아웃에서 못 돈다.
+- **「모델이 알 수 없는 값은 CLI 가 붙인다」가 초안 파일 셋의 설계다** —
+  `ContextItemDraftFile`(← `repo`·`scan_summary` 없음) ·
+  `ProposalDraftFile`(← `base_version_id`·`client_request_id` 없음).
+  ★ 넷째 초안 파일을 만들 때도 같은 질문을 해라: **모델이 이 칸을 지어낼 수 있나?**
 - 🔴 **`bin/contextops-cli.mjs` 는 커밋되는 산출물이다.** 소스만 고치고 빌드를 잊으면
-  사용자는 옛 CLI 를 돈다 — `test/bundle.test.ts` 가 방금 빌드한 바이트와 대조해서
-  빨개진다. 고쳤으면 `pnpm --filter @contextops/plugin build` 를 부르고 **같이 커밋해라.**
-- **관통에 단계를 더할 때는 `tools/walkthrough.ps1` 의 prereq 를 「그 단계가 진짜로
-  필요로 하는 파일」로 적어라.** 이번에 `sync` 단계의 cmd 가 이 저장소에 `sync --check` 를
-  걸게 돼 있어서 「설정이 없다」로 끝났다 — 그건 관통이 아니라 preflight 다.
-  임시 저장소와 임시 홈(`HOME`·`USERPROFILE` 둘 다)을 만들어 재라.
+  사용자는 옛 CLI 를 돈다 — `test/bundle.test.ts` 가 바이트로 대조해 빨개진다.
+  고쳤으면 `pnpm --filter @contextops/plugin build` 를 부르고 **같이 커밋해라.**
+- **`packages/schema` 를 고쳤으면 `pnpm --filter @contextops/schema schemas`** 도 불러라
+  (`plugin/contextops/schemas/*.json` 이 표류하면 `test/json-schema.test.ts` 가 빨개진다).
+- 상태 판정은 `managed.ts` 의 `judge()` **하나**다. sync 가 손대도 되는 파일의 정본은
+  `MANAGED_PATHS` 표다 (줄마다 `sample` 이 있고 시험이 「자기 sample 만 맞춘다」를 잰다).
 
 **API 를 손으로 두드릴 일이 생기면** — `pnpm --filter web dev:db` 로 씨앗 DB 를 띄우고
 `http://127.0.0.1:55433` 에서 `project_id` 와 세션 토큰을 받는다. 그 다음은
 `pnpm --filter web build` → `next start` 다. **`next dev` 를 쓰지 마라** (아래 함정).
 
-**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·38·39** 는 SPEC 을 코드에
-맞추는 **문서 한 줄**짜리다. **14**(`.ps1` 두 개가 LF)도 그렇다. **30**(domain 파일 제목)은
-템플릿 한 줄인데 **golden 이 빨개진다** — `TEMPLATE_VERSION` 을 올려라.
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44** 는 문서·한 줄짜리다.
+**14**(`.ps1` 두 개가 LF)도 그렇다. **30**(domain 파일 제목이 「# 도메인」이라 어느
+도메인인지 본문에 없다 — 이번 Pack 에서도 그대로 봤다)은 템플릿 한 줄인데
+**golden 이 빨개진다** — `TEMPLATE_VERSION` 을 올려라. **43 과 같이 하면 값이 두 배다**
+(둘 다 템플릿이고 둘 다 golden 을 깬다).
 
 ⚠ FINDINGS **24·25·26·28·29·31·33·35** 는 **P3 가**, **36** 은 **P4 화면 9** 가 주인이다.
-**37**(`.contextops/.gitignore`)은 **P2 둘째 행**에서 backups 를 만들 때 같이 하면 값이 두 배다.
 
 ## 잰 것
+
+**12바퀴 · P2 셋째 행 = 🔴 GATE 2 — CLI 3 · Skill 3 · Stop 훅 · 관통 payload 단계**
+(`9179ffc` `bfc9d60` `eaae9f5` `f688724`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 7** / typecheck 6초 / test 44초 / build 19초 / walkthrough 47초 |
+| 새 시험 | **+77** — 플러그인 99 → **174**(`upload-draft` 10 · `progress` 13 · `propose` 10 · `commands` 5 · `skills` 25 · `hooks` +8 · 기타) · schema 106 → **108**. 전체 453 → **530** (schema 108 · compiler 124 · plugin 174 · web 124) |
+| 관통 단계 | 6 → **7개** (`payload` 가 켜졌다) · 그 단계 안의 검사 **10개 전부 OK** |
+| CLI 명령 | 5 → **8개** (SPEC §8.3 의 여덟이 다 됐다) |
+| Skill | 0 → **3개** (`init`·`sync`·`propose`) |
+| 훅 | 1 → **2개** (`session-start.mjs` · **`stop.mjs`**) |
+| 번들 | `bin/contextops-cli.mjs` 793KB → **810KB** (같이 커밋했다) |
+| 마이그레이션 | **없다** — DB 를 안 건드렸다 |
+| 닫은 FINDINGS | **38 · 39 · 41 · 42** (42 는 결정이 필요한 것이었다) |
+
+**🔴 GATE 2 의 절반을 눈으로 봤다** (`.ci/walkthrough-payload.json` · 검사 10개 · 실패 0):
+
+- **배포되는 번들**(`bin/contextops-cli.mjs`)을 **픽스처를 통째로 복사한 진짜 저장소**에서
+  돌린다 (scan → upload-draft → progress → propose). 나간 요청 body 를 **진짜 소켓으로**
+  받아 바이트를 판다.
+- 나간 3건이 전부 업로드 allowlist 계약(`ContextItemsBatchDraft`·`ProgressEvent`·
+  `Proposal`)을 지난다.
+- **픽스처 48개 파일의 「가장 긴 줄」이 payload 어디에도 없다.** 고정 금지 문자열이
+  아니라 파일에서 뽑으므로 픽스처가 바뀌어도 계속 잰다.
+- `.env.example` 의 **값** 0건 · env **키 이름**은 실제로 나갔다(14개) —
+  안 나가면 `scan_summary` 가 빈 채로 올라간다는 뜻이라 그것도 고장이다.
+- 기기 토큰이 **body 에 0건** (헤더로만 간다).
+- 🔴 초안에 `file_body` 를 끼워 넣으면 **exit 2 이고 요청이 아예 안 나간다.**
+  「서버의 400 에 기대지 않는다」가 여기서 잠긴다.
+- **갈리는 것을 봤다** — 초안 body 에 실제 소스 1500자를 넣으니
+  「src/main.ts: new ValidationPipe({ whitelist: true, fo…」로 빨개졌다.
+
+⚠ **GATE 2 의 나머지 절반(「Claude Code 에서 `init`」)은 아직 사람이 해 봐야 한다.**
+Skill 은 모델이 실행하는 문서라 무인 세션이 스스로 재는 것은 여기까지다.
+
+**🔴 첫 결정 — P6 의 경계를 「선언표」로 정했다 (FINDINGS 42)**
+
+SPEC §0.1 P6 의 문장(「Hook 은 파일을 변경하지 않는다」)과 §8.6 의 `stop.mjs`
+(`pending-proposal.json` 을 쓴다)가 서로 어긋나 있었다. 앞 바퀴가 P6 게이트를
+hooks.json 이 가리키는 것 **전부**로 넓혀 뒀으므로, `stop.mjs` 를 그냥 더하면 CI 가
+빨개진다 — 그게 의도였다.
+
+**골라서 SPEC 한 줄과 게이트를 같이 바꿨다** (예외를 코드에 숨기지 않았다):
+
+> Hook 은 **사용자의 파일**을 변경하지 않는다. 훅이 쓸 수 있는 자리는 `.contextops/` 의
+> **git 이 무시하는 경로**(`IGNORED_LOCAL_PATHS`)뿐이고, 훅마다 `hooks/hooks.json` 의
+> `_writes` 표에 **선언한** 경로로 한정된다.
+
+★ ②(초안을 서버에 두기)를 안 고른 이유 — 힌트 하나 때문에 **세션 종료가 네트워크를
+기다린다.** 그리고 우리가 쓰는 경로는 우리가 만든 `.contextops/.gitignore` 안이라
+**git 이 그 변화를 아예 못 본다** — 사용자가 커밋하거나 리뷰하는 파일은 한 바이트도
+안 바뀐다. 그게 P6 이 지키려던 것 자체다.
+
+**설계에서 한 판단 다섯** — 다음 바퀴가 되돌리지 않게:
+
+- **「모델이 알 수 없는 값은 CLI 가 붙인다」.** `ProposalDraftFile` 에는
+  `base_version_id`·`client_request_id` 칸이 **없다** — 기준 버전은 `GET /versions` 의
+  `official_version_id` 로 채운다. ★ 왜 — uuid 는 **지어낼 수 있는 모양**이고, 지어낸
+  기준 버전으로 올라온 제안은 승인 화면에서 남의 버전과 대조된다. **눈으로 절대 못 잡는다.**
+  (`ContextItemDraftFile` 이 `scan_summary` 를 빼는 것과 같은 이유다.)
+- **`--evidence` 를 받으려고 args 에 `kind: 'list'` 를 더했다.** `value` 로 받으면
+  앞의 근거가 **조용히 사라진다** — 근거가 사라지는 것은 P7 이 끊기는 것이라
+  「마지막 것이 이긴다」로 뭉갤 수 없다.
+- **`progress` 의 기본 status 는 표 하나다** (`none`→none · criterion 있으면
+  `criterion_done` · 아니면 `in_progress`). ⚠ `done_candidate` 는 기본이 될 수 없다 —
+  「끝난 것 같다」는 사람이 확인할 것이지 agent 가 자칭할 것이 아니다.
+- **Stop 훅은 세션 id 를 모르면 보고하지 않는다.** 중복 보고는 근거 개수를 부풀려
+  P7 을 거짓말로 만든다 — **누락이 낫다.**
+- **`--from-pending` 은 힌트로 제안을 만들어 주지 않는다.** 「보낸 뒤 힌트를 치운다」는
+  뜻뿐이다. 힌트에는 `{changed_paths, hint}` 뿐이라 거기서 제안을 지으면 근거 없는 줄이 된다.
+
+**게이트를 넷 더했다 — 「같은 지적이 두 번 나오면 게이트로」**:
+
+| 게이트 | 무엇을 막나 | 갈리는지 확인했나 |
+|---|---|---|
+| 관통 `payload` 단계 (검사 10개) | 나가는 **바이트**에 코드 본문·secret·토큰이 있나 · 계약에 없는 키가 소켓을 타나 | **예** — 초안 body 에 실제 소스를 넣어 빨개지는 것을 봤다 |
+| `test/skills.test.ts` | SKILL.md 가 **없는 명령·플래그·계약·종료 코드**를 가르치나 (모델이 그대로 실행한다) | **예** — `--check` 를 `--chek` 로 바꿔 빨개지는 것을 봤다 |
+| `test/commands.test.ts` | SPEC §8.3 표와 `COMMANDS` 표가 갈리나 | 표에서 8개를 실제로 읽어 내는지도 같이 잰다 (파서가 0개를 읽으면 무의미하다) |
+| `principles.ps1` P6 + `test/hooks.test.ts` | 훅이 **선언 밖**에 쓰나 · 선언이 ignore 밖을 가리키나 | **예** — 선언을 지워도 FAIL · 선언을 `CLAUDE.md` 로 바꿔도 FAIL |
+| `test/progress.test.ts` 의 마지막 절 | Pack 이 가르치는 고정 문단(SPEC §4.3)의 플래그를 CLI 가 실제로 받나 | 갈리면 진행 보고가 **조용히** 멈춘다 — 그래서 플러그인이 compiler 를 시험 전용으로 들여온다 |
+
+**④2-B · 정의만 있고 아무 일도 안 하는 것 — 이번 라운드**
+
+| 후보 | 소비처가 있나 | 값을 바꾸면 결과가 갈리나 | 판정 |
+|---|---|---|---|
+| **`PROGRESS_SOURCES` 3종** | `agent` = CLI 기본 · `hook` = stop.mjs · `manual` = 웹 | 시험이 `agent`·`hook` 두 갈래를 **실제 요청**으로 낸다 (hooks.test 가 `source: 'hook'` 을 잰다) | **살렸다** — `manual` 은 화면 6·8(P4)이 주인 |
+| **`PROGRESS_STATUSES` 4종** | `progress` 의 기본값 표 + `--status` | `none`·`in_progress`·`criterion_done` 이 시험에서 갈린다 | **거의 다** — `done_candidate` 는 `POST /progress/{id}/confirm` 이 주인이고 그 화면이 아직 없다 |
+| **`ProgressEvidence.commit_sha`** | `progress --commit` 이 채운다 | — | **절반** — 플래그는 있는데 그 값을 **읽는 화면이 없다** (P4) |
+| **`LOCAL_FILES` 8칸** | `draft`·`proposalDraft`·`pendingProposal` 을 이번에 배선했다 | 셋 다 시험이 파일을 놓고 명령/훅이 읽는 것을 잰다 | **다 살았다** (8/8) |
+| **`ERROR_CODES` 의 `VALIDATION_FAILED`** | `session.ts` 의 `reportFailure` 가 **exit 2** 로 옮긴다 | 시험이 「서버가 계약 위반이라 하면 2」를 잰다 (재시도가 아니라 수정이다) | **살렸다 — 이제 CLI 도 읽는다** |
+| **`DeviceCredential.device_id`** | `setup --device-id` 로만 들어온다 · **읽는 곳 0곳** | — | **여전히 절반** — `DELETE /devices/{id}` 를 부르는 명령이 아직 없다 |
+| 🔴 **`PROGRESS_REPORT` 고정 문단** | `templates/index.ts` 의 `workflow` 칸 `foot` | **`workflow` 항목이 없으면 그 파일이 아예 안 나간다** | **죽어 있다 (조건부)** — FINDINGS 43 |
 
 **11바퀴 · P2 둘째 행 — `sync` · `status` · SessionStart 훅** (`9c4d5d2`)
 
@@ -223,33 +321,42 @@ walkthrough` → **GREEN**. 관통 **6단계**(fixture·compile·api·publish·s
 
 **루프 실주행 기준선** — `logs/cycles/*.jsonl` 의 **마지막** result 줄 · `duration_api_ms`
 
-| | dry001·002 | c001 | c002 | c003 `8e02f48` | c004 `84ce3ea` |
-|---|---|---|---|---|---|
-| 시간 | 0.3분 · 0.3분 | 15.1분 | **result 줄 없음** | 30.2분 | **7.1분** |
-| 턴 | 7 · 7 | 77 | (잘렸다) | 92 | **46** |
-| 비용 | $0.42 · $0.41 | $6.28 | | $13.90 | **$3.05** |
+| | dry001·002 | c001 | c002 | c003 `8e02f48` | c004 `84ce3ea` | **11바퀴 `9c4d5d2`** |
+|---|---|---|---|---|---|---|
+| 시간 | 0.3분 · 0.3분 | 15.1분 | **result 줄 없음** | 30.2분 | 7.1분 | **21.7분** |
+| 턴 | 7 · 7 | 77 | (잘렸다) | 92 | 46 | **129** |
+| 비용 | $0.42 · $0.41 | $6.28 | | $13.90 | $3.05 | **$13.56** |
 
 ⚠ **5~10바퀴는 `logs/cycles/` 에 파일이 없다.** 루프 러너가 아니라 직접 연 세션으로 돌았다.
+11바퀴의 값은 `logs/cycles/2026-09-04_c001.jsonl` 의 마지막 `result` 줄에서 읽었다.
 
-🔴 **11바퀴(이 바퀴)는 러너로 돌았다 — `logs/cycles/2026-09-04_c001.jsonl`.**
-그런데 `result` 줄은 세션이 **끝난 뒤에** 붙으므로 그 바퀴 자신은 자기 값을 못 읽는다.
-**다음 바퀴가 그 파일의 마지막 `result` 줄을 읽어 이 표에 `c005 9c4d5d2` 열로 이어 적어라**
+🔴 **12바퀴(이 바퀴)는 `logs/cycles/2026-09-04_c002.jsonl` 이다.**
+`result` 줄은 세션이 **끝난 뒤에** 붙으므로 그 바퀴 자신은 자기 값을 못 읽는다.
+**다음 바퀴가 그 파일의 마지막 `result` 줄을 읽어 이 표에 `12바퀴 f688724` 열로 이어 적어라**
 (기준: `duration_api_ms` · `num_turns` · `total_cost_usd`). 안 적으면 기준선이 여기서 끊긴다.
 
 ## 눈 판정 대기
 
-_(없음)_ — 이번 바퀴에 만든 것도 화면이 아니라 CLI 와 훅이다. **관통이 낸 16줄과
-적용된 Pack 을 직접 읽었다** (`.ci/logs/walkthrough/sync.txt` · `.ci/walkthrough-pack/CLAUDE.md`).
+_(없음)_ — 이번 바퀴에 만든 것도 화면이 아니라 CLI·Skill·훅이다. **관통이 낸 10줄과
+적용된 Pack 을 직접 읽었다** (`.ci/walkthrough-payload.json` · `.ci/walkthrough-pack/`).
 ⚠ `.ci/` 는 다음 관통이 통째로 지운다 — 근거로 인용할 거면 **적기 전에 밖으로 복사**해라.
 
-**생성된 `CLAUDE.md` 를 사람으로서 읽은 판정**: 팀 규칙으로 배포할 만하다. 여섯 줄 전부에
-역추적 태그가 있고(P7), 절 이름(Mission·Goals·Roadmap·Policies·Constraints)이 사람이
-찾는 순서다. ⚠ 다만 `.claude/rules/domain-refund.md` 의 제목이 **「# 도메인」**이라
-어느 도메인인지 본문에 없다 — 이미 **FINDINGS 30** 이고 템플릿 한 줄이다
-(고치면 golden 이 빨개진다 · `TEMPLATE_VERSION` 을 올려라).
+**생성된 Pack 을 사람으로서 읽은 판정**: `CLAUDE.md` 는 팀 규칙으로 배포할 만하다.
+여섯 줄 전부에 역추적 태그가 있고(P7), 절 이름(Mission·Goals·Roadmap·Policies·
+Constraints)이 사람이 찾는 순서다. **그런데 파일 목록을 보다 구멍을 찾았다** —
+Pack 에 `.claude/rules/workflow.md` 가 **아예 없다**. 그 파일에만 있는 진행 보고 문단이
+agent 에게 `progress` 를 가르치는 유일한 자리다 → **FINDINGS 43** (다음 바퀴의 첫 줄).
+⚠ `domain-refund.md` 의 제목이 여전히 **「# 도메인」**이라 어느 도메인인지 본문에 없다
+(FINDINGS 30 · 템플릿 한 줄 · 고치면 golden 이 빨개진다 → `TEMPLATE_VERSION` 을 올려라).
 
 **아직 눈으로 못 본 것** (다음에 화면을 건드리면 여기부터):
 
+- 🔴 **Skill 셋이 Claude Code 안에서 실제로 도는 것** — `/contextops:init` 를 사람이
+  한 번 눌러 봐야 한다 (GATE 2 의 나머지 절반). 무인 세션은 SKILL.md 의 **명령줄이
+  실재하는지**까지만 잰다 (`test/skills.test.ts`)
+- **Stop 훅이 진짜 Claude Code 세션에서 stdin JSON 을 받는 모양** — 시험은
+  `{session_id}` 를 우리가 넣어 준다. 실제 payload 의 칸 이름이 다르면 훅은
+  **조용히 「세션 id 를 모른다」로 물러선다** (그게 안전한 기본값이라 증상이 없다)
 - 화면 5 의 **발행 모달** · **상세 드로어** — 헤드리스에서 버튼을 못 누른다.
   `apps/web/e2e` 가 생기면 자동으로 찍힌다
 - **empty 상태** — 항목이 0개인 프로젝트를 만들어야 본다 (씨앗은 6개를 넣는다)
@@ -257,7 +364,7 @@ _(없음)_ — 이번 바퀴에 만든 것도 화면이 아니라 CLI 와 훅이
 - **`setup` 의 물어보기 흐름** — TTY 가 있어야 도는 갈래다. 시험(`answers`)으로는 잠갔지만
   진짜 터미널에서 붙여 넣어 본 적은 없다
 
-⚠ 다섯 다 **코드에는 있고 시험은 초록**이다. 그래서 더 위험하다 —
+⚠ 여섯 다 **코드에는 있고 시험은 초록**이다. 그래서 더 위험하다 —
 「컴파일 초록은 최소선이다」(loop/PROMPT.md ①③).
 
 ## 막힌 것 — 🙋 사람이 해야 하는 것
@@ -284,6 +391,24 @@ _(없음)_ — 이번 바퀴에 만든 것도 화면이 아니라 CLI 와 훅이
   `next start` 로 가라 — 이번 바퀴에 30분을 여기서 썼다.
   ⚠ 그리고 **`next dev` 는 `.next` 를 개발용으로 덮어쓴다.** 그 뒤 `next start` 는
   「production build 가 없다」로 죽는다. 순서는 언제나 **build → start** 다.
+- 🔴 **`Get-Content -Raw` 는 PS 5.1 에서 ANSI 로 읽는다** — UTF-8 한글이 깨지고
+  `ConvertFrom-Json` 이 「잘못된 배열이 전달되었습니다」로 죽는다. **증상이 원인을 안 가리킨다**
+  (이번엔 「hooks.json 의 `_writes` 선언이 없다」로 보였다). JSON 을 읽을 거면
+  `[System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)` 를 써라.
+- 🔴 **`python - <<'PY'` 안의 `\n` 이 `
+`(진짜 개행)으로 접힌다.** 이번에 시험 파일의
+  `'# 남의 파일
+'` 이 두 줄로 갈라져 TS 가 깨졌다. STATUS 에 이미 있던 함정
+  (「heredoc 으로 파일을 쓰면 `\` 가 `\` 로 접힌다」)과 같은 것이다 —
+  **파일 편집은 Edit/Write 도구로 해라.** 특히 이스케이프가 든 코드는.
+- 🔴 **`Get-Content -Raw` 는 PS 5.1 에서 ANSI 로 읽는다.** UTF-8 한글이 깨지고
+  `ConvertFrom-Json` 이 「잘못된 배열이 전달되었습니다」로 죽는다. **증상이 원인을
+  하나도 안 가리킨다** — 이번엔 「hooks.json 의 `_writes` 선언이 없다」로 보였다.
+  JSON 을 읽을 거면 `[System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8)`.
+- 🔴 **`python - <<'PY'` 안에서도 역슬래시가 접힌다.** 이번엔 TS 문자열의 개행
+  이스케이프가 **진짜 개행**이 되어 시험 파일이 두 줄로 갈라졌다. STATUS 에 이미 있던
+  함정(「heredoc 으로 파일을 쓰면 역슬래시가 접힌다」)과 같은 것이다 —
+  **이스케이프가 든 코드는 Edit/Write 도구로 써라.** 두 바퀴 연속으로 밟았다.
 - 🔴 **서버를 같은 프로세스에서 띄운 채 `execFileSync` 를 부르면 영원히 안 끝난다.**
   동기 호출이 이벤트 루프를 잡아서 서버가 응답을 못 한다 — 자식은 timeout 까지 기다렸다
   죽고, 증상은 **「이유 없이 exit -1, 출력 없음」**이다 (원인이 하나도 안 보인다).

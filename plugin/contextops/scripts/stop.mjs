@@ -191,7 +191,9 @@ function alreadyReported(root, sessionId) {
   if (typeof sessionId !== 'string' || sessionId.length === 0) return true
   //  ⚠ 이름 규칙의 정본은 `src/cli/paths.ts` 의 `progressMarkerFile()` 이다.
   //    여기는 번들이 아니라 import 를 못 해서 규칙을 옮겨 적었다 —
-  //    `test/progress.test.ts` 가 둘이 같은 이름을 내는지 잰다. 고칠 때 같이 고쳐라.
+  //    둘이 같은 이름을 내는지는 `test/hooks.test.ts` 의 「같은 세션에 agent 가 이미
+  //    보고했으면 보내지 않는다」가 잰다 (그 시험은 progressMarkerFile() 로 파일을 쓴다).
+  //    고칠 때 둘을 같이 고쳐라 — 갈리면 훅이 못 찾고 **중복 보고**를 한다.
   const safe = sessionId.replace(/[^A-Za-z0-9_-]/g, '_')
   return existsSync(join(root, LOCAL_DIR, 'cache', `progress-${safe}.json`))
 }

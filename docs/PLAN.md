@@ -105,9 +105,30 @@
       (`hooks.json` 이 가리키는 스크립트 전부), `test/hooks.test.ts` 가 훅을 **돌린 뒤
       모든 파일의 바이트와 mtime** 을 대조한다. 이름만 세면 새 쓰기 API 에 뚫린다.
       ⚠ CLI 8개 중 다섯이 됐다 — 나머지 셋(`upload-draft`·`propose`·`progress`)은 아래 행이다.
-- [ ] **`init` Skill · `upload-draft` · `propose` Skill · `progress` · Stop 훅**
+- [x] **`init` Skill · `upload-draft` · `propose` Skill · `progress` · Stop 훅** —
+      `9179ffc` `bfc9d60` `eaae9f5` `f688724`
       **완료 기준**: 🔴 **GATE 2** — Claude Code 에서 `init` → 웹 승인 → `sync` 관통 ·
       업로드 payload 캡처에 **코드 본문 0건** (P1)
+      → **payload 쪽은 확인했다.** 관통이 **7단계**가 됐고, 새 `payload` 단계
+      (`apps/web/scripts/walkthrough-payload.ts`)가 **배포되는 번들**을 픽스처 저장소에서
+      돌려(scan → upload-draft → progress → propose) 나간 요청 body 를 **진짜 소켓으로
+      받아** 잰다 — 검사 10개 전부 OK (`.ci/walkthrough-payload.json`):
+      나간 3건이 업로드 계약을 지나고, **픽스처 48개 파일의 가장 긴 줄이 payload 에 0건**,
+      env 값 0건(키 이름은 실제로 나갔다), 토큰은 body 에 0건, 그리고 초안에
+      `file_body` 를 끼워 넣으면 **exit 2 이고 요청이 아예 안 나간다.**
+      초안 body 에 실제 소스를 넣어 **빨개지는 것도 봤다.**
+      ⚠ **「Claude Code 에서 `init`」은 아직 사람이 해 봐야 한다** — Skill 은 모델이
+      실행하는 문서라 무인 세션이 스스로 재는 것은 여기까지다. `test/skills.test.ts` 가
+      SKILL.md 의 명령줄을 뽑아 `COMMANDS`·플래그·계약 이름·`EXIT` 표와 대조한다
+      (틀린 이름은 **사용자의 기계에서만** 조용히 실패하고 우리 CI 는 못 본다).
+      ⚠ CLI 는 SPEC §8.3 의 **여덟이 다 됐다**. `test/commands.test.ts` 가 SPEC 표와
+      코드 표를 대조하므로 한쪽만 늘면 빨개진다.
+      🔴 **P6 을 결정했다** (FINDINGS 42): 훅이 쓸 수 있는 자리는 `.contextops/` 의
+      git-ignore 경로뿐이고 `hooks/hooks.json` 의 `_writes` 에 **선언한** 것으로 한정된다.
+      게이트 둘(`principles.ps1` · `test/hooks.test.ts`)이 그 경계를 재고, 선언을 지우거나
+      선언을 ignore 밖으로 옮기면 **둘 다 빨개지는 것을 봤다.**
+      🔴 **남은 구멍**: `workflow` 항목이 없으면 `workflow.md` 가 안 나가고, 그러면
+      **agent 가 `progress` 를 배우지 못한다** (FINDINGS 43 — 다음 바퀴의 첫 줄)
 
 ## P3 — 서버 AI (SPEC 9/10~9/11)
 

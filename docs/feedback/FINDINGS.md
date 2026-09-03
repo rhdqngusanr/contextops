@@ -29,6 +29,66 @@
 
 ## 다음에 고칠 것
 
+### 43. `workflow` 항목이 없으면 **agent 가 진행 보고를 배우지 못한다**   [구멍]
+- **증상**: SPEC §4.3 은 진행 보고 문단이 「`workflow.md` 에 **항상** 포함되는 고정
+  텍스트」라고 적는다. 그런데 컴파일러는 `workflow` **타입 항목이 하나라도 있을 때만**
+  `.claude/rules/workflow.md` 를 만든다 (`collect()` 이 항목이 배치된 문서만 만든다).
+  paylab 픽스처에는 `workflow` 항목이 없어서 **이번 관통이 만든 Pack 에 workflow.md 가
+  아예 없다** — 파일 셋(`CLAUDE.md`·`domain-refund.md`·`manifest.json`)뿐이다.
+  즉 이번 바퀴에 만든 `progress` 명령을 **아무도 배우지 못한다.** Roadmap 은 영원히
+  agent 보고 0건이고, 화면은 「아직 보고가 없다」로 멀쩡히 뜬다.
+- **근거**: `.ci/walkthrough-pack/` 에 `.claude/rules/workflow.md` 없음 (이번 바퀴
+  직접 확인 — `find .ci/walkthrough-pack -type f`) ·
+  `packages/compiler/src/assemble.ts:47` `collect()` · `templates/index.ts:111` 의
+  `workflow` 칸 `foot: () => [...PROGRESS_REPORT]`
+- **정본**: `docs/SPEC.md` §4.3 · §4.1
+- **고칠 방향**: **둘 중 하나만** 해라 (loop/PROMPT.md ④2-B).
+  ① 「항상」을 지킨다 — `workflow` 문서를 **항목이 없어도** 만든다. 그러면 진행 보고
+     문단 하나만 든 `workflow.md` 가 늘 나간다. ⚠ 그 파일의 `source_item_ids` 가
+     비게 되는데 `ManifestFile.source_item_ids` 는 `.min(1)` 이다 (P7 — 근거 없는
+     파일을 금지하는 자리다). 그러니 **이 문단이 왜 근거 없이 나가도 되는지**를
+     계약에 명시해야 한다 (「제품이 넣는 사용법」은 팀 항목이 아니다).
+  ② 문단을 `CLAUDE.md` 로 옮긴다 — CLAUDE.md 는 언제나 나가고 모든 세션이 읽는다.
+     ⚠ 대신 12,000자 예산을 상시로 먹고, `relieveClaudeMd()` 가 옮길 수 있는 대상이
+     하나 늘어난다.
+  ⚠ 어느 쪽이든 **golden 이 빨개진다** — `TEMPLATE_VERSION` 을 올리고 왜 갱신했는지
+  커밋 메시지에 적어라 (loop/PROMPT.md ③).
+- **왜 이번 바퀴에 안 했나**: PLAN P2 셋째 행(GATE 2)의 완료 기준이 아니고, 위 ①은
+  **P7 계약을 건드리는 결정**이라 한 바퀴에 둘을 만지면 실패 원인을 못 가린다.
+- **상태**: 대기 (🔴 다음 바퀴의 첫 줄. `progress` 명령이 여기 걸려 있다)
+
+### 44. `batch-draft` 응답을 서버가 **계약으로 내지 않는다**   [격차]
+- **증상**: 이번 바퀴에 `ContextItemsBatchDraftResult` 를 계약으로 올렸고 **플러그인은
+  그걸로 판다.** 그런데 라우트는 여전히 손으로 만든 객체를 `ctx.ok(...)` 로 낸다 —
+  즉 계약이 **한쪽에서만** 강제된다. 서버가 칸 이름을 바꾸면 시험은 초록인데
+  `upload-draft` 만 「서버 응답이 계약과 맞지 않는다」로 죽는다.
+- **근거**: `apps/web/src/app/api/v1/projects/[id]/context-items/batch-draft/route.ts`
+  의 `return ctx.ok({ accepted, rejected })` · `packages/schema/src/upload.ts` 의
+  `ContextItemsBatchDraftResult` (이번 바퀴 추가)
+- **정본**: `docs/SPEC.md` §5
+- **고칠 방향**: 라우트가 낼 때 그 계약으로 한 번 파싱한다(`ctx.ok(Result.parse(...))`).
+  ⚠ 응답 계약을 **표로** 올릴 거면 `API_REQUESTS` 옆에 `API_RESPONSES` 를 두고
+  「표의 모든 줄이 실제로 어느 라우트에서 쓰인다」를 시험으로 잠가라 — 안 그러면
+  응답 계약이 정확히 「정의만 있고 아무 일도 안 하는 것」이 된다.
+- **상태**: 대기 (값싸다)
+
+### 45. 훅이 쓰는 파일 이름 규칙이 **두 곳에 손으로 적혀 있다**   [격차]
+- **증상**: `progress-<session>.json` 의 이름 규칙이 `src/cli/paths.ts` 의
+  `progressMarkerFile()` 과 `scripts/stop.mjs` 의 `alreadyReported()` 에 **각각** 있다.
+  훅은 번들이 아니라 `@contextops/schema` 도 `src/` 도 import 할 수 없어서다.
+  지금은 `test/hooks.test.ts` 가 「CLI 가 쓴 파일을 훅이 찾는가」로 둘을 잇지만,
+  **규칙이 갈리면 훅이 못 찾고 중복 보고를 한다** — 그건 근거 개수를 부풀려 P7 을
+  거짓말로 만드는 자리다.
+- **근거**: `plugin/contextops/src/cli/paths.ts` 의 `progressMarkerFile()` ·
+  `plugin/contextops/scripts/stop.mjs` 의 `alreadyReported()` (`eaae9f5`)
+- **정본**: `docs/SPEC.md` §8.6
+- **고칠 방향**: 훅에도 「의존 없는 공용 조각」을 하나 두는 길이 있다
+  (`scripts/hook-shared.mjs` — 훅끼리만 import). ⚠ 그러면 `tools/principles.ps1` 의
+  P6 검사가 **hooks.json 이 가리키는 파일만** 세므로 그 조각이 검사를 안 받는다 —
+  검사 대상을 「훅과 훅이 import 하는 것」으로 넓혀야 같이 잠긴다.
+  지금은 시험 하나가 잇고 있으므로 급하지 않다.
+- **상태**: 대기
+
 ### 36. `setup` 이 가리키는 **토큰 발급 화면이 없다**   [구멍]
 - **증상**: `contextops setup` 은 「브라우저에서 로그인하고 **기기 토큰을 발급받아**
   붙여 넣어라」고 안내한다. 그런데 웹에 그 화면이 없다 — 토큰을 만드는 길은
@@ -77,7 +137,7 @@
 - **고칠 방향**: §8.3 의 `validate` 칸을 「같은 Zod 계약으로 로컬 검증(번들 포함),
   오류 위치 출력」으로 고치고, §8.4 3단계의 `schemas/*.json` 은 **작성 안내서**라고 한 줄
   덧붙여라. 계약은 여전히 한 벌이다 — 둘 다 같은 Zod 에서 나온다.
-- **상태**: 대기
+- **상태**: ✅ `9179ffc` (둘 다 고쳤다)
 
 ### 39. SPEC §8.3 의 exit 표에 「잘못 쓴 명령」의 자리가 없다   [격차]
 - **증상**: 표의 코드는 0·1·2·10·20·30 이다. 모르는 명령·모르는 플래그·인자 없음에
@@ -89,7 +149,9 @@
 - **정본**: `docs/SPEC.md` §8.3
 - **고칠 방향**: §8.3 표 아래에 「64 = 잘못된 사용(명령·플래그·인자)」 한 줄. 값은
   직렬화된다 — 순서를 바꾸지 마라.
-- **상태**: 대기
+- **상태**: ✅ `9179ffc` — 같은 바퀴에 게이트도 올렸다. `test/commands.test.ts` 가
+  SPEC §8.3 표의 명령 이름과 `COMMANDS` 표를 대조하고, 도움말에 `EXIT` 표의 값이
+  전부 있는지 잰다 (문서에만 있는 명령 위에 다음 바퀴가 짓지 않게).
 
 ### 40. `sync` 는 **변경 파일만** 받지 않고 Manifest 의 파일을 전부 받는다   [격차]
 - **증상**: SPEC §8.5 4단계는 「**변경 파일만** `cache/<semver>/` 로 다운로드」다.
@@ -119,7 +181,7 @@
   「로컬 manifest.json 이 계약과 맞나」로 바꾼다 (`readLocalManifest` 가 하는 일이다).
   ⚠ 진짜 서명(발행자 키)을 넣을 생각이면 그건 §2.1·§3 을 건드리는 별개의 일이다 —
   여기 한 줄로 있으면 「이미 있다」고 오해된다.
-- **상태**: 대기 (값싼 문서 한 줄)
+- **상태**: ✅ `9179ffc` (「발행자 키 서명은 아직 없다」를 §8.5 1단계에 명시했다)
 
 ### 42. P6 의 원칙 문장과 검증 칸이 다르고, §8.6 의 `stop.mjs` 는 **파일을 쓴다**   [격차]
 - **증상**: SPEC §0.1 P6 의 문장은 「**Hook 은** 파일을 변경하지 않는다」인데 검증 칸은
@@ -139,7 +201,15 @@
      ⚠ 대신 Stop 훅이 네트워크를 타고, 세션 종료가 2초 늦어질 수 있다.
 - **왜 게이트를 먼저 좁히지 않았나**: 좁히면 「지금 지켜지는 것」이 조용히 약해진다.
   빨개지는 쪽으로 두면 다음 사람이 **결정을 하고** 들어간다 (게이트는 문서보다 강하다).
-- **상태**: 대기 (🔴 P2 셋째 행의 **첫 결정**이다)
+- **상태**: ✅ `eaae9f5` — **①을 골랐고, 예외를 코드에 숨기지 않고 표로 올렸다.**
+  새 P6: 「Hook 은 **사용자의 파일**을 변경하지 않는다. 쓸 수 있는 자리는 `.contextops/` 의
+  git-ignore 경로뿐이고, 훅마다 `hooks/hooks.json` 의 `_writes` 에 **선언한** 경로로 한정된다.」
+  ②(서버에 두기)를 안 고른 이유: 힌트 하나 때문에 세션 종료가 네트워크를 기다린다.
+  그리고 우리가 쓰는 경로는 우리가 만든 `.contextops/.gitignore` 안이라 **git 이 그 변화를
+  아예 못 본다** — 사용자가 커밋·리뷰하는 파일은 한 바이트도 안 바뀐다. 그게 P6 이
+  지키려던 것 자체다. 게이트 둘을 그 경계에 맞췄고 **둘 다 갈리는 것을 봤다**:
+  선언을 지우면 `principles.ps1` FAIL · 선언을 `CLAUDE.md` 로 바꿔도 FAIL ·
+  `test/hooks.test.ts` 는 훅을 돌린 뒤 **바뀐 경로 집합이 선언과 정확히 같은지** 본다.
 
 ### 33. 화면 5 의 「미발행 변경 N건」과 semver 추천을 **계산할 문이 없다**   [구멍]
 - **증상**: DESIGN_BRIEF §4 화면 5 는 상단에 「미발행 변경 7건」을, 발행 모달에
