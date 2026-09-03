@@ -36,6 +36,9 @@
 - [ ] **DB 스키마 · Drizzle 마이그레이션** (SPEC §2) + Supabase 연결
       **완료 기준**: 마이그레이션이 로컬에서 적용됨 · 인덱스 5개 존재
       🙋 **Supabase 프로젝트 생성은 사람이 한다.** 루프는 스키마·마이그레이션·`.env.example` 까지
+      → 루프가 할 몫은 끝났다 (`389c7f2`): 표 16 · 인덱스 5 · enum 14 를 **PGlite 에
+      실제로 적용**하고 시험 11개로 잠갔다. `- [x]` 로 바꾸지 않은 이유는 **Supabase 연결**
+      한 조각이 남아서다 — 사람이 프로젝트를 만들고 `DATABASE_URL` 을 주면 닫힌다
 - [ ] **API 1군** — teams · projects · repos · tokens · documents · context-items · conflicts · questions
       **완료 기준**: vitest api 초록 · 권한 2단계(owner/member) 검사 · 응답 형식 SPEC §5 준수
 - [ ] **API 2군 + 발행 트랜잭션** — proposals · versions:publish · packs · sync-reports · progress · roadmap
