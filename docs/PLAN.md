@@ -39,8 +39,18 @@
       → 루프가 할 몫은 끝났다 (`389c7f2`): 표 16 · 인덱스 5 · enum 14 를 **PGlite 에
       실제로 적용**하고 시험 11개로 잠갔다. `- [x]` 로 바꾸지 않은 이유는 **Supabase 연결**
       한 조각이 남아서다 — 사람이 프로젝트를 만들고 `DATABASE_URL` 을 주면 닫힌다
-- [ ] **API 1군** — teams · projects · repos · tokens · documents · context-items · conflicts · questions
+- [x] **API 1군** — teams · projects · repos · tokens · documents · context-items · conflicts · questions — `0a370d8` `5d26744`
       **완료 기준**: vitest api 초록 · 권한 2단계(owner/member) 검사 · 응답 형식 SPEC §5 준수
+      → 라우트 13개 · 시험 37개(auth 17 · routes 20). 셋 다 만족했다:
+      **① vitest api 초록** — 시험이 `route.ts` 의 export 를 **그대로** 부른다 (PGlite 연결을
+      꽂아서). 핸들러 안의 로직을 베낀 시험이 아니다.
+      **② 권한 2단계** — 같은 body·같은 프로젝트가 member 면 403, owner 면 201.
+      기기 토큰은 owner 의 것이어도 member 까지다 (`ACTOR_MAX_ROLE` 표).
+      **③ 응답 형식** — 모든 응답이 `{data, meta:{request_id}}` / `{error:{code,…}}` 이고,
+      항목 응답은 `ContextItem.parse` 로 되판다.
+      ⚠ 남은 몫은 FINDINGS 24·25·26 에 적었다 (zip 업로드 · 구조화 job · 충돌→항목 상태).
+      전부 **주인이 P3** 라서 여기서 열지 않았다 — 반쯤 검사하는 zip 경로가 제일 나쁘다.
+      Next 앱 뼈대도 여기서 세웠다 (`ci.ps1` 의 build 층이 SKIP 에서 풀렸다). 화면은 넷째 행이다
 - [ ] **API 2군 + 발행 트랜잭션** — proposals · versions:publish · packs · sync-reports · progress · roadmap
       **완료 기준**: 손으로 넣은 항목이 Pack 으로 나옴 · `STALE_BASE` 409 재현 테스트 ·
       실패 시 전체 롤백 테스트
