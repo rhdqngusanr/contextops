@@ -160,9 +160,24 @@ if (-not $hasWorkspace) {
 }
 
 # ── 4층 · 빌드 ────────────────────────────────────────────────────
-$hasWeb = Test-Path (Join-Path $root "apps\web\package.json")
+#  ★ 폴더가 있다고 빌드가 있는 것은 아니다. apps/web 은 DB 층(P1 첫 행)이 먼저 생기고
+#    Next 앱(P1 넷째 행)은 나중에 붙는다. 그 사이에 `pnpm --filter web build` 를 그냥
+#    부르면 「build 스크립트가 없다」로 빨개지는데, 그건 **고장이 아니라 아직 없는 것**이다.
+#    2·3층이 멤버를 먼저 세는 것과 같은 이유로 여기서도 **대상을 먼저 센다.**
+#    ⚠ 반대쪽 함정도 같이 기억해라 — build 스크립트가 **생겼는데도** SKIP 이 나오면
+#      그건 이 검사가 눈을 가린 것이다. note 에 이유를 적어서 한 줄만 보고도 구별되게 한다.
+$webPkg = Join-Path $root "apps\web\package.json"
+$hasWeb = Test-Path $webPkg
+$hasBuildScript = $false
+if ($hasWeb) {
+    try {
+        $wj = (Get-Content $webPkg -Raw -Encoding UTF8) | ConvertFrom-Json
+        if ($wj.scripts -and $wj.scripts.build) { $hasBuildScript = $true }
+    } catch { $hasBuildScript = $false }
+}
 if ($Fast)          { Add-Layer "build" "SKIP" "-Fast" }
 elseif (-not $hasWeb) { Add-Layer "build" "SKIP" "apps/web 없음" }
+elseif (-not $hasBuildScript) { Add-Layer "build" "SKIP" "apps/web 에 build 스크립트 없음 — Next 앱은 아직이다 (PLAN P1 넷째 행)" }
 elseif ($red -gt 0) { Add-Layer "build" "SKIP" "앞 층이 빨갛다" }
 else {
     $r = Invoke-Layer "build" "pnpm --filter web build"

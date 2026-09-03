@@ -33,3 +33,11 @@ catalog:
   zod: ^4.5.4
   # tsx — .ts 를 그대로 실행한다. packages/schema 의 JSON Schema 산출기가 쓴다.
   tsx: ^4.23.13
+  # DB (SPEC §1.2 · §2). drizzle-orm 은 런타임, drizzle-kit 은 마이그레이션 산출기다.
+  drizzle-orm: ^0.45.2
+  drizzle-kit: ^0.31.10
+  # Supabase Postgres 드라이버. 연결 문자열은 .env 로만 온다 (apps/web/.env.example).
+  postgres: ^3.4.9
+  # PGlite — 프로세스 안에서 도는 Postgres(WASM). 마이그레이션을 **실제로 적용해 보는**
+  # 시험이 이걸 쓴다. Docker 도 Supabase 계정도 없이 「적용됨」을 잴 수 있는 유일한 길이다.
+  "@electric-sql/pglite": ^0.5.8
