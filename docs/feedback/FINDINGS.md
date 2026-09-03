@@ -29,7 +29,7 @@
 
 ## 다음에 고칠 것
 
-### 43. `workflow` 항목이 없으면 **agent 가 진행 보고를 배우지 못한다**   [구멍]
+### 43. ✅ `workflow` 항목이 없으면 **agent 가 진행 보고를 배우지 못한다**   [구멍]
 - **증상**: SPEC §4.3 은 진행 보고 문단이 「`workflow.md` 에 **항상** 포함되는 고정
   텍스트」라고 적는다. 그런데 컴파일러는 `workflow` **타입 항목이 하나라도 있을 때만**
   `.claude/rules/workflow.md` 를 만든다 (`collect()` 이 항목이 배치된 문서만 만든다).
@@ -55,7 +55,13 @@
   커밋 메시지에 적어라 (loop/PROMPT.md ③).
 - **왜 이번 바퀴에 안 했나**: PLAN P2 셋째 행(GATE 2)의 완료 기준이 아니고, 위 ①은
   **P7 계약을 건드리는 결정**이라 한 바퀴에 둘을 만지면 실패 원인을 못 가린다.
-- **상태**: 대기 (🔴 다음 바퀴의 첫 줄. `progress` 명령이 여기 걸려 있다)
+- **🔴 결정 — ①을 골랐다** (`bc08125`): ②(CLAUDE.md 로 옮김)는 SPEC §4.3 을 뒤집고
+  12,000자 예산을 상시로 먹는데, **CLAUDE.md 도 항목이 없으면 안 나가므로** 같은 고장이
+  한 겹 아래에서 다시 난다. ①의 대가였던 `source_item_ids.min(1)` 은 **풀지 않고 좁혔다** —
+  `packages/schema` 에 `PRODUCT_TEXT_PACK_FILES` 표를 두고 「이 경로만 근거 없이 나갈 수
+  있다」로 바꿨다. 표 밖의 파일이 빈 근거로 오면 여전히 막힌다.
+- **상태**: ✅ `bc08125` — `DocSpec.always` 한 칸 · 관통 publish 가 「workflow 항목 0개인데도
+  workflow.md 가 나왔나 · 진행 보고 5줄이 다 있나」를 잰다. `TEMPLATE_VERSION` 1.0 → 1.1
 
 ### 44. `batch-draft` 응답을 서버가 **계약으로 내지 않는다**   [격차]
 - **증상**: 이번 바퀴에 `ContextItemsBatchDraftResult` 를 계약으로 올렸고 **플러그인은
@@ -87,6 +93,39 @@
   P6 검사가 **hooks.json 이 가리키는 파일만** 세므로 그 조각이 검사를 안 받는다 —
   검사 대상을 「훅과 훅이 import 하는 것」으로 넓혀야 같이 잠긴다.
   지금은 시험 하나가 잇고 있으므로 급하지 않다.
+- **상태**: 대기
+
+### 46. 항목 없는 `workflow.md` 의 제목이 **내용과 어긋난다**   [격차]
+- **증상**: 이번 바퀴부터 workflow 항목이 0개여도 `.claude/rules/workflow.md` 가 나간다.
+  그런데 머리말이 `# 작업 절차`인데 본문은 **ContextOps 진행 보고 규칙 하나**뿐이다 —
+  사람이 열면 「작업 절차라더니 왜 우리 도구 사용법만 있나」로 읽힌다. 팀 규칙으로
+  배포할 만한 파일인가를 묻는 자리(loop/PROMPT.md ⑦ 3층)에서 걸린다.
+- **근거**: `.ci/walkthrough-pack/.claude/rules/workflow.md` (이번 바퀴 직접 읽음 — 8줄) ·
+  `packages/compiler/templates/index.ts` 의 `DOCS.workflow.head`
+- **정본**: `docs/SPEC.md` §4.3
+- **고칠 방향**: **FINDINGS 30 과 한 묶음이다** — 둘 다 `head` 한 줄이고 둘 다 golden 을
+  깬다. 같이 하면 `TEMPLATE_VERSION` 을 한 번만 올린다. ⚠ 제목을 항목 유무로 갈라
+  쓰지 마라(`slots` 가 비면 다른 제목) — 같은 파일이 저장소마다 다른 제목을 갖게 되고
+  `always` 를 표 한 칸으로 만든 뜻이 없어진다.
+- **상태**: 대기 (값싸다 · 30 과 같이)
+
+### 47. 배포되는 **JSON Schema 가 P7 의 근거 규칙을 표현하지 못한다**   [격차]
+- **증상**: `source_item_ids` 의 `.min(1)` 을 `PRODUCT_TEXT_PACK_FILES` 예외 표로 바꾸면서
+  규칙이 Zod `.refine` 이 됐다. `z.toJSONSchema` 는 refine 을 **표현하지 못하고 조용히
+  버린다** — 그래서 `plugin/contextops/schemas/manifest.json` 에서 `"minItems": 1` 이
+  사라졌고 대신할 규칙이 들어가지 않았다. 그 JSON Schema 만으로 재면 **아무 경로나
+  빈 `source_item_ids` 로 지나간다.**
+- **근거**: `git show HEAD~1:plugin/contextops/schemas/manifest.json` 에는
+  `"source_item_ids": {"minItems": 1, …}` · 지금은 `{"type":"array","items":…}` 뿐
+  (이번 바퀴 직접 대조) · `packages/schema/src/manifest.ts` 의 `.refine`
+- **정본**: `docs/SPEC.md` §3 (P7)
+- **얼마나 급한가**: **런타임은 안 샌다.** 플러그인은 `Manifest.parse`(Zod)로 판다 —
+  `schemas/*.json` 을 manifest 검증에 쓰는 코드는 0곳이다(`grep` 확인). 새는 것은
+  「우리가 배포하는 계약 문서가 실제 계약보다 느슨하다」는 사실이다.
+- **고칠 방향**: `toJsonSchema` 의 `override` 로 그 자리에 `anyOf`(비지 않거나 · 경로가
+  예외 표에 있거나)를 손으로 넣는다. ⚠ 그러면 **JSON Schema 를 손으로 짜는 자리**가
+  하나 생긴다 — 「Zod 정본과 일치한다」를 재는 `json-schema.test.ts` 가 그 자리에서는
+  아무것도 못 재게 되므로, 예외를 넣었다는 사실 자체를 시험으로 잠가라.
 - **상태**: 대기
 
 ### 36. `setup` 이 가리키는 **토큰 발급 화면이 없다**   [구멍]
@@ -478,7 +517,7 @@
   (SPEC §14 절삭 순서 4번이라 일정이 밀리면 잘릴 수도 있다. 잘리면 그 결정을 여기 적어라)
 - **상태**: 대기 (P5 행이 주인 · 지금 고치지 마라)
 
-### 8. workflow 항목이 없는 프로젝트에는 진행 보고 규칙이 안 나간다   [구멍]
+### 8. ✅ workflow 항목이 없는 프로젝트에는 진행 보고 규칙이 안 나간다   [구멍]
 - **증상**: SPEC §4.3 의 고정 텍스트(진행 보고 CLI 사용법)는 `.claude/rules/workflow.md`
   의 꼬리말이고, 그 파일은 **workflow 항목이 하나라도 있어야** 생긴다. 항목이 0개인
   프로젝트는 Pack 어디에도 진행 보고 방법이 없다 → agent 가 보고를 안 하고 Roadmap 이 안 움직인다.
@@ -491,7 +530,10 @@
   ② 고정 텍스트를 CLAUDE.md 꼬리말로 옮긴다 (SPEC §4.3 을 고쳐야 한다)
   ③ Manifest 에 「항목에서 오지 않은 파일」을 표현할 자리를 만든다 — **P7 을 넓히는 일이라
      신중해야 한다.** 「근거 없는 줄」의 예외를 한 번 열면 다음 예외가 쉬워진다
-- **상태**: 대기
+- **상태**: ✅ `bc08125` — **③을 골랐다** (43 과 같은 구멍이다). ①(픽스처가 workflow 항목을
+  만들게 한다)은 제품의 일을 사용자 데이터에 시킨다 — 픽스처를 고쳐도 남의 저장소는 그대로다.
+  ③의 「예외가 쉬워진다」는 걱정은 **예외를 계약의 표 하나**(`PRODUCT_TEXT_PACK_FILES`)로
+  묶고, 「표 밖은 여전히 막힌다」·「표에 이름이 늘었으면 알린다」를 schema 시험 5개로 잠가서 막았다
 
 ### 9. `tags`·`owner_id`·`valid_from`·`valid_until` 과 짧은 절의 `body` 가 Pack 을 바꾸지 않는다   [구멍]
 - **증상**: 컴파일러가 실제로 읽는 Base 필드는 `id`·`title`·`status`·`scope`·`priority`·

@@ -5,92 +5,120 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 12바퀴 · `f688724`_
+_마지막 갱신: 2026-09-04 · 루프 13바퀴 · `bc08125`_
 
 ---
 
 ## 지금 어디인가
 
-**P2 가 끝났다 — 플러그인이 다 됐다.** CLI 는 SPEC §8.3 의 **여덟이 전부** 있고,
-Skill 셋(`init`·`sync`·`propose`)과 훅 둘(SessionStart·Stop)이 들어갔다.
-**관통이 7단계**가 됐다 — 새 `payload` 단계가 **GATE 2 의 P1 증거**를 낸다.
+**P2 가 끝났고, 그 뒤에 열린 구멍 하나(FINDINGS 43·8)를 닫았다.**
+이제 **workflow 항목이 0개인 저장소도 `.claude/rules/workflow.md` 를 받는다** —
+agent 가 `progress` 를 배울 자리가 모든 Pack 에 생겼다. `TEMPLATE_VERSION` 1.0 → **1.1**.
 
-다음은 **P3 첫 행 — 서버측 AI (`structureDocument` · `detectConflicts` · 예산 가드)** 다.
-⚠ 그 전에 **FINDINGS 43** 이 있다 (아래 「다음 바퀴가 할 일」).
+다음은 **`docs/PLAN.md` P3 첫 행 — 서버측 AI (`structureDocument` · `detectConflicts` ·
+예산 가드 · SPEC §7)** 다. 앞을 막는 FINDINGS 는 **없다** (남은 것은 전부 격차이거나
+P3·P4 가 주인이다).
 
 | 있는 것 | 없는 것 |
 |---|---|
 | `loop/` · `tools/` · pnpm workspace + catalog | 서버측 AI (`structureDocument`·`detectConflicts`) · 예산 가드 |
-| `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 108) | Supabase 프로젝트 (🙋 사람) · Vercel |
-| `packages/compiler` (파이프라인 7단계 · 테스트 124 · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
+| `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
+| `packages/compiler` (파이프라인 7단계 · 테스트 **130** · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
 | `apps/web` — 라우트 28개 · 테스트 124 | 충돌을 **만드는** 코드 (P3 · FINDINGS 28) |
 | 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
 | 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
-| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | 🔴 **`workflow.md` 가 안 나가는 저장소가 있다** (FINDINGS 43) |
+| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | 배포되는 JSON Schema 가 P7 규칙을 못 담는다 (FINDINGS 47 · 런타임은 샌 데 없다) |
+| ✅ **모든 Pack 에 `workflow.md`** — 진행 보고 문단이 항상 나간다 (FINDINGS 43·8) | |
 
-검사 층: `principles OK 7 · typecheck 6초·멤버 4 · test 44초·멤버 4 · build 19초 ·
-walkthrough 47초` → **GREEN**. 관통 **7단계**
-(fixture·compile·api·publish·scan·**payload**·sync). 남은 SKIP 하나(`shots`)의 prereq 는
+검사 층: `principles OK 7 · typecheck 6초·멤버 4 · test 42초·멤버 4 · build 21초 ·
+walkthrough 49초` → **GREEN**. 관통 **7단계**
+(fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`.
 
 ## 다음 바퀴가 할 일
 
-🔴 **`docs/feedback/FINDINGS.md` 43 이 맨 위다 — 이번 바퀴가 만든 `progress` 가
-거기 걸려 있다.**
+🔴 **`docs/PLAN.md` P3 첫 행 — 7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드 (SPEC §7).**
+`docs/feedback/FINDINGS.md` 맨 위(43)는 이번 바퀴에 닫혔고, 그 위를 막는 것은 없다.
 
-컴파일러는 `workflow` **타입 항목이 있을 때만** `.claude/rules/workflow.md` 를 만든다.
-그런데 SPEC §4.3 의 진행 보고 문단(= agent 에게 `progress` 사용법을 가르치는 유일한
-자리)은 그 파일에만 있다. paylab 픽스처에는 `workflow` 항목이 없어서 **이번 관통이
-만든 Pack 에 workflow.md 가 아예 없다** (`.ci/walkthrough-pack/` 에 파일 셋뿐).
-즉 **Roadmap 이 영원히 agent 보고 0건**이고 화면은 「아직 보고가 없다」로 멀쩡히 뜬다.
+⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
+⚠ **Anthropic API 키도 사람이 준다** (아래 「막힌 것」). 키가 없으면 P3 는
+**픽스처 결과로 떨어지는 갈래**(`BUDGET_EXCEEDED` → 픽스처)까지만 잰다 — 그것도 SPEC §7.4 다.
 
-선택지 둘과 각각의 대가는 FINDINGS 43 에 적어 뒀다. ⚠ ①(항목 없어도 workflow.md 를
-만든다)은 `ManifestFile.source_item_ids` 의 `.min(1)`(P7)과 부딪힌다 — **계약을
-건드리는 결정**이다. 어느 쪽이든 **golden 이 빨개지므로 `TEMPLATE_VERSION` 을 올려라.**
+**P3 를 시작하기 전에 아는 것:**
 
-그 다음이 `docs/PLAN.md` **P3 첫 행**(서버 AI · SPEC §7).
+- **`withBudget()` 는 아직 없다.** SPEC §7 의 이름이지 코드가 아니다 — `apps/web/src` 에
+  구현 0건이다 (이번 바퀴 `grep` 확인 · 이름이 나오는 곳은 SPEC·`.env.example` 주석·
+  `principles.ps1` 검사뿐). **만드는 게 그 행의 일이다.**
+  `tools/principles.ps1` 의 P3 검사는 지금 **SKIP** 이다. 대상이 생기는 순간 켜져야 한다 —
+  **켜지지 않으면 그게 고장이다** (loop/PROMPT.md ⑥).
+- **에러 코드는 이미 표에 있고 시험이 잰다** (`apps/web/test/error-codes.test.ts`).
+  `BUDGET_EXCEEDED` 를 실제로 던지는 라우트가 생기면 그 시험의 「살아 있는 코드」 수가 늘어난다.
+- **충돌을 만드는 코드가 없다** (FINDINGS 28) — 지금 충돌 카드는 씨앗이 넣는다.
+  7.2 가 그 주인이다.
 
-**시작하기 전에 아는 것 (이번 바퀴가 깔아 둔 자리):**
+**컴파일러를 다시 건드릴 때 아는 것 (이번 바퀴가 깔아 둔 자리):**
 
-- **명령을 더하는 절차는 `src/cli/commands.ts` 의 표 옆 주석**에 있다 — 네 걸음.
-  이번에 그 절차로 셋을 더했고 맞았다. 이제 `test/commands.test.ts` 가 **SPEC §8.3 의
-  표와 이 표를 대조**하므로, 한쪽만 늘면 빨개진다.
-- **Skill 을 더할 때는 `skills/<이름>/SKILL.md` 하나면 된다.** `test/skills.test.ts` 가
-  그 문서에서 명령줄을 뽑아 `COMMANDS`·플래그 표·`JSON_SCHEMA_FILES`·`EXIT` 와 대조한다.
-  🔴 **SKILL.md 는 컴파일도 import 도 안 되는 텍스트인데 모델이 그대로 실행한다** —
-  틀린 이름은 사용자의 기계에서만 조용히 실패한다. 그래서 이 게이트가 있다.
-- **훅을 더하는 절차는 `hooks/hooks.json` 의 `_comment` 에 있다 — 네 걸음.**
-  🔴 **파일을 쓰는 훅이면 `_writes` 에 경로를 선언해야 한다** (P6 의 새 정의).
-  선언이 없으면 `principles.ps1` 이, 선언 밖에 쓰면 `test/hooks.test.ts` 가 빨개진다.
-- **서버로 말하는 문은 `src/cli/session.ts` 하나다** — `readyOrExplain()`(설정·토큰) ·
-  `reportFailure()`(서버 코드 → 종료 코드). 새 명령은 이 둘로 시작한다.
-  ⚠ **디스크 쓰기 probe 는 sync 에만 있다.** 읽기만 하는 명령이 probe 를 하면
-  읽기 전용 체크아웃에서 못 돈다.
-- **「모델이 알 수 없는 값은 CLI 가 붙인다」가 초안 파일 셋의 설계다** —
-  `ContextItemDraftFile`(← `repo`·`scan_summary` 없음) ·
-  `ProposalDraftFile`(← `base_version_id`·`client_request_id` 없음).
-  ★ 넷째 초안 파일을 만들 때도 같은 질문을 해라: **모델이 이 칸을 지어낼 수 있나?**
-- 🔴 **`bin/contextops-cli.mjs` 는 커밋되는 산출물이다.** 소스만 고치고 빌드를 잊으면
-  사용자는 옛 CLI 를 돈다 — `test/bundle.test.ts` 가 바이트로 대조해 빨개진다.
-  고쳤으면 `pnpm --filter @contextops/plugin build` 를 부르고 **같이 커밋해라.**
-- **`packages/schema` 를 고쳤으면 `pnpm --filter @contextops/schema schemas`** 도 불러라
-  (`plugin/contextops/schemas/*.json` 이 표류하면 `test/json-schema.test.ts` 가 빨개진다).
-- 상태 판정은 `managed.ts` 의 `judge()` **하나**다. sync 가 손대도 되는 파일의 정본은
-  `MANAGED_PATHS` 표다 (줄마다 `sample` 이 있고 시험이 「자기 sample 만 맞춘다」를 잰다).
-
-**API 를 손으로 두드릴 일이 생기면** — `pnpm --filter web dev:db` 로 씨앗 DB 를 띄우고
-`http://127.0.0.1:55433` 에서 `project_id` 와 세션 토큰을 받는다. 그 다음은
-`pnpm --filter web build` → `next start` 다. **`next dev` 를 쓰지 마라** (아래 함정).
+- **「항목이 없어도 나가는 문서」는 `DOCS` 표의 `always` 한 칸이다.** 켜는 절차 세 걸음이
+  그 칸 주석에 있고, ①만 하면 `packages/compiler/test/always.test.ts` 가 빨개진다.
+- 🔴 **P7 의 예외는 `packages/schema` 의 `PRODUCT_TEXT_PACK_FILES` 표 하나다.**
+  `source_item_ids` 의 `.min(1)` 은 **풀린 게 아니라 좁혀졌다** — 표 밖의 경로가 빈 근거로
+  오면 여전히 막힌다. 「표에 이름이 늘었으면 알린다」를
+  `packages/schema/test/manifest-evidence.test.ts` 가 잰다. **여기 한 줄을 더할 때는
+  왜 그 파일이 근거 없이 나가도 되는지를 커밋 메시지에 적어라.**
+- 🔴 **`TEMPLATE_VERSION` 은 컴파일러 입력 계약의 리터럴이다** (`src/input.ts`).
+  올리면 golden `input.json` 3개와 `test/fixtures.ts` 도 같이 올려야 한다 —
+  이번 바퀴에 시험 25개가 「컴파일 입력이 계약과 다르다」로 한꺼번에 빨개졌다.
+- **Pack 파일은 codepoint 순으로 정렬된다** — `.claude/...` 가 `CLAUDE.md` 보다 **앞**이다.
+  `files[0]` 이 CLAUDE.md 라고 가정한 시험 둘이 이번에 빨개졌다. `path` 로 찾아라.
+- 🔴 **`packages/schema` 를 고치면 번들이 갈린다.** `bin/contextops-cli.mjs` 는
+  schema 를 통째로 담는다 — `pnpm --filter @contextops/plugin build` 를 부르고 같이 커밋해라
+  (`test/bundle.test.ts` 가 바이트로 대조한다). `pnpm --filter @contextops/schema schemas` 도.
 
 **값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44** 는 문서·한 줄짜리다.
-**14**(`.ps1` 두 개가 LF)도 그렇다. **30**(domain 파일 제목이 「# 도메인」이라 어느
-도메인인지 본문에 없다 — 이번 Pack 에서도 그대로 봤다)은 템플릿 한 줄인데
-**golden 이 빨개진다** — `TEMPLATE_VERSION` 을 올려라. **43 과 같이 하면 값이 두 배다**
-(둘 다 템플릿이고 둘 다 golden 을 깬다).
+**14**(`.ps1` 두 개가 LF)도 그렇다. 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿
+`head` 한 줄이고 둘 다 golden 을 깬다. 같이 하면 `TEMPLATE_VERSION` 을 한 번만 올린다
+(30: domain 파일 제목이 「# 도메인」 · 46: 항목 없는 workflow.md 제목이 「# 작업 절차」).
 
 ⚠ FINDINGS **24·25·26·28·29·31·33·35** 는 **P3 가**, **36** 은 **P4 화면 9** 가 주인이다.
 
 ## 잰 것
+
+**13바퀴 · FINDINGS 43·8 — workflow 항목이 0개여도 `workflow.md` 를 낸다** (`bc08125`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 7** / typecheck 6초 / test 42초 / build 21초 / walkthrough 49초 |
+| 새 시험 | **+11** — compiler 124 → **130**(`always.test.ts` 6) · schema 108 → **113**(`manifest-evidence.test.ts` 5). 전체 530 → **541** |
+| 관통 검사 | publish 단계에 **+2** (「workflow 항목 0개인데도 파일이 나왔나」·「진행 보고 5줄이 다 있나」) — 둘 다 OK |
+| 관통이 낸 Pack | 파일 **3 → 4개** (`.claude/rules/workflow.md` 770바이트가 새로 나간다) |
+| `TEMPLATE_VERSION` | 1.0 → **1.1** (golden 3케이스의 `input.json`·`expected/manifest.json` 갱신 · case-2·3 에 `workflow.md` 신규) |
+| 번들 | `bin/contextops-cli.mjs` **810,874바이트** (schema 가 바뀌어 다시 빌드해 같이 커밋했다) |
+| 마이그레이션 | **없다** — DB 를 안 건드렸다 |
+| 닫은 FINDINGS | **43 · 8** (같은 구멍이 두 번 적혀 있었다) |
+| 새 FINDINGS | **46**(항목 없는 workflow.md 의 제목 · 격차) · **47**(JSON Schema 가 P7 규칙을 못 담는다 · 격차) |
+
+**🔴 결정 — P7 의 예외를 「푸는」 대신 「이름 붙였다」**
+
+FINDINGS 43 의 선택지 ①(항목이 없어도 `workflow.md` 를 만든다)은
+`ManifestFile.source_item_ids` 의 `.min(1)` 과 부딪혔다. 그 `.min(1)` 이 P7 의
+「근거 없는 파일 금지」다.
+
+**푼 방법**: `.min(1)` 을 지우고 `packages/schema` 에 `PRODUCT_TEXT_PACK_FILES` 표를 두고
+「이 경로만 근거 없이 나갈 수 있다」로 좁혔다. 지금 그 표에 있는 것은
+`.claude/rules/workflow.md` 하나다.
+
+- 왜 ②(CLAUDE.md 로 옮김)가 아닌가 — SPEC §4.3 을 뒤집고 12,000자 예산을 상시로 먹는데,
+  **CLAUDE.md 도 항목이 없으면 안 나간다.** 같은 고장이 한 겹 아래에서 다시 난다.
+- 왜 픽스처를 고치지 않았나 (FINDINGS 8 의 ①) — 그건 제품의 일을 사용자 데이터에 시키는 것이다.
+  픽스처를 고쳐도 **남의 저장소는 그대로다.**
+- 예외가 넓어지는 것을 무엇이 막나 — 시험 5개. 「표 밖의 경로는 빈 근거로 막힌다」·
+  「표에 이름이 늘면 빨개진다」·「Manifest 안에서도 같은 규칙이 걸린다」.
+
+**갈리는 것을 봤다** — 되돌려 보지 않고 관통 산출물로 확인했다:
+`.ci/walkthrough-pack/` 이 파일 3개(`CLAUDE.md`·`domain-refund.md`·`manifest.json`)에서
+**4개**가 됐고, `manifest.json` 의 새 줄은
+`.claude/rules/workflow.md · 770 · source_item_ids: []` 다. 진행 보고 5줄이 그 안에 다 있다.
+paylab 픽스처에는 **workflow 항목이 없다** — 그래서 이 검사가 의미가 있다.
 
 **12바퀴 · P2 셋째 행 = 🔴 GATE 2 — CLI 3 · Skill 3 · Stop 훅 · 관통 payload 단계**
 (`9179ffc` `bfc9d60` `eaae9f5` `f688724`)
@@ -321,33 +349,39 @@ hooks.json 이 가리키는 것 **전부**로 넓혀 뒀으므로, `stop.mjs` �
 
 **루프 실주행 기준선** — `logs/cycles/*.jsonl` 의 **마지막** result 줄 · `duration_api_ms`
 
-| | dry001·002 | c001 | c002 | c003 `8e02f48` | c004 `84ce3ea` | **11바퀴 `9c4d5d2`** |
-|---|---|---|---|---|---|---|
-| 시간 | 0.3분 · 0.3분 | 15.1분 | **result 줄 없음** | 30.2분 | 7.1분 | **21.7분** |
-| 턴 | 7 · 7 | 77 | (잘렸다) | 92 | 46 | **129** |
-| 비용 | $0.42 · $0.41 | $6.28 | | $13.90 | $3.05 | **$13.56** |
+| | dry001·002 | c001 | c002 | c003 `8e02f48` | c004 `84ce3ea` | 11바퀴 `9c4d5d2` | **12바퀴 `f688724`** |
+|---|---|---|---|---|---|---|---|
+| 시간 | 0.3분 · 0.3분 | 15.1분 | **result 줄 없음** | 30.2분 | 7.1분 | 21.7분 | **32.4분** |
+| 턴 | 7 · 7 | 77 | (잘렸다) | 92 | 46 | 129 | **194** |
+| 비용 | $0.42 · $0.41 | $6.28 | | $13.90 | $3.05 | $13.56 | **$30.35** |
+
+⚠ 12바퀴가 **역대 최대**다 (턴 194 · $30). GATE 2 한 바퀴에 CLI 3 · Skill 3 · 훅 · 관통
+단계를 다 넣었기 때문이다 — 「한 바퀴에 하나」를 넓게 잡으면 값이 이만큼 뛴다.
 
 ⚠ **5~10바퀴는 `logs/cycles/` 에 파일이 없다.** 루프 러너가 아니라 직접 연 세션으로 돌았다.
 11바퀴의 값은 `logs/cycles/2026-09-04_c001.jsonl` 의 마지막 `result` 줄에서 읽었다.
 
-🔴 **12바퀴(이 바퀴)는 `logs/cycles/2026-09-04_c002.jsonl` 이다.**
+12바퀴의 값은 `logs/cycles/2026-09-04_c002.jsonl` 에서 읽어 위 표에 이어 적었다.
+
+🔴 **13바퀴(이 바퀴)는 `logs/cycles/2026-09-04_c003.jsonl` 이다.**
 `result` 줄은 세션이 **끝난 뒤에** 붙으므로 그 바퀴 자신은 자기 값을 못 읽는다.
-**다음 바퀴가 그 파일의 마지막 `result` 줄을 읽어 이 표에 `12바퀴 f688724` 열로 이어 적어라**
+**다음 바퀴가 그 파일의 마지막 `result` 줄을 읽어 이 표에 `13바퀴 bc08125` 열로 이어 적어라**
 (기준: `duration_api_ms` · `num_turns` · `total_cost_usd`). 안 적으면 기준선이 여기서 끊긴다.
 
 ## 눈 판정 대기
 
-_(없음)_ — 이번 바퀴에 만든 것도 화면이 아니라 CLI·Skill·훅이다. **관통이 낸 10줄과
-적용된 Pack 을 직접 읽었다** (`.ci/walkthrough-payload.json` · `.ci/walkthrough-pack/`).
+_(없음)_ — 이번 바퀴에 만진 것은 화면이 아니라 컴파일러·계약이다.
+**관통이 낸 Pack 을 직접 읽었다** (`.ci/walkthrough-pack/` · 파일 4개).
 ⚠ `.ci/` 는 다음 관통이 통째로 지운다 — 근거로 인용할 거면 **적기 전에 밖으로 복사**해라.
 
-**생성된 Pack 을 사람으로서 읽은 판정**: `CLAUDE.md` 는 팀 규칙으로 배포할 만하다.
-여섯 줄 전부에 역추적 태그가 있고(P7), 절 이름(Mission·Goals·Roadmap·Policies·
-Constraints)이 사람이 찾는 순서다. **그런데 파일 목록을 보다 구멍을 찾았다** —
-Pack 에 `.claude/rules/workflow.md` 가 **아예 없다**. 그 파일에만 있는 진행 보고 문단이
-agent 에게 `progress` 를 가르치는 유일한 자리다 → **FINDINGS 43** (다음 바퀴의 첫 줄).
+**생성된 Pack 을 사람으로서 읽은 판정**: `CLAUDE.md` 는 여전히 팀 규칙으로 배포할 만하다.
+새로 나가는 `.claude/rules/workflow.md` 는 **8줄**이고, 진행 보고 5줄이 다 있다 —
+「agent 가 `progress` 를 어디서 배우나」의 답이 이제 모든 Pack 에 있다.
+**그런데 그 파일을 읽다 격차 하나를 봤다** — 머리말이 `# 작업 절차`인데 본문은
+ContextOps 사용법 하나뿐이라 제목과 내용이 어긋난다 → **FINDINGS 46**.
 ⚠ `domain-refund.md` 의 제목이 여전히 **「# 도메인」**이라 어느 도메인인지 본문에 없다
-(FINDINGS 30 · 템플릿 한 줄 · 고치면 golden 이 빨개진다 → `TEMPLATE_VERSION` 을 올려라).
+(FINDINGS 30). **30 과 46 은 같은 자리(`DOCS` 표의 `head`)라 한 바퀴에 같이 해라** —
+둘 다 golden 을 깨므로 `TEMPLATE_VERSION` 을 한 번만 올리면 된다.
 
 **아직 눈으로 못 본 것** (다음에 화면을 건드리면 여기부터):
 
