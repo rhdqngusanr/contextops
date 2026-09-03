@@ -7,7 +7,8 @@ import type { Cli } from './cli'
 import { saveCredential, writeProjectConfig } from './config'
 import { EXIT } from './exit'
 import { describeIssues } from './issues'
-import { resolveRoot } from './paths'
+import { LOCAL_DIR, resolveRoot } from './paths'
+import { ensureLocalGitignore } from './sync'
 
 // =====================================================================
 //  `contextops setup` — 이 저장소를 프로젝트에 잇는다 (docs/SPEC.md §8.3)
@@ -123,6 +124,10 @@ export async function runSetup(cli: Cli, flags: Flags): Promise<number> {
   // ── ⑤ 두 파일을 쓴다 ───────────────────────────────────────────
   const deviceId = flags.value('device-id')
   const configPath = writeProjectConfig(root, draft.data)
+  //  🔴 `.contextops/.gitignore` 를 **여기서** 만든다 (SPEC §8.2 「ignore」 칸).
+  //     안 만들면 처음 `scan` 을 돌린 사람이 기계마다 다른 cache/scan.json 을 커밋하고,
+  //     그 뒤로 팀원 전원이 매 세션 충돌을 본다 (docs/feedback/FINDINGS.md 37).
+  ensureLocalGitignore(root)
   let credentialPath: string
   try {
     credentialPath = saveCredential(cli.home, origin.data, projectId, {
@@ -135,6 +140,7 @@ export async function runSetup(cli: Cli, flags: Flags): Promise<number> {
   }
 
   cli.io.out(`설정을 저장했다: ${configPath}`)
+  cli.io.out(`  ${LOCAL_DIR}/.gitignore 도 만들었다 (cache·backups 는 커밋하지 않는다)`)
   cli.io.out(`토큰을 저장했다: ${credentialPath} (본인만 읽기)`)
   if (deviceId === undefined) {
     cli.io.out('  ⚠ device_id 를 안 받았다 — 나중에 이 기기만 끊으려면 --device-id 로 다시 setup 해라.')

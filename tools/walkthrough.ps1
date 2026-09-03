@@ -63,13 +63,16 @@ $stages = @(
        cmd = "pnpm --filter web exec tsx scripts/walkthrough-payload.ts" },
 
     @{ name = "sync"
-       what = "플러그인이 Pack 을 받아 applied 로 보고한다 (SPEC §8.5)"
+       what = "플러그인이 Pack 을 받아 적용하고 applied 로 보고한다 · hash 불일치에서 멈춘다 (SPEC §8.5 · P6)"
        #  ⚠ prereq 는 **그 단계가 진짜로 필요로 하는 파일**이어야 한다. 예전엔
        #    bin/contextops-cli.mjs 였는데, 그 파일은 P2 **첫** 행(setup·scan·validate)에서
        #    생기고 sync 는 **둘째** 행이다. 그대로 두면 첫 행이 끝나는 순간 관통이
        #    없는 명령을 불러 빨개진다 — 그건 고장이 아니라 아직 안 만든 것이다.
-       prereq = "plugin\contextops\src\cli\sync.ts"
-       cmd = "node plugin/contextops/bin/contextops-cli.mjs sync --check" },
+       #  ⚠ 이 저장소 자체에 `sync` 를 걸지 마라 (`sync --check` 였다). 여기는
+       #    ContextOps 에 이어진 저장소가 아니라서 「설정이 없다」로 끝난다 — 그건
+       #    관통이 아니라 preflight 다. 스크립트가 **임시 저장소와 진짜 소켓**으로 잰다.
+       prereq = "plugin\contextops\scripts\walkthrough-sync.ts"
+       cmd = "pnpm --filter @contextops/plugin exec tsx scripts/walkthrough-sync.ts" },
 
     @{ name = "shots"
        what = "화면 캡처 — 눈 판정 재료 (.ci/shots/)"

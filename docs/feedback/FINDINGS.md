@@ -46,7 +46,7 @@
   ⚠ 그 전에 CLI 에 콜백 서버를 만들지 마라 — 부를 화면이 없으면 죽은 코드다.
 - **상태**: 대기 (P4 화면 9 가 주인)
 
-### 37. 아무도 `.contextops/` 의 **ignore 규칙을 만들지 않는다**   [구멍]
+### 37. ✅ 아무도 `.contextops/` 의 **ignore 규칙을 만들지 않는다**   [구멍]
 - **증상**: SPEC §8.2 는 `cache/`·`backups/`·`pending-proposal.json` 을 「ignore」라고
   적는데, 그걸 **쓰는 코드가 0곳**이다. 그래서 `scan` 을 처음 돌린 사람은
   `.contextops/cache/scan.json` 을 그대로 커밋한다 — 그 파일은 기계마다 다르고
@@ -58,7 +58,13 @@
   `pending-proposal.json` 세 줄). 폴더 안에 두면 **사용자의 루트 `.gitignore` 를 안 건드린다** —
   남의 파일을 고치지 않는 것이 이 제품의 습관이다. ⚠ P6 위반이 아니다: 훅이 아니라
   사람이 부른 `setup` 이 쓴다. 이미 있으면 덮지 마라.
-- **상태**: 대기 (P2 둘째 행에서 sync 가 backups 를 만들 때 같이 하면 값이 두 배다)
+- **상태**: ✅ (P2 둘째 행과 같이 했다 — 예상대로 값이 두 배였다)
+  정본은 `plugin/contextops/src/cli/paths.ts` 의 `IGNORED_LOCAL_PATHS` 한 줄이고,
+  쓰는 함수는 `sync.ts` 의 `ensureLocalGitignore()` 하나다. **`setup` 과 `sync` 가 같이
+  부른다** — `setup` 은 첫 `scan` 보다 앞이라서, `sync` 는 `backups/` 를 **만드는 순간**이라서.
+  이미 있으면 손대지 않는다 (사람이 줄을 더했을 수 있다). `manifest.json` 은 **일부러
+  목록에 없다** — 무시하면 팀이 적용 버전을 못 공유한다. 시험이 그 셋을 잠근다
+  (`test/sync.test.ts`: 규칙 줄이 `IGNORED_LOCAL_PATHS` 와 정확히 같고 manifest 는 없다).
 
 ### 38. SPEC §8.3 은 `validate` 가 `schemas/*.json` 을 쓴다는데 코드는 **Zod 정본**으로 판다   [격차]
 - **증상**: 구현은 번들에 들어간 Zod 로 검증한다. JSON Schema 로는 `.refine()` 을 옮길 수
@@ -84,6 +90,36 @@
 - **고칠 방향**: §8.3 표 아래에 「64 = 잘못된 사용(명령·플래그·인자)」 한 줄. 값은
   직렬화된다 — 순서를 바꾸지 마라.
 - **상태**: 대기
+
+### 40. `sync` 는 **변경 파일만** 받지 않고 Manifest 의 파일을 전부 받는다   [격차]
+- **증상**: SPEC §8.5 4단계는 「**변경 파일만** `cache/<semver>/` 로 다운로드」다.
+  코드는 `official.files` 를 **전부** 받는다. 파일 2개인 지금은 차이가 안 보이지만,
+  Manifest 상한은 50개다 — 한 파일이 바뀌어도 50번 받는다.
+- **근거**: `plugin/contextops/src/cli/sync.ts` ④단계 `for (const file of official.files)` ·
+  관통 `sync` 단계의 「Pack 파일이 바이트 그대로 놓였다 — 2/2」 (`.ci/walkthrough-sync.json`)
+- **정본**: `docs/SPEC.md` §8.5 4단계
+- **왜 지금 그렇게 뒀나**: 「무엇이 변경 파일인가」의 답이 두 개다 — ①로컬 해시가 다른 것
+  ②공식 Manifest 에서 항목이 바뀐 것. 전부 받으면 그 판단이 필요 없고, ⑦(post-verify)이
+  **모든 파일**을 대조하므로 반만 적용된 상태가 원리적으로 안 생긴다. 적게 받는 최적화가
+  「덜 검사하는」 최적화가 되기 쉬운 자리다.
+- **고칠 방향**: 받을 목록을 `judge()` 가 이미 계산하는 `modified`·`missing` + 「공식과
+  로컬 Manifest 의 sha256 이 다른 파일」로 좁힌다. ⚠ 좁히면 **⑦이 여전히 전부를
+  대조하는지** 확인해라 — 안 받은 파일을 검사에서도 빼면 그때부터 반만 적용된 Pack 이
+  `applied` 로 보고된다. 시험은 「파일 3개 중 1개만 바뀐 Manifest → 요청이 1건」이다.
+- **상태**: 대기 (파일 50개짜리 Pack 이 실제로 생길 때가 값이 나는 때다)
+
+### 41. SPEC §8.5 1단계의 「manifest 서명(sha256) 확인」이 preflight 에 없다   [격차]
+- **증상**: preflight 는 project.json·토큰·디스크 쓰기 가능 셋만 본다. 「manifest 서명」에
+  해당하는 코드가 없다 — Manifest 스키마에 서명 칸 자체가 없고(`packages/schema/src/manifest.ts`),
+  로컬 파일의 해시 대조는 3단계(`judge()`)가 한다.
+- **근거**: `plugin/contextops/src/cli/sync.ts` 의 `preflight()` · `Manifest` 스키마에
+  `signature` 없음 (이번 바퀴 확인)
+- **정본**: `docs/SPEC.md` §8.5 1단계
+- **고칠 방향**: 문서 한 줄이다 — 1단계에서 「manifest 서명(sha256)」을 지우고
+  「로컬 manifest.json 이 계약과 맞나」로 바꾼다 (`readLocalManifest` 가 하는 일이다).
+  ⚠ 진짜 서명(발행자 키)을 넣을 생각이면 그건 §2.1·§3 을 건드리는 별개의 일이다 —
+  여기 한 줄로 있으면 「이미 있다」고 오해된다.
+- **상태**: 대기 (값싼 문서 한 줄)
 
 ### 33. 화면 5 의 「미발행 변경 N건」과 semver 추천을 **계산할 문이 없다**   [구멍]
 - **증상**: DESIGN_BRIEF §4 화면 5 는 상단에 「미발행 변경 7건」을, 발행 모달에

@@ -3,6 +3,8 @@ import type { Cli } from './cli'
 import { EXIT } from './exit'
 import { SCAN_FLAGS, runScan } from './scan'
 import { SETUP_FLAGS, runSetup } from './setup'
+import { STATUS_FLAGS, runStatus } from './status'
+import { SYNC_FLAGS, runSync } from './sync'
 import { VALIDATE_FLAGS, runValidate } from './validate'
 
 // =====================================================================
@@ -15,8 +17,9 @@ import { VALIDATE_FLAGS, runValidate } from './validate'
 //    ④ SPEC §8.3 의 표와 이 표가 같은지 본다 — 다르면 FINDINGS 에 적는다
 //
 //  ⚠ **아직 안 만든 명령을 여기 적지 마라.** 표에 있으면 `--help` 가 「할 수 있다」고
-//    말하는 것이고, 사람은 그걸 믿고 부른다. SPEC §8.3 에는 8개가 있고 여기 셋뿐인
-//    것이 지금의 사실이다 (나머지는 docs/PLAN.md P2 둘째·셋째 행).
+//    말하는 것이고, 사람은 그걸 믿고 부른다. SPEC §8.3 에는 8개가 있고 여기 다섯뿐인
+//    것이 지금의 사실이다 (나머지 셋은 docs/PLAN.md P2 **셋째** 행:
+//    `upload-draft` · `propose` · `progress`).
 // =====================================================================
 
 export type Command = {
@@ -45,6 +48,18 @@ export const COMMANDS: Record<string, Command> = {
     flags: VALIDATE_FLAGS,
     run: runValidate,
   },
+  status: {
+    summary: '무엇이 적용돼 있나 — applied/outdated/modified (파일을 안 바꾼다)',
+    usage: 'contextops status [옵션]',
+    flags: STATUS_FLAGS,
+    run: runStatus,
+  },
+  sync: {
+    summary: '발행된 Pack 을 이 저장소에 적용한다 (backup · atomic · 적용 뒤 재검증)',
+    usage: 'contextops sync [--check] [--force]',
+    flags: SYNC_FLAGS,
+    run: runSync,
+  },
 }
 
 export function helpText(): string[] {
@@ -54,7 +69,7 @@ export function helpText(): string[] {
     lines.push(`      ${command.usage}`)
     lines.push(...flagHelp(command.flags))
   }
-  lines.push('', '종료 코드: 0 성공 · 2 계약 위반 · 10 로그인 실패 · 20 네트워크 · 30 설정 · 64 잘못된 사용')
+  lines.push('', '종료 코드: 0 성공 · 1 손으로 바뀜(sync·status) · 2 계약 위반 · 10 로그인 실패 · 20 네트워크 · 30 설정 · 64 잘못된 사용')
   return lines
 }
 

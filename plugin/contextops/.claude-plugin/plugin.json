@@ -4,5 +4,6 @@
   "description": "Team context sync for Claude Code",
   "author": {
     "name": "ContextOps"
-  }
+  },
+  "hooks": "./hooks/hooks.json"
 }

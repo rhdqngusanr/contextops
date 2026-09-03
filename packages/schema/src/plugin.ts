@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { DeviceToken, RepoName, RepoPath } from './common'
 import { ContextItemDraft } from './item'
-import { MAX_DRAFT_ITEMS, SCAN_LIMITS, ScanSummary } from './upload'
+import { MAX_DRAFT_ITEMS, SCAN_LIMITS, ScanSummary, SyncReport } from './upload'
 
 // =====================================================================
 //  플러그인이 **로컬 디스크에 두는 파일들**의 계약 (docs/SPEC.md §8.2)
@@ -101,3 +101,19 @@ export const ContextItemDraftFile = z.object({
   items: z.array(ContextItemDraft).min(1).max(MAX_DRAFT_ITEMS),
 }).strict()
 export type ContextItemDraftFile = z.infer<typeof ContextItemDraftFile>
+
+/**
+ * `<repo>/.contextops/cache/sync-receipt.json` — **보내지 못한 sync 보고** (SPEC §8.5 8단계).
+ *
+ * ★ 왜 파일로 남기나 — 마지막 걸음(보고)이 네트워크다. 거기서 실패했다고 sync 를
+ *   실패로 되돌리면 **이미 올바르게 적용된 파일들을 되돌리는** 꼴이 된다. 그래서
+ *   적용은 성공으로 끝내고 보고만 미룬다. 다음 `status` 가 이 파일을 보고 다시 보낸다.
+ * ⚠ `SyncReport` 를 그대로 품는다 — 보낼 값을 다시 조립하지 않는다. 조립을 두 번 하면
+ *   재전송된 보고가 원래 보고와 달라질 수 있고, 그러면 화면이 거짓말한다.
+ */
+export const SyncReceiptFile = z.object({
+  project_id: z.uuid(),
+  api_origin: ApiOrigin,
+  report: SyncReport,
+}).strict()
+export type SyncReceiptFile = z.infer<typeof SyncReceiptFile>

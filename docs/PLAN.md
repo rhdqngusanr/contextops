@@ -93,9 +93,18 @@
       저장하지 않아서 실제 비트만 재면 개발 기계에서 **검사 없이 초록**이 된다.
       ⚠ CLI 8개 중 셋만 만들었다 — 나머지는 아래 두 행이다. 명령 표에 **없는 명령은
       적지 않았다**: 표에 있으면 `--help` 가 「할 수 있다」고 말한다.
-- [ ] **`sync`(백업·atomic·post-verify) · `status` · SessionStart 훅**
+- [x] **`sync`(백업·atomic·post-verify) · `status` · SessionStart 훅** — 아래
       **완료 기준**: 훅 알림 → sync → `applied` 보고 · **hash 불일치에서 중단** ·
       **`session-start.mjs` 에 fs write 0건** (P6) · path traversal 거부
+      → **넷 다 확인했다.** 관통 `sync` 단계(`plugin/contextops/scripts/walkthrough-sync.ts`)가
+      **배포되는 번들을 진짜 소켓으로** 돌려 16개 검사를 낸다 (`.ci/walkthrough-sync.json`):
+      앞 단계가 발행한 진짜 Manifest → 파일 2개 바이트 일치 → `applied` 보고 →
+      서버가 한 줄 덧붙인 바이트를 주면 **exit 20 이고 Pack 파일을 하나도 안 썼다** →
+      훅이 `적용 v0.9.0 · 공식 v1.0.0` 을 알리고 **저장소 바이트가 그대로다**.
+      ⚠ P6 은 두 겹으로 잰다 — `tools/principles.ps1` 이 쓰기 API **이름**을 세고
+      (`hooks.json` 이 가리키는 스크립트 전부), `test/hooks.test.ts` 가 훅을 **돌린 뒤
+      모든 파일의 바이트와 mtime** 을 대조한다. 이름만 세면 새 쓰기 API 에 뚫린다.
+      ⚠ CLI 8개 중 다섯이 됐다 — 나머지 셋(`upload-draft`·`propose`·`progress`)은 아래 행이다.
 - [ ] **`init` Skill · `upload-draft` · `propose` Skill · `progress` · Stop 훅**
       **완료 기준**: 🔴 **GATE 2** — Claude Code 에서 `init` → 웹 승인 → `sync` 관통 ·
       업로드 payload 캡처에 **코드 본문 0건** (P1)

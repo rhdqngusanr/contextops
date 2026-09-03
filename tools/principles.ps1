@@ -205,19 +205,40 @@ if ($compFiles.Count -eq 0) {
 # =====================================================================
 #  ★ 사용자 저장소를 몰래 고치는 도구가 되면 아무도 안 깐다. 변경은 사용자가
 #    /contextops:sync 를 **직접 실행할 때만**.
-$hook = Join-Path $root "plugin\contextops\scripts\session-start.mjs"
-if (-not (Test-Path $hook)) {
-    Add-Row "P6" "SessionStart 훅이 파일을 쓰지 않음" "SKIP" "session-start.mjs 없음"
+#  ⚠ 검사 대상을 파일 이름으로 박지 마라 — 훅이 둘째(Stop)가 되는 순간 그 파일만
+#    검사를 안 받는다. **hooks.json 이 가리키는 것 전부**를 센다. 그러면 훅을 더하는
+#    사람이 게이트를 따로 켤 필요가 없다 (SPEC §8.1 · §8.6).
+$hooksJson = Join-Path $root "plugin\contextops\hooks\hooks.json"
+if (-not (Test-Path $hooksJson)) {
+    Add-Row "P6" "훅이 파일을 쓰지 않음" "SKIP" "plugin/contextops/hooks/hooks.json 없음"
 } else {
-    $p6Banned = @(
-        "writeFile", "appendFile", "createWriteStream", "mkdirSync", "rmSync",
-        "unlinkSync", "renameSync", "copyFileSync", "chmodSync"
-    )
-    $hits = Find-Banned @(Get-Item $hook) $p6Banned
-    if ($hits.Count -gt 0) {
-        Add-Row "P6" "SessionStart 훅이 파일을 쓰지 않음" "FAIL" ($hits -join " · ")
+    $raw = Get-Content -LiteralPath $hooksJson -Raw
+    $names = [regex]::Matches($raw, 'scripts/([A-Za-z0-9._-]+\.mjs)') | ForEach-Object { $_.Groups[1].Value }
+    $names = @($names | Sort-Object -Unique)
+    if ($names.Count -eq 0) {
+        Add-Row "P6" "훅이 파일을 쓰지 않음" "FAIL" "hooks.json 이 어떤 스크립트도 가리키지 않는다"
     } else {
-        Add-Row "P6" "SessionStart 훅이 파일을 쓰지 않음" "OK" ""
+        $p6Banned = @(
+            "writeFile", "appendFile", "createWriteStream", "mkdirSync", "rmSync",
+            "unlinkSync", "renameSync", "copyFileSync", "chmodSync"
+        )
+        $hookFiles = @()
+        $absent = @()
+        foreach ($n in $names) {
+            $f = Join-Path $root "plugin\contextops\scripts\$n"
+            if (Test-Path $f) { $hookFiles += (Get-Item $f) } else { $absent += $n }
+        }
+        if ($absent.Count -gt 0) {
+            #  없는 스크립트를 가리키면 사용자는 매 세션 오류를 본다 — 그건 고장이다.
+            Add-Row "P6" "훅이 파일을 쓰지 않음" "FAIL" ("hooks.json 이 없는 파일을 가리킨다: " + ($absent -join " · "))
+        } else {
+            $hits = Find-Banned $hookFiles $p6Banned
+            if ($hits.Count -gt 0) {
+                Add-Row "P6" "훅이 파일을 쓰지 않음" "FAIL" ($hits -join " · ")
+            } else {
+                Add-Row "P6" "훅이 파일을 쓰지 않음" "OK" ("$($hookFiles.Count)개 훅: " + ($names -join " · "))
+            }
+        }
     }
 }
 

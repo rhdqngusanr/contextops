@@ -24,9 +24,37 @@ export const LOCAL_FILES = {
   scan: `${LOCAL_DIR}/cache/scan.json`,
   draft: `${LOCAL_DIR}/cache/draft.json`,
   pendingProposal: `${LOCAL_DIR}/pending-proposal.json`,
+  /** 보내지 못한 sync 보고. 다음 `status` 가 재전송한다 (SPEC §8.5 8단계). */
+  syncReceipt: `${LOCAL_DIR}/cache/sync-receipt.json`,
+  /** 훅이 네트워크 없이 읽는 최신 Manifest (SPEC §8.6 「5분 내 cache 재사용」). */
+  latestCache: `${LOCAL_DIR}/cache/latest-manifest.json`,
 } as const
 
 export type LocalFile = keyof typeof LOCAL_FILES
+
+/**
+ * 🔴 SPEC §8.2 표의 **「ignore」 칸**이 이 목록이다 — `.contextops/.gitignore` 의 정본.
+ *
+ * ★ 왜 필요한가 — `cache/scan.json` 은 기계마다 다르고 매 스캔 바뀐다. 아무도 규칙을
+ *   안 만들면 처음 `scan` 을 돌린 사람이 그걸 그대로 커밋하고, 그 뒤로 팀원 모두가
+ *   매 세션 충돌을 본다 (docs/feedback/FINDINGS.md 37 — 새 레포 실험에서 실제로 그랬다).
+ * ★ 왜 저장소 루트의 `.gitignore` 가 아니라 `.contextops/.gitignore` 인가 —
+ *   **남의 파일을 안 고치기 위해서다.** 루트 `.gitignore` 는 사용자의 것이고,
+ *   거기에 줄을 끼워 넣으면 우리가 사용자 저장소를 몰래 고치는 도구가 된다.
+ *
+ * ⚠ 여기 한 줄을 더하면 `LOCAL_FILES` 표에서 그 파일이 ignore 인지 다시 봐라.
+ *   `manifest.json` 은 **커밋 선택**이라 여기 없다 — 넣으면 팀이 못 공유한다.
+ */
+export const IGNORED_LOCAL_PATHS = ['cache/', 'backups/', 'pending-proposal.json'] as const
+
+/** `.contextops/backups/<ts>-<from>-to-<to>/` — sync 가 바꾸기 전 원본 (SPEC §8.2). */
+export const BACKUP_DIR = `${LOCAL_DIR}/backups`
+
+/** 보관 개수 (SPEC §8.2 「최근 5개 보관」). 숫자를 호출부에 적지 마라. */
+export const BACKUP_KEEP = 5
+
+/** 내려받은 Pack 파일이 잠시 머무는 자리 (SPEC §8.5 4단계). */
+export const CACHE_DIR = `${LOCAL_DIR}/cache`
 
 /**
  * `--dir` 을 절대 경로로 편다. 상대 경로는 **명령을 부른 자리** 기준이다.

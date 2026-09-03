@@ -134,6 +134,11 @@ async function main(): Promise<void> {
       writeFileSync(target, text, 'utf8')
     }
     check('받은 본문의 sha256 이 Manifest 와 전부 같다', hashMismatch === 0, `파일 ${manifest.files.length}개`)
+
+    //  🔴 **다음 단계(sync)가 이 Manifest 를 그대로 쓴다.** 여기서 남기지 않으면
+    //     sync 단계는 자기가 Manifest 를 지어내야 하고, 그러면 「서버가 준 것을
+    //     플러그인이 받아들이나」를 재는 게 아니라 우리가 만든 것을 우리가 읽는 꼴이다.
+    writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
     check('🔴 P7 — 모든 Pack 파일에 역추적 태그가 있다', untagged === 0)
     check('🔴 P7 — Manifest 의 모든 파일이 항목에서 왔다',
       manifest.files.every((f) => f.source_item_ids.length > 0))
