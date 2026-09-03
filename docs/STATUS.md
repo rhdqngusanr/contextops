@@ -5,61 +5,64 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 16바퀴 · `7cf9d50`_
+_마지막 갱신: 2026-09-04 · 루프 17바퀴 · `8cde1f5`_
 
 ---
 
 ## 지금 어디인가
 
-**P3 첫 행의 ③(충돌 탐지)이 끝났다. `withBudget()` 의 두 번째 소비처가 생겼다.**
-항목 둘이 어긋나는 것을 **질문 카드로 만드는 코드가 돈다** (`lib/ai/conflict.ts` · 시험 24개).
-`AI_FEATURES` 4종 중 **둘**(`structure`·`conflict`)이 부르는 자리를 가졌다.
+**P3 둘째 행이 시작됐다. 그 행의 「둘째 결정」을 먼저 끝냈다 — `conflicts` 표의 모양.**
+§7.2 가 내는 것(`a_item_id`·`b_item_id`·`severity`)을 **담을 칸이 생겼고**, 어느 칸이
+차는지는 `CONFLICT_KIND_RULES` 의 새 축 `anchor` 가 정하고 **DB CHECK 제약 5개가
+막는다** (그 제약은 표에서 **생성된다** — 손으로 적은 kind 이름이 한 곳도 없다).
+마이그레이션이 `0002` → **`0003`** 이 됐다.
 
-**①②③이 다 끝났는데도 P3 첫 행은 열려 있다** — 완료 기준(「paylab 문서 → 항목 12 +
-충돌 3」)은 진짜 키와 라우트가 있어야 잰다. 다음은 **P3 둘째 행 「웹 화면 3·4」**다.
-
-⚠ **여기서 만든 것도 lib 하나다. 부르는 자리가 없다** (FINDINGS 54) —
-게다가 **낸 것을 담을 칸도 없다**: `conflicts` 표는 `a_item_id` 도 `severity` 도 없다.
+⚠ **여전히 그 표에 쓰는 코드는 0곳이다** (FINDINGS 28). 담을 칸만 생겼다 —
+채우는 것은 `detectConflicts()` 를 부르는 job 자리와 같이 온다.
 ⚠ **진짜 Claude 를 부른 적이 없다.** API 키가 없어 스텁으로만 쟀다 (🙋 사람).
+
+**다음은 P3 둘째 행의 「첫째 결정」**이다 — job 상태를 어디에 두나 (아래 「다음 바퀴」).
 
 | 있는 것 | 없는 것 |
 |---|---|
-| `loop/` · `tools/` · pnpm workspace + catalog | **`conflicts` 표에 쓰는 코드** (FINDINGS 54·28) |
+| `loop/` · `tools/` · pnpm workspace + catalog | **`conflicts` 표에 쓰는 코드** (FINDINGS 28 — 담을 칸은 이제 있다) |
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
 | `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
-| `apps/web` — 라우트 28개 · 테스트 **190** | **`structureDocument`·`detectConflicts` 를 부르는 라우트** (52·54) |
+| `apps/web` — 라우트 28개 · 테스트 **194** | **`structureDocument`·`detectConflicts` 를 부르는 라우트** (52·28) |
 | 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | `ask`·`demo` 를 부르는 자리 (기능 표의 나머지 둘 · §7.3·§7.4) |
 | 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | 구조화·탐지 job 상태를 담을 자리 (화면 3 이 polling 한다 · SPEC §9) |
 | 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · `AiConflictOutput` · 시험 24 | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
+| 🔴 **`conflicts` 표가 §7.2 를 담는다** — `a_item_id`·`b_item_id`·`severity` · CHECK 5개 · 복합 FK · 마이그레이션 `0003` | 질문 → 만들어진 항목의 **근거 사슬** (FINDINGS 56) |
 | 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
 | 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
 | **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | |
 | ✅ **모든 Pack 에 `workflow.md`** — 진행 보고 문단이 항상 나간다 (FINDINGS 43·8) | |
 
-검사 층: `principles OK 9 · typecheck 5초·멤버 4 · test 42초·멤버 4 · build 17초 ·
+검사 층: `principles OK 9 · typecheck 6초·멤버 4 · test 44초·멤버 4 · build 28초 ·
 walkthrough 52초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없고 라우트가 없다.
-시험 합계 **613** (schema 113 · compiler 136 · plugin 174 · web 190).
-⚠ 15바퀴 STATUS 의 「compiler 130」은 낡은 값이었다 — 직접 세어 **136** 이다.
+시험 합계 **617** (schema 113 · compiler 136 · plugin 174 · web 194).
 
 ## 다음 바퀴가 할 일
 
 🔴 **`docs/PLAN.md` P3 둘째 행 — 웹 화면 3·4 (가져오기 · 정리 · 질문 카드).**
-그 행이 §7.1·§7.2 를 **처음으로 부르는 자리**다. FINDINGS **52·54·25·29·26** 이
+그 행이 §7.1·§7.2 를 **처음으로 부르는 자리**다. FINDINGS **52·28·25·29·26·56** 이
 전부 이 행을 기다린다.
 
-**시작하기 전에 아는 것 (두 바퀴가 깔아 둔 자리):**
+**시작하기 전에 아는 것 (세 바퀴가 깔아 둔 자리):**
 
-- 🔴 **첫 결정은 「job 상태를 어디에 두나」다.** 12 chunk 짜리 문서도 40개 항목의 탐지도
-  한 요청 안에서 안 끝난다. SPEC §9 화면 3 이 「구조화 진행 표시(polling)」라고 적은 것이
-  그 뜻이다. **구조화와 탐지가 같은 자리를 쓴다** — 둘을 따로 만들지 마라.
-- 🔴 **둘째 결정은 `conflicts` 표의 모양이다** (FINDINGS **54·25·29** 를 한 묶음으로).
-  이번 바퀴가 근거를 깔아 뒀다: §7.2 가 내는 **넷은 전부 항목 대 항목**이고
-  (`CONFLICT_KIND_RULES[k].needsB` 가 넷 다 `true`), `open_question` 하나만 문서 구간을
-  가리킨다. 그래서 `SOURCE_REF` 를 넓히는 길은 **P7 을 깬다** — 항목의 근거가 다른
-  항목을 가리키면 원문까지 가는 사슬이 끊긴다. `conflicts` 에 `a_item_id`·`b_item_id`·
-  `severity` 칸을 더하는 쪽이 남는 길이다. 마이그레이션이 `0003` 이 된다.
+- ✅ **둘째 결정(`conflicts` 표의 모양)은 이번 바퀴에 끝났다** (`8cde1f5`). 담을 칸은
+  있다 — `a_item_id`·`b_item_id`·`severity`. **INSERT 를 손으로 채우지 마라**:
+  어느 칸이 차는지는 `CONFLICT_KIND_RULES` 가 정하고 DB CHECK 이 막는다.
+  표를 읽어서 채우는 본보기가 `apps/web/test/api-routes.test.ts` 의 `seedConflict()` 다.
+- 🔴 **그래서 다음은 「첫 결정」 하나만 남았다 — job 상태를 어디에 두나.**
+  12 chunk 짜리 문서도 40개 항목의 탐지도 한 요청 안에서 안 끝난다. SPEC §9 화면 3 이
+  「구조화 진행 표시(polling)」라고 적은 것이 그 뜻이다.
+  **구조화와 탐지가 같은 자리를 쓴다** — 둘을 따로 만들지 마라.
+- 🔴 **`detectConflicts()` 의 결과를 행으로 옮기는 코드가 그 job 안에 있다** (FINDINGS 28).
+  §7.2 가 내는 넷은 전부 `anchor:'items'` 라 `aItemId`/`bItemId`/`severity` 만 채운다 —
+  `aRef` 는 `null` 이어야 하고, 안 그러면 **DB 가 거부한다** (일부러 그렇게 만들었다).
 - 🔴 **키가 없으면 `client.ts` 가 던진다.** lib 은 던지는 데까지가 제 일이다 —
   §7.5 의 「픽스처 결과로 떨어지는」 갈래는 **라우트·화면**이 받는다. 두 lib 이 던지는
   것은 넷이다: `BUDGET_EXCEEDED` · `RATE_LIMITED` · `AI_OUTPUT_INVALID` · 키 없음(`Error`).
@@ -76,16 +79,54 @@ walkthrough 52초` → **GREEN**. 관통 **7단계**
 ⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
 ⚠ **Anthropic API 키도 사람이 준다.**
 
-**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44** 는 문서·한 줄짜리다.
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57** 은 문서·한 줄짜리다.
 **14**(`.ps1` 두 개가 LF)도 그렇다. **55**(공통 프롬프트)는 §7.3 전이 제일 싸다.
 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿 `head` 한 줄이고 둘 다 golden 을 깬다.
 🔴 **50 은 여전히 값싸고 여전히 급하다** — 이제 `callClaude()` 를 부르는 제품 파일이
 **둘**이고, 그 게이트는 예산 가드를 건너뛰는 새 파일을 못 잡는다.
 
-⚠ FINDINGS **24·25·26·28·29·31·33·35·52·54** 는 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
-**53** 은 **API 키가 생긴 뒤**가 주인이다.
+⚠ FINDINGS **24·25·26·28·29·31·33·35·52·56** 은 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
+**53** 은 **API 키가 생긴 뒤**가 주인이다. **54** 는 이번 바퀴에 절반이 닫혔다 (`8cde1f5`).
 
 ## 잰 것
+
+**17바퀴 · P3 둘째 행 ⓪ — `conflicts` 표가 §7.2 의 출력을 담는다** (`8cde1f5`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 6초 / test 44초 / build 28초 / walkthrough 52초 |
+| 새 시험 | **+4** — web 190 → **194**. 합계 **617** |
+| 마이그레이션 | `0002` → **`0003`** (`0003_fluffy_jean_grey.sql` · 12줄). DB 를 처음으로 다시 건드렸다 |
+| 새 칸 | `conflicts.a_item_id`·`b_item_id`(text · `item_<slug>`) · `severity`(새 pgEnum `conflict_severity`). `a_ref` 는 `NOT NULL` 을 **잃었다** — 문서를 가리키는 종류 전용이 됐다 |
+| 새 제약 | CHECK **5개** + 복합 FK **2개**. CHECK 은 전부 `CONFLICT_KIND_RULES` 에서 **생성된다** — 마이그레이션 SQL 의 kind 이름은 표에서 나온 것이고 손으로 적은 곳이 0곳이다 |
+| 계약 | `ConflictKindRule` 에 축 하나 추가: **`anchor: 'items' | 'document'`** (+`CONFLICT_ANCHORS`). 이제 종류 하나가 세 축을 갖는다 — `detected`(severity 를 갖나) · `anchor`(항목인가 원문인가) · `needsB`(b 쪽이 필요한가) |
+| 갈리는 것을 봤나 | **봤다.** b 쪽 없는 `contradiction` · severity 없는 `contradiction` · 원문 구간까지 문 `contradiction` · 항목을 가리키는 `open_question` · severity 를 문 `open_question` · a_ref 없는 `open_question` · 없는 항목을 가리키는 FK — **일곱 갈래가 전부 DB 에서 거부된다.** 반대편(옳은 모양)은 통과한다 |
+| 응답을 쟀나 | **쟀다.** `CONFLICT_KINDS` 5종을 다 넣고 `GET /conflicts` 를 읽어, **표가 말한 칸만** 차 있는지 종류마다 대조한다 (`a_item_id`·`b_item_id`·`a_ref`·`severity` 넷) |
+| 번들 | `bin/contextops-cli.mjs` 814,385 → **814,558바이트** (`packages/schema` 를 고쳐 다시 빌드 — `test/bundle.test.ts` 가 표류로 잡았다). `schemas/*.json` **10개는 안 바뀌었다** (`CONFLICT_KIND_RULES` 는 Zod 가 아니다) |
+| SPEC | §2 의 `conflicts` 줄과 §7.2 를 **코드와 같게** 고쳤다 — FINDINGS 25 가 「SPEC 안에서 갈렸다」고 적은 그 자리다 |
+| 닫은 FINDINGS | **54** 의 절반 (표가 못 담는다). 나머지 절반(쓰는 코드 0곳)은 **28** 이 그대로 들고 있다 |
+| 새 FINDINGS | **56**(답변으로 만든 항목이 질문과 안 이어진다 · 구멍) · **57**(`b_ref` 를 이제 어느 종류도 못 채운다 · 격차). **25·28·29 에 「막고 있던 것이 없어졌다」를 적었다** |
+| 2-B 확인 (죽은 정의 찾기) | `enforcement` 4종 — **살아 있다** (`compiler/test/liveness.test.ts` 가 4종의 Pack 지문이 서로 다름을 잠갔다) · `confidence` 3단계 — **살아 있다** (`tag.ts` 가 역추적 태그에 `conf:` 로 찍는다 = 값을 바꾸면 Pack byte 가 갈린다) |
+
+**🔴 결정 — `SOURCE_REF` 를 넓히지 않고 `conflicts` 에 항목 칸을 더했다**
+
+FINDINGS 54 가 갈래 둘을 적어 뒀다: ①`a_ref` 에 「항목」 종류를 더한다 ②`conflicts` 에
+항목 칸을 더한다. **①을 버렸다.** `SOURCE_REF` 는 항목이 **원문까지 가는 사슬**이고,
+거기에 「항목」이 들어가면 항목의 근거가 다른 항목을 가리킬 수 있게 된다 — 사슬이 한 칸
+끊기고 그게 P7 이 무너지는 자리다. **충돌이 항목을 가리키는 것과 항목이 원문을 가리키는
+것은 다른 관계다.** 그래서 축 이름을 `anchor` 로 두고 둘을 갈랐다.
+
+**🔴 결정 — 모양 검사를 서비스 코드가 아니라 DB 에 뒀다**
+
+충돌 행을 만드는 자리는 앞으로 **셋**이다 (§7.1 의 `open_questions` · §7.2 의 탐지 ·
+사람이 직접 적는 질문). 검사를 서비스에 두면 자리마다 베껴야 하고, 하나만 빠뜨려도
+**반쪽짜리 행**이 들어온다 — 그 행은 화면에 「충돌 1건」으로 멀쩡히 뜨고 눌렀을 때
+가리킬 것이 없다. DB 는 빠뜨릴 수 없다. 그리고 제약을 **표에서 생성**해서, 종류를
+더할 때 이 파일에 손댈 것이 없게 했다 (`db:generate` 한 번).
+
+⚠ **부작용 하나를 그대로 남겼다** — `b_ref` 의 CHECK 이 `b_ref is null` 이 됐다
+(`anchor:'document' && needsB` 인 종류가 0줄이라서). 지우면 `needsB` 가 그 조합에서
+아무 뜻도 없어지므로 **일부러 남겼고** FINDINGS 57 에 적었다.
 
 **16바퀴 · P3 첫 행 ③ — 충돌 탐지 `detectConflicts()`** (`7cf9d50`)
 

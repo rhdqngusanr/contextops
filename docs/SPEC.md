@@ -128,8 +128,10 @@ context_items    { id, project_id, type enum(10종), status enum('draft','review
 context_item_revisions { item_id, revision, data jsonb /* type별 필드 */, source_refs jsonb[], confidence enum('high','medium','low'),
                    created_by, origin enum('doc','code','manual','proposal'), unique(item_id,revision) }
 conflicts        { id, project_id, kind enum('contradiction','stale','duplicate','doc_vs_code','open_question'),
-                   a_ref jsonb, b_ref jsonb null, question text, status enum('open','resolved','dismissed'),
-                   resolution jsonb null, resolved_by, resolved_at }
+                   a_item_id text null, b_item_id text null /* item_<slug> · (project_id,*) 복합 FK → context_items */,
+                   a_ref jsonb null, b_ref jsonb null /* 항목이 아니라 원문 구간을 가리키는 종류 전용 */,
+                   question text, severity enum('high','medium','low') null,
+                   status enum('open','resolved','dismissed'), resolution jsonb null, resolved_by, resolved_at }
 proposals        { id, project_id, author_id, status enum('draft','submitted','approved','rejected','published'),
                    title, summary, base_version_id, items jsonb /* ProposalItem[] */, relates_to text[] /* milestone ids */,
                    client_request_id unique, decided_by, decided_at, decision_note }
@@ -144,6 +146,8 @@ progress_events  { id, project_id, device_id, milestone_id text, criterion text 
                    evidence jsonb /* [{path,start_line,end_line,commit_sha}] */, summary text, context_version text, source enum('agent','hook','manual'),
                    confirmed_by null, confirmed_at null }
 ```
+
+🔴 **충돌 한 장이 어느 칸을 채우는지는 `kind` 가 정한다.** 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표이고 축은 셋이다 — `anchor`(`items` 면 `a_item_id`·`b_item_id`, `document` 면 `a_ref`·`b_ref`) · `needsB`(b 쪽이 필요한가) · `detected`(§7.2 가 매기는 `severity` 를 갖는가). 그 규칙은 문서가 아니라 **DB CHECK 제약 5개**이고, `apps/web/src/db/schema.ts` 의 `conflictShapeCheck()` 가 그 표를 읽어 만든다 — 종류를 더하면 `db:generate` 한 번으로 제약이 따라온다. ⚠ 항목을 `SourceRef` 로 가리키지 마라. `SOURCE_REF` 에 「항목」 종류를 더하면 항목의 `source_refs` 가 다른 항목을 가리킬 수 있게 되고 원문까지 가는 사슬이 끊긴다 (P7).
 
 인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
 
@@ -380,6 +384,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - 출력: `conflicts: [{kind, a_item_id, b_item_id?, question, severity}]`. kind 규칙: `contradiction`(양립 불가), `stale`(날짜·버전이 더 최신 항목에 의해 무효), `duplicate`(같은 개념), `doc_vs_code`(문서 항목 vs 코드 origin 항목). 🔴 종류별 규칙(탐지가 내는가 · 두 쪽이 필요한가 · 모델에게 주는 한 줄)의 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표다 — 프롬프트가 그 표를 **읽어서** 싣는다. `CONFLICT_KINDS` 5종 중 `open_question` 만 `detected:false` 이고 그것은 §7.1 이 만든다.
 - `a_item_id`·`b_item_id` 는 uuid 가 아니라 `item_<slug>` 다. 🔴 **프롬프트에 실리지 않은 id 가 오면 재시도한다** — 모델이 지어낸 id 는 남의 항목을 가리키고 그게 P7 이 무너지는 자리다. 같은 짝의 중복·자기 자신과의 충돌·「바뀐 항목이 한쪽도 없는 짝」도 같은 재시도로 간다.
 - `severity` 는 `high`·`medium`·`low` 3단계이고 정본은 `CONFLICT_SEVERITIES` 다 (화면 4 는 카드 10장만 보여 주므로 결과를 심각도 내림차순으로 낸다). ⚠ SPEC 은 원래 이 필드의 **이름만** 적었다 — 값은 이 저장소에 이미 있는 3단계 사다리와 같은 낱말로 정했다.
+- 낸 것을 **`conflicts` 행으로** 저장한다. 그 표는 §7.2 의 출력을 그대로 담는다 (`a_item_id`·`b_item_id`·`severity`) — 어느 칸이 채워지는가는 §2 가 적은 대로 `CONFLICT_KIND_RULES` 가 정하고 DB CHECK 이 막는다.
 - LLM은 "최신이 맞다"를 판단하지 않는다. 질문만 만든다.
 - 🔴 **`detectConflicts()` 한 번이 `withBudget('conflict')` 한 번이고 LLM 왕복도 한 번(+재시도 1회)이다.** 장부(`ai_usage`)의 행 수가 곧 빈도이므로, 항목을 나눠 여러 번 부르면 §7.5 의 상한이 「탐지 N회」가 아니라 「묶음 N개」가 된다 (§7.1 의 「문서 하나」와 같은 자리의 결정).
 - 수치(후보 40개 · body 300자 · 재시도 1회)의 정본은 `apps/web/src/lib/ai/conflict.ts` 의 상수다.
