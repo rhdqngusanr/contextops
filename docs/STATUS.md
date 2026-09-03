@@ -5,118 +5,130 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-03 · 루프 8바퀴 · `e5f61c8` `6b990f9`_
+_마지막 갱신: 2026-09-03 · 루프 9바퀴 · `874ea95` `d9d507e`_
 
 ---
 
 ## 지금 어디인가
 
-**P1 셋째 행(API 2군 + 발행 트랜잭션)이 끝났다. 다음은 P1 넷째 행 — 웹 화면 2·5·7 이고
-그게 🔴 GATE 1 이다.**
+**🔴 GATE 1 을 통과했다.** P1 넷째 행(웹 화면 2·5·7)이 끝났고 **웹에서 항목 → 발행 →
+Pack Explorer 역추적까지 브라우저로 직접 봤다.** 다음은 P2 첫 행 — 플러그인이다.
 
-🔴 **관통이 3단계에서 4단계가 됐다.** `publish` 가 SKIP 에서 풀렸다 —
-픽스처 문서를 넣고 **한 번도 안 멈추고 Pack 파일까지** 간다.
+**P1 에 남은 것은 첫 행 하나뿐이고 그건 🙋 사람이다** (Supabase `DATABASE_URL`).
+루프 몫은 끝났다 — 코드는 다 됐고 값만 꽂으면 닫힌다.
 
 | 있는 것 | 없는 것 |
 |---|---|
-| `loop/` · `tools/` · pnpm workspace + catalog | **웹 화면 9개** (`app/` 에 자리 표시 하나뿐) |
-| `packages/schema` (계약 전부 + API 계약 · 테스트 **105**) | Supabase 프로젝트 (🙋 사람) · Vercel |
-| `packages/compiler` (파이프라인 7단계 · 테스트 112 · `COMPILER_VERSION`) | `plugin/contextops` 의 bin·skills·hooks |
-| **`apps/web` — 라우트 27개 · 테스트 98** | 서버측 AI (`structureDocument`·`detectConflicts`) |
-| **발행 트랜잭션** (`lib/api/publish.ts` · SPEC §2.1 여덟 단계) | `packs/{semver}/zip` (P5 첫 행이 주인) |
-| `apps/web/src/db` (표 16 · 인덱스 5 · enum 14 · 마이그레이션 2) | 충돌을 **만드는** 코드 (P3 · FINDINGS 28) |
-| `fixtures/paylab-*` · `plugin/contextops/schemas/*.json` 7개 | |
+| `loop/` · `tools/` · pnpm workspace + catalog | **`plugin/contextops` 의 bin·skills·hooks** (P2) |
+| `packages/schema` (계약 전부 · 테스트 105) | Supabase 프로젝트 (🙋 사람) · Vercel |
+| `packages/compiler` (파이프라인 7단계 · 테스트 **124** · 태그 **읽기**) | 서버측 AI (`structureDocument`·`detectConflicts`) |
+| `apps/web` — 라우트 **28개** · 테스트 **124** | 웹 화면 **1·3·4·6·8·9** (2·5·7 은 됐다) |
+| **웹 화면 5개** — `/login` `/auth/callback` `/t/new` `/t/[team]/p/new` `/t/…/context` `/t/…/packs[/semver]` | 충돌을 **만드는** 코드 (P3 · FINDINGS 28) |
+| **`globals.css` — 토큰 정본 하나** + 게이트 3개 | `packs/{semver}/zip` (P5 첫 행이 주인) |
+| **`scripts/dev-server.ts` — 화면을 눈으로 볼 수 있는 씨앗 서버** | 화면에서 항목을 **새로 만드는 폼** (P3 · FINDINGS 35) |
 
-검사 층: `principles OK 6 · typecheck OK 7초 · test OK 37초·멤버 3 · build OK 16초 ·
-walkthrough OK 40초` → **GREEN**.
-관통 4단계 (`fixture`·`compile`·`api`·`publish`). 남은 SKIP 셋의 prereq 는
-`walkthrough-payload.ts`(P2) · `plugin/.../contextops-cli.mjs`(P2) · `apps/web/e2e`(화면).
+검사 층: `principles OK 6 · typecheck 5초 · test 38초·멤버 3 · build 17초 ·
+walkthrough 40초` → **GREEN**. 관통 4단계. 남은 SKIP 셋의 prereq 는
+`walkthrough-payload.ts`(P2) · `plugin/.../contextops-cli.mjs`(P2) · `apps/web/e2e`(아래 참고).
 
 ## 다음 바퀴가 할 일
 
-`docs/PLAN.md` **P1 넷째 행**: 웹 화면 2·5·7 (로그인 · Context · Pack Explorer).
-**🔴 GATE 1 이다** — 「웹에서 항목 입력 → 발행 → Pack Explorer 에서 역추적 확인」.
-정본은 `SPEC.md` §9 **+ `docs/DESIGN_BRIEF.md` §3(토큰 정본)** · 참고 시안 `design/*.dc.html`.
+`docs/PLAN.md` **P2 첫 행**: 플러그인 레이아웃 · `setup` · `scan` · `validate` · credentials.
+정본은 `SPEC.md` §8. 완료 기준은 「새 레포에서 `setup` 완료 · `credentials.json` 권한 0600 ·
+`claude plugin validate` 통과」다.
 
-**API 는 다 깔려 있다. 화면이 새 문을 만들 필요가 없다:**
+🔴 **P2 를 시작하면 관통 SKIP 두 개가 같이 켜진다** — 그게 이 행의 진짜 값이다:
+`payload`(업로드에 코드 본문 0건 · **P1 · 심사 첫 질문**)와 `sync`.
+`tools/walkthrough.ps1` 의 단계 표가 prereq 파일 이름을 그대로 적어 뒀다.
 
-| 화면이 필요한 것 | 이미 있는 라우트 |
-|---|---|
-| 항목 목록·필터 | `GET /projects/{id}/context-items?type&status&scope` |
-| 항목 고치기 | `PATCH /context-items/{id}` (`{revision, changes}` · 409 낙관적 잠금) |
-| 발행 | `POST /projects/{id}/versions/publish` (`base_version_id` 는 **null 도 명시**) |
-| 버전 목록 | `GET /projects/{id}/versions` (`is_official` 이 같이 온다) |
-| Pack Explorer | `GET /packs/latest/manifest` · `/packs/{semver}/files/{path}` (**text/plain**) |
-| 역추적 | `pack_files.source_map` (줄 범위 → 항목 ID) · 본문의 `<!-- ctx:… -->` |
-| 기기 상태 | `GET /projects/{id}/sync-status` (`unknown` 은 서버가 매긴다) |
-| Roadmap | `GET /projects/{id}/roadmap` (행은 **마일스톤** — P5) |
+**화면 작업이 다시 필요해지면 — 이제 눈으로 볼 수 있다:**
 
-⚠ **눈 판정 합격선은 8개, 6개 미만이면 미완성**이다 (`loop/PROMPT.md` ⑦3층).
-`DESIGN_BRIEF` §3 토큰만 쓰고, loading/empty/error **세 상태를 전부** 찍어라.
-**「실시간」이라는 단어를 쓰지 마라** — "마지막 보고: 8분 전, v1.3, applied" 형식이다.
+```
+pnpm --filter web dev:db          # ① PGlite 를 TCP 로 열고 paylab 씨앗 + v1.0.0 발행
+                                  #    DATABASE_URL 과 토큰을 찍어 준다
+# ② 그 값으로 next 를 띄운다 (⚠ ?max=1 이 꼭 있어야 한다 — 아래 함정)
+# ③ 브라우저를 /auth/callback?next=…#access_token=<토큰>&expires_in=3600 으로 보낸다
+```
 
-**값싼 것들 (아무 바퀴에서나 · 화면 작업 중 막히면 이걸로 돌려라)**:
-FINDINGS **21·22·23·17** 은 SPEC 을 코드에 맞추는 **문서 한 줄**짜리다.
-**14**(`.ps1` 두 개가 LF)도 그렇다. **30**(domain 파일 제목)은 템플릿 한 줄인데
-**golden 이 빨개진다** — `TEMPLATE_VERSION` 을 올리고 이유를 커밋 메시지에 써야 한다.
+씨앗의 정본은 `apps/web/scripts/seed.ts` **하나**이고 관통도 그걸 쓴다 —
+따로 만들면 관통이 보는 데이터와 화면이 보는 데이터가 갈린다.
 
-⚠ FINDINGS **24·25·26·28·29·31** 은 전부 **P3 가 주인**이다. 지금 열지 마라.
+⚠ **`apps/web/e2e` 는 아직 없다** (관통 `shots` 단계가 SKIP). 이번 바퀴의 캡처는
+헤드리스 Chrome 을 **손으로** 불러서 찍었다. 자동화하려면 그 폴더와
+`"test:e2e"` 스크립트를 만들면 관통이 저절로 켜진다.
+
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32** 는 SPEC 을 코드에 맞추는
+**문서 한 줄**짜리다. **14**(`.ps1` 두 개가 LF)도 그렇다. **30**(domain 파일 제목)은
+템플릿 한 줄인데 **golden 이 빨개진다** — `TEMPLATE_VERSION` 을 올려라.
+
+⚠ FINDINGS **24·25·26·28·29·31·33·35** 는 전부 **P3 가 주인**이다. 지금 열지 마라.
 
 ## 잰 것
 
-**8바퀴 · P1 셋째 행 — API 2군 + 발행 트랜잭션** (`e5f61c8` · `6b990f9`)
+**9바퀴 · P1 넷째 행 — 웹 화면 2·5·7 · 🔴 GATE 1** (`874ea95` · `d9d507e`)
 
 | | 값 |
 |---|---|
-| `tools/ci.ps1` 전 층 | GREEN — principles OK 6 / typecheck 7초 / test 37초 / build 16초 / **walkthrough 40초·4단계** |
-| 라우트 | 13 → **27개** (`next build` 가 전부 `ƒ (Dynamic)` 로 낸다) |
-| 새 시험 | **+49** — web 59 → **98** · schema 95 → **105**. 전체 266 → **315** |
-| 새 파일 | `lib/api/{publish,proposal,progress,sync,pack}.ts` · 라우트 14개 · 시험 2개 · `scripts/walkthrough-publish.ts` · `packages/compiler/src/version.ts` |
-| 마이그레이션 | **없다** — 표 16개로 다 됐다. DB 를 안 건드린 것이 의도다 |
+| `tools/ci.ps1` 전 층 | GREEN — principles OK 6 / typecheck 5초 / test 38초 / build 17초 / walkthrough 40초 |
+| 화면 | 0 → **5개** (`next build` 가 `/login` `/auth/callback` `/t/new` 를 ○, 나머지를 ƒ 로 낸다) |
+| 라우트 | 27 → **28개** (`GET /teams` — 없으면 화면이 slug→uuid 를 못 바꾼다) |
+| 새 시험 | **+41** — web 98 → **124** · compiler 112 → **124**. 전체 315 → **356** |
+| 새 게이트 | **3개** (아래) |
+| 마이그레이션 | **없다** — DB 를 안 건드렸다 |
 
-**관통 `publish` 단계가 실제로 지나는 것** (검사 13개 · 2초):
-픽스처 문서 2개 업로드 → 초안 6개 → 전부 active → `1.0.0` 발행 → Manifest 를
-`Manifest.parse` 로 되팜 → **파일마다 받은 본문의 sha256 을 다시 재서** Manifest 와 대조 →
-같은 ETag 로 다시 부르면 304 → 낡은 base 는 409 `STALE_BASE` → 제안 submit·approve →
-`1.1.0` 발행 → **새 항목이 Pack 본문에 나옴** → 기기 둘 중 하나만 보고 →
-`applied`/`unknown` → 진행 보고 하나가 roadmap 을 `not_started → in_progress` 로 바꿈.
+**🔴 GATE 1 을 눈으로 확인했다** — 근거는 `docs/evidence/2026-09-03-screens/` 에 있다
+(`.ci/shots/` 는 관통이 지운다. **적기 전에 복사했다**):
 
-**설계에서 한 판단 다섯** — 다음 바퀴가 되돌리지 않게 이유를 남긴다:
+- `s5-context.png` — 공식 `v1.0.0 · e3624065` · 항목 6개. 표에 타입 아이콘 · 제목 +
+  CtxTag(`item_policy_retry · rev 2`) · scope(`domain:refund`) · 상태 칩 · confidence ·
+  근거 수 · rev. 버전 히스토리에 「공식 v1.0.0 · snapshot · 첫 정본 · [Pack 보기]」
+- `s7-pack-trace.png` — **여기가 GATE 1 이다.** `CLAUDE.md` 9번 줄을 고르면 오른쪽에
+  `item_goal_success_rate · rev 2` → goal · 적용 중 · high → 「결제 승인 성공률 99.5%」 →
+  근거 `¶ 문서 §paylab 결제 서비스 · 0–400자`. **픽스처 문서에서 여기까지 끊긴 데가 없다** (P7)
+- `s2-login.png` — 설정이 없으니 「로그인 서버가 아직 연결되지 않았습니다」 + 비활성 버튼.
+  **아직 없는 것과 고장 난 것이 화면에서 구별된다**
+- `s5-context-needslogin.png` — 401 이 「오류」가 아니라 「로그인하러 가기」로 나온다
 
-- **`base_version_id` 는 nullable 이고 optional 이 아니다.** 첫 발행은 `null` 인데 그걸
-  「빼도 되는 필드」로 두면 **낡은 기준을 빠뜨린 요청과 구별할 수 없다** — `STALE_BASE`
-  검사가 통째로 무력해진다. 「기준이 없다」는 명시적으로 말해야 한다.
-- **컴파일을 DB INSERT 보다 먼저 한다.** SPEC §2.1 의 번호는 4(버전)→5(컴파일)지만
-  순서를 바꿨다. 결과는 같고(어차피 전부 롤백) **에러 details 가 정확해진다** —
-  제약 위반이 먼저 터지면 「어느 항목이 문제인가」가 드라이버 메시지에 묻힌다.
-- **승인된 제안의 `add` 는 항목을 `active` 로 만든다.** `draft` 로 넣으면 snapshot(active
-  만)에 안 들어가서 **Pack 에 안 나온다** — 승인이 아무것도 안 한 것이 된다.
-- **`sync-reports`·`progress` 는 기기 토큰만 할 수 있다.** 사람이 브라우저에서 대신 적을 수
-  있으면 「마지막 보고」가 무엇의 시각인지 말할 수 없다. 손으로 올리고 싶으면 CLI 를 통한다
-  (`source:'manual'`).
-- **모르는 버전의 sync 보고도 받는다** (`version_id` = null). 버리면 zip 을 손으로 푼 기기가
-  **영원히 `unknown`** 으로 남아서 화면이 「보고가 없다」고 거짓말한다.
+**설계에서 한 판단 넷** — 다음 바퀴가 되돌리지 않게:
 
-**게이트가 갈리는지 3번 확인했다** (전부 되돌렸다):
+- **화면은 없는 숫자를 만들지 않는다.** DESIGN_BRIEF 는 「미발행 변경 7건」과 「semver 추천」을
+  적지만 **둘 다 서버에 계산이 없다** (FINDINGS 33). 지어내면 「근거 없는 숫자는 화면에
+  없다」가 깨진다 — 잰 것(항목 수·공식 버전·snapshot)만 내고, 발행 모달은 세 후보를
+  SPEC §6 의 기준과 나란히 놓고 **사람이 고르게** 했다.
+- **역추적 태그를 읽는 코드를 `packages/compiler/src/tag.ts`(쓰는 파일)에 뒀다.**
+  화면 쪽에 적으면 형식이 두 곳에 살고, 태그를 한 글자 바꾸면 역추적이 조용히 끊긴다 —
+  화면은 태연히 「해당 없음」을 표시한다. 왕복은 `test/tag.test.ts` 가 잠근다.
+- **컴파일러에 공개 문을 하나 더 뒀다** (`@contextops/compiler/tag`). index 는
+  `node:crypto` 를 재수출해서 브라우저 번들에 못 들어간다 (`sideEffects:false` 로도 안 된다 —
+  번들러는 흔들기 전에 먼저 해석한다). **둘 다 package.json 에 선언**했으니 ad-hoc
+  깊은 import 가 아니다.
+- **`GET /teams` 를 더했다.** SPEC §5 에 없었는데, 화면 주소는 slug 이고(§9) 라우트는 uuid 를
+  받는다. 이 문이 없으면 로그인한 사람이 **자기 프로젝트로 갈 수가 없다.** SPEC 을 고쳤다.
 
-| 무엇을 뒤집었나 | 결과 |
-|---|---|
-| `WITHOUT_OWNER` 를 그대로 둔 채 `fail('STALE_BASE')` 를 만듦 | `이제 내는 자리가 생겼다 — WITHOUT_OWNER 에서 지워라: STALE_BASE, COMPILE_FAILED` |
-| 「내용 안 바뀐 발행」 검사를 넣어 봄 | 시험이 **201 을 잡아냈다** → 그 검사는 죽은 코드였다. 빼고 FINDINGS 27 에 적었다 |
-| catch-all(`[...path]`) 라우트를 시험에서 부름 | `params<P extends Record<string,string>>` 이 **타입 검사에서 막았다** → `as any` 로 뚫지 않고 헬퍼를 넓혔다 |
+**게이트 3개를 더했다 — 「같은 지적이 두 번 나오면 게이트로」**:
+
+| 게이트 | 무엇을 막나 | 갈리는지 확인했나 |
+|---|---|---|
+| `test/design-tokens.test.ts` | DESIGN_BRIEF §3 색 표 ↔ `globals.css :root` **양방향** · 화면 코드의 색 리터럴 · padding/margin/gap 의 px | **예** — `#ABCDEF` 를 심어 빨개지는 것을 보고 되돌렸다 |
+| `test/web-tables.test.ts` | 칩 4표·근거 4종·에러 10종·semver 3등급이 ① enum 과 키가 같고 ② **값마다 다른 것을 낸다** | 표 하나가 같은 아이콘을 두 번 쓰면 빨개진다 |
+| `packages/compiler/test/tag.test.ts` | 쓴 태그를 그대로 되읽는 왕복 · golden 3종에서 「절 머리·빈 줄은 칠해지지 않는다」 | golden 전 파일을 돈다 |
+
+**눈으로 보고 고친 결함 7개** (`d9d507e`) — 전부 컴파일 초록이었고 캡처로만 보였다:
+비활성 accent 링크 · 버튼 글자 접힘 · 한글 UI 의 영문만 대문자 · 라벨 접힘 ·
+CtxTag 가 칸 전체로 늘어남 · **3열이 세로 가운데로 어긋남**(`.items-start` 가 `.row` 보다
+위에 있어 특이도에서 졌다) · 파일 트리에서 경로 잘림과 sha 쪼개짐.
 
 **④2-B · 정의만 있고 아무 일도 안 하는 것 — 이번 라운드**
 
 | 후보 | 소비처가 있나 | 값을 바꾸면 결과가 갈리나 | 판정 |
 |---|---|---|---|
-| **`SYNC_STATUSES` 5종** | `statusOfDevice` + sync-status 라우트 | 보고한 기기 `applied` / 안 한 기기 `unknown` | **살렸다** → FINDINGS 16 ✅ |
-| **`PROGRESS_STATUSES` 4종** | `PROGRESS_EFFECT` 표 + roadmap | 네 값이 **세 갈래**로 갈린다 | **살렸다** → FINDINGS 13 ✅(절반) |
-| **`PROPOSAL_STATUSES` 5종** | 생성 · `PROPOSAL_DECISIONS` 표 · 발행 7단계 | 다섯을 전부 만드는 코드가 생겼다 | **살렸다** |
-| `SOURCE_REF_KINDS` 4종 | `SRC_TAG` 표 (컴파일러) | 종류마다 태그 문자열이 다르다 | **살아 있다** |
-| `enforcement` 4종 · `confidence` 3단계 | `ENFORCEMENT_LABEL` · `traceTag` 의 `conf:` | 관통 산출물에서 직접 봤다 | **살아 있다** |
-| `PROGRESS_SOURCES` 3종 | 저장만 한다 | 읽는 코드 0곳 | **절반** → FINDINGS 13 에 남겼다 (P4 화면이 주인) |
-| `REVISION_ORIGINS` 4종 | `code`·`manual`·`proposal` 3종만 | `doc` 을 만드는 곳 0곳 | **절반** → FINDINGS 31 |
-| `CONFLICT_KINDS` 5종 | 읽는 라우트는 있는데 **만드는 곳 0곳** | 늘 빈 목록 | **죽어 있다** → FINDINGS 28 |
+| **`ITEM_TYPES` 10종** | `ITEM_TYPE_ICON` 표 (화면 5 의 첫 칸) | 10종이 **서로 다른 아이콘**을 낸다 (시험이 중복을 잡는다) | **살렸다** |
+| **`ITEM_STATUSES` 4종** | `ITEM_STATUS_CHIP` + 필터 | 넷이 아이콘·라벨·색이 다 다르다 | **살렸다** |
+| **`CONFIDENCE_LEVELS` 3단계** | `CONFIDENCE_CHIP` + 컴파일러의 `conf:` | 화면과 Pack 둘 다에서 갈린다 | **살렸다** |
+| **`ERROR_CODES` 10종** | `ERROR_HINT` 표 (화면 문구) | 열이 **서로 다른 존댓말 문장**을 낸다 | **살렸다** — 이제 화면에서도 안 죽는다 |
+| **`SOURCE_REF_KINDS` 4종** | `SRC_LABEL`·`SRC_ICON` (화면) + `SRC_TAG` (컴파일러) | 값을 바꾸면 라벨이 갈린다 (`r/a.ts` vs `…:14–30`) | **살렸다** |
+| `SYNC_STATUSES` 5종 | `SYNC_CHIP` 표는 만들었는데 **쓰는 화면이 아직 없다** (화면 9 는 P4) | — | **절반** — 표만 있다. 화면 9 가 주인 |
+| `pack_files.source_map` | INSERT 한 곳뿐 · **읽는 라우트 0곳** | 늘 안 읽힌다 | **죽어 있다** → FINDINGS 34 |
 
 **루프 실주행 기준선** — `logs/cycles/*.jsonl` 의 **마지막** result 줄 · `duration_api_ms`
 
@@ -131,28 +143,19 @@ FINDINGS **21·22·23·17** 은 SPEC 을 코드에 맞추는 **문서 한 줄**�
 
 ## 눈 판정 대기
 
-_(없음)_
+_(없음)_ — 이번 바퀴에 만든 화면 셋을 **전부 브라우저로 띄워서 봤다.**
+근거는 `docs/evidence/2026-09-03-screens/` 4장이고, 보고 고친 것은 `d9d507e` 에 있다.
 
-**이번 바퀴에 눈으로 본 것** — 관통이 만든 **Pack 을 직접 열어 읽었다**
-(`.ci/walkthrough-pack/` · 재생성은 `pnpm --filter web exec tsx scripts/walkthrough-publish.ts`):
+**아직 눈으로 못 본 것** (다음에 화면을 건드리면 여기부터):
 
-- `CLAUDE.md` 의 **모든 내용 줄에 역추적 태그가 있다** (P7). 태그가
-  `ctx:item_mission_paylab rev:2 conf:high src:doc:{uuid}#0-400` 이라 **항목 ID → 문서 →
-  문자 범위**까지 이어진다. 픽스처 문서에서 시작해 여기까지 끊긴 데가 없다
-- 머리말이 `# paylab-api — Team Context v1.0.0` + `snapshot:8328aa7e` + 「Do not edit by
-  hand; run /contextops:propose」다. **팀 규칙으로 배포해도 되겠다**고 읽힌다
-- `v1.1.0/CLAUDE.md` 의 Goals 절에 승인된 제안의 항목(`item_goal_settlement`)이
-  `rev:1` 로 새로 붙었다 — 제안 → 승인 → 발행이 **산출물에서 보인다**
-- 🔴 **여기서 고장을 하나 찾았다**: `.claude/rules/domain-refund.md` 의 제목이 그냥
-  `# 도메인` 이다. 도메인 이름이 **파일 이름에만** 있다 — agent 가 여러 도메인 파일을
-  한 맥락에 읽으면 어느 규칙이 어느 도메인 것인지 구별할 수 없다 (FINDINGS 30).
-  `DocVars.title` 에 값이 이미 와 있는데 `domain` 템플릿이 안 읽는다
-- **FINDINGS 9 를 눈으로 재확인했다**: policy 항목의 `body`(「고정 간격 재시도는
-  금지한다」)가 Pack 어디에도 없다. 짧은 절은 `body` 를 버린다 — 사용자가 적은 설명이
-  **조용히 사라진다**
-- 화면은 만들지 않았다. **`DESIGN_BRIEF` 토큰을 아직 하나도 쓰지 않았다** (화면은 다음 행)
-- `packages/compiler` 는 `version.ts` 하나만 더했다 (`COMPILER_VERSION`) — 파이프라인은
-  한 줄도 안 건드렸다. golden 은 그대로고 3바퀴의 Pack 눈 판정이 그대로 선다
+- 화면 5 의 **발행 모달** — 코드는 있는데 캡처를 못 찍었다 (헤드리스에서 버튼을 못 누른다).
+  `apps/web/e2e` 가 생기면 자동으로 찍힌다
+- 화면 5 의 **상세 드로어** — 같은 이유. 행을 눌러야 열린다
+- **empty 상태** — 항목이 0개인 프로젝트를 만들어야 본다 (씨앗은 6개를 넣는다)
+- 화면 7 의 **제외된 항목 접이식** — 이번 씨앗은 `excluded` 가 비어 있다
+
+⚠ 넷 다 **코드에는 있고 시험은 초록**이다. 그래서 더 위험하다 —
+「컴파일 초록은 최소선이다」(loop/PROMPT.md ①③).
 
 ## 막힌 것 — 🙋 사람이 해야 하는 것
 
@@ -172,6 +175,26 @@ _(없음)_
 > 같은 벽에 두 번 부딪히면 `loop/PROMPT.md` ③ 의 규칙으로, 기계가 잴 수 있으면
 > `tools/principles.ps1` 의 검사로 올린다.
 
+- 🔴 **vite 8 은 oxc 로 변환한다.** `esbuild: { jsx }` 는 「무시한다」고 **경고만 하고
+  조용히 안 먹는다.** `.tsx` 를 시험에서 들여오려면 `oxc: { jsx: { runtime: 'automatic' } }`
+  다 — 문자열 `'automatic'` 은 타입에서 막힌다 (`vitest.base.ts`).
+- 🔴 **`node:crypto` 를 재수출하는 index 는 브라우저 번들에 못 들어간다.**
+  `sideEffects: false` 로도 안 된다 — 번들러는 흔들기 전에 **먼저 해석**한다.
+  `package.json` 의 `exports` 에 문을 하나 더 선언해라 (`./tag`).
+- 🔴 **CSS 특이도는 소스 순서로 갈린다.** `.items-start` 를 `.row` **위에** 적었더니
+  `.row { align-items: center }` 가 이겨서 3열이 세로 가운데로 어긋났다. 눈으로만 보였다.
+  유틸리티 클래스는 **아래에** 두거나 `.row.items-start` 로 올려라.
+- 🔴 **`<a>` 에는 `:disabled` 가 안 먹는다.** 「비활성 accent 링크」는 눌러도 아무 일이
+  없는 파란 버튼이고, 그건 「아직 없다」가 아니라 **「고장」으로 읽힌다.** 태그를 바꿔라.
+- **pglite-socket 은 연결을 한 번에 하나씩 처리한다.** postgres-js 는 기본 풀이 10개라
+  화면 하나가 두 요청을 동시에 내면 **둘째가 30초 굶다가 500** 이다. `?max=1` 을 붙여라.
+  ⚠ 그리고 클라이언트가 갑자기 죽으면 **ECONNRESET 이 씨앗 서버를 통째로 죽인다** —
+  `dev-server.ts` 가 그걸 삼킨다. 안 삼키면 다음 캡처가 「프로젝트를 찾을 수 없습니다」다.
+- **헤드리스 Chrome 은 `--timeout` 보다 `--virtual-time-budget` 이 낫다.** 전자는
+  fetch 가 끝나기 전에 찍어서 **skeleton 만 담긴 캡처**를 낸다. ⚠ 리다이렉트하는 페이지
+  (`/auth/callback`)에 `--virtual-time-budget` 을 쓰면 **안 끝난다** — 거기서만 `--timeout`.
+- **PowerShell 로 캡처 경로를 줄 때는 절대 경로여야 한다.** Chrome 은 상대 경로를
+  자기 cwd 로 풀어서 「지정된 경로를 찾을 수 없습니다」로 조용히 실패한다.
 - 🔴 **`snapshot_hash` 는 semver 를 품는다.** 「같은 내용은 두 번 발행 못 한다」는 검사를
   넣었다가 시험이 「막힐 줄 알았는데 201」로 잡아냈다 — 번호만 올리면 언제나 다른 해시다.
   **막을 방법이 지금 없다** (FINDINGS 27). 손으로 두 번째 해시를 계산하지 마라.
