@@ -168,6 +168,11 @@
       `GET /projects/{id}/jobs?feature&status&limit&offset` · 최신순. 질의 계약 `AiJobQuery`
       (`ListQuery` 를 넓힌다 — `feature` 의 값이 서버 전용 표에서 와서 계약 패키지로 못 올린다).
       시험 213→220. `ai_jobs_project_created_idx` 가 처음으로 읽는 코드를 가졌다.
+      ③ ✅ **목록이 무거워지지 않는다** (`91ede81` · FINDINGS **60** 닫음) —
+      `AI_JOB_FIELDS` 표에 `heavy` 축을 두어 `AI_JOB_COLUMNS`(상세)·`AI_JOB_LIST_COLUMNS`(목록)가
+      **생성된다.** 목록은 `result` 를 안 나르고, 응답의 `shape:'summary'|'full'` 이 화면에게
+      어느 쪽을 받았는지 말한다. 시험 220→225. 목록 953바이트 vs 상세 2063바이트를 눈으로 읽었다
+      (`docs/evidence/2026-09-04-jobs-shape/`).
       🔴 **남은 것: 화면 3·4 자체** · 실패한 job 재시도 (**59**).
       ⚠ 여전히 **진짜 키로 부른 적이 없다** — 완료 기준(「paylab 문서 → 항목 12 + 충돌 3」)은
       키가 있어야 잰다 (🙋).

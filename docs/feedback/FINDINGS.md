@@ -29,6 +29,44 @@
 
 ## 다음에 고칠 것
 
+### 62. 도는 동안 **진행률이 0 정보**다 — 화면 3 이 보여 줄 것이 「돌고 있음」뿐이다   [격차]
+- **증상**: `ai_jobs` 는 `queued → running → succeeded/failed` 만 남긴다. chunk 진행
+  (`result.chunks {used,total}`)은 **끝난 뒤에야** 쓰인다 — `runJob()` 이 러너가 돌아온
+  다음에 한 번 UPDATE 하기 때문이다. 그래서 12 chunk 짜리 문서를 올리면 화면 3 은
+  몇 분 동안 **회전만** 보여 준다. SPEC §9 화면 3 은 「구조화 **진행 표시**(polling)」인데
+  지금 polling 이 가져오는 새 정보는 status 한 글자뿐이다.
+- **근거**: 이번 바퀴 직접 읽음 — `apps/web/src/lib/ai/job.ts` 의 `runJob()`
+  (첫 UPDATE=running · 마지막 UPDATE=succeeded, 그 사이 쓰기 0곳) ·
+  `docs/evidence/2026-09-04-jobs-shape/list-vs-detail.txt` 의 `result.chunks`
+  는 succeeded 행에만 있다
+- **정본**: `docs/SPEC.md` §7.1 · §9 화면 3
+- **고칠 방향**: ⚠ **chunk 마다 행을 UPDATE 하는 것이 제일 싼 길이지만, 그러면
+  `result` 가 「끝난 것」이 아니게 된다** — `ai_jobs_result_ck`(succeeded 여야 result 가
+  있다)와 부딪친다. 값싼 갈래 둘: ① `input` 에 chunk 총수를 미리 넣는다 (문서 글자수는
+  올릴 때 안다 — 「12 조각 중」까지는 LLM 없이 말할 수 있다) ② 진행 칸을 따로 둔다
+  (`progress jsonb` · CHECK 밖). ①이 먼저다 — 화면이 「몇 조각짜리 일인가」만 알아도
+  회전은 막대가 된다. ⚠ 어느 쪽이든 **표의 수명 규칙(`AI_JOB_STATUS_RULES`)을 먼저
+  읽어라** — 거기서 CHECK 이 생성된다.
+- **상태**: 대기 (화면 3 이 주인)
+
+### 63. job 응답 모양이 **셋**이다 — 만드는 라우트만 `shape` 가 없다   [격차]
+- **증상**: 이번 바퀴에 목록(`shape:'summary'`)과 상세(`shape:'full'`)를 갈랐는데,
+  job 을 **만드는** 두 라우트(`POST /documents` · `batch-draft`)는 `createJob()` 이
+  돌려주는 `{id, status}` 를 그대로 `job` 으로 싣는다 — `shape` 가 없는 셋째 모양이다.
+  화면이 그 객체를 job 으로 들고 다니면 `shape` 를 못 찾고, 「summary 인가 full 인가」를
+  판단하는 코드가 `undefined` 갈래를 하나 더 갖게 된다.
+- **근거**: 이번 바퀴 직접 읽음 —
+  `apps/web/src/app/api/v1/projects/[id]/documents/route.ts:67~82` (`job` 을 그대로 실음) ·
+  `apps/web/src/lib/ai/job.ts` 의 `createJob()` 반환형 `{id, status}`
+- **정본**: `docs/SPEC.md` §5
+- **고칠 방향**: 둘 중 하나. ① 이름을 바꿔 **모양이 아니게** 한다 (`job_id`) — 그러면
+  화면은 「id 를 받았으니 목록/상세로 읽으러 간다」가 되고 모양은 여전히 둘이다.
+  ② `createJob()` 이 `INSERT … returning` 에서 요약 칸을 다 받아 `toAiJob()` 을 태운다 —
+  모양은 둘로 유지되고 화면은 첫 응답부터 job 객체를 갖는다. ⚠ ②는 만드는 라우트가
+  **응답 계약을 넓히는** 것이라 화면 3 이 그 값을 실제로 쓰는지 보고 정해라 — 안 쓰면
+  ①이 더 정직하다 (안 쓰는 칸을 내보내지 않는다).
+- **상태**: 대기 (화면 3 이 주인 · 값싸다)
+
 ### 60. job 목록이 **`result` 를 통째로 실어 나른다** — polling 이 무거워진다   [격차]
 - **증상**: `GET /projects/{id}/jobs` 는 `AI_JOB_COLUMNS` 를 그대로 읽어서 **행마다
   `result` 전부**를 낸다. `result.items` 에는 §7.1 이 문서에서 뽑은 항목 초안이 통째로
@@ -45,7 +83,15 @@
   `AI_JOB_COLUMNS` 옆에 `AI_JOB_LIST_COLUMNS` 를 두고 **둘 다 `toAiJob()` 이 아는
   모양**이게 해라 — 안 그러면 「목록에는 있는데 상세에는 없는 칸」이 조용히 생긴다.
   응답 모양이 둘이 되므로 화면이 어느 쪽을 받았는지 알 수 있어야 한다.
-- **상태**: 대기 (값싸다 · 화면 3 을 만들기 전이 제일 싸다)
+- **상태**: ✅ `91ede81` — 목록은 `result` 를 안 나른다. 칸을 라우트에서 고르지 않고
+  **`AI_JOB_FIELDS` 표 하나에 `heavy` 축**을 두어 거기서 `AI_JOB_COLUMNS`(상세)와
+  `AI_JOB_LIST_COLUMNS`(목록)가 생성된다 — 「목록에는 있는데 상세에는 없는 칸」이 생길 자리가
+  없다. 응답의 **`shape:'summary'|'full'`** 이 화면에게 어느 쪽을 받았는지 말한다.
+  `input` 은 남겼다 — 계약이 **가리키는 id 만** 담게 막고 있고(P1) 화면이 「이게 내 문서의
+  job 인가」를 그 칸으로 가른다. 시험 **+5** (220 → 225): 표의 `heavy` 를 뒤집으면 응답이
+  갈린다 · 목록 payload 에 항목 초안의 제목도 본문도 0건 · shape 가 갈린다.
+  눈으로 읽은 근거: `docs/evidence/2026-09-04-jobs-shape/list-vs-detail.txt` —
+  job 2개짜리 목록 **953바이트** vs 같은 job 한 장의 상세 **2063바이트**.
 
 ### 61. `VALIDATION_FAILED` 의 문구가 **질의 오류에 안 맞는다**   [격차]
 - **증상**: `?feature=ask` 로 물으면 400 이 나는데 message 가 「**요청 본문**이 계약과
