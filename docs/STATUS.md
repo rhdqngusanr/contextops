@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-03 · 루프 3바퀴 · `dc66593` `a4ac92d` `8e02f48`_
+_마지막 갱신: 2026-09-03 · 루프 4바퀴 · `dc66593` `a4ac92d` `8e02f48` `84ce3ea`_
 
 ---
 
@@ -23,7 +23,10 @@ _마지막 갱신: 2026-09-03 · 루프 3바퀴 · `dc66593` `a4ac92d` `8e02f48`
 | `plugin/contextops/schemas/*.json` 7개 | |
 | `docs/SPEC.md` · `DESIGN_BRIEF.md` · `PLAN.md` | |
 
-검사 층: `principles OK · typecheck OK · test OK · build SKIP · walkthrough OK`.
+검사 층: `principles OK · typecheck OK(멤버 2개) · test OK(멤버 2개) · build SKIP · walkthrough OK`.
+**이번 바퀴에 typecheck·test 층의 「가짜 OK」를 막았다** (FINDINGS 1번 ✅ `84ce3ea`) —
+`pnpm -r` 이 멤버 0개에서 exit 0 이라 **아무것도 검사 안 하고 초록**이던 자리다.
+이제 두 층이 멤버 수를 세고 note 에 남긴다.
 **principles 가 OK 3 → OK 6 으로 늘었다** — `P4`(컴파일러 순수성)·`P4b`(golden 3종)·
 `P7`(템플릿 역추적 태그 자리)이 **SKIP 을 벗었다.** 지난 바퀴가 「compiler 를 만들고도
 P4·P4b·P7 이 SKIP 이면 그게 고장이다」라고 적어 둔 자리다.
@@ -46,7 +49,32 @@ P4·P4b·P7 이 SKIP 이면 그게 고장이다」라고 적어 둔 자리다.
 ⚠ **P0 이 끝나면 P1 첫 행(DB·Drizzle)인데 거기서 사람이 필요하다** (아래 「막힌 것」).
 루프는 스키마·마이그레이션·`.env.example` 까지 하고 멈춘다.
 
+⚠ **FINDINGS 「다음에 고칠 것」 맨 위 두 개(12·7)는 주인이 뒤 Phase 행이라 지금 고치지 마라.**
+12번(에러 코드 9종)은 P1 「API 1군」 행이 주인이고 — 소비처 없이 스키마만 만들면
+정의만 있고 아무 일도 안 하는 표가 하나 더 생긴다. 7번(agents·cursor 타깃)은 P5 행이 주인이다.
+**지금 손댈 수 있는 것은 PLAN P0 마지막 행이다.**
+
 ## 잰 것
+
+**4바퀴 · CI 게이트** (`84ce3ea`) — PLAN 행이 아니라 **FINDINGS 1번**을 고친 바퀴다
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles OK 6 / **typecheck OK 4초·멤버 2개** / **test OK 3초·멤버 2개** / build SKIP / walkthrough OK 2초 |
+| 고친 것 | `ci.ps1` +42줄 (함수 2개 · 2·3층 분기) · 다른 파일 0건 |
+| 게이트가 갈리는지 | AST 로 함수를 꺼내 두 워크스페이스에 돌림 — 빈 곳 **0개**(SKIP 경로) / 이 저장소 **2개·testable 2개**(OK 경로) |
+| 증상 재현 | 빈 워크스페이스 `pnpm -r test` → `No projects matched the filters` · **EXIT=0** |
+
+**관통은 지난 바퀴와 같다** — `compile OK` 1단계, 나머지 5개는 `apps/web`·`plugin` 이
+없어서 맞는 SKIP. 이번 바퀴는 산출물(Pack)을 바꾸지 않았으므로 3바퀴의 눈 판정이 그대로 선다.
+
+**④2-B · 정의만 있고 아무 일도 안 하는 것 — 이번 라운드 3종 확인**
+
+| 후보 | 소비처가 있나 | 값을 바꾸면 결과가 갈리나 | 판정 |
+|---|---|---|---|
+| `ItemType` 10종 | `compiler/src/partition.ts` 의 `Record<ItemType, …>` 표 · `sections.ts` | `liveness.test.ts` 「10종을 넣으면 산출물이 달라진다」 | **살아 있다** |
+| sync 상태 5종 | `schema/src/upload.ts` — `REPORTABLE_SYNC_STATUSES` 가 `unknown` 을 뺀다 | `upload-allowlist.test.ts:144` 가 두 목록의 차이를 잠갔다 | **살아 있다** (소비처인 plugin 은 P2) |
+| **에러 코드 9종** | **0건** — `grep -rn "STALE_BASE\|BUDGET_EXCEEDED\|ERROR_CODE" packages apps plugin tools` | 코드에 없어서 잴 것이 없다 | **구멍** → FINDINGS 12번 |
 
 **P0 셋째 행 · `packages/compiler`** (`8e02f48`)
 
@@ -82,23 +110,31 @@ P4·P4b·P7 이 SKIP 이면 그게 고장이다」라고 적어 둔 자리다.
 - 30,000자 분할은 `budget.test.ts` 가 90개 규칙으로 만들어 잰다 (골든으로 하면 픽스처가
   너무 커진다). **줄 가운데서 자르지 않는다**를 시험이 잠갔다
 
-**루프 실주행 기준선**
+**루프 실주행 기준선** — 지난 바퀴가 「읽어서 적어라」고 남긴 자리다. **읽었다**
+(`logs/cycles/*.jsonl` 의 `result` 줄)
 
-| | dryrun 2바퀴 | 실주행 c001 (`5dfefb4`) |
-|---|---|---|
-| 시간 | 24초 · 21초 | **9분 30초** |
-| 턴 | 7 · 7 | **52** |
-| 비용 | $0.42 · $0.41 | **$4.02** |
+| | dry001·002 | c001 `5dfefb4` | c002 `a4ac92d` | **c003 `8e02f48`** |
+|---|---|---|---|---|
+| 한 일 | (dryrun) | 모노레포 뼈대 | `packages/schema` | **`packages/compiler`** |
+| 시간 | 24초 · 21초 | 9.5분 | 18.2분 | **32.1분** |
+| 턴 | 7 · 7 | 52 | 93 | 92 |
+| 비용 | $0.42 · $0.41 | $4.02 | $9.07 | **$13.90** |
 
-→ `CycleTimeoutMin`(45분)·`MaxCostUsd`($50)는 c001 기준으로 넉넉하다. 그대로 둔다.
-c002·c003 의 실제 값은 `logs/cycles/2026-09-03_c00*.jsonl` 의 `result` 줄에 있다 —
-읽어서 다음 바퀴가 여기 적어라 (특히 **c003 은 컴파일러를 통째로 만든 바퀴**라
-「한 행이 얼마나 드나」의 상한에 가깝다).
+🔴 **c003 이 `CycleTimeoutMin`(45분)의 71% 를 썼다.** 세 바퀴가 9.5 → 18.2 → **32.1분**
+으로 계속 올랐고, 턴 수는 92~93 에서 평평한데 시간·비용만 늘었다 — **한 턴이 무거워지고
+있다**(읽을 코드가 늘어서). 다음 큰 행(API 1군 · 웹 화면)은 c003 보다 크다.
+→ **한도를 올리는 것은 사람의 결정이다**(`MaxCostUsd` 는 사용자가 30→50 으로 올렸다 —
+`dc7563d`). 루프는 여기 적고 지나간다. 대신 **한 바퀴에 한 행**을 지키면
+「중간에 잘려서 통째로 날아가는」 일은 없다 — ⑤ 대로 검사 통과 즉시 커밋한다.
+
+⚠ 이 표를 다음 바퀴가 다시 채워라. c004(이 바퀴)의 `result` 줄은 **바퀴가 끝나야** 쓰인다.
 
 ## 눈 판정 대기
 
-_(없음 — 이번 바퀴는 화면을 만들지 않았다. 산출물인 Pack 3벌은 위 「잰 것」에 적은 대로
-직접 열어 읽고 판정했고, 눈으로 본 것 두 가지를 고쳐서 golden 을 다시 냈다.)_
+_(없음 — 4바퀴도 화면을 만들지 않았고 **산출물을 바꾸지도 않았다**(고친 것은 `tools/ci.ps1`
+하나뿐이고 golden 은 그대로다). 그래서 3바퀴의 Pack 눈 판정이 그대로 선다 — 그때
+`case-1-small` 의 `CLAUDE.md` 를 통째로 읽고 「팀 규칙으로 배포해도 되겠다」에 ○ 했고,
+눈으로 본 것 두 가지를 고쳐서 golden 을 다시 냈다.)_
 
 ## 막힌 것 — 🙋 사람이 해야 하는 것
 
@@ -130,6 +166,11 @@ _(없음 — 이번 바퀴는 화면을 만들지 않았다. 산출물인 Pack 3
   `user.name` 만 있고 `user.email` 이 없었다. 이 저장소에 로컬로 박아 두고 지나갔다
   (`git config user.email rhdqngusanr@gmail.com`). **무인 세션은 물어볼 사람이 없어서
   여기서 통째로 막힌다** — 새 기계에서 루프를 켜면 제일 먼저 확인해라.
+- **`.ps1` 을 고칠 때는 Edit 도구를 써라 — BOM 과 CRLF 를 그대로 둔다.** 4바퀴에
+  `ci.ps1` 을 42줄 고치고 확인했다: `CRLF 202 · bare LF 0 · BOM True`.
+  **확인은 `file`·`grep`·`awk` 로 하지 마라** — Git Bash 의 그 도구들은 `\r` 을 삼켜서
+  CRLF 202줄인 파일을 **「CRLF 0줄」로 보고한다.** 바이트로 세라:
+  `python -c "d=open(p,'rb').read(); print(d.count(b'\r\n'))"`.
 - **파이썬으로 `.ps1` 을 고치면 CRLF 가 LF 로 바뀐다.** `io.open` 은 텍스트 모드로
   읽을 때 줄바꿈을 LF 하나로 번역해 버린다. `.gitattributes` 가 `*.ps1 text eol=crlf`
   라서 `git add` 가 경고로 알려 줬다 — 읽을 때 `newline=''` 를 주고, BOM(`utf-8-sig`)과

@@ -29,18 +29,21 @@
 
 ## 다음에 고칠 것
 
-### 1. 워크스페이스 멤버가 0개여도 typecheck·test 층이 초록이다   [구멍]
-- **증상**: `pnpm -r exec tsc --noEmit` · `pnpm -r test` 는 매칭되는 패키지가 없으면
-  `No projects matched the filters` 를 찍고 **exit 0** 이다. `tools/ci.ps1` 은 이걸
-  `typecheck OK` · `test OK` 로 보고한다 — **아무것도 검사하지 않았는데 초록**이다.
-- **근거**: 5dfefb4 직전에 직접 재현. 멤버 0개 상태에서 `pnpm typecheck` → `EXIT=0`,
-  `pnpm test` → `EXIT=0`. 지금은 멤버 2개(schema·compiler)를 넣어 가려졌지만
-  **검사가 막은 게 아니라 우연히 안 걸린 것**이다.
-- **정본**: `tools/ci.ps1` 2·3층 · `loop/PROMPT.md` ⑥ (「대상이 생겼는데도 SKIP 이면
-  그게 고장이다」의 같은 종류 — 여기선 SKIP 이 아니라 **가짜 OK** 다)
-- **고칠 방향**: `ci.ps1` 이 `pnpm -r list --depth -1` 등으로 멤버 수를 세고, 0개면
-  `OK` 가 아니라 `SKIP 워크스페이스 멤버 0개` 로 보고한다. 게이트는 문서보다 강하다.
-- **상태**: 대기
+### 12. 에러 코드 9종이 SPEC §5 에만 있고 코드에는 정본이 없다   [구멍]
+- **증상**: SPEC §5 가 `UNAUTHORIZED`·`FORBIDDEN`·`NOT_FOUND`·`VALIDATION_FAILED`·
+  `STALE_BASE`·`REVISION_CONFLICT`·`BUDGET_EXCEEDED`·`RATE_LIMITED`·`COMPILE_FAILED`
+  **9종을 한 줄에 나열**하는데, 저장소 코드 전체에 이 이름이 **0건**이다. 값 목록이
+  문서 문장 안에만 살아 있어서, API 를 만드는 사람이 **손으로 문자열을 적게 된다** —
+  9종 중 몇 개가 실제로 쓰이는지 아무도 셀 수 없고 오타가 조용히 통과한다.
+- **근거**: `grep -rn "STALE_BASE\|BUDGET_EXCEEDED\|ERROR_CODE" packages apps plugin tools`
+  → **0건** (이번 바퀴 직접 확인) · `docs/SPEC.md:348`
+- **정본**: `docs/SPEC.md` §5
+- **고칠 방향**: **주인은 `docs/PLAN.md` P1 「API 1군」 행이다.** 그 행을 할 때
+  `packages/schema` 에 `ERROR_CODES` 표를 정본으로 두고(「개념 하나 = 정본 파일 하나」),
+  에러 응답 Zod 계약이 그 enum 을 쓰게 한다. 그리고 **9종이 전부 실제로 쓰이는지**를
+  liveness 시험으로 잠근다 — 안 그러면 `ItemType` 10종과 같은 「정의만 있고 아무 일도
+  안 하는」 자리가 하나 더 생긴다. 지금 스키마만 먼저 만들면 소비처 없는 표가 된다.
+- **상태**: 대기 (P1 API 1군 행이 주인)
 
 ### 7. `agents`·`cursor` 타깃이 아직 하나도 안 나온다   [구멍]
 - **증상**: `PACK_TARGETS` 3종 중 컴파일러가 내는 것은 `claude` 하나다. SPEC §4.1
@@ -152,6 +155,27 @@
 ---
 
 ## 고친 것
+
+### 1. 워크스페이스 멤버가 0개여도 typecheck·test 층이 초록이다   [구멍]
+- **증상**: `pnpm -r <script>` 는 매칭되는 패키지가 없으면 `No projects matched the filters`
+  를 찍고 **exit 0** 이다. `tools/ci.ps1` 은 그걸 `typecheck OK`·`test OK` 로 보고했다 —
+  **아무것도 검사하지 않았는데 초록**이었다.
+- **근거**: 이번 바퀴에 다시 재현했다. 빈 워크스페이스(`packages/*` glob 만 있고 멤버 없음)
+  에서 `pnpm -r test` → `No projects matched the filters` · **`EXIT=0`**.
+- **고친 방법**: `tools/ci.ps1` 이 **검사 대상을 먼저 센다.**
+  | 함수 | 무엇을 세나 | 0개면 |
+  |---|---|---|
+  | `Get-WorkspaceMembers` | `pnpm ls -r --depth -1 --json` 에서 **루트를 뺀** 멤버 | typecheck·test 둘 다 `SKIP 워크스페이스 멤버 0개` |
+  | `Get-TestableMembers` | 그 중 `scripts.test` 를 **실제로 가진** 멤버 | test 층만 `SKIP test 스크립트를 가진 멤버 0개` |
+  둘째를 따로 센 이유 — 멤버 수만 세면 「패키지는 있는데 아무도 테스트를 안 도는」 상태가
+  **다시 가짜 OK** 가 된다 (`pnpm-workspace.yaml` 주석의 「셋 중 하나라도 없으면 검사 없이
+  초록」과 같은 함정이다). 두 층의 note 에 멤버 수를 남겨서 `.ci/result` **한 줄만 보고도**
+  몇 개를 돌고 초록인지 알 수 있게 했다 (`test OK 3초 · 멤버 2개`).
+- **갈리는지 확인**: 두 함수를 AST 로 꺼내 두 워크스페이스에 대고 돌렸다 —
+  빈 워크스페이스 **0개**(→ SKIP 경로) / 이 저장소 **2개 · testable 2개**(→ OK 경로).
+  같은 코드가 실제로 두 갈래로 간다.
+- **정본**: `tools/ci.ps1` 2·3층
+- **상태**: ✅ `84ce3ea`
 
 ### 5. `confidence` 3단계 · `enforcement` 4종 · 항목 `status` 4종이 아직 아무것도 바꾸지 않는다   [구멍]
 - **증상**: 값 목록은 있고 파싱도 되지만 **읽는 코드가 없었다.**
