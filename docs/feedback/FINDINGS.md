@@ -29,6 +29,62 @@
 
 ## 다음에 고칠 것
 
+### 36. `setup` 이 가리키는 **토큰 발급 화면이 없다**   [구멍]
+- **증상**: `contextops setup` 은 「브라우저에서 로그인하고 **기기 토큰을 발급받아**
+  붙여 넣어라」고 안내한다. 그런데 웹에 그 화면이 없다 — 토큰을 만드는 길은
+  `POST /projects/{id}/tokens` 를 **손으로 부르는 것**뿐이다. 이번 바퀴의 관통도
+  `node -e` 로 그 라우트를 직접 쳐서 토큰을 얻었다
+  (`docs/evidence/2026-09-03-plugin/setup-new-repo.md`).
+- **근거**: `apps/web/src/app` 에 tokens 화면 0개 (라우트는 있다) ·
+  `plugin/contextops/src/cli/setup.ts` 의 ② 안내 문구 (`b85c2c8`)
+- **정본**: `docs/SPEC.md` §8.3 · §9 (화면 9 「Sync·기기」)
+- **고칠 방향**: 화면 9(기기 목록)가 주인이다 — 거기에 「기기 추가」 버튼과
+  **발급 직후 한 번만 보이는 값**을 두고, 그 아래에 `contextops setup --api-origin …
+  --project … --token … --device-id …` **한 줄을 통째로 복사**하게 해라.
+  그러면 사람이 uuid 를 손으로 옮기지 않아도 되고 `device_id` 도 같이 온다
+  (지금은 optional 이라 「이 기기만 끊기」가 안 된다).
+  ⚠ 그 전에 CLI 에 콜백 서버를 만들지 마라 — 부를 화면이 없으면 죽은 코드다.
+- **상태**: 대기 (P4 화면 9 가 주인)
+
+### 37. 아무도 `.contextops/` 의 **ignore 규칙을 만들지 않는다**   [구멍]
+- **증상**: SPEC §8.2 는 `cache/`·`backups/`·`pending-proposal.json` 을 「ignore」라고
+  적는데, 그걸 **쓰는 코드가 0곳**이다. 그래서 `scan` 을 처음 돌린 사람은
+  `.contextops/cache/scan.json` 을 그대로 커밋한다 — 그 파일은 기계마다 다르고
+  매 스캔 바뀐다. 이번 바퀴의 새 레포 실험에서 실제로 그 상태가 됐다.
+- **근거**: `grep -rn "gitignore" plugin/contextops/src` → 0건 (이번 바퀴 확인) ·
+  `docs/SPEC.md` §8.2 표의 「ignore」 칸
+- **정본**: `docs/SPEC.md` §8.2
+- **고칠 방향**: `setup` 이 `<repo>/.contextops/.gitignore` 를 쓴다 (`cache/`·`backups/`·
+  `pending-proposal.json` 세 줄). 폴더 안에 두면 **사용자의 루트 `.gitignore` 를 안 건드린다** —
+  남의 파일을 고치지 않는 것이 이 제품의 습관이다. ⚠ P6 위반이 아니다: 훅이 아니라
+  사람이 부른 `setup` 이 쓴다. 이미 있으면 덮지 마라.
+- **상태**: 대기 (P2 둘째 행에서 sync 가 backups 를 만들 때 같이 하면 값이 두 배다)
+
+### 38. SPEC §8.3 은 `validate` 가 `schemas/*.json` 을 쓴다는데 코드는 **Zod 정본**으로 판다   [격차]
+- **증상**: 구현은 번들에 들어간 Zod 로 검증한다. JSON Schema 로는 `.refine()` 을 옮길 수
+  없어서다 — `ProposalItem` 의 「add 는 draft 가, update 는 target_item_id 가 필요하다」가
+  통째로 사라진다. 약하게 통과시키고 서버에서 400 을 받으면 사람은 이유를 모른다.
+  `schemas/*.json` 은 **init Skill 이 「이 모양으로 써라」고 지목하는 작성 안내서**로 남는다.
+- **근거**: `plugin/contextops/src/cli/validate.ts` 머리 주석 ·
+  `packages/schema/src/json-schema.ts` 머리 주석 (`b85c2c8`)
+- **정본**: `docs/SPEC.md` §8.3 · §8.4
+- **고칠 방향**: §8.3 의 `validate` 칸을 「같은 Zod 계약으로 로컬 검증(번들 포함),
+  오류 위치 출력」으로 고치고, §8.4 3단계의 `schemas/*.json` 은 **작성 안내서**라고 한 줄
+  덧붙여라. 계약은 여전히 한 벌이다 — 둘 다 같은 Zod 에서 나온다.
+- **상태**: 대기
+
+### 39. SPEC §8.3 의 exit 표에 「잘못 쓴 명령」의 자리가 없다   [격차]
+- **증상**: 표의 코드는 0·1·2·10·20·30 이다. 모르는 명령·모르는 플래그·인자 없음에
+  맞는 것이 없어서 `EXIT.USAGE = 64`(sysexits `EX_USAGE`)를 **목록 끝에** 더했다.
+  없으면 그런 실수가 0(성공)이나 30(설정 문제)으로 나가고, 둘 다 거짓말이다.
+  (에러 코드에 `INTERNAL` 을 더한 FINDINGS 21 과 같은 모양이다)
+- **근거**: `plugin/contextops/src/cli/exit.ts` · `test/validate.test.ts`
+  「파일이 없으면 exit 64 — 계약 위반과 구별한다」 (`b85c2c8`)
+- **정본**: `docs/SPEC.md` §8.3
+- **고칠 방향**: §8.3 표 아래에 「64 = 잘못된 사용(명령·플래그·인자)」 한 줄. 값은
+  직렬화된다 — 순서를 바꾸지 마라.
+- **상태**: 대기
+
 ### 33. 화면 5 의 「미발행 변경 N건」과 semver 추천을 **계산할 문이 없다**   [구멍]
 - **증상**: DESIGN_BRIEF §4 화면 5 는 상단에 「미발행 변경 7건」을, 발행 모달에
   「minor 추천: 항목 추가 5, 변경 2」를 적는다. 그런데 **지금의 항목들과 공식 버전의

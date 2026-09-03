@@ -35,4 +35,11 @@ jobs:
 
       - run: pnpm test
 
-      # TODO(P2 · docs/PLAN.md): plugin/contextops 가 생기면 `claude plugin validate` 층을 더한다.
+      # `claude plugin validate` 는 아직 여기서 안 돈다 — 그 CLI 가 러너에 없다.
+      #  ★ 대신 `pnpm test` 안의 `plugin/contextops/test/plugin-manifest.test.ts` 가
+      #    그 도구가 요구하는 최소 모양(name·version·description)과 **두 곳에 적힌 버전이
+      #    같은지**를 잰다. 진짜 판정은 사람이 손으로 돌린 근거로 남긴다:
+      #    docs/evidence/2026-09-03-plugin/claude-plugin-validate.txt (2.1.233 · passed)
+      #  ⚠ 여기에 `npx @anthropic-ai/claude-code plugin validate` 를 넣지 마라 —
+      #    매 push 마다 CLI 를 내려받게 되고, 네트워크가 흔들리면 **우리 잘못이 아닌
+      #    빨강**이 난다. 게이트는 우리가 고칠 수 있는 것만 재야 한다.

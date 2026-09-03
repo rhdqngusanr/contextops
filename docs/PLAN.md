@@ -80,9 +80,19 @@
 
 ## P2 — 플러그인 (SPEC 9/7~9/9)
 
-- [ ] **플러그인 레이아웃 · `setup` · `scan` · `validate` · credentials**
+- [x] **플러그인 레이아웃 · `setup` · `scan` · `validate` · credentials** — `b85c2c8`
       **완료 기준**: 새 레포에서 `setup` 완료 · `credentials.json` 권한 0600 ·
-      `claude plugin validate` 통과
+      `claude plugin validate` 통과 → **셋 다 확인했다.**
+      근거는 `docs/evidence/2026-09-03-plugin/` (`.ci/` 는 관통이 지운다 — 밖으로 복사했다):
+      씨앗 서버 + `next start` 를 띄우고 `POST /tokens` 로 진짜 토큰을 발급받아,
+      `git init` 만 한 폴더에서 `setup` → `project.json`(토큰 0건) + `credentials.json`.
+      틀린 토큰은 **진짜 서버의 401 로** exit 10 이었고 그 레포는 만들어지지도 않았다.
+      `claude plugin validate` 는 2.1.233 으로 **Validation passed**.
+      ⚠ 0600 은 두 겹으로 잰다 — 「0600 을 요구했는가」는 어느 플랫폼에서나,
+      「실제 비트」는 리눅스 CI 에서 (`test/credentials.test.ts`). Windows 는 그 비트를
+      저장하지 않아서 실제 비트만 재면 개발 기계에서 **검사 없이 초록**이 된다.
+      ⚠ CLI 8개 중 셋만 만들었다 — 나머지는 아래 두 행이다. 명령 표에 **없는 명령은
+      적지 않았다**: 표에 있으면 `--help` 가 「할 수 있다」고 말한다.
 - [ ] **`sync`(백업·atomic·post-verify) · `status` · SessionStart 훅**
       **완료 기준**: 훅 알림 → sync → `applied` 보고 · **hash 불일치에서 중단** ·
       **`session-start.mjs` 에 fs write 0건** (P6) · path traversal 거부
