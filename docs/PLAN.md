@@ -22,7 +22,7 @@
       type별 data · Proposal · ProgressEvent · Manifest) + JSON Schema export — `a4ac92d`
       **완료 기준**: 스키마 단위 테스트 초록 · `plugin/contextops/schemas/*.json` 생성 ·
       **업로드 스키마에 `content`류 필드 0건** (P1 — `tools/principles.ps1` 이 센다)
-- [ ] **`packages/compiler` 전체** — partition · sort · render · sourcemap · hash (SPEC §4)
+- [x] **`packages/compiler` 전체** — partition · sort · render · sourcemap · hash (SPEC §4) — `8e02f48`
       **완료 기준**: golden 3종 byte 일치 · **항목 순서를 셔플해도 출력 동일** ·
       `manifest_hash` 고정값 일치 · `Date.now`/`Math.random`/네트워크 0건 (P4)
 - [ ] **paylab 픽스처** — `fixtures/paylab-api`(TS ~40파일, 의도된 어긋남 3곳) ·
