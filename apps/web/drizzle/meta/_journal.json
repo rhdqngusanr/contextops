@@ -8,6 +8,13 @@
       "when": 1788426715742,
       "tag": "0000_marvelous_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788428277825,
+      "tag": "0001_far_doctor_spectrum",
+      "breakpoints": true
     }
   ]
 }

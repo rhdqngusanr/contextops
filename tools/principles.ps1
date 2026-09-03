@@ -44,11 +44,19 @@ function Get-SourceFiles([string] $rel, [string[]] $patterns) {
 }
 
 # 파일들에서 금지 패턴을 찾는다. 찾으면 "경로:줄" 목록을 돌려준다.
+#
+#  🔴 **경로는 반드시 -LiteralPath 로 넘긴다.**
+#    ★ 왜 — Next App Router 의 동적 구간은 폴더 이름이 `[id]` 다. PowerShell 은 대괄호를
+#      **와일드카드**로 읽어서, `Get-Content <...>/[id]/route.ts` 는 아무것도 못 찾는다.
+#      -ErrorAction SilentlyContinue 와 만나면 **조용히 0줄을 읽고 통과**한다 —
+#      즉 그 라우트들만 P1·P2 검사를 안 받는다. 게이트가 눈을 가리는 최악의 모양이다.
+#      (`-Raw` 는 FileSystem 공급자의 동적 매개변수라 경로 해석이 실패하면
+#       「Raw 라는 매개변수가 없다」는 엉뚱한 오류로 죽는다 — 이건 그나마 시끄러워서 낫다)
 function Find-Banned($files, [string[]] $patterns) {
     $hits = New-Object System.Collections.ArrayList
     foreach ($f in $files) {
         $n = 0
-        foreach ($line in (Get-Content $f.FullName -ErrorAction SilentlyContinue)) {
+        foreach ($line in (Get-Content -LiteralPath $f.FullName -ErrorAction SilentlyContinue)) {
             $n++
             foreach ($p in $patterns) {
                 if ($line -match $p) {
@@ -85,7 +93,7 @@ if ($schemaFiles.Count -eq 0) {
     }
 
     # 업로드 스키마는 .strict() 여야 한다. 모르는 필드가 통과하면 allowlist 가 아니다.
-    $strict = $schemaFiles | Where-Object { (Get-Content $_.FullName -Raw) -match "\.strict\(\)" }
+    $strict = $schemaFiles | Where-Object { (Get-Content -LiteralPath $_.FullName -Raw) -match "\.strict\(\)" }
     if ($strict.Count -eq 0) {
         Add-Row "P1b" "업로드 스키마가 .strict() 로 잠겨 있음" "FAIL" "packages/schema/src 어디에도 .strict() 가 없다"
     } else {
@@ -131,7 +139,7 @@ if ($webFiles.Count -eq 0) {
 } else {
     $callers = @()
     foreach ($f in $webFiles) {
-        $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        $raw = Get-Content -LiteralPath $f.FullName -Raw -ErrorAction SilentlyContinue
         if ($raw -match "messages\.create|messages\.stream") { $callers += $f }
     }
     if ($callers.Count -eq 0) {
@@ -140,7 +148,7 @@ if ($webFiles.Count -eq 0) {
         $bad = @()
         foreach ($f in $callers) {
             $rel = $f.FullName.Substring($root.Length + 1)
-            $raw = Get-Content $f.FullName -Raw
+            $raw = Get-Content -LiteralPath $f.FullName -Raw
             $isClient = $rel -match "lib[\\/]ai[\\/](client|budget)\.ts$"
             if (-not $isClient -and $raw -notmatch "withBudget") { $bad += $rel }
         }
@@ -223,7 +231,7 @@ if (-not (Test-Path $tpl)) {
     Add-Row "P7" "템플릿에 역추적 태그 자리 있음" "SKIP" "packages/compiler/templates 없음"
 } else {
     $tplFiles = @(Get-ChildItem $tpl -Recurse -File -ErrorAction SilentlyContinue)
-    $withTag = $tplFiles | Where-Object { (Get-Content $_.FullName -Raw) -match "ctx:" }
+    $withTag = $tplFiles | Where-Object { (Get-Content -LiteralPath $_.FullName -Raw) -match "ctx:" }
     if ($tplFiles.Count -eq 0) {
         Add-Row "P7" "템플릿에 역추적 태그 자리 있음" "FAIL" "templates 폴더가 비었다"
     } elseif ($withTag.Count -eq 0) {

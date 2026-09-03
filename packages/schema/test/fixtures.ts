@@ -67,3 +67,31 @@ export function sampleDraft(type: ItemType): Record<string, unknown> {
 }
 
 export const ALL_TYPES: readonly ItemType[] = ITEM_TYPES
+
+// ---------------------------------------------------------------------
+//  P1 검사에 쓰는 공용 도구
+//  ★ 왜 여기 있나 — 업로드 payload(플러그인)와 API body(웹)를 **다른 시험 파일**이
+//    재는데, 「무엇이 금지인가」는 하나여야 한다. 두 곳에 적으면 한쪽만 늘어난다.
+//  ⚠ `tools/principles.ps1` 의 목록과 같은 뜻이다. 한쪽을 늘리면 다른 쪽도 늘려라.
+// ---------------------------------------------------------------------
+
+/** 서버가 절대 받지 않는 것들 (SPEC §0.1 P1). */
+export const FORBIDDEN_KEYS = [
+  'file_content', 'snippet', 'code_body', 'transcript', 'diff', 'patch',
+  'memory', 'secret', 'secrets', 'secret_value', 'env_value', 'token_value', 'source_code',
+]
+
+/** JSON Schema 를 훑어 `properties` 아래의 **모든** 필드 이름을 모은다. */
+export function collectPropertyNames(node: unknown, found: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const child of node) collectPropertyNames(child, found)
+    return
+  }
+  if (node === null || typeof node !== 'object') return
+  for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+    if (key === 'properties' && value !== null && typeof value === 'object') {
+      for (const name of Object.keys(value as Record<string, unknown>)) found.add(name)
+    }
+    collectPropertyNames(value, found)
+  }
+}

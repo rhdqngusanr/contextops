@@ -35,12 +35,18 @@ import {
 
 import {
   CONFIDENCE_LEVELS,
+  CONFLICT_KINDS,
+  CONFLICT_STATUSES,
   ITEM_STATUSES,
   ITEM_TYPES,
   PACK_TARGETS,
   PROGRESS_SOURCES,
   PROGRESS_STATUSES,
   REPORTABLE_SYNC_STATUSES,
+  SOURCE_DOCUMENT_KINDS,
+  type ScanSummary,
+  TEAM_ROLES,
+  type ConflictChoice,
   type Manifest,
   type Proposal,
   type ProgressEvent,
@@ -51,25 +57,21 @@ import type { Snapshot, SourceMapEntry } from '@contextops/compiler'
 
 // ---------------------------------------------------------------------
 //  DB 안에서만 사는 값 목록
-//  ★ 왜 여기 있나 — 이 넷은 업로드 payload 에도 Pack 에도 안 나온다. 소비처가
+//  ★ 왜 여기 있나 — 이 셋은 업로드 payload 에도 Pack 에도 안 나온다. 소비처가
 //    DB 와 API 응답뿐이라 정본을 여기 둔다. **API 계약이 이 값을 쓰게 되는 순간
 //    `packages/schema` 로 올려라** — 그때가 「둘째 사용자」다 (CLAUDE.md).
 // ---------------------------------------------------------------------
 
-/** 팀 권한 2단계 (SPEC §5 「권한: owner/member 2단계」). */
-export const TEAM_ROLES = ['owner', 'member'] as const
-/** 팀 참여 상태 2종 (SPEC §2). */
+/** 팀 참여 상태 2종 (SPEC §2). 초대는 아직 화면이 없어 API 계약에 안 나온다. */
 export const TEAM_MEMBER_STATUSES = ['active', 'invited'] as const
-/** 원본 문서 종류 6종 (SPEC §2). */
-export const SOURCE_DOCUMENT_KINDS = ['goal', 'policy', 'roadmap', 'adr', 'notes', 'wiki'] as const
-/** 항목 개정이 어디서 왔나 4종 (SPEC §2). */
+/** 항목 개정이 어디서 왔나 4종 (SPEC §2). 서버가 매기는 값이라 payload 에 자리가 없다. */
 export const REVISION_ORIGINS = ['doc', 'code', 'manual', 'proposal'] as const
-/** 충돌 종류 5종 (SPEC §2 · §7.2). paylab 픽스처가 내는 것은 doc_vs_code·stale·open_question 이다. */
-export const CONFLICT_KINDS = ['contradiction', 'stale', 'duplicate', 'doc_vs_code', 'open_question'] as const
-/** 충돌 처리 상태 3종 (SPEC §2). */
-export const CONFLICT_STATUSES = ['open', 'resolved', 'dismissed'] as const
 /** Proposal 수명 5종 (SPEC §2 · §5). `published` 는 발행 트랜잭션이 마지막에 찍는다 (§2.1 7단계). */
 export const PROPOSAL_STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'published'] as const
+
+//  ⚠ `TEAM_ROLES`·`SOURCE_DOCUMENT_KINDS`·`CONFLICT_KINDS`·`CONFLICT_STATUSES` 는
+//    여기 있었지만 **API 계약이 그 값을 쓰게 되면서** `@contextops/schema` 로 올라갔다
+//    (위 주석의 「둘째 사용자」 규칙). 이제 아래 `pgEnum` 이 그 표를 읽기만 한다.
 
 // ---------------------------------------------------------------------
 //  pgEnum — 위 표와 `@contextops/schema` 표를 **읽기만** 한다
@@ -168,6 +170,14 @@ export const repos = pgTable('repos', {
   defaultBranch: text('default_branch').notNull().default('main'),
   /** 모노레포에서 이 레포가 차지하는 앞자리. 없으면 저장소 전체다. */
   pathPrefix: text('path_prefix'),
+  /**
+   * 마지막 `scan` 요약 (SPEC §8.3 · `POST …/context-items:batch-draft` 가 같이 보낸다).
+   * 🔴 **경로와 이름만이다** — 파일 본문도 env 값도 자리가 없다 (`ScanSummary` 스키마 · P1).
+   * ★ 왜 저장하나 — 안 저장하면 그 payload 가 통째로 버려져서 「보내는데 아무도 안 읽는」
+   *   필드가 된다. 화면 3(가져오기)과 §7.1 이 이 값을 읽는다.
+   */
+  lastScan: jsonb('last_scan').$type<ScanSummary>(),
+  lastScanAt: timestamp('last_scan_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
@@ -202,6 +212,13 @@ export const sourceDocumentVersions = pgTable('source_document_versions', {
 export const contextItems = pgTable('context_items', {
   id: id(),
   projectId: uuid('project_id').notNull().references(() => projects.id),
+  /**
+   * 🔴 계약이 쓰는 항목 ID (`item_<slug>` · SPEC §3 `ItemId`). uuid 와 **따로** 있다.
+   * ★ 왜 둘인가 — FK 는 uuid 로 잇는 게 싸지만, Pack 의 역추적 태그(`ctx:{id}`)에
+   *   uuid 가 박히면 사람이 읽을 수 없다 (P7 은 「사람이 원문까지 간다」는 주장이다).
+   *   프로젝트 안에서 유일하다 — 다른 프로젝트가 같은 slug 를 써도 된다.
+   */
+  publicId: text('public_id').notNull(),
   type: itemType('type').notNull(),
   status: itemStatus('status').notNull().default('draft'),
   currentRevision: integer('current_revision').notNull().default(1),
@@ -211,11 +228,25 @@ export const contextItems = pgTable('context_items', {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   deletedAt: deletedAt(),
-}, (t) => [index('context_items_project_status_idx').on(t.projectId, t.status)])
+}, (t) => [
+  index('context_items_project_status_idx').on(t.projectId, t.status),
+  unique('context_items_project_public_id_uq').on(t.projectId, t.publicId),
+])
 
 export const contextItemRevisions = pgTable('context_item_revisions', {
   itemId: uuid('item_id').notNull().references(() => contextItems.id),
   revision: integer('revision').notNull(),
+  /**
+   * 개정마다 바뀌는 본문. SPEC §2 는 「필수만 적는다」라서 이 다섯이 빠져 있었고,
+   * 그대로 두면 `ContextItem` 의 절반(`title`·`body`·`tags`·기간)이 **저장될 자리가 없다.**
+   * ★ 왜 항목이 아니라 개정에 붙나 — 제목과 본문은 개정마다 달라진다. 항목 쪽에 두면
+   *   옛 버전의 Pack 을 다시 그릴 때 지금 제목이 나온다 (P4 의 재현성이 깨진다).
+   */
+  title: text('title').notNull(),
+  body: text('body').notNull().default(''),
+  tags: text('tags').array().notNull().default([]),
+  validFrom: text('valid_from'),
+  validUntil: text('valid_until'),
   /** 타입별 필드. 정본은 `@contextops/schema` 의 `ITEM_DATA` 표다. */
   data: jsonb('data').notNull(),
   sourceRefs: jsonb('source_refs').$type<SourceRef[]>().notNull().default([]),
@@ -236,7 +267,7 @@ export const conflicts = pgTable('conflicts', {
   bRef: jsonb('b_ref').$type<SourceRef>(),
   question: text('question').notNull(),
   status: conflictStatus('status').notNull().default('open'),
-  resolution: jsonb('resolution').$type<{ choice: 'a' | 'b' | 'both' | 'dismiss'; note?: string }>(),
+  resolution: jsonb('resolution').$type<{ choice: ConflictChoice; note?: string }>(),
   resolvedBy: uuid('resolved_by').references(() => users.id),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   createdAt: createdAt(),
@@ -303,6 +334,13 @@ export const devices = pgTable('devices', {
   /** 🔴 토큰 원문은 저장하지 않는다 — sha256 만 (SPEC §11). 응답에 1회만 보여 준다. */
   tokenHash: text('token_hash').notNull().unique(),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  /**
+   * 🔴 만료 시각 (SPEC §11 「만료 90일」). 기한은 `TOKEN_TTL_DAYS` 하나가 정본이고
+   * 발급 라우트가 그 값으로 채운다 — 숫자를 두 곳에 적으면 조용히 갈라진다.
+   * ⚠ nullable 이 아니다. null 을 허용하면 「영원히 사는 토큰」이 생기고,
+   *   그건 만료가 있다는 주장을 조용히 거짓으로 만든다.
+   */
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   createdAt: createdAt(),
 })

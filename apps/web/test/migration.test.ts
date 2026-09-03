@@ -16,7 +16,6 @@
 //       갈라뜨리면 빨개진다. 그리고 표에 없는 값은 INSERT 가 거부된다
 // =====================================================================
 
-import { readFileSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 import { getTableColumns, getTableName, is } from 'drizzle-orm'
@@ -24,30 +23,23 @@ import { PgTable, isPgEnum, type PgEnum } from 'drizzle-orm/pg-core'
 
 import {
   CONFIDENCE_LEVELS,
+  CONFLICT_KINDS,
+  CONFLICT_STATUSES,
   ITEM_STATUSES,
   ITEM_TYPES,
   PACK_TARGETS,
   PROGRESS_SOURCES,
   PROGRESS_STATUSES,
   REPORTABLE_SYNC_STATUSES,
+  SOURCE_DOCUMENT_KINDS,
+  TEAM_ROLES,
 } from '@contextops/schema'
 
 import * as schema from '../src/db/schema'
 import { INDEX_NAMES } from '../src/db/schema'
-
-type Journal = { entries: { idx: number; tag: string }[] }
-
-const migrationsDir = new URL('../drizzle/', import.meta.url)
-
-/** 마이그레이션 파일을 journal 의 순서대로 읽는다 — 파일 이름 정렬에 기대지 않는다. */
-function migrationSql(): { tag: string; sql: string }[] {
-  const journal = JSON.parse(
-    readFileSync(new URL('meta/_journal.json', migrationsDir), 'utf8'),
-  ) as Journal
-  return [...journal.entries]
-    .sort((a, b) => a.idx - b.idx)
-    .map((e) => ({ tag: e.tag, sql: readFileSync(new URL(`${e.tag}.sql`, migrationsDir), 'utf8') }))
-}
+//  ⚠ 마이그레이션을 읽고 먹이는 절차는 `test/helpers/db.ts` 하나다 — 여기에 다시 적으면
+//    API 시험과 갈라져서, 한쪽만 옛 SQL 을 먹이는 상태가 조용히 생긴다.
+import { applyMigrations, migrationSql } from './helpers/db'
 
 /**
  * TS 스키마 쪽의 표·enum 목록. 손으로 적은 목록과 대조하지 않는다 — 그러면 둘이 갈린다.
@@ -70,6 +62,11 @@ const CONTRACT_ENUMS: Record<string, readonly string[]> = {
   sync_status: REPORTABLE_SYNC_STATUSES,
   progress_status: PROGRESS_STATUSES,
   progress_source: PROGRESS_SOURCES,
+  //  ★ 이 넷은 API 계약이 쓰게 되면서 `packages/schema` 로 올라왔다 (schema.ts 주석).
+  team_role: TEAM_ROLES,
+  source_document_kind: SOURCE_DOCUMENT_KINDS,
+  conflict_kind: CONFLICT_KINDS,
+  conflict_status: CONFLICT_STATUSES,
 }
 
 let pg: PGlite
@@ -81,11 +78,7 @@ async function rows<T>(sql: string, params: unknown[] = []): Promise<T[]> {
 
 beforeAll(async () => {
   pg = new PGlite()
-  for (const m of migrationSql()) {
-    //  ⚠ `--> statement-breakpoint` 는 SQL 주석이라 그대로 먹여도 된다.
-    //    파일을 쪼개지 마라 — 쪼개는 순간 「우리가 만든 SQL」을 시험하게 된다.
-    await pg.exec(m.sql)
-  }
+  await applyMigrations(pg)
 }, 60_000)
 
 afterAll(async () => {
@@ -193,14 +186,16 @@ describe('제약이 실제로 무언가를 막는다', () => {
     const projectId = await seedProject('t-itemtype')
     await expect(
       pg.query(
-        `insert into context_items (project_id, type, scope) values ($1, 'nonexistent', '{"kind":"project"}')`,
+        `insert into context_items (project_id, public_id, type, scope)
+         values ($1, 'item_bad', 'nonexistent', '{"kind":"project"}')`,
         [projectId],
       ),
     ).rejects.toThrow()
     //  같은 자리에 표 안의 값은 들어간다 — 거부가 「전부 막는다」가 아니라는 확인이다.
     await expect(
       pg.query(
-        `insert into context_items (project_id, type, scope) values ($1, 'mission', '{"kind":"project"}')`,
+        `insert into context_items (project_id, public_id, type, scope)
+         values ($1, 'item_good', 'mission', '{"kind":"project"}')`,
         [projectId],
       ),
     ).resolves.toBeDefined()
@@ -234,8 +229,8 @@ describe('제약이 실제로 무언가를 막는다', () => {
   it('없는 프로젝트를 가리키는 항목은 FK 가 막는다', async () => {
     await expect(
       pg.query(
-        `insert into context_items (project_id, type, scope)
-         values ('00000000-0000-0000-0000-000000000000', 'goal', '{"kind":"project"}')`,
+        `insert into context_items (project_id, public_id, type, scope)
+         values ('00000000-0000-0000-0000-000000000000', 'item_orphan', 'goal', '{"kind":"project"}')`,
       ),
     ).rejects.toThrow()
   })

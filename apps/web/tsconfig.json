@@ -1,5 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": [
+    "정본은 ../../tsconfig.base.json 이다. 여기에는 **웹에서만 다른 것**만 적는다:",
+    "React JSX 와 DOM 타입은 다른 패키지에 있으면 안 된다 (schema·compiler 는 브라우저를 모른다).",
+    "next 플러그인은 Route Handler·Metadata 의 타입을 붙여 준다."
+  ],
   "extends": "../../tsconfig.base.json",
-  "include": ["*.ts", "src", "test"]
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["*.ts", "src", "test", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next"]
 }

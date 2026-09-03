@@ -5,7 +5,7 @@ import {
   ProgressEvent, Proposal, REPORTABLE_SYNC_STATUSES, SYNC_STATUSES, SyncReport,
 } from '../src/upload'
 import { toJsonSchema } from '../src/json-schema'
-import { sampleDraft } from './fixtures'
+import { collectPropertyNames, FORBIDDEN_KEYS, sampleDraft } from './fixtures'
 
 // =====================================================================
 //  🔴 P1 — 서버가 받는 네 개의 body 를 한 표로 모아 놓고 함께 검사한다.
@@ -58,26 +58,6 @@ const UPLOAD_SCHEMAS: Record<string, { schema: z.ZodType; valid: unknown; jsonSc
 }
 
 const ENDPOINTS = Object.keys(UPLOAD_SCHEMAS)
-
-/** 서버가 절대 받지 않는 것들 (SPEC §0.1 P1). tools/principles.ps1 의 목록과 같은 뜻이다. */
-const FORBIDDEN_KEYS = [
-  'file_content', 'snippet', 'code_body', 'transcript', 'diff', 'patch',
-  'memory', 'secret', 'secrets', 'secret_value', 'env_value', 'token_value', 'source_code',
-]
-
-function collectPropertyNames(node: unknown, found: Set<string>): void {
-  if (Array.isArray(node)) {
-    for (const child of node) collectPropertyNames(child, found)
-    return
-  }
-  if (node === null || typeof node !== 'object') return
-  for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
-    if (key === 'properties' && value !== null && typeof value === 'object') {
-      for (const name of Object.keys(value as Record<string, unknown>)) found.add(name)
-    }
-    collectPropertyNames(value, found)
-  }
-}
 
 describe('업로드 allowlist (P1 · SPEC §3.1)', () => {
   it('네 개 엔드포인트가 전부 표에 있다', () => {

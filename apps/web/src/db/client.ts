@@ -1,3 +1,9 @@
+import { drizzle } from 'drizzle-orm/postgres-js'
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
+import postgres from 'postgres'
+
+import * as schema from './schema'
+
 // =====================================================================
 //  apps/web/src/db/client.ts — DB 로 들어가는 문 하나 (SPEC §2)
 //
@@ -9,16 +15,17 @@
 //    그래서 이 연결은 **아무나 못 만지는 서버 코드에서만** 열려야 한다.
 // =====================================================================
 
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-
-import * as schema from './schema'
-
-export type Db = ReturnType<typeof create>
+/**
+ * 드라이버가 아니라 **드라이버들의 공통 조상**으로 타입을 잡는다.
+ * ★ 왜 — 배포는 postgres-js 로 붙지만 시험은 PGlite 로 붙는다 (`test/migration.test.ts`).
+ *   구체 타입으로 잡으면 라우트가 postgres-js 에만 맞아서 **시험에서 진짜 라우트를
+ *   부를 수 없게 된다.** 그러면 라우트는 영원히 「타입만 맞는 코드」다.
+ */
+export type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 
 let cached: Db | undefined
 
-function create() {
+function create(): Db {
   const url = process.env.DATABASE_URL
   //  🔴 조용히 undefined 로 돌지 않게 여기서 죽인다. 연결 문자열이 없는 채로
   //     뜬 서버는 **첫 요청에서** 알 수 없는 모양으로 실패한다 (.env.example ③).
@@ -34,6 +41,16 @@ function create() {
 export function getDb(): Db {
   if (!cached) cached = create()
   return cached
+}
+
+/**
+ * 🔴 **시험 전용 문.** PGlite 로 만든 연결을 꽂는다.
+ * ★ 왜 있어야 하나 — 이게 없으면 시험은 라우트를 못 부르고 「핸들러 안의 로직을
+ *   베껴 쓴 시험」이 된다. 그건 배포되는 코드를 재지 않는다.
+ * ⚠ 배포 코드에서 부르지 마라. 부르면 `DATABASE_URL` 이 무의미해진다.
+ */
+export function setDbForTest(db: Db | undefined): void {
+  cached = db
 }
 
 export * as schema from './schema'

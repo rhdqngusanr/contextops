@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate"
   },
@@ -11,11 +14,17 @@
     "@contextops/compiler": "workspace:*",
     "@contextops/schema": "workspace:*",
     "drizzle-orm": "catalog:",
-    "postgres": "catalog:"
+    "next": "catalog:",
+    "postgres": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "drizzle-kit": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
