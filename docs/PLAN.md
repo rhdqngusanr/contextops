@@ -15,8 +15,8 @@
 
 ## P0 — 뼈대와 정본 (SPEC 9/2~9/3)
 
-- [ ] **모노레포 뼈대** — pnpm workspace(`apps/*`, `packages/*`, `plugin`) · `tsconfig.base.json` ·
-      vitest · `.github/workflows/ci.yml`
+- [x] **모노레포 뼈대** — pnpm workspace(`apps/*`, `packages/*`, `plugin`) · `tsconfig.base.json` ·
+      vitest · `.github/workflows/ci.yml` — `5dfefb4`
       **완료 기준**: `pnpm -r test` 가 0개 테스트로라도 초록. `tools/ci.ps1` 의 typecheck·test 층이 SKIP 이 아니게 됨
 - [ ] **`packages/schema` 전체** — SPEC §3 의 Zod 계약 전부 (ItemType 10종 · SourceRef 4종 ·
       type별 data · Proposal · ProgressEvent · Manifest) + JSON Schema export

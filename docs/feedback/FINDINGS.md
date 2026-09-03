@@ -29,7 +29,38 @@
 
 ## 다음에 고칠 것
 
-_(아직 없다. 첫 관통 시나리오가 돌면 여기가 찬다.)_
+### 1. 워크스페이스 멤버가 0개여도 typecheck·test 층이 초록이다   [구멍]
+- **증상**: `pnpm -r exec tsc --noEmit` · `pnpm -r test` 는 매칭되는 패키지가 없으면
+  `No projects matched the filters` 를 찍고 **exit 0** 이다. `tools/ci.ps1` 은 이걸
+  `typecheck OK` · `test OK` 로 보고한다 — **아무것도 검사하지 않았는데 초록**이다.
+- **근거**: 5dfefb4 직전에 직접 재현. 멤버 0개 상태에서 `pnpm typecheck` → `EXIT=0`,
+  `pnpm test` → `EXIT=0`. 지금은 멤버 2개(schema·compiler)를 넣어 가려졌지만
+  **검사가 막은 게 아니라 우연히 안 걸린 것**이다.
+- **정본**: `tools/ci.ps1` 2·3층 · `loop/PROMPT.md` ⑥ (「대상이 생겼는데도 SKIP 이면
+  그게 고장이다」의 같은 종류 — 여기선 SKIP 이 아니라 **가짜 OK** 다)
+- **고칠 방향**: `ci.ps1` 이 `pnpm -r list --depth -1` 등으로 멤버 수를 세고, 0개면
+  `OK` 가 아니라 `SKIP 워크스페이스 멤버 0개` 로 보고한다. 게이트는 문서보다 강하다.
+- **상태**: 대기
+
+### 2. SPEC §1.2 는 Node 20 LTS 인데 실제 실행·CI 는 22 다   [격차]
+- **증상**: 개발 기계의 node 가 v22.22.2 다. `.nvmrc` 를 22 로 적었고 GitHub CI 도
+  거기서 읽는다. SPEC 과 코드가 갈렸다.
+- **근거**: `node --version` → `v22.22.2` · `.nvmrc` = `22` · `docs/SPEC.md` §1.2 표
+- **정본**: `docs/SPEC.md` §1.2
+- **고칠 방향**: 20 으로 내릴 이유가 없다 — SPEC §1.2 의 「Node 20 LTS」를
+  「Node 22 LTS」로 고치고 `.nvmrc` 를 그 정본으로 지목한다. (버전 숫자가 사는 곳은
+  `.nvmrc` 하나여야 한다)
+- **상태**: 대기
+
+### 3. `pnpm` 도 `typescript` 도 SPEC 표에 버전이 없거나 흐리다   [격차]
+- **증상**: SPEC §1.2 는 「TypeScript 5.x」·「vitest」라고만 적는다. 실제로 고정한 값은
+  `pnpm-workspace.yaml` 의 catalog(typescript ^5.9.3 · vitest ^4.1.11)와
+  `package.json` 의 `packageManager` (pnpm@11.25.0) 다.
+- **근거**: `pnpm-workspace.yaml` catalog · `package.json` packageManager · SPEC §1.2 표
+- **정본**: `docs/SPEC.md` §1.2 (「버전 고정」이라고 제목에 적혀 있다)
+- **고칠 방향**: SPEC §1.2 표에서 버전 숫자를 빼고 **「정본은 catalog·packageManager」**
+  라고 가리키게 한다. 두 곳에 숫자가 살면 갈라진다.
+- **상태**: 대기
 
 ---
 
