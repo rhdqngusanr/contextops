@@ -5,91 +5,137 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 20바퀴 · `91ede81`_
+_마지막 갱신: 2026-09-04 · 루프 21바퀴 · `82b886b`_
 
 ---
 
 ## 지금 어디인가
 
-**화면 3 이 두드릴 문이 다 났고, 이번 바퀴는 그 문을 가볍게 했다.**
-`GET /projects/{id}/jobs` 가 행마다 `result` 를 통째로 나르고 있었다 (FINDINGS 60 닫음).
-칸을 라우트에서 고르지 않는다 — **`AI_JOB_FIELDS` 표에 `heavy` 축**을 두고 거기서
-`AI_JOB_COLUMNS`(상세)와 `AI_JOB_LIST_COLUMNS`(목록)가 생성된다. 응답의
-**`shape:'summary'|'full'`** 이 화면에게 어느 쪽을 받았는지 말한다 —
-「`result` 가 없다」와 「아직 안 받았다」는 다른 말이다.
+**화면 3 이 두드릴 문이 다 났고, 이번 바퀴는 그 문에 「지금 어디쯤인가」를 붙였다.**
+`ai_jobs` 는 `queued → running → succeeded|failed` 만 남겨서 polling 이 가져오는 새
+정보가 **status 한 글자**뿐이었다 (FINDINGS 62 닫음). 이제 **`progress
+{done,total,unit}`** 칸 하나가 러너의 한 걸음마다 갱신된다 — §7.1 은 chunk 마다,
+§7.2 는 묶음 하나다 (마이그레이션 `0005`).
+그 칸은 **수명 CHECK 밖**이다: `running` 인데 아직 비어 있을 수 있고(총수는 러너가
+문서를 나눠 봐야 안다) `failed` 인데 차 있어야 한다(「9/12 에서 죽었다」).
+걸음의 낱말은 `AiJobRunner.unit` 이 정해 **값에 실려** 나가므로 화면에
+`feature === 'structure' ? …` 갈래가 생기지 않는다.
 
 ⚠ **여전히 진짜 Claude 를 부른 적이 없다.** 키가 없어 스텁으로만 쟀다 (🙋 사람).
-⚠ **화면 3·4 자체는 아직 없다.** 지난 세 바퀴는 전부 그 화면이 두드릴 **문**이다.
-⚠ **응답을 눈으로 읽고 격차 둘을 새로 찾았다** (`docs/evidence/2026-09-04-jobs-shape/`) —
-도는 동안 **진행률이 0 정보**다(**62**) · job 응답 모양이 **셋**이다(**63**, 만드는 라우트만
-`shape` 가 없다).
+⚠ **화면 3·4 자체는 아직 없다.** 지난 네 바퀴는 전부 그 화면이 두드릴 **문**이다.
+⚠ **응답을 눈으로 읽고 격차 하나를 새로 찾았다**
+(`docs/evidence/2026-09-04-jobs-progress/polling.txt`) — `ai_jobs.updated_at` 은
+쓰기만 하고 **읽는 코드가 0곳**이라 화면이 「멈춘 job」과 「도는 job」을 구별할 수
+없다(**64**). 그리고 **63**(만드는 라우트만 모양이 다르다)이 한 칸 더 벌어졌다 —
+`POST /documents` 가 내는 `{id,status}` 에는 `progress` 도 없다.
 
 | 있는 것 | 없는 것 |
 |---|---|
 | `loop/` · `tools/` · pnpm workspace + catalog | 웹 화면 **1·3·4·6·8·9** |
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
 | `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | **실패한 job 재시도** (FINDINGS 59 — 예산·빈도 초과는 기다리면 풀리는데 되돌릴 문이 없다) |
-| `apps/web` — 라우트 **30개** · 테스트 **225** | **도는 동안의 진행률** (FINDINGS 62 — 화면 3 이 회전만 보여 준다) |
+| `apps/web` — 라우트 **30개** · 테스트 **231** | **멈춘 job 을 알아보는 눈** (FINDINGS 64 — `updated_at` 을 아무도 안 읽는다) |
 | 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | `ask`·`demo` 를 부르는 자리 (기능 표의 나머지 둘 · §7.3·§7.4) |
 | 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
 | 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · 시험 24 | zip 업로드 (FINDINGS 26 의 남은 절반 — SPEC §11 상한과 같이 와야 한다) |
 | 🔴 **`conflicts` 표가 §7.2 를 담는다** — CHECK 5개 · 복합 FK · 마이그레이션 `0003` | 질문 → 만들어진 항목의 **근거 사슬** (FINDINGS 56) |
-| 🔴 **job 자리** — `ai_jobs` 표 · `lib/ai/job.ts` · `AI_JOB_RUNNERS` · 라우트 **4개** · 시험 **26** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
+| 🔴 **job 자리** — `ai_jobs` 표(`progress` 포함) · `AI_JOB_RUNNERS` · 라우트 **4개** · 시험 **32** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
 | 🔴 **충돌 행을 만드는 코드** — 러너 둘이 유일한 자리다 (FINDINGS 28 닫음) | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
 | 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | |
 | 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | |
 | **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | |
 
-검사 층: `principles OK 9 · typecheck 7초·멤버 4 · test 49초·멤버 4 · build 18초 ·
-walkthrough 74초` → **GREEN**. 관통 **7단계**
+검사 층: `principles OK 9 · typecheck 8초·멤버 4 · test 56초·멤버 4 · build 18초 ·
+walkthrough 61초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없다.
-시험 합계 **643** (schema 113 · compiler 136 · plugin 174 · web 220).
+시험 합계 **654** (schema 113 · compiler 136 · plugin 174 · web 231).
+DB 는 **`0005`** 까지다 — 표 18개 · 인덱스 8개.
 
 ## 다음 바퀴가 할 일
 
 🔴 **`docs/PLAN.md` P3 둘째 행 — 웹 화면 3 (가져오기 · 구조화 진행).**
-**문은 다 났고 가벼워졌다.** 이제 그 문을 두드리는 화면이다.
+**문은 다 났고, 가벼워졌고, 이제 진행률까지 말한다.** 두드리는 화면만 없다.
 
 **시작하기 전에 아는 것:**
 
 - 🔴 **화면 3 이 새로고침 뒤에 하는 질의는 하나다** — `GET /projects/{id}/jobs
-  ?feature=structure&limit=1`. 그 답의 `id` 로 `GET …/jobs/{jobId}` 를 polling 한다.
-  **job id 를 state 에만 들고 있지 마라** — 그게 FINDINGS 58 이었다.
-  ✅ 목록은 이제 `result` 를 안 나른다 (FINDINGS **60** 닫음). 목록 행은
-  **`shape:'summary'`** 라 `result` 칸이 **아예 없다** — 화면이 「없다」를
-  「빈 결과」로 읽으면 안 된다. 전문이 필요하면 `…/jobs/{jobId}`(`shape:'full'`) 한 번.
-  ⚠ 만드는 라우트(`POST /documents`)가 내는 `job:{id,status}` 는 `shape` 가 없는
-  **셋째 모양**이다 (FINDINGS **63**) — 그 값을 job 객체로 들고 다니지 마라.
-  ⚠ 도는 동안 화면이 보여 줄 수 있는 것은 「돌고 있음」뿐이다 (FINDINGS **62**) —
-  chunk 진행률은 끝난 뒤에야 온다. 막대가 필요하면 그 항목을 먼저 해라.
+  ?feature=structure&limit=1`. **id 를 state 에만 들고 있지 마라** (FINDINGS 58).
+  ✅ 그 한 줄이 이제 진행률까지 나른다 (FINDINGS **62** 닫음) — 응답 실물은
+  `docs/evidence/2026-09-04-jobs-progress/polling.txt` 에 있다.
+  `progress` 는 **`null` 이거나 `{done,total,unit}`** 이고, `null` 은 「0 걸음」이 아니라
+  **「아직 한 걸음도 보고 안 했다」**(총수를 모른다)이다 — 그때만 회전이고 그 뒤로는 막대다.
+  라벨의 가운뎃말은 `unit` 을 **그대로** 써라. `feature` 로 낱말을 고르면 §7.3 이
+  job 이 되는 날 화면을 다시 고쳐야 한다.
+  ⚠ 목록 행은 `shape:'summary'` 라 `result` 칸이 **아예 없다** (FINDINGS 60).
+  전문이 필요하면 `…/jobs/{jobId}`(`shape:'full'`) 한 번.
+  ⚠ 만드는 라우트(`POST /documents`)가 내는 `job:{id,status}` 는 `shape` 도 `progress` 도
+  없는 **셋째 모양**이다 (FINDINGS **63**) — 그 값을 job 객체로 들고 다니지 마라.
+  ⚠ **「도는 중」과 「멈춤」은 아직 구별 못 한다** (FINDINGS **64**) — `updated_at` 이
+  응답에 없다. 화면이 그 판정을 하려면 그 항목을 먼저 해라 (표에 한 줄이다).
 - 🔴 **키가 없을 때 화면이 무엇을 보여 주나 — 그 결정이 아직 없다.** job 은
   `failed`·`error_code='INTERNAL'` 로 끝난다. §7.5 는 「픽스처 결과를 보여 준다」고
   적었는데 **그 픽스처가 어디 있는지도, 고르는 코드도 없다.** lib 은 던지는 데까지가
   제 일이고 job 은 코드를 남기는 데까지다 — **고르는 것은 화면이다.**
   ⚠ 갈래는 넷이다: `BUDGET_EXCEEDED` · `RATE_LIMITED` · `AI_OUTPUT_INVALID` ·
   `INTERNAL`(키 없음 포함). 앞의 둘만 「기다리면 풀린다」다 — FINDINGS **59** 참고.
+  ✅ 실패해도 `progress` 는 **남는다** — 「4조각 중 1조각에서 죽었다」를 말할 수 있다.
 - **job 을 재는 본보기는 `test/ai-job.test.ts` 다.** 시험은 `runJob()` 을 **직접**
   부른다 — `freshDb()` 가 `startJob()` 을 「적어만 두는」 것으로 갈아 끼우기 때문이다
   (`startedJobIds()`). 배포에서는 `after()` 가 응답 뒤에 굴린다.
+  🔴 **「도는 도중」을 재는 법**: 스텁 LLM 의 `messages.create` 안에서 행을 읽는다 —
+  그 자리가 job 이 반쯤 간 유일한 순간이다 (이번 바퀴의 새 시험 6개가 그렇게 잰다).
 - **화면 4(정리)는 이제 볼 것이 생겼다** — 충돌 카드가 실제로 행으로 들어온다.
   `anchor` 가 `items` 면 항목 두 장, `document` 면 원문 구간이다. 화면이 그 표를
   **읽어서** 무엇을 그릴지 골라야 한다 (한쪽으로 접으면 P7 이 끊긴다).
-- **DB 는 `0004` 까지다.** 표 18개 · 인덱스 8개.
+- **DB 는 `0005` 까지다.** 표 18개 · 인덱스 8개.
 
 ⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
 ⚠ **Anthropic API 키도 사람이 준다.**
 
-**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57·61·63** 은 문서·한 줄짜리다.
-**14**(`.ps1` 두 개가 LF)도 그렇다. **55**(공통 프롬프트)는 §7.3 전이 제일 싸다.
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57·61·63·64** 는
+문서·한 줄짜리다. **14**(`.ps1` 두 개가 LF)도 그렇다. **55**(공통 프롬프트)는 §7.3 전이 제일 싸다.
 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿 `head` 한 줄이고 둘 다 golden 을 깬다.
 🔴 **50 은 여전히 값싸고 더 급해졌다** — `callClaude()` 를 부르는 제품 파일이 둘이고
 그 게이트는 예산 가드를 건너뛰는 새 파일을 못 잡는다.
 
-⚠ FINDINGS **24·25·29·31·33·35·56·59·62·63** 은 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
+⚠ FINDINGS **24·25·29·31·33·35·56·59·63·64** 는 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
 **53** 은 **API 키가 생긴 뒤**가 주인이다. **26** 은 절반(구조화 job)이 닫혔고 zip 만 남았다.
 
 ## 잰 것
+
+**21바퀴 · P3 둘째 행 ③ 앞 — 도는 동안의 진행률** (`82b886b`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 8초 / test 56초 / build 18초 / walkthrough 61초 |
+| 새 시험 | **+6** — web 225 → **231** (`ai-job.test.ts`). 합계 **654** |
+| 새 칸 | `ai_jobs.progress jsonb` — 마이그레이션 **`0005`**. 표 18개 그대로 · 인덱스 8개 그대로 |
+| 새 계약 | `AiJobProgress {done,total,unit}` (`lib/ai/job.ts`) — 쓰기 전에 이 계약으로 판다 |
+| 새 표 칸 | `AiJobRunner.unit` — 한 걸음의 낱말(`조각`·`묶음`)이 **표**에 있다. 값에 실려 나가므로 화면에 `feature ===` 갈래가 없다 |
+| 쓰는 자리 | **하나** — `runJob()` 의 `ctx.report(done,total)`. 러너는 숫자 둘만 주고 `structure.ts` 는 여전히 DB 에 안 쓴다 (`onProgress`) |
+| 갈리는 것을 봤나 | **봤다.** 스텁 LLM 이 **부르기 전에 행을 읽어** 도는 도중을 붙잡는다 — `0/3 → 1/3 → 2/3` 로 자란다 · 안 굴린 job 은 `null`(「0 걸음」과 다르다) · 실패한 job 은 `result` 가 **비어 있는데** `progress` 는 `1/3` 로 **남는다** · 낱말이 기능마다 갈리고 그 값이 러너 표에서 온다 |
+| 눈으로 읽었나 | **읽었다** — `docs/evidence/2026-09-04-jobs-progress/polling.txt`. 4조각짜리 문서(28,175자)를 올리고 화면 3 이 할 polling 을 **여섯 번** 찍었다: `queued(progress:null) → running 0/4 → 1/4 → 2/4 → 3/4 → succeeded 4/4`. 목록 한 줄이 500 → 592바이트로 늘었을 뿐이다 |
+| 닫은 FINDINGS | **62**(도는 동안 진행률이 0 정보) |
+| 새 FINDINGS | **64**(`ai_jobs.updated_at` 을 아무도 읽지 않는다 · 격차) |
+| 2-B 확인 (죽은 정의 찾기) | 🔴 **하나 찾았다** — `ai_jobs.updated_at` 은 쓰는 자리가 **넷**(이번 바퀴에 다섯째가 늘었다)인데 **읽는 자리가 0곳**이다 (`AI_JOB_FIELDS` 에 없어서 응답에도 안 나간다) → FINDINGS **64**. `confidence` 3단계 — **살아 있다** (`compiler/src/tag.ts` 의 `conf:` 로 Pack 지문에 들어간다 · `liveness.test.ts`) |
+
+**🔴 결정 — FINDINGS 62 의 ① 이 아니라 ② 를 골랐다**
+
+62 는 「①(`input` 에 chunk 총수를 미리 넣는다)이 먼저다」로 적혀 있었다. 안 골랐다.
+①은 **총수만** 알려 주고 「지금 어디인가」는 여전히 모른다 — 회전이 「4조각짜리 회전」이
+될 뿐이고, 사람이 새로고침을 누르는 이유(「멈춘 것 같다」)를 하나도 없애지 못한다.
+게다가 `input` 은 **「가리키는 id 만」**이라는 규칙이 붙은 칸이라(P1 · `job.ts` 머리 주석)
+파생 수치를 넣으면 그 규칙이 흐려진다 — 다음 사람이 「글자수도 넣지 뭐」로 간다.
+
+**🔴 결정 — `progress` 는 수명 CHECK(`AI_JOB_STATUS_RULES`) 밖이다**
+
+그 표는 「이 상태면 이 칸이 차 있어야 한다」인데 진행률은 그렇게 못 적는다:
+`running` 이어도 러너가 문서를 나눠 보기 전까지는 비어 있고, `succeeded`·`failed` 에도
+**남아 있어야 한다**. 「9/12 에서 죽었다」가 실패 화면이 사람에게 할 수 있는 유일한 말이다.
+수명이 정하는 칸이 아니라 **수명과 나란히 흐르는 칸**이라 CHECK 을 안 걸었다 —
+그 이유를 `db/schema.ts` 의 그 칸 주석과 SPEC §2 에 적었다 (다음 사람이 「CHECK 이
+빠졌네」 하고 채우지 않게).
 
 **20바퀴 · P3 둘째 행 ③ — 목록을 가볍게** (`91ede81`)
 
@@ -673,12 +719,12 @@ hooks.json 이 가리키는 것 **전부**로 넓혀 뒀으므로, `stop.mjs` �
 
 ## 눈 판정 대기
 
-_(없음)_ — 이번 바퀴에 만진 것은 화면이 아니라 DB·계약·라우트다.
-**산출물은 시험이 직접 읽는다**: 충돌 행 넷의 칸이 종류마다 표대로 찼는지,
-`GET /conflicts` 응답이 그 행을 그대로 내는지, `ai_jobs` 행에 문서 본문이 없는지.
-⚠ **아직 눈으로 못 본 것 하나가 늘었다** — 화면 3 이 없으므로 「구조화 진행 표시」를
-사람이 본 적이 없다. job 이 `queued → running → succeeded` 로 가는 것을 본 것은
-시험뿐이다.
+_(없음)_ — 이번 바퀴에 만진 것은 화면이 아니라 DB·계약·러너다.
+**산출물을 눈으로 읽었다**: `docs/evidence/2026-09-04-jobs-progress/polling.txt` 는
+화면 3 이 할 polling 여섯 번을 그대로 찍은 것이고, 거기서 목록 한 줄이
+`queued(null) → 0/4 → 1/4 → 2/4 → 3/4 → 4/4` 로 자라는 것을 확인했다.
+⚠ **여전히 화면 3 이 없다** — 그 응답으로 막대를 그린 것을 사람이 본 적은 없다.
+job 이 `queued → running → succeeded` 로 가는 것을 본 것은 시험과 이 파일뿐이다.
 
 _(아래는 이전 바퀴의 눈 판정 기록이다)_ — 이번 바퀴에 만진 것은 화면이 아니라 컴파일러·계약이다.
 **관통이 낸 Pack 을 직접 읽었다** (`.ci/walkthrough-pack/` · 파일 4개).

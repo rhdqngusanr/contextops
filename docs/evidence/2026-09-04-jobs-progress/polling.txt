@@ -1,0 +1,180 @@
+>>> ① 올린 직후 (아직 안 굴렀다)  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (500 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+      "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+      "feature": "structure",
+      "status": "queued",
+      "progress": null,
+      "input": {
+        "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+      },
+      "error_code": null,
+      "started_at": null,
+      "finished_at": null,
+      "created_at": "2026-09-03T20:14:53.974Z"
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ② 조각 1 을 부르기 직전  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (592 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+      "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+      "feature": "structure",
+      "status": "running",
+      "progress": {
+        "done": 0,
+        "unit": "조각",
+        "total": 4
+      },
+      "input": {
+        "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:14:53.979Z",
+      "finished_at": null,
+      "created_at": "2026-09-03T20:14:53.974Z"
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ② 조각 2 을 부르기 직전  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (592 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+      "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+      "feature": "structure",
+      "status": "running",
+      "progress": {
+        "done": 1,
+        "unit": "조각",
+        "total": 4
+      },
+      "input": {
+        "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:14:53.979Z",
+      "finished_at": null,
+      "created_at": "2026-09-03T20:14:53.974Z"
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ② 조각 3 을 부르기 직전  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (592 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+      "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+      "feature": "structure",
+      "status": "running",
+      "progress": {
+        "done": 2,
+        "unit": "조각",
+        "total": 4
+      },
+      "input": {
+        "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:14:53.979Z",
+      "finished_at": null,
+      "created_at": "2026-09-03T20:14:53.974Z"
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ② 조각 4 을 부르기 직전  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (592 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+      "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+      "feature": "structure",
+      "status": "running",
+      "progress": {
+        "done": 3,
+        "unit": "조각",
+        "total": 4
+      },
+      "input": {
+        "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:14:53.979Z",
+      "finished_at": null,
+      "created_at": "2026-09-03T20:14:53.974Z"
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ③ 끝난 뒤  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (616 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+      "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+      "feature": "structure",
+      "status": "succeeded",
+      "progress": {
+        "done": 4,
+        "unit": "조각",
+        "total": 4
+      },
+      "input": {
+        "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:14:53.979Z",
+      "finished_at": "2026-09-03T20:14:54.007Z",
+      "created_at": "2026-09-03T20:14:53.974Z"
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ④ 같은 job 의 상세 (shape:full) — result 를 뺀 앞머리만
+{
+  "shape": "full",
+  "id": "11ff3898-15bf-4190-a804-45c1665ba6a3",
+  "project_id": "f3b00977-3ea2-4523-b2b7-14019ce20a2a",
+  "feature": "structure",
+  "status": "succeeded",
+  "progress": {
+    "done": 4,
+    "unit": "조각",
+    "total": 4
+  },
+  "input": {
+    "document_version_id": "6dde891d-f726-4f5c-87d4-be926349d388"
+  },
+  "error_code": null,
+  "started_at": "2026-09-03T20:14:53.979Z",
+  "finished_at": "2026-09-03T20:14:54.007Z",
+  "created_at": "2026-09-03T20:14:53.974Z"
+}
+
+(문서 28175자 · 4조각 · result.chunks = {"used":4,"total":4})
