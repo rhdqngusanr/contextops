@@ -1,7 +1,6 @@
 import { CreateProject } from '@contextops/schema'
 
 import { projects } from '../../../../../../db/schema'
-import { requireActor } from '../../../../../../lib/api/auth'
 import { fail } from '../../../../../../lib/api/error'
 import { requireTeam } from '../../../../../../lib/api/guard'
 import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
@@ -13,8 +12,7 @@ import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
 export const dynamic = 'force-dynamic'
 
 export const POST = route<{ id: string }>('POST /teams/{id}/projects', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
-  ctx.note({ user_id: actor.userId })
+  const actor = await ctx.actor()
 
   const teamId = pathUuid(ctx.params.id, 'team id')
   await requireTeam(ctx.db, actor, teamId, 'owner')

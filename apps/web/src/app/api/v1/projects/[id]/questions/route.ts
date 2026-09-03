@@ -4,7 +4,6 @@ import { AnswerQuestions, ConflictQuery } from '@contextops/schema'
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
 import { conflicts, contextItemRevisions, contextItems } from '../../../../../../db/schema'
-import { requireActor } from '../../../../../../lib/api/auth'
 import { CONFLICT_COLUMNS, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
@@ -25,9 +24,9 @@ export const dynamic = 'force-dynamic'
 
 /** GET 은 충돌 목록과 같은 질의를 쓰되 `kind` 를 강제한다. */
 export const GET = route<{ id: string }>('GET /projects/{id}/questions', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const projectId = pathUuid(ctx.params.id, 'project id')
-  ctx.note({ user_id: actor.userId, project_id: projectId })
+  ctx.note({ project_id: projectId })
 
   await requireProject(ctx.db, actor, projectId, 'member')
   const query = parseQuery(ctx.req, ConflictQuery)
@@ -47,9 +46,9 @@ export const GET = route<{ id: string }>('GET /projects/{id}/questions', async (
 })
 
 export const POST = route<{ id: string }>('POST /projects/{id}/questions', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const projectId = pathUuid(ctx.params.id, 'project id')
-  ctx.note({ user_id: actor.userId, project_id: projectId })
+  ctx.note({ project_id: projectId })
 
   await requireProject(ctx.db, actor, projectId, 'member')
   const body = await parseBody(ctx.req, AnswerQuestions)

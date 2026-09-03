@@ -35,7 +35,14 @@ export const ACTOR_MAX_ROLE: Record<Actor['kind'], TeamRole> = {
   device: 'member',
 }
 
-function bearer(req: Request): string {
+/**
+ * 헤더에서 자격증명 문자열만 꺼낸다. **DB 를 만지지 않는다.**
+ * ★ 왜 따로 있나 — 붙여 두면 「자격증명이 없다」가 DB 상태에 달리게 된다.
+ *   실제로 그랬다: `DATABASE_URL` 이 없는 서버에서 인증 없는 요청이 401 이 아니라
+ *   INTERNAL 500 을 냈다 (빌드한 서버를 띄워 눈으로 봤다). 없는 헤더를 알아내는 데
+ *   DB 가 필요할 이유가 없다.
+ */
+export function readBearer(req: Request): string {
   const header = req.headers.get('authorization')
   if (!header) fail('UNAUTHORIZED', '인증 헤더가 없다')
   const [scheme, ...rest] = header.split(' ')
@@ -79,9 +86,11 @@ async function sessionActor(db: Db, jwt: string, now: Date): Promise<Actor> {
   return { kind: 'user', userId: row.id }
 }
 
-/** 헤더 하나에서 주체를 정한다. 실패는 전부 401 이다. */
-export async function requireActor(db: Db, req: Request, now: Date): Promise<Actor> {
-  const credential = bearer(req)
+/**
+ * 자격증명 하나에서 주체를 정한다. 실패는 전부 401 이다.
+ * ⚠ 라우트는 이걸 직접 부르지 않는다 — `ctx.actor()` 가 순서(헤더 먼저, DB 나중)를 지킨다.
+ */
+export async function resolveActor(db: Db, credential: string, now: Date): Promise<Actor> {
   return credential.startsWith(TOKEN_PREFIX)
     ? deviceActor(db, credential, now)
     : sessionActor(db, credential, now)

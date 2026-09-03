@@ -67,6 +67,23 @@ describe('인증 — 자격증명이 없거나 어긋나면 401 이다', () => {
     expect((await errorOf(res)).code).toBe('UNAUTHORIZED')
   })
 
+  it('🔴 DB 가 없어도 헤더가 없으면 401 이다 (500 이 아니다)', async () => {
+    //  ★ 이 시험은 눈으로 본 고장에서 나왔다 — 빌드한 서버를 DATABASE_URL 없이 띄웠더니
+    //    인증 없는 요청이 INTERNAL 500 이었다. 자격증명이 없다는 사실을 알아내는 데
+    //    DB 가 필요할 이유가 없다 (`route.ts` 의 `ctx.actor()` 가 순서를 지킨다).
+    await closeDb(pg)
+    pg = undefined
+    const saved = process.env.DATABASE_URL
+    delete process.env.DATABASE_URL
+    try {
+      const res = await createTeam(req('POST', '/api/v1/teams', { body: { name: 'a', slug: 'a-team' } }), params({}))
+      expect(res.status).toBe(401)
+      expect((await errorOf(res)).code).toBe('UNAUTHORIZED')
+    } finally {
+      if (saved !== undefined) process.env.DATABASE_URL = saved
+    }
+  })
+
   it('Bearer 가 아니면 401', async () => {
     const raw = new Request('http://localhost/api/v1/teams', {
       method: 'POST',

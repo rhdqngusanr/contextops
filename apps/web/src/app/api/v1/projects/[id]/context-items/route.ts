@@ -2,7 +2,6 @@ import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm'
 import { ContextItemQuery } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../../../../../db/schema'
-import { requireActor } from '../../../../../../lib/api/auth'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItem } from '../../../../../../lib/api/item'
 import { parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
@@ -30,9 +29,9 @@ function scopeCondition(raw: string): SQL {
 }
 
 export const GET = route<{ id: string }>('GET /projects/{id}/context-items', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const projectId = pathUuid(ctx.params.id, 'project id')
-  ctx.note({ user_id: actor.userId, project_id: projectId })
+  ctx.note({ project_id: projectId })
 
   await requireProject(ctx.db, actor, projectId, 'member')
   const query = parseQuery(ctx.req, ContextItemQuery)

@@ -2,7 +2,6 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { ContextItem, ContextItemUpdate } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../../../../db/schema'
-import { requireActor } from '../../../../../lib/api/auth'
 import { fail } from '../../../../../lib/api/error'
 import { requireProject } from '../../../../../lib/api/guard'
 import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, parseItemData, toContextItem } from '../../../../../lib/api/item'
@@ -22,9 +21,8 @@ import { parseBody, pathUuid, route } from '../../../../../lib/api/route'
 export const dynamic = 'force-dynamic'
 
 export const PATCH = route<{ id: string }>('PATCH /context-items/{id}', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const itemUuid = pathUuid(ctx.params.id, 'item id')
-  ctx.note({ user_id: actor.userId })
 
   const [current] = await ctx.db
     .select(ITEM_COLUMNS)

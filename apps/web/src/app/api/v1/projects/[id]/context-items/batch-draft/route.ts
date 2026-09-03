@@ -5,7 +5,6 @@ import { ContextItemDraft, ContextItemsBatchDraftEnvelope } from '@contextops/sc
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems, repos } from '../../../../../../../db/schema'
-import { requireActor } from '../../../../../../../lib/api/auth'
 import { requireProject } from '../../../../../../../lib/api/guard'
 import { issuesOf, parseBody, pathUuid, route } from '../../../../../../../lib/api/route'
 
@@ -26,9 +25,9 @@ import { issuesOf, parseBody, pathUuid, route } from '../../../../../../../lib/a
 export const dynamic = 'force-dynamic'
 
 export const POST = route<{ id: string }>('POST /projects/{id}/context-items/batch-draft', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const projectId = pathUuid(ctx.params.id, 'project id')
-  ctx.note({ user_id: actor.userId, project_id: projectId })
+  ctx.note({ project_id: projectId })
 
   await requireProject(ctx.db, actor, projectId, 'member')
   const body = await parseBody(ctx.req, ContextItemsBatchDraftEnvelope)

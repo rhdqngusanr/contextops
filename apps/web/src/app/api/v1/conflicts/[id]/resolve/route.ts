@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm'
 import { ResolveConflict } from '@contextops/schema'
 
 import { conflicts } from '../../../../../../db/schema'
-import { requireActor } from '../../../../../../lib/api/auth'
 import { CONFLICT_COLUMNS, RESOLUTION_OUTCOME, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
@@ -23,9 +22,8 @@ import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
 export const dynamic = 'force-dynamic'
 
 export const POST = route<{ id: string }>('POST /conflicts/{id}/resolve', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const conflictId = pathUuid(ctx.params.id, 'conflict id')
-  ctx.note({ user_id: actor.userId })
 
   const [row] = await ctx.db
     .select({ id: conflicts.id, projectId: conflicts.projectId, status: conflicts.status })

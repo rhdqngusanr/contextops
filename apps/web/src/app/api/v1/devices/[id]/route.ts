@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { devices } from '../../../../../db/schema'
-import { requireActor } from '../../../../../lib/api/auth'
 import { fail } from '../../../../../lib/api/error'
 import { requireProject } from '../../../../../lib/api/guard'
 import { pathUuid, route } from '../../../../../lib/api/route'
@@ -16,9 +15,8 @@ import { pathUuid, route } from '../../../../../lib/api/route'
 export const dynamic = 'force-dynamic'
 
 export const DELETE = route<{ id: string }>('DELETE /devices/{id}', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const deviceId = pathUuid(ctx.params.id, 'device id')
-  ctx.note({ user_id: actor.userId })
 
   const [device] = await ctx.db
     .select({ id: devices.id, userId: devices.userId, projectId: devices.projectId, revokedAt: devices.revokedAt })

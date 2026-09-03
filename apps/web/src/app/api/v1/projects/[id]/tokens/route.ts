@@ -1,7 +1,6 @@
 import { CreateToken } from '@contextops/schema'
 
 import { devices } from '../../../../../../db/schema'
-import { requireActor } from '../../../../../../lib/api/auth'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
@@ -21,9 +20,9 @@ import { mintToken, tokenExpiry } from '../../../../../../lib/api/token'
 export const dynamic = 'force-dynamic'
 
 export const POST = route<{ id: string }>('POST /projects/{id}/tokens', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const projectId = pathUuid(ctx.params.id, 'project id')
-  ctx.note({ user_id: actor.userId, project_id: projectId })
+  ctx.note({ project_id: projectId })
 
   if (actor.kind === 'device') fail('FORBIDDEN', '기기 토큰으로는 토큰을 발급할 수 없다')
   await requireProject(ctx.db, actor, projectId, 'member')

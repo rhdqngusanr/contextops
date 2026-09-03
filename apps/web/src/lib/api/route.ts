@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { ZodError, type ZodType, type z } from 'zod'
 
 import { getDb, type Db } from '../../db/client'
+import { readBearer, resolveActor, type Actor } from './auth'
 import { ApiError } from './error'
 import { logRequest } from './log'
 import { failure, noContent, ok } from './respond'
@@ -26,6 +27,13 @@ export type RouteContext<P> = {
   requestId: string
   /** 요청 하나 안에서는 「지금」이 하나다 — 만료 판정과 기록 시각이 갈리지 않게. */
   now: Date
+  /**
+   * 누가 부르고 있나 (SPEC §5). 라우트의 첫 줄이다.
+   * ★ 순서가 규칙이다 — **헤더를 먼저 읽고 그 다음에 DB 를 연다.** 반대로 하면
+   *   자격증명이 없다는 사실이 DB 상태에 달리고, DB 가 없는 서버가 401 대신 500 을 낸다.
+   * ★ 한 요청에 한 번만 판정한다 (두 번 불러도 같은 주체 · 세션 upsert 도 한 번).
+   */
+  actor(): Promise<Actor>
   ok(data: unknown, status?: number): Response
   noContent(): Response
   /** 로그에 남길 식별자를 붙인다 (SPEC §11 — id 만, 이름·본문 금지). */
@@ -49,6 +57,8 @@ export function route<P extends Record<string, string> = Record<string, never>>(
     const requestId = randomUUID()
     const started = Date.now()
     const noted: { user_id?: string; project_id?: string } = {}
+    const now = new Date()
+    let resolved: Promise<Actor> | undefined
     let response: Response
 
     try {
@@ -58,7 +68,19 @@ export function route<P extends Record<string, string> = Record<string, never>>(
         req,
         params,
         requestId,
-        now: new Date(),
+        now,
+        actor: () => {
+          if (!resolved) {
+            //  헤더 먼저 (순수) → 그 다음에 DB.
+            const credential = readBearer(req)
+            //  로그의 `user_id` 를 라우트가 따로 적지 않게 여기서 채운다 (SPEC §11).
+            resolved = resolveActor(getDb(), credential, now).then((a) => {
+              noted.user_id = a.userId
+              return a
+            })
+          }
+          return resolved
+        },
         ok: (data, status) => ok(data, requestId, status),
         noContent,
         note: (fields) => Object.assign(noted, fields),

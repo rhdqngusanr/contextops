@@ -1,7 +1,6 @@
 import { CreateTeam } from '@contextops/schema'
 
 import { teamMembers, teams } from '../../../../db/schema'
-import { requireActor } from '../../../../lib/api/auth'
 import { fail } from '../../../../lib/api/error'
 import { parseBody, route } from '../../../../lib/api/route'
 
@@ -15,10 +14,9 @@ import { parseBody, route } from '../../../../lib/api/route'
 export const dynamic = 'force-dynamic'
 
 export const POST = route('POST /teams', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   //  기기 토큰으로는 팀을 만들 수 없다 — 토큰은 프로젝트 안의 물건이다.
   if (actor.kind === 'device') fail('FORBIDDEN', '기기 토큰으로는 팀을 만들 수 없다')
-  ctx.note({ user_id: actor.userId })
 
   const body = await parseBody(ctx.req, CreateTeam)
 

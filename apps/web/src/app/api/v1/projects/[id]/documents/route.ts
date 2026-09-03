@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm'
 import { CreateDocument } from '@contextops/schema'
 
 import { sourceDocumentVersions, sourceDocuments } from '../../../../../../db/schema'
-import { requireActor } from '../../../../../../lib/api/auth'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
@@ -22,9 +21,9 @@ import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
 export const dynamic = 'force-dynamic'
 
 export const POST = route<{ id: string }>('POST /projects/{id}/documents', async (ctx) => {
-  const actor = await requireActor(ctx.db, ctx.req, ctx.now)
+  const actor = await ctx.actor()
   const projectId = pathUuid(ctx.params.id, 'project id')
-  ctx.note({ user_id: actor.userId, project_id: projectId })
+  ctx.note({ project_id: projectId })
 
   await requireProject(ctx.db, actor, projectId, 'member')
   const body = await parseBody(ctx.req, CreateDocument)
