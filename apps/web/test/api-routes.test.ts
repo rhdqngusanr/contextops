@@ -1,7 +1,10 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { CONFLICT_CHOICES, ContextItem, type ConflictChoice } from '@contextops/schema'
+import {
+  CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem,
+  type ConflictChoice, type ConflictKind,
+} from '@contextops/schema'
 
 import { conflicts, contextItemRevisions, contextItems, repos, sourceDocumentVersions, sourceDocuments } from '../src/db/schema'
 import type { Db } from '../src/db/client'
@@ -357,13 +360,31 @@ describe('context-items 부분 갱신 — 낙관적 잠금 (SPEC §5)', () => {
 })
 
 describe('conflicts — 선택 4개가 상태를 가른다', () => {
-  /** 충돌은 §7.2(AI)가 만든다. 그 전이라 시험은 행을 직접 넣는다. */
-  async function seedConflict(projectId: string, kind: 'doc_vs_code' | 'open_question' = 'doc_vs_code') {
+  let seq = 0
+
+  /** FK(`conflicts_a_item_fk`)가 실제 항목을 요구한다 — 가리킬 항목을 먼저 만든다. */
+  async function seedItemFor(projectId: string, publicId: string) {
+    await db.insert(contextItems).values({ projectId, publicId, type: 'policy', scope: { kind: 'project' } })
+    return publicId
+  }
+
+  /**
+   * 충돌은 §7.2(AI)가 만든다. 그 전이라 시험이 행을 직접 넣는다.
+   *
+   * 🔴 **어느 칸을 채우는지는 `CONFLICT_KIND_RULES` 가 정한다.** DB 의 CHECK 이 같은
+   *    표에서 나오므로 여기서 손으로 골라 채우면 표가 바뀌는 순간 갈라진다 —
+   *    표를 읽어서 채우면 새 종류가 늘어도 이 시험이 따라온다.
+   */
+  async function seedConflict(projectId: string, kind: ConflictKind = 'doc_vs_code') {
+    const rule = CONFLICT_KIND_RULES[kind]
+    const n = ++seq
     const [row] = await db.insert(conflicts).values({
       projectId,
       kind,
-      aRef: { kind: 'manual', note: '문서: 재시도 5회' },
-      bRef: { kind: 'repository_path', repo: 'paylab-api', path: 'src/payment/retry.ts', start_line: 14 },
+      aItemId: rule.anchor === 'items' ? await seedItemFor(projectId, `item_a${n}`) : null,
+      bItemId: rule.anchor === 'items' && rule.needsB ? await seedItemFor(projectId, `item_b${n}`) : null,
+      aRef: rule.anchor === 'document' ? { kind: 'manual', note: '문서: 재시도 5회' } : null,
+      severity: rule.detected ? 'high' : null,
       question: '재시도 횟수는 3회인가 5회인가?',
     }).returning({ id: conflicts.id })
     return row!.id
@@ -387,6 +408,29 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
     //  표가 실제로 판정을 바꾼다 — dismiss 만 다른 상태다.
     expect(seen).toEqual({ a: 'resolved', b: 'resolved', both: 'resolved', dismiss: 'dismissed' })
     expect(new Set(Object.values(RESOLUTION_OUTCOME)).size).toBe(2)
+  })
+
+  it('종류마다 채워지는 칸이 다르고, 그게 응답에 그대로 나온다 (CONFLICT_KIND_RULES)', async () => {
+    //  ★ 왜 이 시험인가 — 칸을 더해 놓고 응답에서 빠뜨리면 화면은 「충돌 1건」만 보고
+    //    **무엇과 무엇이 어긋났는지 물어볼 데가 없다.** 그건 근거 없는 숫자다 (P7).
+    const { owner, projectId } = await seed()
+    for (const kind of CONFLICT_KINDS) await seedConflict(projectId, kind)
+
+    const data = await dataOf(await listConflicts(
+      req('GET', `/api/v1/projects/${projectId}/conflicts`, { auth: owner }),
+      params({ id: projectId }),
+    ))
+    const rows = data.conflicts as Record<string, unknown>[]
+    expect(rows).toHaveLength(CONFLICT_KINDS.length)
+    for (const row of rows) {
+      const kind = row.kind as ConflictKind
+      const rule = CONFLICT_KIND_RULES[kind]
+      const isNull = (k: string) => row[k] === null
+      expect(isNull('a_item_id'), `${kind} 의 a_item_id`).toBe(rule.anchor !== 'items')
+      expect(isNull('b_item_id'), `${kind} 의 b_item_id`).toBe(!(rule.anchor === 'items' && rule.needsB))
+      expect(isNull('a_ref'), `${kind} 의 a_ref`).toBe(rule.anchor !== 'document')
+      expect(isNull('severity'), `${kind} 의 severity`).toBe(!rule.detected)
+    }
   })
 
   it('이미 처리된 충돌은 다시 못 뒤집는다', async () => {

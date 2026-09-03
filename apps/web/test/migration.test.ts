@@ -24,6 +24,7 @@ import { PgTable, isPgEnum, type PgEnum } from 'drizzle-orm/pg-core'
 import {
   CONFIDENCE_LEVELS,
   CONFLICT_KINDS,
+  CONFLICT_SEVERITIES,
   CONFLICT_STATUSES,
   ITEM_STATUSES,
   ITEM_TYPES,
@@ -67,6 +68,7 @@ const CONTRACT_ENUMS: Record<string, readonly string[]> = {
   source_document_kind: SOURCE_DOCUMENT_KINDS,
   conflict_kind: CONFLICT_KINDS,
   conflict_status: CONFLICT_STATUSES,
+  conflict_severity: CONFLICT_SEVERITIES,
 }
 
 let pg: PGlite
@@ -224,6 +226,80 @@ describe('제약이 실제로 무언가를 막는다', () => {
       )
     await expect(ins('1.0.0')).resolves.toBeDefined()
     await expect(ins('1.0.1')).rejects.toThrow()
+  })
+
+  //  -------------------------------------------------------------------
+  //   충돌 한 장의 모양 — `CONFLICT_KIND_RULES` 에서 나온 CHECK 이 진짜 무는가
+  //   ★ 왜 여기서 재나 — 이 제약이 있어야 「충돌 1건」이라고 뜬 카드가 **가리킬 것을
+  //     반드시 가진다.** 없으면 반쪽짜리 행이 화면까지 올라가고, 눌렀을 때 아무것도
+  //     없다 (P7 이 무너지는 자리).
+  //  -------------------------------------------------------------------
+
+  /** 충돌 한 줄을 넣는다. 채울 칸 이름과 값을 그대로 받는다 — 무엇이 막히는지가 보이게. */
+  function insertConflict(projectId: string, columns: string, values: string) {
+    return pg.query(
+      `insert into conflicts (project_id, question, ${columns}) values ($1, '재시도는 3회인가?', ${values})`,
+      [projectId],
+    )
+  }
+
+  async function seedConflictItems(slug: string): Promise<string> {
+    const projectId = await seedProject(slug)
+    for (const publicId of ['item_x', 'item_y']) {
+      await pg.query(
+        `insert into context_items (project_id, public_id, type, scope)
+         values ($1, $2, 'policy', '{"kind":"project"}')`,
+        [projectId, publicId],
+      )
+    }
+    return projectId
+  }
+
+  it('항목 대 항목인 종류는 두 항목과 severity 가 **다** 있어야 들어간다', async () => {
+    const projectId = await seedConflictItems('t-conflict-items')
+    await expect(
+      insertConflict(projectId, 'kind, a_item_id, b_item_id, severity', `'contradiction', 'item_x', 'item_y', 'high'`),
+    ).resolves.toBeDefined()
+    //  needsB — 한쪽만 있으면 「무엇과 어긋났나」에 답할 수 없다
+    await expect(
+      insertConflict(projectId, 'kind, a_item_id, severity', `'contradiction', 'item_x', 'high'`),
+    ).rejects.toThrow()
+    //  detected — 심각도는 §7.2 가 매긴다. 없으면 화면 4 가 카드 순서를 못 정한다
+    await expect(
+      insertConflict(projectId, 'kind, a_item_id, b_item_id', `'contradiction', 'item_x', 'item_y'`),
+    ).rejects.toThrow()
+    //  anchor='items' 인데 원문 구간을 가리키면 막는다 (P7 — 사슬이 한 칸 끊긴다)
+    await expect(
+      insertConflict(
+        projectId,
+        'kind, a_item_id, b_item_id, severity, a_ref',
+        `'contradiction', 'item_x', 'item_y', 'high', '{"kind":"manual","note":"문서"}'`,
+      ),
+    ).rejects.toThrow()
+  })
+
+  it('문서를 가리키는 종류(open_question)는 a_ref 만 채운다', async () => {
+    const projectId = await seedConflictItems('t-conflict-doc')
+    await expect(
+      insertConflict(projectId, 'kind, a_ref', `'open_question', '{"kind":"manual","note":"문서"}'`),
+    ).resolves.toBeDefined()
+    //  가리킬 항목이 아직 없는 종류다 — 항목 id 를 넣으면 막힌다
+    await expect(
+      insertConflict(projectId, 'kind, a_ref, a_item_id', `'open_question', '{"kind":"manual","note":"문서"}', 'item_x'`),
+    ).rejects.toThrow()
+    //  §7.1 이 만드는 종류라 severity 가 없다
+    await expect(
+      insertConflict(projectId, 'kind, a_ref, severity', `'open_question', '{"kind":"manual","note":"문서"}', 'low'`),
+    ).rejects.toThrow()
+    //  a_ref 없이 질문만 있는 행은 근거 없는 카드다
+    await expect(insertConflict(projectId, 'kind', `'open_question'`)).rejects.toThrow()
+  })
+
+  it('없는 항목을 가리키는 충돌은 FK 가 막는다 (근거 없는 카드가 없다 · P7)', async () => {
+    const projectId = await seedConflictItems('t-conflict-fk')
+    await expect(
+      insertConflict(projectId, 'kind, a_item_id, b_item_id, severity', `'contradiction', 'item_x', 'item_nope', 'high'`),
+    ).rejects.toThrow()
   })
 
   it('없는 프로젝트를 가리키는 항목은 FK 가 막는다', async () => {

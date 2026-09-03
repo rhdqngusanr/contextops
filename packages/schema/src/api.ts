@@ -161,14 +161,36 @@ export type ConflictChoice = (typeof CONFLICT_CHOICES)[number]
 //    `AiStructureOutput`(item.ts)과 같은 이유다.
 // ---------------------------------------------------------------------
 
-/** 충돌 종류 하나의 규칙. 프롬프트·검증·화면이 이 표를 **읽기만** 한다. */
+/**
+ * 충돌 한 장이 **무엇을 가리키나** 2종.
+ *
+ * ⚠ `items` 를 `SOURCE_REF` 의 종류로 더하지 마라. 그러면 항목의 `source_refs` 가
+ *   다른 항목을 가리킬 수 있게 되고, 원문까지 가는 사슬이 한 칸 끊긴다 (P7).
+ *   충돌이 항목을 가리키는 것과 항목이 원문을 가리키는 것은 **다른 관계**다.
+ */
+export const CONFLICT_ANCHORS = ['items', 'document'] as const
+export type ConflictAnchor = (typeof CONFLICT_ANCHORS)[number]
+
+/** 충돌 종류 하나의 규칙. 프롬프트·검증·DB 제약·화면이 이 표를 **읽기만** 한다. */
 export interface ConflictKindRule {
   /**
    * §7.2 **탐지가 이 종류를 낼 수 있나.** `false` 면 다른 곳이 만든다 —
    * 어디가 만드는지는 `madeBy` 에 적는다.
+   *
+   * 🔴 `severity` 는 §7.2 가 매기는 값이다 — 이 칸이 `true` 인 종류만 갖는다.
    */
   readonly detected: boolean
-  /** 두 항목이 어긋나는 종류인가. `true` 면 `b_item_id` 가 **있어야** 한다. */
+  /**
+   * 🔴 이 종류가 **무엇을 가리키나.** 충돌 행의 어느 칸이 채워지는지가 여기서 갈린다:
+   *   - `items`    → `a_item_id` (·`needsB` 면 `b_item_id`) · `a_ref`/`b_ref` 는 비어야 한다
+   *   - `document` → `a_ref` (·`needsB` 면 `b_ref`) · `a_item_id`/`b_item_id` 는 비어야 한다
+   *
+   * ★ 그 규칙은 문서가 아니라 **DB 제약**이다 — `apps/web/src/db/schema.ts` 의
+   *   `conflictShapeCheck()` 가 이 표를 읽어 CHECK 을 만든다. 여기 한 줄을 고치고
+   *   `db:generate` 를 돌리면 제약이 따라온다.
+   */
+  readonly anchor: ConflictAnchor
+  /** 어긋나는 **두 쪽**이 있는 종류인가. `true` 면 b 쪽 칸이 **있어야** 한다. */
   readonly needsB: boolean
   /** 이 종류를 만드는 자리 한 줄. `detected` 가 `false` 인 줄이 특히 중요하다. */
   readonly madeBy: string
@@ -185,9 +207,11 @@ export interface ConflictKindRule {
  * ★ 새 종류를 더하는 절차 — 넷이고, 앞의 둘은 기계가 막아 준다:
  *   ① `CONFLICT_KINDS` **끝에** 값 추가 (중간에 끼우지 마라 — `conflicts.kind` 로 직렬화된다)
  *   ② 이 표에 한 줄  ← ①만 하면 여기서 타입 검사가 막힌다
- *   ③ `pnpm --filter web db:generate` (pgEnum 값이 늘었다)
+ *   ③ `pnpm --filter web db:generate` — pgEnum 값이 늘고, **`anchor`·`needsB`·`detected`
+ *      에서 나오는 CHECK 제약이 같이 바뀐다** (`db/schema.ts` 의 `conflictShapeCheck()`)
  *   ④ `detected: true` 로 더했으면 `test/scope-and-enums.test.ts` 의 「탐지 종류는
  *      전부 프롬프트에 실린다」가 그 줄을 요구한다
+ *   화면·라우트는 고칠 것이 없다 — 이 표를 읽기만 하기 때문이다.
  *
  * ⚠ `detected` 가 `false` 인 줄은 **§7.2 의 출력 enum 에서 빠진다.** 모델이 낼 수
  *   없는 종류를 도구 스키마에 실으면, 모델은 그 이름을 골라 놓고 우리 검증에서
@@ -195,25 +219,26 @@ export interface ConflictKindRule {
  */
 export const CONFLICT_KIND_RULES = {
   contradiction: {
-    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
     hint: '양립할 수 없다 — 둘 다 지키면 모순이 되는 두 항목이다.',
   },
   stale: {
-    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
     hint: '한쪽의 날짜·버전이 다른 쪽에 의해 무효가 됐다. **어느 쪽이 맞는지는 판단하지 마라.**',
   },
   duplicate: {
-    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
     hint: '같은 개념을 두 항목이 각각 적었다.',
   },
   doc_vs_code: {
-    detected: true, needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
     hint: '문서에서 온 항목(origin=doc)과 코드에서 온 항목(origin=code)이 서로 다른 말을 한다.',
   },
-  //  ⚠ 이 종류만 `detected: false` 다. §7.1 이 문서를 읽다 「판단이 필요하다」고 남긴
-  //     질문이고, 두 항목이 어긋난 것이 아니라 **한쪽도 아직 없는** 것이다.
+  //  ⚠ 이 종류만 `detected: false` 이고 이 종류만 `anchor: 'document'` 다. §7.1 이
+  //     문서를 읽다 「판단이 필요하다」고 남긴 질문이고, 두 항목이 어긋난 것이 아니라
+  //     **한쪽도 아직 없는** 것이다 — 가리킬 항목이 없으니 원문 구간을 가리킨다.
   open_question: {
-    detected: false, needsB: false, madeBy: '§7.1 문서 구조화의 `open_questions`',
+    detected: false, anchor: 'document', needsB: false, madeBy: '§7.1 문서 구조화의 `open_questions`',
     hint: '',
   },
   //  ⚠ `as const` 여야 `detected` 가 `true`/`false` **리터럴**로 남고, 아래

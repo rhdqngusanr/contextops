@@ -19,7 +19,10 @@
 //    갱신이 있는 테이블에 `updated_at`, 삭제가 있는 테이블에 `deleted_at`(soft delete).
 // =====================================================================
 
+import { sql, type SQL } from 'drizzle-orm'
 import {
+  check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -35,7 +38,9 @@ import {
 
 import {
   CONFIDENCE_LEVELS,
+  CONFLICT_KIND_RULES,
   CONFLICT_KINDS,
+  CONFLICT_SEVERITIES,
   CONFLICT_STATUSES,
   ITEM_STATUSES,
   ITEM_TYPES,
@@ -47,6 +52,7 @@ import {
   type ScanSummary,
   TEAM_ROLES,
   type ConflictChoice,
+  type ConflictKindRule,
   type Manifest,
   type Proposal,
   type ProgressEvent,
@@ -91,6 +97,8 @@ export const confidence = pgEnum('confidence', CONFIDENCE_LEVELS)
 export const revisionOrigin = pgEnum('revision_origin', REVISION_ORIGINS)
 export const conflictKind = pgEnum('conflict_kind', CONFLICT_KINDS)
 export const conflictStatus = pgEnum('conflict_status', CONFLICT_STATUSES)
+/** 충돌 심각도 3단계 (SPEC §7.2). **탐지가 매기는 값**이라 그 종류에만 있다. */
+export const conflictSeverity = pgEnum('conflict_severity', CONFLICT_SEVERITIES)
 export const proposalStatus = pgEnum('proposal_status', PROPOSAL_STATUSES)
 export const packTarget = pgEnum('pack_target', PACK_TARGETS)
 /**
@@ -265,21 +273,83 @@ export const contextItemRevisions = pgTable('context_item_revisions', {
   //    같은 유일성이고, PK 가 없으면 개정 행을 한 줄로 지목할 방법이 없다.
 }, (t) => [primaryKey({ columns: [t.itemId, t.revision] })])
 
+/**
+ * 🔴 **충돌 한 장의 모양을 `CONFLICT_KIND_RULES` 표에서 DB 제약으로 내린다.**
+ *
+ * ★ 왜 코드가 아니라 DB 인가 — 충돌 행을 만드는 자리는 앞으로 여럿이다 (§7.1 의
+ *   `open_questions` · §7.2 의 탐지 · 사람이 직접 적는 질문). 검사를 서비스 코드에
+ *   두면 자리마다 베껴야 하고, 하나만 빠뜨려도 **반쪽짜리 행**이 조용히 들어온다.
+ *   그 행은 화면에 「충돌 1건」으로 멀쩡히 뜨고, 눌렀을 때 가리킬 것이 없다.
+ * ★ 왜 표에서 **생성**하나 — 종류를 하나 더할 때 이 파일에 손댈 것이 없어야 한다.
+ *   `CONFLICT_KIND_RULES` 에 한 줄을 더하고 `db:generate` 를 돌리면 제약이 따라온다.
+ *   ⚠ 여기에 kind 이름을 손으로 적지 마라. 적는 순간 표가 정본이 아니게 된다.
+ *
+ * @param column  이 칸이 채워져야 하는가를 잴 컬럼 이름
+ * @param needs   표의 한 줄을 보고 「이 종류는 그 칸이 필요한가」를 답한다
+ */
+function conflictShapeCheck(column: string, needs: (rule: ConflictKindRule) => boolean) {
+  const kinds = CONFLICT_KINDS.filter((k) => needs(CONFLICT_KIND_RULES[k]))
+  const filled = `"${column}" is not null`
+  //  ⚠ `kind in ()` 는 SQL 이 아니다. 아무 종류도 안 쓰는 칸(지금은 `b_ref`)과
+  //     모든 종류가 쓰는 칸은 양쪽 끝의 갈래로 따로 낸다.
+  const body: string =
+    kinds.length === 0 ? `"${column}" is null`
+    : kinds.length === CONFLICT_KINDS.length ? filled
+    : `(${filled}) = ("kind" in (${kinds.map((k) => `'${k}'`).join(', ')}))`
+  //  `sql.raw` 를 쓰는 근거: 이 문자열의 재료는 **전부 우리 표의 상수**다. 외부 입력이
+  //  섞이는 자리가 하나도 없다 (컬럼 이름도 아래 호출부가 리터럴로 준다).
+  return check(`conflicts_${column}_shape_ck`, sql.raw(body) as SQL)
+}
+
 export const conflicts = pgTable('conflicts', {
   id: id(),
   projectId: uuid('project_id').notNull().references(() => projects.id),
   kind: conflictKind('kind').notNull(),
-  /** 어긋난 두 쪽. `open_question` 처럼 한 쪽만 있는 종류는 `b_ref` 가 비어 있다. */
-  aRef: jsonb('a_ref').$type<SourceRef>().notNull(),
+  /**
+   * 🔴 `anchor: 'items'` 인 종류가 가리키는 두 항목 — **`item_<slug>`** 다 (uuid 가
+   * 아니다. 모델이 보는 이름이 이것이고 §7.2 의 출력이 이 이름을 낸다).
+   * 아래 복합 FK 가 「그 프로젝트에 실제로 있는 항목인가」를 막는다 (P7).
+   */
+  aItemId: text('a_item_id'),
+  bItemId: text('b_item_id'),
+  /**
+   * 🔴 `anchor: 'document'` 인 종류(지금은 `open_question` 하나)가 가리키는 **원문 구간**.
+   * ⚠ 항목을 여기 담지 마라 — `SourceRef` 는 「원문까지 가는 사슬」이고 항목은 그
+   *   사슬의 시작점이지 마디가 아니다 (`CONFLICT_ANCHORS` 주석 · P7).
+   */
+  aRef: jsonb('a_ref').$type<SourceRef>(),
   bRef: jsonb('b_ref').$type<SourceRef>(),
   question: text('question').notNull(),
+  /** §7.2 가 매기는 심각도. 화면 4 가 카드 10장을 고르는 순서가 이 칸이다. */
+  severity: conflictSeverity('severity'),
   status: conflictStatus('status').notNull().default('open'),
   resolution: jsonb('resolution').$type<{ choice: ConflictChoice; note?: string }>(),
   resolvedBy: uuid('resolved_by').references(() => users.id),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-}, (t) => [index('conflicts_project_status_idx').on(t.projectId, t.status)])
+}, (t) => [
+  index('conflicts_project_status_idx').on(t.projectId, t.status),
+  //  ⚠ `(project_id, public_id)` 로 잇는다 — `public_id` 는 프로젝트 안에서만 유일하다.
+  //    a/b 가 NULL 이면 Postgres 가 검사를 건너뛴다 (MATCH SIMPLE) — `open_question`
+  //    처럼 항목을 안 가리키는 종류가 막히지 않는 이유다.
+  foreignKey({
+    name: 'conflicts_a_item_fk',
+    columns: [t.projectId, t.aItemId],
+    foreignColumns: [contextItems.projectId, contextItems.publicId],
+  }),
+  foreignKey({
+    name: 'conflicts_b_item_fk',
+    columns: [t.projectId, t.bItemId],
+    foreignColumns: [contextItems.projectId, contextItems.publicId],
+  }),
+  //  🔴 다섯 줄 전부 위 표에서 나온다. 손으로 종류를 세지 마라.
+  conflictShapeCheck('a_item_id', (r) => r.anchor === 'items'),
+  conflictShapeCheck('b_item_id', (r) => r.anchor === 'items' && r.needsB),
+  conflictShapeCheck('a_ref', (r) => r.anchor === 'document'),
+  conflictShapeCheck('b_ref', (r) => r.anchor === 'document' && r.needsB),
+  conflictShapeCheck('severity', (r) => r.detected),
+])
 
 export const proposals = pgTable('proposals', {
   id: id(),

@@ -1,4 +1,6 @@
-import type { ConflictChoice, ConflictKind, ConflictStatus, SourceRef } from '@contextops/schema'
+import type {
+  ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, SourceRef,
+} from '@contextops/schema'
 
 import { conflicts } from '../../db/schema'
 
@@ -24,13 +26,25 @@ export const RESOLUTION_OUTCOME: Record<ConflictChoice, ConflictStatus> = {
   dismiss: 'dismissed',
 }
 
+/**
+ * 충돌 한 장을 돌려줄 때 읽는 칸 전부.
+ *
+ * ⚠ **어느 칸이 비어 있는가는 `kind` 가 정한다** (`CONFLICT_KIND_RULES` 의 `anchor`).
+ *   `anchor:'items'` 면 `a_item_id`/`b_item_id` 가 차고 `a_ref`/`b_ref` 가 비고,
+ *   `anchor:'document'` 면 반대다. 화면은 그 표를 읽어 무엇을 그릴지 고른다 —
+ *   여기서 한쪽으로 접지 마라. 접으면 화면이 근거로 가는 길을 잃는다 (P7).
+ *   그 규칙은 DB CHECK 이 강제한다 (`db/schema.ts` 의 `conflictShapeCheck()`).
+ */
 export const CONFLICT_COLUMNS = {
   id: conflicts.id,
   project_id: conflicts.projectId,
   kind: conflicts.kind,
+  a_item_id: conflicts.aItemId,
+  b_item_id: conflicts.bItemId,
   a_ref: conflicts.aRef,
   b_ref: conflicts.bRef,
   question: conflicts.question,
+  severity: conflicts.severity,
   status: conflicts.status,
   resolution: conflicts.resolution,
   resolved_at: conflicts.resolvedAt,
@@ -40,9 +54,12 @@ type ConflictRow = {
   id: string
   project_id: string
   kind: ConflictKind
-  a_ref: SourceRef
+  a_item_id: string | null
+  b_item_id: string | null
+  a_ref: SourceRef | null
   b_ref: SourceRef | null
   question: string
+  severity: ConflictSeverity | null
   status: ConflictStatus
   resolution: { choice: ConflictChoice; note?: string } | null
   resolved_at: Date | null
@@ -54,9 +71,12 @@ export function toConflict(row: ConflictRow) {
     id: row.id,
     project_id: row.project_id,
     kind: row.kind,
+    a_item_id: row.a_item_id,
+    b_item_id: row.b_item_id,
     a_ref: row.a_ref,
     b_ref: row.b_ref,
     question: row.question,
+    severity: row.severity,
     status: row.status,
     resolution: row.resolution,
     resolved_at: row.resolved_at === null ? null : row.resolved_at.toISOString(),
