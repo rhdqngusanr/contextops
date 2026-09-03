@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, Scope, SourceRef } from './common'
+import { CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, Scope, Semver, SourceRef } from './common'
 import { ContextItemDraft } from './item'
-import { ContextItemsBatchDraft } from './upload'
+import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
 
 // =====================================================================
 //  API 계약 (docs/SPEC.md §5)
@@ -268,6 +268,34 @@ export const ContextItemsBatchDraftEnvelope = ContextItemsBatchDraft.extend({
   items: z.array(z.unknown()).min(1).max(50),
 }).strict()
 
+// ---------------------------------------------------------------------
+//  API 2군 — 제안 · 발행 · Pack · 보고 (SPEC §5 · §2.1 · §6)
+// ---------------------------------------------------------------------
+
+/**
+ * `POST /proposals/{id}/submit` · `/approve` · `/reject` (SPEC §5)
+ *
+ * ★ 셋이 같은 body 인 이유 — 셋 다 「누가 무엇을 결정했나」만 남긴다. 결정의 **종류**는
+ *   경로가 말하지 상태 필드가 말하지 않는다. body 에 `status` 를 두면 `/approve` 로
+ *   `rejected` 를 보낼 수 있게 되고, 그러면 경로가 거짓말한다.
+ */
+export const ProposalDecision = z.object({
+  note: z.string().max(500).optional(),
+}).strict()
+
+/**
+ * `POST /projects/{id}/versions/publish` (SPEC §5 · §2.1)
+ *
+ * ⚠ `base_version_id` 는 **nullable 이고 optional 이 아니다.** 첫 발행은 기준이 없어서
+ *   `null` 인데, 그걸 「빼도 되는 필드」로 두면 **낡은 기준을 빠뜨린 요청과 구별할 수 없다** —
+ *   `STALE_BASE` 검사가 통째로 무력해진다. 「기준이 없다」는 말은 명시적으로 해야 한다.
+ */
+export const PublishVersion = z.object({
+  semver: Semver,
+  base_version_id: z.uuid().nullable(),
+  change_summary: z.string().max(1000).optional(),
+}).strict()
+
 /**
  * 🔴 **서버가 받는 body 의 정본 표.** `test/api-allowlist.test.ts` 가 이 표를 돌면서
  *   ① 전부 `.strict()` 인가 ② 금지 키가 없는가 를 잰다 —
@@ -283,6 +311,14 @@ export const API_REQUESTS: Record<string, z.ZodType> = {
   'POST /conflicts/{id}/resolve': ResolveConflict,
   'context-items 일괄 초안': ContextItemsBatchDraftEnvelope,
   'context-items 부분 갱신': ContextItemUpdate,
+  //  API 2군. ⚠ 아래 셋(`Proposal`·`SyncReport`·`ProgressEvent`)은 `upload.ts` 가 정본이다 —
+  //  **플러그인도 웹도 같은 body 를 보낸다.** 여기 다시 정의하지 마라. 두 벌이 되는 순간
+  //  한쪽만 조여지고, 느슨한 쪽이 P1 의 구멍이 된다.
+  'POST /projects/{id}/proposals': Proposal,
+  'POST /proposals/{id}/submit|approve|reject': ProposalDecision,
+  'POST /projects/{id}/versions/publish': PublishVersion,
+  'POST /projects/{id}/sync-reports': SyncReport,
+  'POST /projects/{id}/progress': ProgressEvent,
 }
 
 export type CreateTeam = z.infer<typeof CreateTeam>
@@ -295,3 +331,5 @@ export type ContextItemUpdate = z.infer<typeof ContextItemUpdate>
 export type ConflictQuery = z.infer<typeof ConflictQuery>
 export type ResolveConflict = z.infer<typeof ResolveConflict>
 export type AnswerQuestions = z.infer<typeof AnswerQuestions>
+export type ProposalDecision = z.infer<typeof ProposalDecision>
+export type PublishVersion = z.infer<typeof PublishVersion>

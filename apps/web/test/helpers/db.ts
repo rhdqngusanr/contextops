@@ -88,9 +88,11 @@ const ORIGIN = 'http://localhost:3000'
 export function req(
   method: string,
   path: string,
-  opts: { auth?: string; body?: unknown; raw?: string } = {},
+  //  `headers` 는 ETag 조건부 요청(`if-none-match`) 때문에 있다 — SPEC §5 packs 세 줄이
+  //  304 를 약속하고, 그건 머리를 보내 봐야만 잴 수 있다.
+  opts: { auth?: string; body?: unknown; raw?: string; headers?: Record<string, string> } = {},
 ): Request {
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = { ...opts.headers }
   if (opts.auth) headers.authorization = `Bearer ${opts.auth}`
   const hasBody = opts.body !== undefined || opts.raw !== undefined
   if (hasBody) headers['content-type'] = 'application/json'
@@ -101,8 +103,13 @@ export function req(
   })
 }
 
-/** Next 15 의 Route Handler 두 번째 인자. */
-export function params<P extends Record<string, string>>(value: P): { params: Promise<P> } {
+/**
+ * Next 15 의 Route Handler 두 번째 인자.
+ * ⚠ 값이 `string | string[]` 인 이유 — catch-all 구간(`[...path]`)은 배열로 온다
+ *   (`src/lib/api/route.ts` 의 같은 주석). `string` 으로만 잡으면 그 라우트를 시험에서
+ *   못 부르고, 그때 `as any` 로 뚫게 된다.
+ */
+export function params<P extends Record<string, string | string[]>>(value: P): { params: Promise<P> } {
   return { params: Promise.resolve(value) }
 }
 

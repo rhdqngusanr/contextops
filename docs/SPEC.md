@@ -225,7 +225,7 @@ export const Manifest = z.object({ schema_version: z.literal('1.0'), compiler_ve
 
 ### 3.1 업로드 payload allowlist (P1)
 
-`POST /context-items:batch-draft`, `POST /proposals`, `POST /progress`, `POST /sync-reports`의 body는 위 스키마 `.strict()`로 파싱. `content`, `body`가 2000자를 넘거나, `source_refs`에 `repository_path`가 있는데 `snippet`류 키가 있으면 400. 서버 로그에 body를 남기지 않는다(`request_id`, route, status만).
+`POST /context-items/batch-draft`, `POST /proposals`, `POST /progress`, `POST /sync-reports`의 body는 위 스키마 `.strict()`로 파싱. `content`, `body`가 2000자를 넘거나, `source_refs`에 `repository_path`가 있는데 `snippet`류 키가 있으면 400. 서버 로그에 body를 남기지 않는다(`request_id`, route, status만).
 
 ---
 
@@ -314,6 +314,10 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 
 공통: 응답 `{ data, meta:{ request_id } }` / `{ error:{ code, message, details?, request_id } }`. 인증은 (a) 웹 세션(Supabase JWT) 또는 (b) `Authorization: Bearer ctx_<token>`(devices.token_hash 대조). 권한: owner/member 2단계. 목록은 `?limit=50&offset=`.
 
+⚠ **동사형 경로는 콜론이 아니라 경로 구간이다** (`/versions/publish` · `/proposals/{id}/submit`).
+App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:` 를 못 쓴다 — 콜론으로 적으면
+그 라우트는 **만들 수가 없다.** 예전 표기(`versions:publish`)를 되살리지 마라 (FINDINGS 20).
+
 | Method · Path | 권한 | 요청 → 응답 |
 |---|---|---|
 | POST /teams | 로그인 | {name, slug} → team |
@@ -323,14 +327,14 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 | DELETE /devices/{id} | 본인·owner | → 204 |
 | POST /projects/{id}/documents | member | multipart(zip) 또는 {title, kind, content} → document + 구조화 job 시작 (§7.1) |
 | GET /projects/{id}/context-items | member | ?type&status&scope → items[] |
-| POST /projects/{id}/context-items:batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}]} · 충돌 탐지 job 시작 (§7.2) |
+| POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}]} · 충돌 탐지 job 시작 (§7.2) |
 | PATCH /context-items/{id} | owner | {revision(현재), patch} → item · revision 불일치 409 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |
-| POST /conflicts/{id}:resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
+| POST /conflicts/{id}/resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
 | POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer}]} → 항목 생성 |
 | POST /projects/{id}/proposals | member/device | Proposal → proposal |
-| POST /proposals/{id}:submit / :approve / :reject | 작성자 / owner | {note?} → proposal |
-| POST /projects/{id}/versions:publish | owner | {semver, base_version_id, change_summary} → version (§2.1) |
+| POST /proposals/{id}/submit / /approve / /reject | 작성자 / owner | {note?} → proposal |
+| POST /projects/{id}/versions/publish | owner | {semver, base_version_id, change_summary} → version (§2.1) |
 | GET /projects/{id}/versions | member | → versions[] |
 | GET /projects/{id}/packs/latest/manifest | device/member | ETag=manifest_hash, If-None-Match → 304 |
 | GET /projects/{id}/packs/{semver}/manifest | device/member | immutable, `Cache-Control: max-age=31536000` |
@@ -340,7 +344,7 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 | GET /projects/{id}/sync-status | member | → [{device, user, version, status, reported_at}] |
 | POST /projects/{id}/progress | device | ProgressEvent → 202 (client_event_id 중복은 200 idempotent) |
 | GET /projects/{id}/roadmap | member | → [{milestone, done_when:[{text, evidence_count, last_event}], conflicts, last_report_at, status}] |
-| POST /progress/{id}:confirm | owner | → done 확정 |
+| POST /progress/{id}/confirm | owner | → done 확정 |
 | POST /projects/{id}/ask | member | {question} → {answer, cited_item_ids[]} (§7.3, 예산 가드) |
 | POST /demo/ai-once | 게스트 | {fixture:'paylab'|'bookstack'} → 충돌 카드 결과 (§7.4) |
 | GET /health | 공개 | {ok, db, version} |
@@ -532,7 +536,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 9/2 | P0 | 모노레포·CI·Supabase 프로젝트·Drizzle 초기 마이그레이션·`packages/schema` 전체 | `pnpm test` green, 스키마 JSON export |
 | 9/3 | P0 | `packages/compiler` 전체 + golden 3 · paylab 픽스처 코드·문서 작성 | golden 통과, manifest_hash 고정 |
 | 9/4 | P1 | API: teams/projects/repos/tokens/documents/context-items/conflicts/questions | vitest api green |
-| 9/5 | P1 | API: proposals/versions:publish/packs/sync/progress/roadmap · 발행 트랜잭션 | 손으로 넣은 항목이 Pack으로 나옴 |
+| 9/5 | P1 | API: proposals/versions/publish/packs/sync/progress/roadmap · 발행 트랜잭션 | 손으로 넣은 항목이 Pack으로 나옴 |
 | 9/6 | P1 | 웹 화면 2·5·7(로그인·Context·Pack Explorer) | **GATE 1**: 웹에서 항목 → 발행 → Pack Explorer 확인 |
 | 9/7 | P2 | 플러그인 레이아웃·`setup`·`scan`·`validate`·credentials·`plugin validate` | 새 레포에서 setup 완료 |
 | 9/8 | P2 | `sync`(백업·atomic·post-verify)·`status`·SessionStart 훅 | 훅 알림 → sync → applied 보고 |

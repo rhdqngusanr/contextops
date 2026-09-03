@@ -5,7 +5,7 @@ import { getDb, type Db } from '../../db/client'
 import { readBearer, resolveActor, type Actor } from './auth'
 import { ApiError } from './error'
 import { logRequest } from './log'
-import { failure, noContent, ok } from './respond'
+import { failure, matchesEtag, noContent, notModified, ok, packText, quoteEtag } from './respond'
 
 // =====================================================================
 //  Route Handler 를 감싸는 자리 하나 (SPEC §5 · §11)
@@ -34,8 +34,17 @@ export type RouteContext<P> = {
    * ★ 한 요청에 한 번만 판정한다 (두 번 불러도 같은 주체 · 세션 upsert 도 한 번).
    */
   actor(): Promise<Actor>
-  ok(data: unknown, status?: number): Response
+  ok(data: unknown, status?: number, headers?: Record<string, string>): Response
   noContent(): Response
+  /**
+   * ETag 가 붙는 응답을 한 번에 낸다 (SPEC §5 packs 세 줄).
+   * `If-None-Match` 가 맞으면 **본문을 만들지 않고** 304 를 돌려준다 —
+   * 그래서 `body` 는 값이 아니라 함수다. 안 그러면 304 인데도 Pack 을 조립한다.
+   */
+  cached(
+    opts: { etag: string; cacheControl: string; kind: 'json' | 'text' },
+    body: () => unknown,
+  ): Response
   /** 로그에 남길 식별자를 붙인다 (SPEC §11 — id 만, 이름·본문 금지). */
   note(fields: { user_id?: string; project_id?: string }): void
 }
@@ -49,7 +58,10 @@ type NextContext<P> = { params: Promise<P> }
  * `name` 은 로그에 남는 **라우트 모양**이다 (`POST /projects/{id}/repos`).
  * ⚠ 실제 경로를 로그에 남기지 마라 — id 가 로그에 흩어지면 지울 수가 없다.
  */
-export function route<P extends Record<string, string> = Record<string, never>>(
+//  ⚠ 값이 `string | string[]` 인 이유 — catch-all 구간(`[...path]`)은 배열로 온다
+//    (`GET …/packs/{semver}/files/{path}` 의 path 는 `/` 를 품는다). `string` 으로만
+//    잡으면 그 라우트가 타입 검사에서 막히고, 그때 `as any` 로 뚫게 된다.
+export function route<P extends Record<string, string | string[]> = Record<string, never>>(
   name: string,
   handle: Handler<P>,
 ): (req: Request, next: NextContext<P>) => Promise<Response> {
@@ -81,8 +93,18 @@ export function route<P extends Record<string, string> = Record<string, never>>(
           }
           return resolved
         },
-        ok: (data, status) => ok(data, requestId, status),
+        ok: (data, status, headers) => ok(data, requestId, status, headers),
         noContent,
+        cached: (opts, body) => {
+          if (matchesEtag(req.headers.get('if-none-match'), opts.etag)) {
+            return notModified(requestId, opts)
+          }
+          const value = body()
+          return opts.kind === 'text'
+            ? packText(String(value), requestId, opts)
+            //  JSON 쪽은 봉투를 지킨다 — 화면이 `{data, meta}` 하나만 읽게.
+            : ok(value, requestId, 200, { etag: quoteEtag(opts.etag), 'cache-control': opts.cacheControl })
+        },
         note: (fields) => Object.assign(noted, fields),
       })
     } catch (err) {
@@ -124,11 +146,19 @@ export function issuesOf(err: ZodError): { path: string; message: string }[] {
 
 /** body 를 계약으로 파싱한다. **라우트에서 손으로 검사하지 마라** (P1). */
 export async function parseBody<T extends ZodType>(req: Request, schema: T): Promise<z.output<T>> {
+  const text = await req.text()
   let raw: unknown
-  try {
-    raw = await req.json()
-  } catch {
-    throw new ApiError('VALIDATION_FAILED', 'JSON 본문이 아니다')
+  //  ⚠ 빈 본문은 `{}` 로 읽는다. `{note?}` 처럼 전부 optional 인 요청은 본문 없이 오는 것이
+  //    정상이고, 그걸 「JSON 이 아니다」로 막으면 라우트마다 우회 문을 파게 된다.
+  //    필수 필드가 있는 스키마는 어차피 여기서 필드별 issues 로 400 이 된다 — 그쪽이
+  //    화면에 더 쓸모 있는 답이다.
+  if (text.trim().length === 0) raw = {}
+  else {
+    try {
+      raw = JSON.parse(text)
+    } catch {
+      throw new ApiError('VALIDATION_FAILED', 'JSON 본문이 아니다')
+    }
   }
   const parsed = schema.safeParse(raw)
   if (!parsed.success) throw new ApiError('VALIDATION_FAILED', undefined, issuesOf(parsed.error))

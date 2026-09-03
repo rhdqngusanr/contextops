@@ -25,11 +25,11 @@ const webSrc = fileURLToPath(new URL('../src', import.meta.url))
 
 /**
  * 아직 **내는 자리가 없는** 코드 → 그 코드를 만들 PLAN 행.
- * 지금은 API 1군까지 왔고, 아래 넷은 뒤 행이 주인이다.
+ * 지금은 API 2군까지 왔고, 남은 둘은 P3 가 주인이다.
+ * ⚠ `STALE_BASE`·`COMPILE_FAILED` 는 발행 트랜잭션이 실제로 내게 되어 여기서 지웠다
+ *   (`lib/api/publish.ts` · PLAN P1 셋째 행). 표를 늘려서 초록을 만들지 마라.
  */
 const WITHOUT_OWNER: Partial<Record<ErrorCode, string>> = {
-  STALE_BASE: 'PLAN P1 셋째 행 — 발행 트랜잭션 (SPEC §2.1 1단계)',
-  COMPILE_FAILED: 'PLAN P1 셋째 행 — 발행 트랜잭션 (SPEC §2.1 5단계)',
   BUDGET_EXCEEDED: 'PLAN P3 첫 행 — 서버측 AI 예산 가드 (SPEC §7.5)',
   RATE_LIMITED: 'PLAN P3 첫 행 — 게스트 데모의 IP당 상한 (SPEC §7.4)',
 }
@@ -94,10 +94,11 @@ describe('🔴 정의만 있고 아무 일도 안 하는 코드가 없다 (FINDI
     ).toEqual([])
   })
 
-  it('API 1군이 쓰는 여섯은 실제로 내는 자리가 있다', () => {
+  it('API 1·2군이 쓰는 여덟은 실제로 내는 자리가 있다', () => {
     const live = ERROR_CODES.filter((code) => callersOf(code).length > 0)
     expect([...live].sort()).toEqual([
-      'FORBIDDEN', 'INTERNAL', 'NOT_FOUND', 'REVISION_CONFLICT', 'UNAUTHORIZED', 'VALIDATION_FAILED',
+      'COMPILE_FAILED', 'FORBIDDEN', 'INTERNAL', 'NOT_FOUND',
+      'REVISION_CONFLICT', 'STALE_BASE', 'UNAUTHORIZED', 'VALIDATION_FAILED',
     ])
   })
 })

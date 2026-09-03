@@ -42,6 +42,17 @@ function assertRank(role: TeamRole, min: TeamRole): void {
   if (ROLE_RANK[role] < ROLE_RANK[min]) fail('FORBIDDEN', `${min} 권한이 필요하다`)
 }
 
+/**
+ * 기기 토큰**만** 할 수 있는 일 (SPEC §5 `sync-reports`·`progress` 의 권한 칸).
+ * ★ 왜 사람을 막나 — 이 둘은 「그 기기에서 무슨 일이 있었나」의 보고다. 사람이 브라우저에서
+ *   대신 적을 수 있으면 보고의 주체가 흐려지고, 화면의 "마지막 보고" 가 무엇의 시각인지
+ *   말할 수 없게 된다. 사람이 손으로 올리고 싶으면 그것도 기기(CLI)를 통한다 (`source:'manual'`).
+ */
+export function requireDevice(actor: Actor): Extract<Actor, { kind: 'device' }> {
+  if (actor.kind !== 'device') fail('FORBIDDEN', '기기 토큰으로만 할 수 있다')
+  return actor
+}
+
 /** 팀 단위 작업 (`POST /teams/{id}/projects`). */
 export async function requireTeam(db: Db, actor: Actor, teamId: string, min: TeamRole): Promise<TeamRole> {
   //  기기 토큰은 팀 단위 작업을 하지 않는다 — 플러그인이 하는 일은 전부 프로젝트 안이다.
