@@ -8,7 +8,8 @@
     "dev": "next dev",
     "start": "next start",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "dev:db": "tsx scripts/dev-server.ts"
   },
   "dependencies": {
     "@contextops/compiler": "workspace:*",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-socket": "^0.0.14",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

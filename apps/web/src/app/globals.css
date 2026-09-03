@@ -112,7 +112,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   font-size: var(--fs-label);
   color: var(--ink-3);
   letter-spacing: 0.3px;
-  text-transform: uppercase;
+  /* ⚠ `text-transform: uppercase` 를 쓰지 마라 — 이 제품의 UI 는 한글이라 한글은 그대로고
+     영문 라벨만 대문자로 소리친다 (`타입` `상태` `SCOPE` 가 나란히 있었다). 눈으로 봤다. */
+  /* ⚠ 좁은 자리에서 「타 입」으로 접혔다. 라벨은 안 접는다. */
+  white-space: nowrap;
 }
 
 .meta { font-size: var(--fs-label); color: var(--ink-3); }
@@ -131,7 +134,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .grow { flex: 1 1 auto; min-width: 0; }
 .pad { padding: var(--sp-5); }
 .pad-sm { padding: var(--sp-3); }
-.items-start { align-items: flex-start; }
+ /* ⚠ `.row` 가 아래에서 align-items:center 를 준다. 같은 특이도면 뒤가 이기므로
+    여기서는 `.row.items-start` 로 한 단계 올린다 — 안 그러면 3열이 세로 가운데로
+    어긋난다 (눈으로 확인했다: .ci/shots/s7-pack.png 첫 판). */
+.row.items-start, .items-start { align-items: flex-start; }
 .drawer { width: var(--drawer-w); flex: 0 0 var(--drawer-w); }
 .pack-tree { width: var(--pack-tree-w); flex: 0 0 var(--pack-tree-w); }
 .pack-side { width: var(--pack-side-w); flex: 0 0 var(--pack-side-w); }
@@ -153,6 +159,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   background: transparent;
   color: var(--ink-2);
   cursor: pointer;
+  /* ⚠ 좁은 자리에서 「보내 기」로 접혔다 (.ci/shots/s2-login.png 첫 판). 버튼 글자는 안 접는다. */
+  white-space: nowrap;
 }
 .btn:hover { background: var(--surface-hi); color: var(--ink); }
 .btn:disabled { color: var(--ink-4); border-color: var(--line); cursor: not-allowed; }
@@ -238,6 +246,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   border: 1px solid var(--line-hi);
   border-radius: var(--radius);
   padding: 0 var(--sp-2);
+  /* ⚠ flex 컬럼 안에서 칸 전체로 늘어났다 (표의 제목 칸). 칩은 내용만큼만이다. */
+  align-self: flex-start;
 }
 
 /* ── 화면 뼈대 ────────────────────────────────────────────────────── */
@@ -349,3 +359,15 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .pack-lineno { flex: 0 0 auto; min-width: var(--sp-6); text-align: right; user-select: none; }
 /* 본문은 줄바꿈을 지킨다 — 잘린 문장이 없는지 눈으로 봐야 한다 (loop/PROMPT.md ⑦3층) */
 .pack-linetext { white-space: pre-wrap; word-break: break-word; }
+
+/* 파일 트리의 한 줄 — 경로는 240px 안에서 **접어서 다 보여 준다.**
+   ⚠ `.btn` 의 `white-space: nowrap` 을 여기서만 푼다. 경로가 잘리면 어느 파일인지
+     알 수 없고, 그러면 트리가 아무 일도 안 하는 목록이 된다 (눈으로 확인했다). */
+.tree-item {
+  white-space: normal;
+  word-break: break-all;
+  text-align: left;
+  gap: var(--sp-2);
+}
+/* ⚠ sha 4자는 안 접는다 — `.tree-item` 의 break-all 이 `4175` 를 `41`/`75` 로 쪼갰다. */
+.tree-sha { white-space: nowrap; word-break: normal; flex: 0 0 auto; }

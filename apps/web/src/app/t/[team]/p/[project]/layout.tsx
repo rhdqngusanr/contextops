@@ -51,8 +51,9 @@ export default function ProjectLayout({
             </a>
           ))}
         </div>
-        {/* 「실시간」이라는 말을 쓰지 않는다 (DESIGN_BRIEF §2-3). */}
-        <span className="meta ink-4">상태는 각 기기의 마지막 보고 기준입니다.</span>
+        {/* ⚠ 여기에 「상태는 마지막 보고 기준입니다」 같은 안내를 두지 마라 — 그 문장은
+            기기 상태를 **보여 주는 화면**(화면 9)의 것이다. 화면에 없는 것을 설명하는
+            글은 읽는 사람이 무엇을 보고 있는지 헷갈리게 만든다 (눈으로 확인하고 뺐다). */}
       </nav>
       <main className="main">
         <div className="main-inner">{children}</div>

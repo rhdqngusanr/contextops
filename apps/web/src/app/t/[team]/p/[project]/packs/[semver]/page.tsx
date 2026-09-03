@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import type { ContextItem, Manifest, ManifestFile } from '@contextops/schema'
 //  ⚠ `@contextops/compiler` 가 아니라 `/tag` 다. index 는 node:crypto 를 재수출해서
 //    브라우저 번들에 못 들어간다 — 이유는 그 패키지의 package.json 주석에 있다.
@@ -55,7 +55,9 @@ function PackExplorer({ project, semver }: { project: ProjectRef; semver: string
   }
 
   const m = manifest.result.data
-  const first = m.files[0]
+  //  ⚠ 처음 열리는 파일은 **CLAUDE.md** 다. 경로순 첫째(`.claude/rules/…`)를 열면
+  //    사람이 Pack 의 현관이 아니라 곁방부터 보게 된다 (눈으로 확인하고 고쳤다).
+  const first = m.files.find((f) => f.path === 'CLAUDE.md') ?? m.files[0]
   const current = m.files.find((f) => f.path === path) ?? first
   const byItemId = new Map<string, ContextItem>(
     items.result.state === 'ready' ? items.result.data.items.map((i) => [i.id, i]) : [],
@@ -109,13 +111,13 @@ function FileTree({
         <button
           key={f.path}
           type="button"
-          className="btn btn-sm row-between"
+          className="btn btn-sm row-between tree-item"
           aria-current={f.path === current?.path ? 'true' : undefined}
           onClick={() => onPick(f.path)}
         >
           <span className="mono">{f.path}</span>
           {/* sha 앞 4자 — 같은 파일이 버전 간에 바뀌었는지 눈으로 잡는 자리 */}
-          <span className="mono ink-4" title={f.sha256}>{f.sha256.slice(0, 4)}</span>
+          <span className="mono ink-4 tree-sha" title={f.sha256}>{f.sha256.slice(0, 4)}</span>
         </button>
       ))}
     </nav>
@@ -136,7 +138,21 @@ function FileView({
   byItemId: Map<string, ContextItem>
 }) {
   const body = useAsync(() => fetchPackFile(project.id, semver, file.path), [project.id, semver, file.path])
+  //  ★ 고른 줄을 **주소에 남긴다** (`#L12`) — 「이 줄이 어느 항목에서 왔나」를 링크로
+  //    건네줄 수 있어야 역추적이 리뷰에서 쓰인다. 버전은 불변이라(SPEC §6) 그 링크는
+  //    영원히 같은 것을 가리킨다.
+  //    ⚠ 서버 렌더에는 조각이 없다 — 마운트 뒤에 읽는다 (`useEffect`).
   const [line, setLine] = useState<number | null>(null)
+  useEffect(() => {
+    const m = /^#L(\d+)$/.exec(window.location.hash)
+    if (m) setLine(Number(m[1]) - 1)
+  }, [file.path])
+
+  function pick(index: number): void {
+    setLine(index)
+    //  `replaceState` 다 — 줄을 훑을 때마다 뒤로 가기 기록이 쌓이면 못 빠져나온다.
+    window.history.replaceState(null, '', `#L${index + 1}`)
+  }
 
   const lines = body.result.state === 'ready' ? body.result.data.split('\n') : []
   //  ⚠ 본문이 길다. 파일이 바뀔 때만 다시 훑는다.
@@ -166,7 +182,7 @@ function FileView({
               type="button"
               className="pack-line"
               aria-selected={selectedTag !== undefined && trace.get(i) === selectedTag}
-              onClick={() => setLine(i)}
+              onClick={() => pick(i)}
             >
               <span className="pack-lineno ink-4">{i + 1}</span>
               <span className="pack-linetext">{text === '' ? ' ' : text}</span>

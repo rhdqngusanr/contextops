@@ -2,17 +2,9 @@ import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { eq } from 'drizzle-orm'
 import { Manifest } from '@contextops/schema'
 
-import { contextItems } from '../src/db/schema'
-import { POST as createTeam } from '../src/app/api/v1/teams/route'
-import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
-import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
-import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
-import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
-import { PATCH as updateItem } from '../src/app/api/v1/context-items/[id]/route'
 import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
 import { POST as submitProposal } from '../src/app/api/v1/proposals/[id]/submit/route'
 import { POST as approveProposal } from '../src/app/api/v1/proposals/[id]/approve/route'
@@ -24,6 +16,7 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from '../test/helpers/db'
+import { seedPaylab } from './seed'
 
 // =====================================================================
 //  관통 2단계 — 픽스처 문서 → 항목 → 발행 → Pack 파일 (SPEC §2.1 · §5)
@@ -90,88 +83,16 @@ async function main(): Promise<void> {
   const { pg, db } = await freshDb()
 
   try {
-    const owner = sessionJwt('walkthrough-owner')
+    // ── ①②③ 팀·프로젝트·문서·항목 — 씨앗은 `scripts/seed.ts` 하나다 ────
+    //  ⚠ 여기서 다시 적지 마라. 같은 서사를 개발용 서버(dev-server.ts)도 쓴다 —
+    //    갈리면 **관통이 보는 데이터와 사람이 화면에서 보는 데이터가 달라진다.**
+    const seed = await seedPaylab('walkthrough-owner')
+    const { owner, projectId } = seed
 
-    // ── ① 팀 · 프로젝트 · 레포 ─────────────────────────────────────────
-    const team = await dataOf(await createTeam(
-      req('POST', '/api/v1/teams', { auth: owner, body: { name: 'Paylab', slug: 'paylab' } }), params({}),
-    ))
-    const teamId = team.id as string
-    const project = await dataOf(await createProject(
-      req('POST', `/api/v1/teams/${teamId}/projects`, { auth: owner, body: { name: 'paylab-api', slug: 'paylab-api' } }),
-      params({ id: teamId }),
-    ))
-    const projectId = project.id as string
-    await createRepo(
-      req('POST', `/api/v1/projects/${projectId}/repos`, { auth: owner, body: { name: 'paylab-api' } }),
-      params({ id: projectId }),
-    )
-
-    // ── ② 픽스처 문서 2개를 올린다 ─────────────────────────────────────
-    const goals = await dataOf(await createDocument(req('POST', `/api/v1/projects/${projectId}/documents`, {
-      auth: owner, body: { title: '팀 목표와 규칙', kind: 'goal', content: fixtureDoc('goals.md') },
-    }), params({ id: projectId })))
-    const roadmapDoc = await dataOf(await createDocument(req('POST', `/api/v1/projects/${projectId}/documents`, {
-      auth: owner, body: { title: '지난 분기 로드맵', kind: 'roadmap', content: fixtureDoc('old-roadmap.md') },
-    }), params({ id: projectId })))
-    check('픽스처 문서 2개가 들어갔다', typeof goals.current_version_id === 'string' && typeof roadmapDoc.current_version_id === 'string')
-
-    const goalsVersion = goals.current_version_id as string
-    const roadmapVersion = roadmapDoc.current_version_id as string
-
-    // ── ③ 항목 초안 → 전부 active ──────────────────────────────────────
-    const drafts = [
-      fromDoc('item_mission_paylab', 'mission', goalsVersion, {
-        title: 'PSP 가 흔들려도 결제는 흔들리지 않는다',
-        body: '가맹점이 우리를 쓰는 이유는 하나다 — 밖이 실패해도 결제가 선다.',
-        data: { statement: 'PSP 장애가 가맹점 결제로 번지지 않게 한다.', rationale: '가맹점이 우리를 쓰는 유일한 이유다.' },
-      }),
-      fromDoc('item_goal_success_rate', 'goal', goalsVersion, {
-        title: '결제 승인 성공률 99.5%',
-        body: 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
-        data: { outcome: '결제 승인 성공률 99.5%', metric: '주간 승인 성공률', deadline: '2026-06-30' },
-      }),
-      fromDoc('item_policy_retry', 'policy', goalsVersion, {
-        title: 'PSP 재시도는 지수 백오프 5회',
-        body: '고정 간격 재시도는 금지한다 — 모든 인스턴스가 같은 박자로 다시 때린다.',
-        data: { rule: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다', severity: 'must', enforcement: 'review' },
-      }),
-      fromDoc('item_constraint_card', 'constraint', goalsVersion, {
-        title: '카드 정보를 저장하지 않는다',
-        body: '토큰만 받는다.',
-        data: { statement: '카드 원본 정보를 저장하지 않는다 — 토큰만 받는다.' },
-      }),
-      fromDoc('item_road_m1', 'roadmap', roadmapVersion, {
-        title: 'M1 — 재시도 정책 통일',
-        body: '',
-        data: {
-          milestone_id: 'PL-M1',
-          paths: ['src/payment'],
-          done_when: ['재시도가 지수 백오프로 통일된다', '고정 간격 호출이 0건이다'],
-        },
-      }),
-      fromDoc('item_policy_refund', 'policy', goalsVersion, {
-        title: '환불은 24시간 안에 종결한다',
-        body: '승인률과 부딪히면 환불 속도가 우선이다.',
-        scope: { kind: 'domain', value: 'refund' },
-        data: { rule: '환불 접수→종결을 24시간 안에 끝낸다', severity: 'must', enforcement: 'review' },
-      }),
-    ]
-
-    const batch = await dataOf(await batchDraft(req('POST', `/api/v1/projects/${projectId}/context-items/batch-draft`, {
-      auth: owner,
-      body: { items: drafts, repo: 'paylab-api', scan_summary: { file_count: 42, languages: ['ts'] } },
-    }), params({ id: projectId })))
-    const rejected = batch.rejected as { index: number; issues: unknown[] }[]
-    check('초안 6개가 전부 받아들여졌다', (batch.accepted as unknown[]).length === drafts.length,
-      rejected.length > 0 ? JSON.stringify(rejected) : `accepted ${(batch.accepted as unknown[]).length}`)
-
-    const itemRows = await db.select({ id: contextItems.id }).from(contextItems).where(eq(contextItems.projectId, projectId))
-    for (const row of itemRows) {
-      await updateItem(req('PATCH', `/api/v1/context-items/${row.id}`, {
-        auth: owner, body: { revision: 1, changes: { status: 'active' } },
-      }), params({ id: row.id }))
-    }
+    check('픽스처 문서 2개가 들어갔다', seed.goalsVersion.length > 0 && seed.roadmapVersion.length > 0)
+    check('초안 6개가 전부 받아들여졌다', seed.accepted === 6 && seed.rejected.length === 0,
+      seed.rejected.length > 0 ? JSON.stringify(seed.rejected) : `accepted ${seed.accepted}`)
+    check('초안이 전부 active 가 됐다 — 아니면 Pack 에 한 줄도 안 나온다', seed.itemUuids.length === 6)
 
     // ── ④ 발행 ────────────────────────────────────────────────────────
     const first = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
@@ -232,12 +153,12 @@ async function main(): Promise<void> {
         base_version_id: v1.id,
         items: [{
           operation: 'add',
-          draft: fromDoc('item_goal_settlement', 'goal', goalsVersion, {
+          draft: fromDoc('item_goal_settlement', 'goal', seed.goalsVersion, {
             title: '정산 오차 0원',
             body: '일 배치 후 원장 대사 차액으로 잰다.',
             data: { outcome: '정산 오차 0원', metric: '일 배치 후 원장 대사 차액', deadline: '2026-06-30' },
           }),
-          evidence: [{ kind: 'source_document', document_version_id: goalsVersion, start_char: 0, end_char: 200, heading_path: ['2. 올해의 목표'] }],
+          evidence: [{ kind: 'source_document', document_version_id: seed.goalsVersion, start_char: 0, end_char: 200, heading_path: ['2. 올해의 목표'] }],
           reason: '문서에는 있는데 항목에 없었다',
         }],
         relates_to: ['PL-M1'],

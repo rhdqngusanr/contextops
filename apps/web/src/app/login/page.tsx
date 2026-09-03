@@ -65,13 +65,17 @@ function LoginCard() {
           </div>
         ) : null}
 
-        <a
-          className="btn btn-primary text-center"
-          aria-disabled={config === null}
-          href={config === null ? undefined : oauthUrl(config, 'github', next)}
-        >
-          GitHub로 계속
-        </a>
+        {/* 🔴 설정이 없으면 **비활성 버튼**이지 accent 링크가 아니다.
+            ★ 왜 — `<a>` 에는 `:disabled` 가 안 먹어서, 눌러도 아무 일 없는 파란 버튼이
+              남는다. 그건 「아직 없다」가 아니라 「고장」으로 읽힌다 (눈으로 확인했다:
+              .ci/shots/s2-login.png 첫 판). 태그 자체를 바꿔야 상태가 보인다. */}
+        {config === null ? (
+          <button type="button" className="btn text-center" disabled>GitHub로 계속</button>
+        ) : (
+          <a className="btn btn-primary text-center" href={oauthUrl(config, 'github', next)}>
+            GitHub로 계속
+          </a>
+        )}
 
         <div className="col-tight">
           <label className="label" htmlFor="email">이메일 링크 받기</label>
