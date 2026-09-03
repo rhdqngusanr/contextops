@@ -25,9 +25,11 @@
 - [x] **`packages/compiler` 전체** — partition · sort · render · sourcemap · hash (SPEC §4) — `8e02f48`
       **완료 기준**: golden 3종 byte 일치 · **항목 순서를 셔플해도 출력 동일** ·
       `manifest_hash` 고정값 일치 · `Date.now`/`Math.random`/네트워크 0건 (P4)
-- [ ] **paylab 픽스처** — `fixtures/paylab-api`(TS ~40파일, 의도된 어긋남 3곳) ·
-      `fixtures/paylab-docs`(150줄 + 폐기 로드맵 1개)
+- [x] **paylab 픽스처** — `fixtures/paylab-api`(TS 42파일, 의도된 어긋남 3곳) ·
+      `fixtures/paylab-docs`(151줄 + 폐기 로드맵 1개) — `0236e36`
       **완료 기준**: SPEC §10.1 의 기대 결과(충돌 3 · open_question 4 · M1~M3)를 낼 재료가 다 있음
+      → `tools/fixtures.mjs` 가 20종을 센다. 관통(`walkthrough.ps1`) 첫 단계로 붙어서
+      픽스처가 조용히 상하면 관통이 막힌다
 
 ## P1 — API 와 발행 (SPEC 9/4~9/6)
 
