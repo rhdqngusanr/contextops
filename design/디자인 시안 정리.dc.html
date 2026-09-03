@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0}
+body{background:#08090B;color:#EDEFF3;font-family:'Pretendard','Pretendard Variable',-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-wrap:pretty;word-break:keep-all;overflow-wrap:break-word}
+*{box-sizing:border-box}
+a{color:#7B9CFF;text-decoration:none}a:hover{color:#fff}
+::selection{background:#1F4EE0;color:#fff}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#08090B;padding:56px 40px 90px" data-screen-label="Index">
+  <div style="max-width:1080px;margin:0 auto">
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:34px">
+      <span style="width:15px;height:15px;border-radius:3px;background:#1F4EE0;display:inline-block"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.12em;color:#A7AEB9">CONTEXTOPS · DESIGN</span>
+    </div>
+
+    <h1 style="margin:0;font-size:44px;font-weight:700;letter-spacing:-0.035em;line-height:1.15">디자인 시안</h1>
+    <p style="margin:16px 0 0;max-width:60ch;font-size:16.5px;line-height:1.8;color:#A7AEB9">파일 두 개로 정리했습니다. 랜딩은 심사위원용 첫 화면, 앱 화면은 팀장·개발자가 쓰는 7개 화면입니다. 문구와 수치는 디자인 브리프 그대로입니다.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-top:40px">
+      <a href="ContextOps v3.dc.html" style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:26px;display:block;color:inherit" style-hover="border-color:#24304F;background:#0A0E1A">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.1em;color:#7B9CFF;margin-bottom:18px">01 · LANDING</div>
+        <div style="font-size:21px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px">ContextOps v3</div>
+        <div style="font-size:14.5px;line-height:1.75;color:#A7AEB9">히어로 + 제품 창(사이드바·결정 카드·로드맵), Before/After, 왜 git으로 안 되나요, 아는 것/모르는 것, 설치 한 줄.</div>
+        <div style="margin-top:18px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#D5DAE2">열기 →</div>
+      </a>
+      <a href="ContextOps 앱화면.dc.html" style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:26px;display:block;color:inherit" style-hover="border-color:#24304F;background:#0A0E1A">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.1em;color:#7B9CFF;margin-bottom:18px">02 · APP</div>
+        <div style="font-size:21px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px">ContextOps 앱화면</div>
+        <div style="font-size:14.5px;line-height:1.75;color:#A7AEB9">Roadmap · Context(발행 모달) · Proposals(diff) · Packs · Sync · 정리 · 가져오기. 좌측 내비로 전환됩니다.</div>
+        <div style="margin-top:18px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#D5DAE2">열기 →</div>
+      </a>
+    </div>
+
+    <div style="margin-top:56px;padding-top:30px;border-top:1px solid #16181D">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:24px">화면 목록</div>
+      <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;overflow-x:auto">
+        <div style="display:grid;grid-template-columns:56px minmax(180px,1fr) minmax(280px,1.5fr) 120px;gap:16px;padding:12px 20px;min-width:760px;border-bottom:1px solid #16181D;font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.05em;color:#A7AEB9">
+          <span>#</span><span>화면</span><span>담은 것</span><span>상태</span>
+        </div>
+        {{ rows }}
+      </div>
+    </div>
+
+    <div style="margin-top:56px;padding-top:30px;border-top:1px solid #16181D">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:24px">비주얼 규칙</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+        <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:24px">
+          <div style="font-size:16.5px;font-weight:600;margin-bottom:18px">타이포</div>
+          <div style="display:grid;gap:14px;font-size:14.5px;color:#A7AEB9">
+            <div><span style="color:#EDEFF3">Pretendard</span> — 본문·UI·제목 (400/500/600/700)</div>
+            <div><span style="color:#EDEFF3;font-family:'JetBrains Mono',monospace;font-size:14px">JetBrains Mono</span> — 버전·해시·경로·로그·수치</div>
+            <div>제목 32–74px / 본문 15–16.5px / 라벨 11.5–12px</div>
+          </div>
+        </div>
+        <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:24px">
+          <div style="font-size:16.5px;font-weight:600;margin-bottom:18px">색</div>
+          <div style="display:grid;gap:12px">{{ swatches }}</div>
+        </div>
+        <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:24px">
+          <div style="font-size:16.5px;font-weight:600;margin-bottom:18px">상태 칩</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">{{ chips }}</div>
+          <div style="margin-top:18px;font-size:13.5px;line-height:1.75;color:#A7AEB9">색만으로 구분하지 않고 아이콘 + 라벨을 항상 함께 씁니다. AI가 만든 카드에는 주황 <span style="color:#E9A25A">AI 제안</span> 칩이 붙고, 항상 사람의 선택 버튼으로 끝납니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:56px;padding-top:30px;border-top:1px solid #16181D">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:20px">남은 것</div>
+      <div style="display:grid;gap:12px;font-size:15px;line-height:1.7;color:#D5DAE2;max-width:70ch">
+        <div>· 화면 2(로그인·팀 만들기)와 버전 히스토리 타임라인은 아직 없습니다.</div>
+        <div>· 라이트 모드, 모바일 랜딩(390px), 컴포넌트 시트는 요청하시면 이어 만듭니다.</div>
+        <div>· Context 행 클릭 시 열리는 우측 드로어는 안내 문구만 있고 실제 드로어는 미구현입니다.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:900}}">
+const ROWS = [
+  ['1', '랜딩', '히어로 · 제품 창 · Before/After · 설치', '완료'],
+  ['3', '가져오기', 'zip 진행 · 붙여넣기 · 10문항 카드', '완료'],
+  ['4', '정리', '결정 카드 4종 · 필터 · 빈 상태', '완료'],
+  ['5', 'Context', '항목 테이블 · 발행 모달 · 토스트', '완료'],
+  ['6', 'Proposals', '줄 단위 diff · 승인/거절', '완료'],
+  ['7', 'Packs', '파일 트리 · 소스 원문 · 근거 패널', '완료'],
+  ['8', 'Roadmap', '요약 4타일 · 마일스톤 3행 · 근거', '완료'],
+  ['9', 'Sync', '질의창 · 기기 상태 표', '완료'],
+  ['2', '로그인 · 팀 만들기', '—', '미착수']
+];
+
+const COLORS = [
+  ['#1F4EE0', 'accent', '주요 액션 · 선택'],
+  ['#08090B', 'bg', '페이지 바탕'],
+  ['#0C0E12', 'surface', '카드 · 패널'],
+  ['#1B1E24', 'line', '구분선 · 테두리'],
+  ['#5FC48F', 'ok', 'applied · 근거 있음'],
+  ['#E2B04A', 'warn', 'outdated · 충돌'],
+  ['#EF7D72', 'bad', 'failed · 근거 없음'],
+  ['#E9A25A', 'llm', 'AI가 만든 것']
+];
+
+const CHIPS = [
+  ['applied ✓', '#5FC48F', '#1E3B2C'],
+  ['outdated ⚠', '#E2B04A', '#4A3B20'],
+  ['modified ✎', '#7B9CFF', '#24304F'],
+  ['manual ⇩', '#7B9CFF', '#24304F'],
+  ['unknown ?', '#A7AEB9', '#22262E'],
+  ['failed ✕', '#EF7D72', '#4A2622'],
+  ['AI 제안', '#E9A25A', '#4A3520']
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    const mono = "'JetBrains Mono', monospace";
+
+    const rows = React.createElement(React.Fragment, null, ROWS.map((r, i) => {
+      const soon = r[3] === '미착수';
+      return React.createElement('div', {
+        key: r[1],
+        style: {
+          display: 'grid', gridTemplateColumns: '56px minmax(180px,1fr) minmax(280px,1.5fr) 120px',
+          gap: '16px', padding: '14px 20px', minWidth: '760px', alignItems: 'center',
+          borderBottom: i === ROWS.length - 1 ? '0' : '1px solid #16181D', fontSize: '14.5px'
+        }
+      },
+        React.createElement('span', { style: { fontFamily: mono, fontSize: '12.5px', color: '#A7AEB9' } }, r[0]),
+        React.createElement('span', { style: { color: soon ? '#A7AEB9' : '#EDEFF3' } }, r[1]),
+        React.createElement('span', { style: { color: '#A7AEB9', fontSize: '14px' } }, r[2]),
+        React.createElement('span', {
+          style: {
+            fontFamily: mono, fontSize: '11.5px', justifySelf: 'start',
+            color: soon ? '#A7AEB9' : '#5FC48F',
+            border: '1px solid ' + (soon ? '#22262E' : '#1E3B2C'),
+            borderRadius: '4px', padding: '3px 8px'
+          }
+        }, r[3])
+      );
+    }));
+
+    const swatches = React.createElement(React.Fragment, null, COLORS.map(c =>
+      React.createElement('div', { key: c[1], style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+        React.createElement('span', { style: { width: '22px', height: '22px', borderRadius: '5px', background: c[0], border: '1px solid #22262E', flexShrink: 0 } }),
+        React.createElement('span', { style: { fontFamily: mono, fontSize: '12px', width: '68px', color: '#EDEFF3' } }, c[1]),
+        React.createElement('span', { style: { fontFamily: mono, fontSize: '12px', color: '#A7AEB9', width: '76px' } }, c[0]),
+        React.createElement('span', { style: { fontSize: '13.5px', color: '#A7AEB9' } }, c[2])
+      )
+    ));
+
+    const chips = React.createElement(React.Fragment, null, CHIPS.map(c =>
+      React.createElement('span', {
+        key: c[0],
+        style: { fontFamily: mono, fontSize: '11.5px', color: c[1], border: '1px solid ' + c[2], borderRadius: '4px', padding: '4px 9px' }
+      }, c[0])
+    ));
+
+    return { rows: rows, swatches: swatches, chips: chips };
+  }
+}
+</script>
+</body>
+</html>

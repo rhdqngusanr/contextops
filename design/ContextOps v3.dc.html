@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0}
+body{background:#08090B;color:#EDEFF3;font-family:'Pretendard','Pretendard Variable',-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-wrap:pretty;word-break:keep-all;overflow-wrap:break-word}
+*{box-sizing:border-box}
+a{color:#7B9CFF;text-decoration:none}a:hover{color:#fff}
+::selection{background:#1F4EE0;color:#fff}
+@keyframes caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#08090B" data-screen-label="Landing v3">
+
+  <header style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:32px;padding:0 28px;height:52px;background:rgba(8,9,11,0.86);backdrop-filter:blur(12px);border-bottom:1px solid #16181D">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="width:15px;height:15px;border-radius:3px;background:#1F4EE0;display:inline-block"></span>
+      <span style="font-size:16px;font-weight:500;letter-spacing:-0.015em">ContextOps</span>
+    </div>
+    <div style="display:flex;gap:22px;font-size:14.5px;color:#A7AEB9">
+      <a href="#" style="color:#A7AEB9">Docs</a><a href="#" style="color:#A7AEB9">Changelog</a><a href="#" style="color:#A7AEB9">Enterprise</a>
+    </div>
+    <div style="flex:1"></div>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#A7AEB9">v1.2.0</span>
+    <button style="height:30px;padding:0 14px;border:0;border-radius:5px;background:#EDEFF3;color:#08090B;font-size:14px;font-weight:500;cursor:pointer" style-hover="background:#1F4EE0;color:#fff">시작하기</button>
+  </header>
+
+  <section style="padding:76px 28px 0;text-align:center">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border:1px solid #1E2229;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:0.06em;color:#A7AEB9;margin-bottom:34px">
+      <span style="width:6px;height:6px;border-radius:50%;background:#1F4EE0;display:inline-block"></span>TEAM CONTEXT FOR CLAUDE CODE
+    </div>
+    <h1 style="margin:0 auto;max-width:22ch;font-family:'Pretendard',sans-serif;font-weight:400;font-size:clamp(42px,5.4vw,74px);line-height:1.08;letter-spacing:-0.035em;font-weight:700">팀원 모두가 동일한<br>AI 설정으로 일합니다</h1>
+    <p style="margin:26px auto 0;max-width:56ch;font-family:'Pretendard',sans-serif;font-size:17.5px;line-height:1.8;color:#9AA1AC">팀장이 승인한 목표·로드맵·결정을 모든 팀원의 Claude Code에 같은 버전으로 배포하고, 로드맵이 실제로 진행되는지 근거와 함께 보여줍니다.</p>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:34px;flex-wrap:wrap">
+      <button style="height:44px;padding:0 22px;border:0;border-radius:6px;background:#1F4EE0;color:#fff;font-family:'Pretendard',sans-serif;font-size:16px;font-weight:500;cursor:pointer" style-hover="background:#3D66F0">샘플 팀으로 둘러보기</button>
+      <button style="height:44px;padding:0 22px;border:1px solid #22262E;border-radius:6px;background:transparent;color:#EDEFF3;font-family:'Pretendard',sans-serif;font-size:16px;font-weight:500;cursor:pointer" style-hover="border-color:#3A404A">2분 영상 보기</button>
+    </div>
+    <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#A7AEB9">팀장 브라우저 15분 · 개발자 <span style="color:#A7AEB9">npx contextops setup</span></div>
+  </section>
+
+  <section style="padding:56px 28px 0">
+    <div style="max-width:1320px;margin:0 auto;border:1px solid #1B1E24;border-radius:12px;background:#0C0E12;overflow-x:auto;box-shadow:0 40px 120px -40px rgba(31,78,224,0.35)">
+      <div style="display:flex;align-items:center;gap:14px;height:38px;padding:0 14px;min-width:1160px;border-bottom:1px solid #16181D;background:#0A0B0F">
+        <div style="display:flex;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#2A2E36;display:inline-block"></span><span style="width:9px;height:9px;border-radius:50%;background:#2A2E36;display:inline-block"></span><span style="width:9px;height:9px;border-radius:50%;background:#2A2E36;display:inline-block"></span></div>
+        <div style="display:flex;gap:2px;font-family:'JetBrains Mono',monospace;font-size:12.5px">
+          <span style="padding:4px 10px;border-radius:4px;background:#15181E;color:#EDEFF3">정리 · 4</span>
+          <span style="padding:4px 10px;color:#A7AEB9">Context</span>
+          <span style="padding:4px 10px;color:#A7AEB9">Packs</span>
+          <span style="padding:4px 10px;color:#A7AEB9">Roadmap</span>
+        </div>
+        <div style="flex:1"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9">manifest 3f9c2e1a</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(180px,224px) minmax(420px,1fr) minmax(0,300px);min-width:1160px;min-height:560px">
+        <div style="border-right:1px solid #16181D;padding:16px 12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 8px 12px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#A7AEB9">PROJECTS</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9">⌘J</span>
+          </div>
+          <div style="display:grid;gap:1px">{{ navItems }}</div>
+          <div style="margin-top:22px;padding:0 8px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:12px">SYNC</div>
+            <div style="display:grid;gap:9px;font-family:'JetBrains Mono',monospace;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">A</span><span style="color:#5FC48F">v1.2.0</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">B</span><span style="color:#5FC48F">v1.2.0</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">C</span><span style="color:#E2B04A">v1.1.0</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:26px 28px;border-right:1px solid #16181D">
+          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.06em;color:#7B9CFF;border:1px solid #24304F;border-radius:4px;padding:2px 7px">{{ card.kind }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#A7AEB9">{{ card.meta }}</span>
+          </div>
+          <div style="font-family:'Pretendard',sans-serif;font-size:24px;font-weight:600;letter-spacing:-0.025em;line-height:1.35;margin:14px 0 22px">{{ card.title }}</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+            <div style="border:1px solid #1B1E24;border-radius:8px;background:#0A0B0F;padding:16px 18px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9;margin-bottom:12px">{{ card.aLabel }}</div>
+              <div style="font-family:'Pretendard',sans-serif;font-size:16px;line-height:1.75;color:#D5DAE2">{{ card.aBody }}</div>
+            </div>
+            <div style="border:1px solid #1B1E24;border-radius:8px;background:#0A0B0F;padding:16px 18px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9;margin-bottom:12px">{{ card.bLabel }}</div>
+              <div style="font-family:'Pretendard',sans-serif;font-size:16px;line-height:1.75;color:#D5DAE2">{{ card.bBody }}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:24px;font-family:'Pretendard',sans-serif;font-size:15px;font-weight:500">{{ card.ask }}</div>
+          <sc-if value="{{ pending }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">{{ choices }}</div>
+          </sc-if>
+          <sc-if value="{{ resolved }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:16px;padding:12px 14px;border:1px solid #1E3B2C;border-radius:7px;background:#0B140F;display:flex;align-items:center;gap:10px;font-family:'Pretendard',sans-serif;font-size:15px;color:#5FC48F;animation:fadeIn .22s ease">
+            <span>✓</span><span>{{ resolvedLabel }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#A7AEB9">rev 7 로 반영 예정</span>
+          </div>
+          </sc-if>
+
+          <div style="margin-top:30px;padding-top:22px;border-top:1px solid #16181D">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:14px">CLAUDE CODE · SESSION</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;line-height:2;color:#9AA1AC">
+              <div><span style="color:#7B9CFF">›</span> /contextops:sync</div>
+              <div style="color:#5FC48F">✓ CLAUDE.md, rules/bookstack-roadmap.md 갱신 · applied</div>
+              <div><span style="color:#7B9CFF">›</span> progress --milestone BS-M2</div>
+              <div style="color:#5FC48F">202 accepted · evidence 1 · 코드 본문 0 bytes<span style="display:inline-block;width:7px;height:14px;background:#5FC48F;margin-left:6px;vertical-align:-2px;animation:caret 1.1s steps(1) infinite"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:26px 22px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:18px">BS-M2 검색 API 연동</div>
+          <div style="display:flex;align-items:baseline;gap:7px;letter-spacing:-0.025em;margin-bottom:16px">
+            <span style="font-size:46px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1">2</span>
+            <span style="font-size:20px;font-weight:500;color:#A7AEB9">/3</span>
+          </div>
+          <div style="display:flex;gap:3px;margin-bottom:22px">
+            <div style="flex:1;height:5px;border-radius:3px;background:#1F4EE0"></div>
+            <div style="flex:1;height:5px;border-radius:3px;background:#1F4EE0"></div>
+            <div style="flex:1;height:5px;border-radius:3px;background:#1E2229"></div>
+          </div>
+          <div style="display:grid;gap:13px;font-family:'Pretendard',sans-serif;font-size:15px;line-height:1.5">
+            <div style="display:grid;grid-template-columns:16px 1fr;gap:9px"><span style="color:#5FC48F">✓</span><span>카카오 API 실응답 검증 <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#A7AEB9">근거 2</span></span></div>
+            <div style="display:grid;grid-template-columns:16px 1fr;gap:9px"><span style="color:#5FC48F">✓</span><span>ISBN 13자리 정규화 <span style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#A7AEB9">근거 1</span></span></div>
+            <div style="display:grid;grid-template-columns:16px 1fr;gap:9px;color:#A7AEB9"><span>○</span><span>분야 없음 처리 · 근거 없음</span></div>
+          </div>
+          <div style="margin-top:26px;padding-top:20px;border-top:1px solid #16181D">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:14px">지금까지 모인 항목</div>
+            <div style="display:grid;gap:10px;font-family:'JetBrains Mono',monospace;font-size:13px">
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">goal</span><span>4</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">roadmap</span><span>3</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">policy</span><span>6</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">adr</span><span>2</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:#A7AEB9">open_question</span><span>4</span></div>
+            </div>
+          </div>
+          <div style="margin-top:26px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9;line-height:1.9">마지막 보고 10분 전<br>서버는 코드 본문을 보지 않습니다</div>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1320px;margin:14px auto 0;display:flex;justify-content:space-between;gap:20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#A7AEB9;flex-wrap:wrap">
+      <span>왼쪽 목록을 눌러 다른 결정 카드를 보세요</span>
+      <span>GUEST · 읽기 전용 · 매일 03:00 초기화</span>
+    </div>
+  </section>
+
+  <section style="padding:110px 28px 0">
+    <div style="max-width:1320px;margin:0 auto">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:56px;align-items:center">
+        <div>
+          <h2 style="margin:0;font-family:'Pretendard',sans-serif;font-weight:400;font-size:38px;line-height:1.22;letter-spacing:-0.03em;font-weight:700">같은 질문에<br>같은 답이 나옵니다</h2>
+          <p style="margin:20px 0 0;font-family:'Pretendard',sans-serif;font-size:16px;line-height:1.85;color:#9AA1AC;max-width:44ch">팀원마다 다른 문서를 읽던 Claude가 하나의 승인된 버전을 읽습니다. 답에는 항상 출처와 승인 시점이 붙습니다.</p>
+          <div style="margin-top:24px"><a href="#">Learn more</a></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+          <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:22px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#EF7D72;margin-bottom:18px">BEFORE</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9;margin-bottom:16px">북스택 검색 API, 검증됐어?</div>
+            <div style="display:grid;gap:14px;font-family:'Pretendard',sans-serif;font-size:15.5px;line-height:1.7;color:#D5DAE2">
+              <div>“아직 확인하지 못했습니다.”</div>
+              <div>“8월 4일 검증 완료로 적혀 있습니다.”</div>
+            </div>
+            <div style="margin-top:20px;font-family:'Pretendard',sans-serif;font-size:14.5px;color:#EF7D72">같은 팀, 다른 답</div>
+          </div>
+          <div style="border:1px solid #24304F;border-radius:10px;background:#0A0E1A;padding:22px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#7B9CFF;margin-bottom:18px">AFTER · v1.2.0</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#A7AEB9;margin-bottom:16px">북스택 검색 API, 검증됐어?</div>
+            <div style="font-family:'Pretendard',sans-serif;font-size:15.5px;line-height:1.7;color:#EDEFF3">“2026-08-04 실제 API 검색 10권 검증 완료. ISBN 13자리, 분야 정보 없음.”</div>
+            <div style="margin-top:16px;font-family:'Pretendard',sans-serif;font-size:14px;line-height:1.7;color:#A7AEB9">근거: 북스택 현재 상태 §검색 API · 팀장 승인 2026-09-01</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:110px 28px 0">
+    <div style="max-width:1320px;margin:0 auto">
+      <h2 style="margin:0 0 12px;font-family:'Pretendard',sans-serif;font-weight:400;font-size:38px;letter-spacing:-0.03em;font-weight:700">왜 git으로는 안 되나요</h2>
+      <p style="margin:0 0 40px;font-family:'Pretendard',sans-serif;font-size:16px;color:#9AA1AC;max-width:52ch">DeepWiki는 코드를 사람에게 설명합니다. ContextOps는 팀의 결정을 AI에게 꽂습니다.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+        <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:26px 24px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#7B9CFF;margin-bottom:18px">01</div>
+          <div style="font-family:'Pretendard',sans-serif;font-size:20px;font-weight:500;line-height:1.45;letter-spacing:-0.02em">팀장은 git을 안 씁니다.</div>
+        </div>
+        <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:26px 24px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#7B9CFF;margin-bottom:18px">02</div>
+          <div style="font-family:'Pretendard',sans-serif;font-size:20px;font-weight:500;line-height:1.45;letter-spacing:-0.02em">컨텍스트는 레포 하나에 갇히지 않습니다.</div>
+        </div>
+        <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:26px 24px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#7B9CFF;margin-bottom:18px">03</div>
+          <div style="font-family:'Pretendard',sans-serif;font-size:20px;font-weight:500;line-height:1.45;letter-spacing:-0.02em">git은 “왜”를 모릅니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:110px 28px 0">
+    <div style="max-width:1320px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
+      <div style="border:1px solid #1B1E24;border-radius:10px;background:#0C0E12;padding:30px 28px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#5FC48F;margin-bottom:24px">서버가 아는 것</div>
+        <div style="display:grid;gap:13px;font-family:'Pretendard',sans-serif;font-size:16px;font-weight:500">
+          <div>팀·프로젝트 ID</div><div>구조화 항목</div><div>문서 원문</div><div>경로·줄·커밋</div><div>버전·해시</div>
+        </div>
+      </div>
+      <div style="border:1px solid #1B1E24;border-radius:10px;background:#0A0B0F;padding:30px 28px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;color:#A7AEB9;margin-bottom:24px">모르는 것</div>
+        <div style="display:grid;gap:13px;font-family:'Pretendard',sans-serif;font-size:16px;font-weight:500;color:#A7AEB9">
+          <div>저장소 코드 본문</div><div>환경변수·secret</div><div>개인 CLAUDE.local.md</div><div>Auto Memory</div><div>Claude 대화</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:110px 28px 100px">
+    <div style="max-width:1320px;margin:0 auto;border:1px solid #1B1E24;border-radius:12px;background:linear-gradient(180deg,#0D1220,#0A0B0F);padding:64px 40px;text-align:center">
+      <h2 style="margin:0;font-family:'Pretendard',sans-serif;font-weight:400;font-size:40px;letter-spacing:-0.03em;font-weight:700">개발자 설치는 한 줄</h2>
+      <p style="margin:16px 0 30px;font-family:'Pretendard',sans-serif;font-size:15.5px;color:#9AA1AC">그 다음은 Claude Code에서 <span style="font-family:'JetBrains Mono',monospace;font-size:15px;color:#7B9CFF">/contextops:init</span> 한 번.</p>
+      <div style="display:inline-flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:17px;border:1px solid #22262E;border-radius:8px;background:#08090B;padding:16px 22px"><span style="color:#7B9CFF">$</span>npx contextops setup</div>
+    </div>
+    <div style="max-width:1320px;margin:22px auto 0;display:flex;justify-content:space-between;gap:20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#A7AEB9;flex-wrap:wrap">
+      <span>재미난사람들 · Wanted AI Championship 2026</span>
+      <span style="display:flex;gap:18px"><a href="#">GitHub</a><a href="#">Known limitations</a></span>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:940}}">
+const CARDS = [
+  {
+    id: 'search', nav: 'bookstack / 검색 API', sub: 'contradiction',
+    kind: 'CONTRADICTION', meta: 'item_bs_search_state · 근거 2',
+    title: '북스택 검색 API — 상태가 서로 다릅니다',
+    aLabel: 'A · 현재상태.md L41  ·  갱신 2026-07-12',
+    aBody: '“카카오 실제 API 응답은 아직 확인하지 못했다.”',
+    bLabel: 'B · QC결과.md L12  ·  갱신 2026-08-04',
+    bBody: '“2026-08-04 실제 API 검색 10권을 검증했다. ISBN 13자리. 분야 정보 없음.”',
+    ask: '어느 쪽이 현재 상태인가요?',
+    opts: [
+      ['A가 맞음', 'A가 현재 상태로 확정되었습니다'],
+      ['B가 맞음', 'B가 현재 상태로 확정되었습니다'],
+      ['둘 다 보류', '둘 다 보류로 표시했습니다'],
+      ['무시', '무시했습니다']
+    ]
+  },
+  {
+    id: 'retry', nav: 'parking-api / 재시도 정책', sub: 'doc_vs_code',
+    kind: 'DOC vs CODE', meta: 'src/payment/retry.ts:14 · MAX_RETRY = 3',
+    title: '재시도 정책 — 문서 5회 / 코드 3회',
+    aLabel: '문서 · 결제정책.md L27',
+    aBody: '“결제 실패 시 최대 5회까지 재시도한다.”',
+    bLabel: '코드 · retry.ts L14',
+    bBody: 'const MAX_RETRY = 3;',
+    ask: '무엇을 기준으로 삼을까요?',
+    opts: [
+      ['문서가 맞음(코드 수정 필요)', '문서 기준으로 확정 · 코드 수정 제안이 만들어집니다'],
+      ['코드가 맞음(문서 갱신)', '코드 기준으로 확정 · 문서 갱신 제안이 만들어집니다'],
+      ['보류', '보류로 표시했습니다']
+    ]
+  },
+  {
+    id: 'dup', nav: 'api / 용어 중복', sub: 'duplicate',
+    kind: 'DUPLICATE', meta: 'term_payment_intent · 2곳',
+    title: '“PaymentIntent”와 “결제요청”은 같은 개념인가요?',
+    aLabel: 'api · 용어집.md',
+    aBody: 'PaymentIntent — 결제 시도 단위 객체',
+    bLabel: 'admin · 운영가이드.md',
+    bBody: '결제요청 — 사용자가 결제를 시도한 건',
+    ask: '같은 개념이면 하나로 병합합니다.',
+    opts: [
+      ['같음 · 병합', '같은 개념으로 병합했습니다'],
+      ['다름', '다른 개념으로 표시했습니다'],
+      ['보류', '보류로 표시했습니다']
+    ]
+  },
+  {
+    id: 'mqtt', nav: 'iot / MQTT 선택', sub: 'open_question',
+    kind: 'OPEN QUESTION', meta: '담당자 미지정 · 12일 경과',
+    title: 'MQTT를 선택한 이유가 있나요?',
+    aLabel: '관련 문서',
+    aBody: '아키텍처.md에 “MQTT 사용”만 적혀 있고 이유는 없습니다.',
+    bLabel: '관련 코드',
+    bBody: 'iot/broker.ts — mqtt 클라이언트 초기화',
+    ask: '답변하면 ADR 항목이 만들어집니다.',
+    opts: [
+      ['답변 저장 → ADR', '답변이 ADR 항목 초안으로 저장되었습니다'],
+      ['담당자 지정', '담당자 지정 대기로 표시했습니다']
+    ]
+  }
+];
+
+class Component extends DCLogic {
+  state = { i: 0, done: {} };
+
+  renderVals() {
+    const card = CARDS[this.state.i];
+    const done = this.state.done;
+
+    const navItems = React.createElement(React.Fragment, null, CARDS.map((c, i) => {
+      const on = i === this.state.i;
+      const settled = !!done[c.id];
+      return React.createElement('button', {
+        key: c.id,
+        onClick: () => this.setState({ i: i }),
+        style: {
+          display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '8px',
+          width: '100%', textAlign: 'left', padding: '9px 8px', border: 0, borderRadius: '6px',
+          background: on ? '#15181E' : 'transparent', cursor: 'pointer',
+          fontFamily: "'Pretendard', sans-serif"
+        }
+      },
+        React.createElement('span', { style: { display: 'grid', gap: '3px', minWidth: 0 } },
+          React.createElement('span', { style: { fontSize: '14px', color: on ? '#EDEFF3' : '#B4BAC4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, c.nav),
+          React.createElement('span', { style: { fontFamily: "'JetBrains Mono', monospace", fontSize: '11.5px', color: '#A7AEB9' } }, c.sub)
+        ),
+        React.createElement('span', {
+          style: {
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: settled ? '#5FC48F' : '#E2B04A'
+          }
+        })
+      );
+    }));
+
+    const choices = React.createElement(React.Fragment, null, card.opts.map((o, k) =>
+      React.createElement('button', {
+        key: o[0],
+        onClick: () => this.setState(s => ({ done: Object.assign({}, s.done, { [card.id]: o[1] }) })),
+        style: {
+          height: '38px', padding: '0 16px', borderRadius: '6px', cursor: 'pointer',
+          fontFamily: "'Pretendard', sans-serif", fontSize: '14.5px',
+          border: k === 0 ? '0' : '1px solid #22262E',
+          background: k === 0 ? '#1F4EE0' : 'transparent',
+          color: k === 0 ? '#fff' : '#D5DAE2'
+        }
+      }, o[0])
+    ));
+
+    return {
+      navItems: navItems,
+      choices: choices,
+      card: card,
+      pending: !done[card.id],
+      resolved: !!done[card.id],
+      resolvedLabel: done[card.id]
+    };
+  }
+}
+</script>
+</body>
+</html>
