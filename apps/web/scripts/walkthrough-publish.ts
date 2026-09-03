@@ -2,7 +2,8 @@ import { createHash, randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Manifest } from '@contextops/schema'
+import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
+import { PROGRESS_REPORT } from '@contextops/compiler'
 
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
@@ -47,6 +48,11 @@ function check(name: string, ok: boolean, detail = ''): void {
 
 function sha256(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex')
+}
+
+/** 항목에서 오지 않아도 되는 파일인가 — 판정의 정본은 `packages/schema` 의 표다 (P7 의 예외). */
+function isProductText(path: string): boolean {
+  return (PRODUCT_TEXT_PACK_FILES as readonly string[]).includes(path)
 }
 
 /** 픽스처 문서 하나를 그대로 올린다 (P1 — 문서 본문은 사용자가 의도적으로 올린다). */
@@ -127,7 +133,8 @@ async function main(): Promise<void> {
       const text = await res.text()
       if (sha256(text) !== f.sha256) hashMismatch++
       //  🔴 P7 — 근거 없는 파일이 없다. 태그가 하나도 없는 파일은 역추적이 끊긴 것이다.
-      if (!text.includes('ctx:')) untagged++
+      //     예외는 계약에 **이름으로** 적힌 제품 고정 텍스트뿐이다 (SPEC §4.3).
+      if (!text.includes('ctx:') && !isProductText(f.path)) untagged++
 
       const target = join(outDir, f.path)
       mkdirSync(dirname(target), { recursive: true })
@@ -139,9 +146,18 @@ async function main(): Promise<void> {
     //     sync 단계는 자기가 Manifest 를 지어내야 하고, 그러면 「서버가 준 것을
     //     플러그인이 받아들이나」를 재는 게 아니라 우리가 만든 것을 우리가 읽는 꼴이다.
     writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
-    check('🔴 P7 — 모든 Pack 파일에 역추적 태그가 있다', untagged === 0)
-    check('🔴 P7 — Manifest 의 모든 파일이 항목에서 왔다',
-      manifest.files.every((f) => f.source_item_ids.length > 0))
+    check('🔴 P7 — 모든 Pack 파일에 역추적 태그가 있다 (예외 표 밖에서)', untagged === 0)
+    check('🔴 P7 — Manifest 의 모든 파일이 항목에서 왔다 (예외 표 밖에서)',
+      manifest.files.every((f) => f.source_item_ids.length > 0 || isProductText(f.path)))
+    //  🔴 SPEC §4.3 — 진행 보고 문단이 **이 Pack 에 실제로 있다.** 없으면 agent 는
+    //     `progress` 를 배우지 못하고 Roadmap 이 영원히 0건이다 (FINDINGS 43).
+    //     ⚠ paylab 픽스처에는 workflow 항목이 없다 — 그래서 이 검사가 의미가 있다.
+    const workflowPath = PRODUCT_TEXT_PACK_FILES[0]
+    const workflowText = readFileSync(join(outDir, workflowPath), 'utf8')
+    check(`🔴 workflow 항목이 0개인데도 ${workflowPath} 가 나왔다 (SPEC §4.3)`,
+      manifest.files.some((f) => f.path === workflowPath))
+    check('그 파일이 진행 보고 문단을 전부 담는다', PROGRESS_REPORT.every((line) => workflowText.includes(line)),
+      `${PROGRESS_REPORT.length}줄`)
 
     // ── ⑦ 낡은 기준으로 발행하면 409 ───────────────────────────────────
     const stale = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {

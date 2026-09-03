@@ -19303,14 +19303,21 @@ var PublishVersion = external_exports.object({
 
 // ../../packages/schema/src/manifest.ts
 var PACK_TARGETS = ["claude", "agents", "cursor"];
+var PRODUCT_TEXT_PACK_FILES = [".claude/rules/workflow.md"];
 var ManifestFile = external_exports.object({
   path: RepoPath,
   sha256: Sha256,
   size: external_exports.int().min(0),
   target: external_exports.enum(PACK_TARGETS),
   /** 🔴 P7 — 이 파일의 모든 줄은 여기 적힌 항목 ID 로 역추적된다. 비면 근거 없는 파일이다. */
-  source_item_ids: external_exports.array(ItemId).min(1)
-}).strict();
+  source_item_ids: external_exports.array(ItemId)
+}).strict().refine(
+  (f) => f.source_item_ids.length > 0 || PRODUCT_TEXT_PACK_FILES.includes(f.path),
+  {
+    path: ["source_item_ids"],
+    message: "\uADFC\uAC70 \uC5C6\uB294 \uD30C\uC77C\uC774\uB2E4 (P7) \u2014 \uD56D\uBAA9\uC5D0\uC11C \uC624\uC9C0 \uC54A\uC544\uB3C4 \uB418\uB294 \uAC83\uC740 PRODUCT_TEXT_PACK_FILES \uBFD0\uC774\uB2E4"
+  }
+);
 var ManifestMilestone = external_exports.object({
   id: MilestoneId,
   paths: external_exports.array(RepoPath).max(20).default([]),

@@ -15,7 +15,7 @@ import { PROGRESS_REPORT } from './progress-report'
 //    게이트가 아니게 된다.
 // =====================================================================
 
-export const TEMPLATE_VERSION = '1.0'
+export const TEMPLATE_VERSION = '1.1'
 
 /** Pack 을 이루는 문서 종류. `domain`·`scoped` 는 slug 마다 파일이 하나씩 생긴다. */
 export type DocId = 'claude' | 'architecture' | 'domain' | 'workflow' | 'decisions' | 'scoped' | 'policies'
@@ -51,6 +51,20 @@ export type Slot = {
 export type DocSpec = {
   path: (slug: string) => string
   target: PackTarget
+  /**
+   * 🔴 **항목이 하나도 없어도 이 문서를 만든다** (SPEC §4.3).
+   *
+   * ★ 왜 필요한가 — 이 문서의 `foot` 은 팀 항목에서 온 것이 아니라 **제품이 넣는
+   *   사용법**이다. 항목이 있을 때만 만들면 그 사용법을 배우는 저장소와 못 배우는
+   *   저장소가 갈린다 (FINDINGS 8 · 43 — Roadmap 이 영원히 보고 0건이 된다).
+   * ★ 켜는 절차: ① 여기 `always: true` ② `packages/schema` 의
+   *   `PRODUCT_TEXT_PACK_FILES` 에 그 경로 (P7 의 예외를 계약에 이름으로 적는다)
+   *   ③ `test/traceability.test.ts` 의 `isTemplateLine` 이 그 고정 텍스트를 알아보게.
+   *   ①만 하면 `test/always.test.ts` 가 빨개진다.
+   * ⚠ `slug` 가 여럿인 문서(`domain`·`scoped`)에는 켤 수 없다 — 어느 slug 를
+   *   만들지 정할 수 없다.
+   */
+  always?: true
   head: (v: DocVars) => string[]
   slots: readonly Slot[]
   foot?: (v: DocVars) => string[]
@@ -111,6 +125,9 @@ export const DOCS: Record<DocId, DocSpec> = {
   workflow: {
     path: () => '.claude/rules/workflow.md',
     target: 'claude',
+    // 🔴 SPEC §4.3 의 「항상」은 **파일 자체가 항상 나간다**는 뜻이다.
+    //    workflow 항목이 0개인 저장소도 진행 보고 방법을 배워야 한다.
+    always: true,
     head: (v) => ['# 작업 절차', notice(v)],
     slots: [{ section: 'workflow' }],
     // 🔴 SPEC §4.3 — 이 문단은 항목에서 오지 않는다. 항상 붙는다.

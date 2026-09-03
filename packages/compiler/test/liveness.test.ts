@@ -65,7 +65,7 @@ describe('confidence 3단계', () => {
 
   it('태그에 conf: 가 적힌다', () => {
     const result = compile(makeInput([makeItem('mission', { confidence: 'low' })]))
-    expect(result.files[0]?.text).toContain('conf:low')
+    expect(result.files.find((f) => f.path === 'CLAUDE.md')?.text).toContain('conf:low')
   })
 })
 

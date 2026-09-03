@@ -1,5 +1,5 @@
 import { ITEM_TYPES, parseContextItem, type ContextItem, type ItemType } from '@contextops/schema'
-import type { CompileInput } from '../src'
+import { TEMPLATE_VERSION, type CompileInput } from '../src'
 
 // =====================================================================
 //  테스트 표본. golden 은 `test/golden/*/input.json` 이 정본이고, 여기는 **성질**을
@@ -63,7 +63,7 @@ export function makeInput(items: readonly ContextItem[], over: Partial<CompileIn
       items: [...items],
     },
     project: { name: '표본 프로젝트' },
-    templateVersion: '1.0',
+    templateVersion: TEMPLATE_VERSION,
     compilerVersion: 'test',
     ...over,
   }

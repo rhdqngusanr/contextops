@@ -31,7 +31,7 @@ describe('Markdown escape', () => {
 
   it('선행 `#` 는 escape 된다 (본문이 제목으로 승격되면 문서 구조가 뒤집힌다)', () => {
     const mission = compile(makeInput([makeItem('mission', { data: { statement: '# 미션이 아니다' } })]))
-    expect(mission.files[0]?.text).toContain('\\# 미션이 아니다')
+    expect(mission.files.find((f) => f.path === 'CLAUDE.md')?.text).toContain('\\# 미션이 아니다')
   })
 
   it('줄바꿈이 든 본문은 한 줄로 접힌다 (태그는 줄 끝에 하나뿐이어야 한다)', () => {

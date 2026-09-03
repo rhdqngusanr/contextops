@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "compiler_version": "0.1.0",
-  "template_version": "1.0",
+  "template_version": "1.1",
   "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
   "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
   "context_version": "3.0.0",
@@ -73,6 +73,13 @@
       ]
     },
     {
+      "path": ".claude/rules/workflow.md",
+      "sha256": "4d34990d94dcfc6bd690a11fbaf094fc3f61da1d2efef4d7b72856103aad94a9",
+      "size": 770,
+      "target": "claude",
+      "source_item_ids": []
+    },
+    {
       "path": "CLAUDE.md",
       "sha256": "6cd2394da899bbf8c0f1d3be2ed95f0327ea1dccfcb1e157f64cc01809114bb2",
       "size": 544,
@@ -95,5 +102,5 @@
     }
   ],
   "excluded": [],
-  "manifest_hash": "5b23e45fb6e17501107e9142d984462952cbd4819066482f24d1509d2718cff7"
+  "manifest_hash": "5233a725aa0315e29e49183cdcb52bfcee296108dcf116fdbb121716d1262414"
 }

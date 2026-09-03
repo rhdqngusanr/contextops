@@ -38,6 +38,10 @@ export type RenderedDoc = {
 
 export type Excluded = { item_id: string; reason: string }
 
+function emptyDoc(id: DocId, slug = '', title = ''): DocDraft {
+  return { id, slug, title, paths: [], sections: new Map() }
+}
+
 export type BaseVars = Omit<DocVars, 'title' | 'paths'>
 
 // ---------------------------------------------------------------------
@@ -47,6 +51,14 @@ export type BaseVars = Omit<DocVars, 'title' | 'paths'>
 export function collect(items: readonly ContextItem[]): { docs: DocDraft[]; excluded: Excluded[] } {
   const byKey = new Map<string, DocDraft>()
   const excluded: Excluded[] = []
+
+  // 🔴 항목이 없어도 나가는 문서를 **먼저** 만든다 (`DOCS` 표의 `always` · SPEC §4.3).
+  //    ★ 왜 먼저인가 — 뒤에서 항목이 같은 키를 찾아 그대로 채운다. 나중에 채우면
+  //      「항목이 있을 때」와 「없을 때」의 문서 생성 경로가 둘로 갈린다.
+  for (const id of Object.keys(DOCS) as DocId[]) {
+    if (DOCS[id].always !== true) continue
+    byKey.set(docKey({ doc: id, slug: '', title: '', paths: [] }), emptyDoc(id))
+  }
 
   // 🔴 여기서 한 번만 정렬한다. 뒤 단계는 순서를 건드리지 않는다 —
   //    입력 순서가 결과에 새어 들어갈 자리를 하나로 줄인다 (P4).
@@ -60,7 +72,7 @@ export function collect(items: readonly ContextItem[]): { docs: DocDraft[]; excl
       const key = docKey(ref)
       let doc = byKey.get(key)
       if (doc === undefined) {
-        doc = { id: ref.doc, slug: ref.slug, title: ref.title, paths: [], sections: new Map() }
+        doc = emptyDoc(ref.doc, ref.slug, ref.title)
         byKey.set(key, doc)
       }
       // 제목의 주인은 그 문서의 본체다 — 도메인 파일 이름은 도메인 항목이 정하고,
