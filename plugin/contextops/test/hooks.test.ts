@@ -1,23 +1,27 @@
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { mkdirSync, readFileSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { ProgressEvent } from '@contextops/schema'
 
-import { LOCAL_DIR, LOCAL_FILES } from '../src/cli/paths'
+import { LOCAL_DIR, LOCAL_FILES, progressMarkerFile } from '../src/cli/paths'
 import { tempDir } from './helpers/cli'
 import { PROJECT, manifestOf, writeLocalManifest } from './helpers/pack'
 
 // =====================================================================
-//  SessionStart 훅 (docs/SPEC.md §8.6)
+//  훅 둘 (docs/SPEC.md §8.6) — SessionStart 는 알리고, Stop 은 다음 세션에 남긴다
 //
 //  ★ 왜 프로세스로 띄워서 재나 — 이 파일은 번들이 아니다. Claude Code 가
 //    `node <경로>` 로 **그대로** 부른다. import 해서 재면 `@contextops/schema` 를
 //    쓰는 실수가 시험에서만 통과한다 (테스트 러너는 워크스페이스를 아니까).
 //
-//  🔴 **P6 을 행동으로 잰다.** `tools/principles.ps1` 은 쓰기 API 이름을 grep 하지만,
-//     그건 「그 이름을 안 썼다」까지다. 여기서는 훅을 진짜로 돌린 뒤 **저장소의
-//     모든 파일 바이트와 mtime 이 그대로인지** 본다 — 어떻게 썼든 걸린다.
+//  🔴 **P6 을 행동으로 잰다.** `tools/principles.ps1` 은 쓰기 API 이름을 grep 하고
+//     「선언(`hooks.json` 의 `_writes`)이 ignore 목록 안인가」까지 본다. 그건 정적이다.
+//     여기서는 훅을 **진짜로 돌린 뒤** 바뀐 경로를 세어 **선언한 것과 정확히 같은지**
+//     본다 — 어떤 쓰기 API 를 썼든, 어떤 경로로 새든 걸린다.
 //
 //  ⚠ 서버를 띄우지 않는다. 알림 갈래는 **cache** 로 들어간다 (SPEC §8.6 「5분 내
 //    cache 있으면 재사용」) — 그 길이 실제 사용자의 대부분이기도 하다.
@@ -25,6 +29,15 @@ import { PROJECT, manifestOf, writeLocalManifest } from './helpers/pack'
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOOK = join(packageRoot, 'scripts', 'session-start.mjs')
+const STOP = join(packageRoot, 'scripts', 'stop.mjs')
+
+/**
+ * 🔴 **P6 의 선언표** (`hooks/hooks.json` 의 `_writes`). 여기서 읽어서 재는 것이
+ * 요점이다 — 시험에 경로를 손으로 적으면 표를 넓혀도 시험이 안 빨개진다.
+ */
+const DECLARED_WRITES: Record<string, string[]> = JSON.parse(
+  readFileSync(join(packageRoot, 'hooks', 'hooks.json'), 'utf8'),
+)._writes ?? {}
 
 const ORIGIN = 'https://contextops.example.com'
 /** 닿을 수 없는 자리. 오프라인 갈래를 즉시(연결 거부) 만든다. */
@@ -64,11 +77,39 @@ function runHook(repo: string, home: string): string {
   })
 }
 
+/**
+ * Stop 훅을 진짜로 돌린다. 세션 id 는 **stdin JSON** 으로 온다 (Claude Code 규약).
+ *
+ * 🔴 **`execFileSync` 를 쓰지 마라.** 아래 시험은 같은 프로세스에서 http 서버를
+ *    띄우는데, 동기 호출이 이벤트 루프를 잡으면 서버가 응답을 못 한다 — 훅은
+ *    timeout 까지 기다렸다 「오프라인」으로 물러서고, 증상은 **「보고가 0건」**이라
+ *    원인이 하나도 안 보인다 (docs/STATUS.md 「밟은 함정」).
+ */
+function runStop(repo: string, home: string, sessionId: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = execFile(process.execPath, [STOP], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home, USERPROFILE: home },
+      timeout: 20_000,
+    }, (err, stdout) => { if (err) reject(err); else resolve(stdout) })
+    child.stdin?.end(JSON.stringify({ session_id: sessionId }))
+  })
+}
+
+/** git 이 「무엇이 바뀌었나」를 답할 수 있게 만든다 — 커밋이 없으면 전부 untracked 다. */
+function gitRepo(root: string): void {
+  execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+}
+
 /** 저장소 안의 모든 파일 → `경로: 바이트 · mtime`. P6 을 재는 자로 쓴다. */
 function snapshot(root: string): Record<string, string> {
   const out: Record<string, string> = {}
   const walk = (at: string): void => {
     for (const entry of readdirSync(at, { withFileTypes: true })) {
+      //  ⚠ `.git/` 는 뺀다 — git 을 **읽기만** 해도 index 의 mtime 이 바뀐다.
+      //    그건 훅이 저장소를 고친 것이 아니라 git 이 자기 캐시를 만진 것이다.
+      if (entry.name === '.git') continue
       const full = join(at, entry.name)
       if (entry.isDirectory()) { walk(full); continue }
       const stat = statSync(full)
@@ -155,7 +196,7 @@ describe('session-start 훅 — 알릴 것이 있을 때만 알린다', () => {
     connect(repo, home)
     writeLocalManifest(repo, PACK)
     freshCache(repo, manifestOf({ 'CLAUDE.md': '# v2\n' }, { context_version: '1.1.0' }))
-    writeJson(join(repo, ...LOCAL_FILES.pendingProposal.split('/')), { items: [] })
+    writeJson(join(repo, ...LOCAL_FILES.pendingProposal.split('/')), { changed_paths: ['migrations/001.sql'], hint: '마이그레이션이 바뀌었다' })
 
     expect(runHook(repo, home)).toContain('/contextops:propose')
   })
@@ -171,11 +212,11 @@ describe('session-start 훅 — 알릴 것이 있을 때만 알린다', () => {
   })
 })
 
-describe('🔴 P6 — 훅은 파일을 변경하지 않는다', () => {
+describe('🔴 P6 — 훅은 선언한 자리 밖을 건드리지 않는다', () => {
   it.each([
     ['알릴 것이 있을 때', true],
     ['조용할 때', false],
-  ])('%s 도 저장소의 모든 바이트와 mtime 이 그대로다', async (_what, notify) => {
+  ])('session-start 는 %s 도 저장소의 모든 바이트와 mtime 이 그대로다', async (_what, notify) => {
     const { repo, home } = world()
     connect(repo, home)
     writeLocalManifest(repo, PACK)
@@ -189,6 +230,155 @@ describe('🔴 P6 — 훅은 파일을 변경하지 않는다', () => {
 
     //  ★ 새 파일도, 지워진 파일도, 한 바이트 바뀐 파일도 여기서 걸린다.
     expect(after).toEqual(before)
+  })
+
+  it('stop 이 바꾼 경로가 _writes 선언과 정확히 같다', async () => {
+    const { repo, home } = world()
+    connect(repo, home, DEAD_ORIGIN)
+    gitRepo(repo)
+    writeLocalManifest(repo, PACK)
+    //  정책 경로 하나를 건드린다 — 이게 훅이 힌트를 남기는 조건이다.
+    writeFileSync(join(repo, 'README.md'), '# 남의 파일\n', 'utf8')
+    mkdirSync(join(repo, 'migrations'), { recursive: true })
+    writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+
+    const before = snapshot(repo)
+    await runStop(repo, home, 'sess-1')
+    const after = snapshot(repo)
+
+    const changed = Object.keys(after).filter((path) => after[path] !== before[path])
+    const removed = Object.keys(before).filter((path) => !(path in after))
+    //  🔴 선언 밖의 파일은 **하나도** 바뀌지 않았다. 지워진 것도 없다.
+    expect(removed).toEqual([])
+    expect(changed).toEqual(DECLARED_WRITES['stop.mjs'])
+  })
+
+  it('할 말이 없으면 stop 도 아무것도 안 쓴다 — 선언은 허가지 의무가 아니다', async () => {
+    const { repo, home } = world()
+    connect(repo, home, DEAD_ORIGIN)
+    gitRepo(repo)
+    //  정책 경로가 아닌 파일만 바뀌었다.
+    writeFileSync(join(repo, 'README.md'), '# 오탈자 하나\n', 'utf8')
+
+    const before = snapshot(repo)
+    await runStop(repo, home, 'sess-2')
+
+    expect(snapshot(repo)).toEqual(before)
+  })
+})
+
+describe('stop 훅 — 진행 보고 (SPEC §8.6)', () => {
+  /** 훅이 진짜 소켓으로 말하게 한다. 받은 body 를 그대로 돌려준다. */
+  async function listen(): Promise<{ origin: string; bodies: string[]; close(): Promise<void> }> {
+    const bodies: string[] = []
+    const server = createServer((req, res) => {
+      const chunks: Buffer[] = []
+      req.on('data', (c: Buffer) => chunks.push(c))
+      req.on('end', () => {
+        bodies.push(Buffer.concat(chunks).toString('utf8'))
+        res.writeHead(202, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ data: { id: 'e1' }, meta: { request_id: PROJECT } }))
+      })
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const port = (server.address() as AddressInfo).port
+    return {
+      origin: `http://127.0.0.1:${port}`,
+      bodies,
+      close: () => new Promise((resolve) => { server.close(() => resolve()) }),
+    }
+  }
+
+  /** 바뀐 경로가 이 마일스톤의 paths 안이다. */
+  const withMilestone = { milestones: [{ id: 'M1', paths: ['migrations/**'], done_when: ['마이그레이션이 돈다'] }] }
+
+  it('마일스톤 paths 가 걸리면 in_progress 를 보낸다 — 근거는 경로뿐이다 (P1)', async () => {
+    const server = await listen()
+    try {
+      const { repo, home } = world()
+      connect(repo, home, server.origin)
+      gitRepo(repo)
+      writeLocalManifest(repo, PACK, { overrides: withMilestone })
+      mkdirSync(join(repo, 'migrations'), { recursive: true })
+      writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+
+      await runStop(repo, home, 'sess-a')
+
+      expect(server.bodies).toHaveLength(1)
+      //  🔴 훅은 계약을 import 할 수 없다 (번들이 아니다) — body 를 손으로 짓는다.
+      //     그래서 **여기서** 계약으로 판다. 아니면 진짜 서버의 400 으로만 드러나고,
+      //     그건 훅이 조용히 삼키는 자리라 아무도 못 본다.
+      const body = ProgressEvent.parse(JSON.parse(server.bodies[0] ?? '{}')) as unknown as Record<string, unknown>
+      expect(body['milestone_id']).toBe('M1')
+      expect(body['status']).toBe('in_progress')
+      //  🔴 훅이 만든 보고라고 스스로 밝힌다 — agent 의 보고와 섞이면 안 된다.
+      expect(body['source']).toBe('hook')
+      //  🔴 P1 — 근거의 칸은 **경로 하나뿐이다.** 훅은 diff 를 읽지 않으므로
+      //     줄 번호조차 모른다. 키가 하나라도 늘면 여기서 걸린다.
+      const evidence = body['evidence'] as Record<string, unknown>[]
+      expect(evidence.map((e) => e['path'])).toContain('migrations/001.sql')
+      for (const one of evidence) expect(Object.keys(one)).toEqual(['path'])
+      //  파일 내용은 payload 어디에도 없다.
+      expect(server.bodies[0]).not.toContain('create table')
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('같은 세션에 agent 가 이미 보고했으면 보내지 않는다 — 근거 개수를 부풀리지 않는다 (P7)', async () => {
+    const server = await listen()
+    try {
+      const { repo, home } = world()
+      connect(repo, home, server.origin)
+      gitRepo(repo)
+      writeLocalManifest(repo, PACK, { overrides: withMilestone })
+      mkdirSync(join(repo, 'migrations'), { recursive: true })
+      writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+      //  `progress --session sess-b` 가 남기는 표시 (경로 규칙의 정본은 paths.ts).
+      writeJson(progressMarkerFile(repo, 'sess-b'), { session_id: 'sess-b', milestone_id: 'M1', status: 'in_progress' })
+
+      await runStop(repo, home, 'sess-b')
+
+      expect(server.bodies).toHaveLength(0)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('세션 id 를 모르면 보내지 않는다 — 중복 보고보다 누락이 낫다', async () => {
+    const server = await listen()
+    try {
+      const { repo, home } = world()
+      connect(repo, home, server.origin)
+      gitRepo(repo)
+      writeLocalManifest(repo, PACK, { overrides: withMilestone })
+      mkdirSync(join(repo, 'migrations'), { recursive: true })
+      writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+
+      await runStop(repo, home, '')
+
+      expect(server.bodies).toHaveLength(0)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('연결 안 된 저장소에서는 아무 일도 하지 않는다', async () => {
+    const server = await listen()
+    try {
+      const { repo, home } = world()
+      gitRepo(repo)
+      mkdirSync(join(repo, 'migrations'), { recursive: true })
+      writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+
+      const before = snapshot(repo)
+      await runStop(repo, home, 'sess-c')
+
+      expect(server.bodies).toHaveLength(0)
+      expect(snapshot(repo)).toEqual(before)
+    } finally {
+      await server.close()
+    }
   })
 })
 
@@ -219,12 +409,16 @@ describe('hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1)', () => 
     },
   )
 
-  it('timeout 이 훅 안의 네트워크 한도보다 길다 — 짧으면 훅이 늘 강제 종료된다', () => {
-    const hookSource = readFileSync(HOOK, 'utf8')
-    const networkMs = Number(/NETWORK_TIMEOUT_MS = (\d+)/.exec(hookSource)?.[1] ?? 0)
-    expect(networkMs).toBeGreaterThan(0)
-    for (const command of commands) {
-      expect((command.timeout ?? 0) * 1000).toBeGreaterThan(networkMs)
-    }
-  })
+  it.each(commands.map((c) => [c.command, c] as const))(
+    'timeout 이 그 훅 자신의 네트워크 한도보다 길다 — 짧으면 훅이 늘 강제 종료된다 · %s',
+    (command, entry) => {
+      //  ⚠ 훅마다 자기 한도가 있다. 한 훅의 상수로 전부를 재면, 다른 훅이 더 오래
+      //    기다리게 바뀐 날 그 훅만 조용히 매번 강제 종료된다.
+      const name = /scripts\/([A-Za-z0-9._-]+\.mjs)/.exec(command)?.[1] ?? ''
+      const source = readFileSync(join(packageRoot, 'scripts', name), 'utf8')
+      const networkMs = Number(/NETWORK_TIMEOUT_MS = (\d+)/.exec(source)?.[1] ?? 0)
+      expect(networkMs).toBeGreaterThan(0)
+      expect((entry.timeout ?? 0) * 1000).toBeGreaterThan(networkMs)
+    },
+  )
 })

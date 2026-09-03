@@ -1,12 +1,26 @@
 {
   "_comment": [
-    "docs/SPEC.md §8.1 · §8.6. 🔴 여기 적은 훅은 사용자가 세션을 열 때마다 묻지 않고 돈다 —",
-    "그래서 P6(훅은 파일을 변경하지 않는다)이 이 파일의 전제다.",
+    "docs/SPEC.md §8.1 · §8.6. 🔴 여기 적은 훅은 사용자가 세션을 열거나 닫을 때마다 묻지 않고 돈다 —",
+    "그래서 P6(훅은 사용자의 파일을 변경하지 않는다)이 이 파일의 전제다.",
     "⚠ 아직 만들지 않은 스크립트를 여기 적지 마라. 없는 파일을 가리키면 사용자는",
-    "  매 세션 오류 줄을 본다. SPEC §8.1 에는 Stop 훅도 있고 그건 docs/PLAN.md P2 셋째 행이다.",
-    "★ 훅을 더하는 절차: ① scripts/<이름>.mjs ② 이 표에 한 줄 ③ tools/principles.ps1 의",
-    "  P6 검사 대상에 그 파일을 더한다 ④ test/hooks.test.ts 가 둘이 같은지 잰다."
+    "  매 세션 오류 줄을 본다.",
+    "★ 훅을 더하는 절차: ① scripts/<이름>.mjs ② 아래 hooks 에 한 줄 ③ 파일을 쓴다면",
+    "  _writes 에 그 경로를 선언한다 ④ test/hooks.test.ts 의 표에 한 줄.",
+    "  ⚠ ③을 빼먹으면 tools/principles.ps1 이 빨개진다 — 게이트가 저절로 따라온다."
   ],
+  "_writes_comment": [
+    "🔴 **P6 의 정의다** (SPEC §0.1). 훅이 저장소에 쓸 수 있는 경로를 훅마다 선언한다.",
+    "규칙 둘, 둘 다 기계가 잰다:",
+    "  ① 선언된 경로는 전부 `.contextops/` 의 **ignore 목록**(src/cli/paths.ts 의",
+    "     IGNORED_LOCAL_PATHS) 안이어야 한다 — git 이 그 변화를 보지 못한다는 뜻이다.",
+    "     그래서 훅은 사용자가 커밋하거나 리뷰하는 파일을 한 바이트도 바꾸지 않는다.",
+    "  ② 여기 없는 훅은 fs write 를 **하나도** 쓸 수 없다 (principles.ps1 이 이름을 센다).",
+    "★ 왜 코드가 아니라 표인가 — 코드 안의 경로는 읽는 사람이 전부 찾아 읽어야 알 수 있다.",
+    "  훅이 무엇을 건드리는지는 **훅을 켜는 자리**에서 한눈에 보여야 한다."
+  ],
+  "_writes": {
+    "stop.mjs": [".contextops/pending-proposal.json"]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -15,6 +29,17 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.mjs\"",
             "timeout": 3
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/stop.mjs\"",
+            "timeout": 5
           }
         ]
       }

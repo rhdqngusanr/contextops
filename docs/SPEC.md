@@ -20,7 +20,7 @@
 | P3 | 서버측 LLM은 API 키(종량제)로만, 4개 기능에 한정, 일일 예산·rate limit·입력 크기 상한이 있다. | `apps/web/src/lib/ai/budget.ts` 존재, 모든 AI 호출이 `withBudget()` 경유 |
 | P4 | 승인 이후 파이프라인(컴파일·해시·배포)에는 LLM이 없다. 같은 snapshot → byte-identical Pack. | `packages/compiler` golden test |
 | P5 | 진행 상태는 마일스톤 단위로만 표시한다. 개인별 생산성 점수·순위를 만들지 않는다. | Roadmap 화면에 사람 이름이 기본 행으로 나오지 않음 |
-| P6 | Hook은 파일을 변경하지 않는다. 변경은 사용자가 `/contextops:sync`를 실행할 때만. | `session-start.mjs`에 fs write 없음 |
+| P6 | Hook은 **사용자의 파일**을 변경하지 않는다. 저장소에서 훅이 쓸 수 있는 자리는 `.contextops/` 안의 **git이 무시하는 경로**(`IGNORED_LOCAL_PATHS`)뿐이고, 훅마다 `hooks/hooks.json`의 `_writes` 표에 **선언한** 경로로 한정된다. 관리 파일(`CLAUDE.md`·`.claude/rules/*`) 변경은 사용자가 `/contextops:sync`를 실행할 때만. | `tools/principles.ps1`: hooks.json이 가리키는 스크립트에 fs write가 있으면 `_writes`에 선언돼 있어야 하고, 선언된 경로는 전부 ignore 목록 안이어야 한다 · `test/hooks.test.ts`: 훅을 **프로세스로 돌린 뒤** 바뀐 경로가 선언한 것뿐이고 나머지는 바이트·mtime이 그대로 |
 | P7 | 모든 Pack 줄은 항목 ID → 원문(문서 offset 또는 코드 path:line)으로 역추적된다. | source map 테스트 |
 
 ### 0.2 용어
@@ -466,6 +466,8 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 ### 8.6 훅 스크립트
 - `session-start.mjs`: project.json 없으면 exit 0 무출력. 5분 내 cache 있으면 재사용. 2초 timeout으로 manifest ETag 조회. 최신이면 무출력. 다르면 stdout에 6줄 이내 안내(현재/공식/변경 요약/`/contextops:sync` 안내/"Hook은 파일을 변경하지 않습니다"). `pending-proposal.json` 있으면 "초안 1건, /contextops:propose" 추가. 오프라인이면 무출력.
 - `stop.mjs`: `git diff --name-only HEAD` + untracked → manifest.milestones.paths와 glob 대조 → 해당 마일스톤에 `in_progress` 이벤트(source:hook, evidence는 path만) — 단 이번 세션에 agent progress 보고가 이미 있으면 생략(로컬 `cache/progress-<session>.json`으로 판단). 정책·아키텍처 관련 경로(`migrations/**`, `infra/**`, `*.config.*`, rules에 scoped된 paths)가 바뀌면 `pending-proposal.json`에 {changed_paths, hint} 저장. LLM 호출 없음.
+  ⚠ **이 쓰기가 P6의 예외가 아니라 P6의 정의다** — `pending-proposal.json`은 `.contextops/`의 ignore 목록 안이라 git이 그 변화를 보지 못한다(우리가 `.contextops/.gitignore`를 만든다). 훅은 사용자의 파일을 한 바이트도 바꾸지 않는다. 쓸 수 있는 경로는 `hooks/hooks.json`의 `_writes`에 선언한 것뿐이고, 선언 밖으로 나가면 `test/hooks.test.ts`가 빨개진다.
+  ⚠ 세션 id는 훅의 **stdin JSON**(`session_id`)에서 온다. 모르면 겹침 방지 표시를 못 읽으므로 진행 보고를 건너뛴다 — 중복 보고보다 누락이 낫다(agent가 이미 보고했을 수 있고, 중복은 근거 수를 부풀려 P7을 거짓말로 만든다).
 
 ### 8.7 CLI 테스트
 temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단, 부분 실패 rollback, 오프라인 무출력, path traversal 거부, credentials 파일 권한 0600.

@@ -201,43 +201,107 @@ if ($compFiles.Count -eq 0) {
 }
 
 # =====================================================================
-#  P6 — Hook 은 파일을 변경하지 않는다
+#  P6 — Hook 은 **사용자의 파일**을 변경하지 않는다
 # =====================================================================
-#  ★ 사용자 저장소를 몰래 고치는 도구가 되면 아무도 안 깐다. 변경은 사용자가
-#    /contextops:sync 를 **직접 실행할 때만**.
+#  ★ 사용자 저장소를 몰래 고치는 도구가 되면 아무도 안 깐다. 관리 파일의 변경은
+#    사용자가 /contextops:sync 를 **직접 실행할 때만**.
 #  ⚠ 검사 대상을 파일 이름으로 박지 마라 — 훅이 둘째(Stop)가 되는 순간 그 파일만
-#    검사를 안 받는다. **hooks.json 이 가리키는 것 전부**를 센다. 그러면 훅을 더하는
-#    사람이 게이트를 따로 켤 필요가 없다 (SPEC §8.1 · §8.6).
+#    검사를 안 받는다. **hooks.json 이 가리키는 것 전부**를 센다.
+#
+#  🔴 훅이 파일을 쓸 수 있는 경우는 **선언했을 때뿐이다** (SPEC §0.1 P6):
+#    ① hooks.json 의 `_writes` 표에 그 훅 이름이 있어야 하고
+#    ② 거기 적힌 경로가 전부 `.contextops/` 의 ignore 목록 안이어야 한다
+#       (정본은 src/cli/paths.ts 의 IGNORED_LOCAL_PATHS — git 이 그 변화를 못 본다).
+#    ★ 왜 「쓰기 0건」이 아니라 이 모양인가 — Stop 훅은 「무엇이 바뀌었나」를
+#      세션이 끝나는 순간에만 알 수 있고, 다음 세션에 전하려면 어딘가 남겨야 한다.
+#      「예외를 코드에 숨기기」와 「경계를 표로 선언하고 기계가 재기」는 다르다.
+#    ⚠ 이름 검사는 여기까지다. 「선언 밖의 경로에 실제로 썼는가」는 훅을 돌려 보는
+#      test/hooks.test.ts 가 잰다 — 이름만 세면 새 쓰기 API 에 그대로 뚫린다.
 $hooksJson = Join-Path $root "plugin\contextops\hooks\hooks.json"
+$pathsTs   = Join-Path $root "plugin\contextops\src\cli\paths.ts"
 if (-not (Test-Path $hooksJson)) {
-    Add-Row "P6" "훅이 파일을 쓰지 않음" "SKIP" "plugin/contextops/hooks/hooks.json 없음"
+    Add-Row "P6" "훅이 선언한 자리만 씀" "SKIP" "plugin/contextops/hooks/hooks.json 없음"
 } else {
-    $raw = Get-Content -LiteralPath $hooksJson -Raw
+    #  🔴 UTF-8 로 **명시해서** 읽는다. `Get-Content -Raw` 는 PS 5.1 에서 ANSI 로 읽어
+    #     한글 주석이 깨지고, 그러면 ConvertFrom-Json 이 「잘못된 배열」로 죽는다 —
+    #     증상은 「_writes 선언이 없다」라서 원인이 하나도 안 보인다.
+    $raw = [System.IO.File]::ReadAllText($hooksJson, [System.Text.Encoding]::UTF8)
     $names = [regex]::Matches($raw, 'scripts/([A-Za-z0-9._-]+\.mjs)') | ForEach-Object { $_.Groups[1].Value }
     $names = @($names | Sort-Object -Unique)
+
+    #  선언표(`_writes`)를 읽는다. 훅 이름 → 경로 목록.
+    $declared = @{}
+    try {
+        $hooksObj = $raw | ConvertFrom-Json
+        if ($hooksObj._writes) {
+            foreach ($prop in $hooksObj._writes.PSObject.Properties) {
+                $declared[$prop.Name] = @($prop.Value)
+            }
+        }
+    } catch {
+        $declared = @{}
+    }
+
+    #  ignore 목록의 정본을 코드에서 뽑는다 — 여기 다시 적으면 갈라진다.
+    $ignored = @()
+    if (Test-Path $pathsTs) {
+        $pathsRaw = [System.IO.File]::ReadAllText($pathsTs, [System.Text.Encoding]::UTF8)
+        $m = [regex]::Match($pathsRaw, "IGNORED_LOCAL_PATHS\s*=\s*\[([^\]]*)\]")
+        if ($m.Success) {
+            $ignored = @([regex]::Matches($m.Groups[1].Value, "'([^']+)'") | ForEach-Object { $_.Groups[1].Value })
+        }
+    }
+
     if ($names.Count -eq 0) {
-        Add-Row "P6" "훅이 파일을 쓰지 않음" "FAIL" "hooks.json 이 어떤 스크립트도 가리키지 않는다"
+        Add-Row "P6" "훅이 선언한 자리만 씀" "FAIL" "hooks.json 이 어떤 스크립트도 가리키지 않는다"
+    } elseif ($ignored.Count -eq 0) {
+        Add-Row "P6" "훅이 선언한 자리만 씀" "FAIL" "IGNORED_LOCAL_PATHS 를 읽지 못했다 — 경계를 잴 수 없다"
     } else {
         $p6Banned = @(
             "writeFile", "appendFile", "createWriteStream", "mkdirSync", "rmSync",
             "unlinkSync", "renameSync", "copyFileSync", "chmodSync"
         )
-        $hookFiles = @()
-        $absent = @()
+        $problems = New-Object System.Collections.ArrayList
+        $wrote = New-Object System.Collections.ArrayList
+
         foreach ($n in $names) {
             $f = Join-Path $root "plugin\contextops\scripts\$n"
-            if (Test-Path $f) { $hookFiles += (Get-Item $f) } else { $absent += $n }
-        }
-        if ($absent.Count -gt 0) {
-            #  없는 스크립트를 가리키면 사용자는 매 세션 오류를 본다 — 그건 고장이다.
-            Add-Row "P6" "훅이 파일을 쓰지 않음" "FAIL" ("hooks.json 이 없는 파일을 가리킨다: " + ($absent -join " · "))
-        } else {
-            $hits = Find-Banned $hookFiles $p6Banned
-            if ($hits.Count -gt 0) {
-                Add-Row "P6" "훅이 파일을 쓰지 않음" "FAIL" ($hits -join " · ")
-            } else {
-                Add-Row "P6" "훅이 파일을 쓰지 않음" "OK" ("$($hookFiles.Count)개 훅: " + ($names -join " · "))
+            if (-not (Test-Path $f)) {
+                #  없는 스크립트를 가리키면 사용자는 매 세션 오류를 본다 — 그건 고장이다.
+                $null = $problems.Add("hooks.json 이 없는 파일을 가리킨다: $n")
+                continue
             }
+            $hits = Find-Banned @(Get-Item $f) $p6Banned
+            if ($hits.Count -eq 0) { continue }
+
+            if (-not $declared.ContainsKey($n)) {
+                $null = $problems.Add("$n 이 파일을 쓰는데 _writes 에 선언이 없다 (" + ($hits -join " · ") + ")")
+                continue
+            }
+            $null = $wrote.Add($n)
+        }
+
+        #  선언된 경로가 전부 ignore 안인가. **선언만 하고 밖을 가리키면 더 나쁘다** —
+        #  「선언했으니 괜찮다」로 읽히기 때문이다.
+        foreach ($n in $declared.Keys) {
+            foreach ($path in $declared[$n]) {
+                $rel = $path -replace '^\.contextops/', ''
+                $inside = $false
+                foreach ($ig in $ignored) {
+                    if ($rel -eq $ig -or $rel.StartsWith($ig)) { $inside = $true }
+                }
+                if (-not ($path.StartsWith(".contextops/") -and $inside)) {
+                    $null = $problems.Add("$n 의 선언이 ignore 밖이다: $path")
+                }
+            }
+        }
+
+        if ($problems.Count -gt 0) {
+            Add-Row "P6" "훅이 선언한 자리만 씀" "FAIL" ($problems -join " · ")
+        } else {
+            $detail = "$($names.Count)개 훅: " + ($names -join " · ")
+            if ($wrote.Count -gt 0) { $detail += " · 쓰기 선언: " + ($wrote -join " · ") }
+            Add-Row "P6" "훅이 선언한 자리만 씀" "OK" $detail
         }
     }
 }
