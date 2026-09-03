@@ -1,7 +1,7 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ROLE_RANK, TEAM_ROLES } from '@contextops/schema'
+import { DeviceToken, ROLE_RANK, TEAM_ROLES } from '@contextops/schema'
 
 import { devices, teamMembers, users } from '../src/db/schema'
 import type { Db } from '../src/db/client'
@@ -189,6 +189,9 @@ describe('기기 토큰 (SPEC §11)', () => {
   it('발급된 토큰은 ctx_ 로 시작하고 DB 에는 원문이 없다', async () => {
     const { token } = await issueToken()
     expect(token.startsWith(TOKEN_PREFIX)).toBe(true)
+    //  ⚠ 플러그인은 `DeviceToken` 으로 붙여 넣은 값을 판다 (`setup`). 발급기가
+    //    길이·문자 집합을 바꾸면 **발급은 되는데 CLI 가 안 받는** 상태가 된다.
+    expect(DeviceToken.safeParse(token).success).toBe(true)
     const rows = await db.select({ hash: devices.tokenHash }).from(devices)
     expect(rows).toHaveLength(1)
     expect(rows[0]!.hash).not.toContain(token)

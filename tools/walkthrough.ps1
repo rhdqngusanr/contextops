@@ -52,6 +52,11 @@ $stages = @(
        prereq = "apps\web\scripts\walkthrough-publish.ts"
        cmd = "pnpm --filter web exec tsx scripts/walkthrough-publish.ts" },
 
+    @{ name = "scan"
+       what = "배포되는 번들이 레포를 훑고 산출물에 코드 본문 0건 (SPEC §8.3 · P1)"
+       prereq = "plugin\contextops\bin\contextops-cli.mjs"
+       cmd = "pnpm --filter @contextops/plugin exec tsx scripts/walkthrough-scan.ts" },
+
     @{ name = "payload"
        what = "업로드 payload 에 코드 본문 0건 (P1 · 심사 첫 질문)"
        prereq = "apps\web\scripts\walkthrough-payload.ts"
@@ -59,7 +64,11 @@ $stages = @(
 
     @{ name = "sync"
        what = "플러그인이 Pack 을 받아 applied 로 보고한다 (SPEC §8.5)"
-       prereq = "plugin\contextops\bin\contextops-cli.mjs"
+       #  ⚠ prereq 는 **그 단계가 진짜로 필요로 하는 파일**이어야 한다. 예전엔
+       #    bin/contextops-cli.mjs 였는데, 그 파일은 P2 **첫** 행(setup·scan·validate)에서
+       #    생기고 sync 는 **둘째** 행이다. 그대로 두면 첫 행이 끝나는 순간 관통이
+       #    없는 명령을 불러 빨개진다 — 그건 고장이 아니라 아직 안 만든 것이다.
+       prereq = "plugin\contextops\src\cli\sync.ts"
        cmd = "node plugin/contextops/bin/contextops-cli.mjs sync --check" },
 
     @{ name = "shots"

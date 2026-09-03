@@ -1,23 +1,40 @@
 import { z } from 'zod'
 import { ContextItem, ContextItemDraft } from './item'
 import { Manifest } from './manifest'
+import { ContextItemDraftFile } from './plugin'
 import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
 
 // =====================================================================
 //  JSON Schema 산출 — 플러그인이 **네트워크 없이** 로컬 검증에 쓴다
 //  (`contextops validate <json>` · SPEC §8.3 · init Skill 이 §8.4 에서 이름으로 지목).
 //
-//  ★ 왜 따로 내보내나 — 계약이 두 벌이 되면 갈라진다. 플러그인은 Zod 를 못 쓰므로
-//    (런타임 의존 0 · SPEC §1.2) **같은 Zod 에서 뽑은** JSON Schema 를 배포한다.
+//  ★ 왜 따로 내보내나 — 계약이 두 벌이 되면 갈라진다. 여기 있는 파일은 전부
+//    **같은 Zod 에서 뽑은 것**이고, 표류하면 `test/json-schema.test.ts` 가 빨개진다.
+//
+//  🔴 **누가 읽나** — init Skill 이 Claude 에게 「이 모양으로 써라」고 지목하는
+//    작성 안내서다 (SPEC §8.4 3단계). **판정하는 것은 이 파일이 아니다.**
+//    `contextops validate` 는 번들에 들어간 **Zod 정본**으로 판다.
+//    ★ 왜 그쪽인가 — JSON Schema 는 `.refine()` 을 못 옮긴다 (`ProposalItem` 의
+//      「add 는 draft 가, update 는 target 이 필요하다」가 통째로 사라진다).
+//      약한 검사로 통과시키고 서버에서 400 을 받으면 사람은 이유를 모른다.
+//      esbuild 가 Zod 를 번들에 넣으므로 「런타임 의존 0」(SPEC §1.2)은 그대로다.
 //
 //  ★ 새 파일을 더하는 절차: 아래 표에 한 줄 → `pnpm --filter @contextops/schema schemas`.
 //    커밋된 파일과 어긋나면 `test/json-schema.test.ts` 가 빨개진다 (표류 방지 게이트).
 // =====================================================================
 
-/** 파일 이름(확장자 없음) → 스키마. 산출 위치는 `plugin/contextops/schemas/`. */
+/**
+ * 산출 위치 (저장소 루트 기준). 산출기·표류 검사·플러그인 쪽 시험이 **같은 값**을 봐야
+ * 한다 — 산출기만 옮기면 나머지가 **옛 파일을 보며 초록**이 된다.
+ */
+export const SCHEMA_OUT_DIR = 'plugin/contextops/schemas'
+
+/** 파일 이름(확장자 없음) → 스키마. 산출 위치는 위 `SCHEMA_OUT_DIR` 이다. */
 export const JSON_SCHEMA_FILES = {
   'context-item': ContextItem,
   'context-item-draft': ContextItemDraft,
+  //  init Skill 이 쓰는 `.contextops/cache/draft.json` 그 자체 (`contextops validate` 의 기본).
+  'draft': ContextItemDraftFile,
   'batch-draft': ContextItemsBatchDraft,
   'proposal': Proposal,
   'progress-event': ProgressEvent,

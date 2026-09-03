@@ -33,6 +33,8 @@ catalog:
   zod: ^4.5.4
   # tsx — .ts 를 그대로 실행한다. packages/schema 의 JSON Schema 산출기가 쓴다.
   tsx: ^4.23.13
+  # esbuild — 플러그인 CLI 를 단일 ESM 번들로 묶는다 (SPEC §1.2 「런타임 의존 0」).
+  esbuild: ^0.25.12
   # DB (SPEC §1.2 · §2). drizzle-orm 은 런타임, drizzle-kit 은 마이그레이션 산출기다.
   drizzle-orm: ^0.45.2
   drizzle-kit: ^0.31.10

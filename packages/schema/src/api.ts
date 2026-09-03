@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, Scope, Semver, SourceRef } from './common'
+import { CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, RepoName, Scope, Semver, SourceRef } from './common'
 import { ContextItemDraft } from './item'
 import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
 
@@ -166,7 +166,7 @@ export const CreateProject = z.object({
 
 /** `POST /projects/{id}/repos` */
 export const CreateRepo = z.object({
-  name: z.string().min(1).max(100),
+  name: RepoName,
   remote_url: z.url().max(400).optional(),
   default_branch: z.string().min(1).max(100).optional(),
   /** 모노레포에서 이 레포가 차지하는 앞자리. 없으면 저장소 전체다. */

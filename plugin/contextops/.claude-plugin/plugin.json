@@ -1,0 +1,8 @@
+{
+  "name": "contextops",
+  "version": "0.1.0",
+  "description": "Team context sync for Claude Code",
+  "author": {
+    "name": "ContextOps"
+  }
+}

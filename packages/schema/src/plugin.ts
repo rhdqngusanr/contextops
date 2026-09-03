@@ -1,0 +1,103 @@
+import { z } from 'zod'
+import { DeviceToken, RepoName, RepoPath } from './common'
+import { ContextItemDraft } from './item'
+import { MAX_DRAFT_ITEMS, SCAN_LIMITS, ScanSummary } from './upload'
+
+// =====================================================================
+//  플러그인이 **로컬 디스크에 두는 파일들**의 계약 (docs/SPEC.md §8.2)
+//
+//  ★ 왜 여기(`packages/schema`)에 있나 — 이 파일들은 CLI 에게 **외부 입력**이다.
+//    사람이 손으로 고치고, 다른 바퀴의 CLI 가 쓰고, git 으로 팀에 퍼진다.
+//    「우리가 쓴 파일이니 믿는다」로 두면 계약이 바뀐 뒤 옛 파일이 조용히 이상하게
+//    해석된다. 파싱하는 자리를 하나로 둔다 (CLAUDE.md 「모든 외부 입력은 schema 로」).
+//
+//  ⚠ 여기 있는 것들은 **올라가지 않는다.** 업로드 allowlist 는 `upload.ts` 다.
+//    그래서 토큰이 이 파일에 나오는 것이 P1 위반이 아니다 — 토큰은 로컬에만 산다.
+//
+//  ★ 새 로컬 파일을 더하는 절차: ① 이 파일에 `.strict()` 스키마 하나
+//    ② `plugin/contextops/src/cli/paths.ts` 의 `LOCAL_FILES` 표에 한 줄 (자리의 정본)
+//    ③ 읽는 쪽은 반드시 이 스키마로 판다 — `JSON.parse` 결과를 그대로 쓰지 마라
+// =====================================================================
+
+/**
+ * API 서버의 **origin** (`https://호스트[:포트]`). 경로도 끝 슬래시도 없다.
+ * ★ 왜 origin 까지만인가 — CLI 는 여기에 `/api/v1/...` 을 이어 붙인다. 끝 슬래시가
+ *   섞이면 `//api/v1` 이 되고, 서버에 따라 404 와 301 로 갈린다.
+ */
+export const ApiOrigin = z.string().min(8).max(200)
+  .regex(/^https?:\/\/[^\s/?#]+$/, 'http(s)://호스트 형식이어야 한다 (경로·끝 슬래시 없음)')
+
+/**
+ * `<repo>/.contextops/project.json` — **커밋한다.** 팀원이 clone 하면 그대로 쓴다.
+ *
+ * 🔴 **secret 이 들어갈 자리가 없다** (`.strict()`). 토큰은 `CredentialsFile` 로만 산다.
+ * ⚠ `team_id`·`repo_id` 는 optional 이다 — 기기 토큰만으로는 알아낼 수 없고
+ *   (팀 목록은 사람 세션 전용 · `GET /repos` 는 아직 없다), 없어도 sync 는 돈다.
+ *   있으면 화면 링크와 `source_refs.repo` 를 이어 주는 값이다.
+ */
+export const ProjectConfig = z.object({
+  api_origin: ApiOrigin,
+  project_id: z.uuid(),
+  team_id: z.uuid().optional(),
+  repo_id: z.uuid().optional(),
+  /** `batch-draft` 의 `repo` 와 근거(`repository_path.repo`)가 가리킬 이름. */
+  repo_name: RepoName.optional(),
+}).strict()
+export type ProjectConfig = z.infer<typeof ProjectConfig>
+
+/**
+ * 기기 하나의 자격증명. 원문 토큰은 발급 응답 **한 번**뿐이라 여기 말고는 없다.
+ * ⚠ `device_id` 는 optional 이다 — 발급 응답에만 있는 값이라, 사람이 웹에서 토큰만
+ *   복사해 오면 알 수 없다. 있으면 `DELETE /devices/{id}` 로 이 기기만 끊을 수 있다.
+ */
+export const DeviceCredential = z.object({
+  token: DeviceToken,
+  device_id: z.uuid().optional(),
+}).strict()
+export type DeviceCredential = z.infer<typeof DeviceCredential>
+
+/**
+ * `~/.contextops/credentials.json` (chmod 600) — `{origin: {project_id: {…}}}`.
+ *
+ * ★ 왜 두 겹인가 — 한 사람이 여러 서버(사내·클라우드)의 여러 프로젝트를 동시에 쓴다.
+ *   파일을 origin 마다 따로 두면 `setup` 이 어느 파일을 고칠지 매번 정해야 하고,
+ *   프로젝트 하나만 키로 쓰면 서버가 다른 같은 uuid 가 서로를 덮는다.
+ */
+export const CredentialsFile = z.record(ApiOrigin, z.record(z.uuid(), DeviceCredential))
+export type CredentialsFile = z.infer<typeof CredentialsFile>
+
+/**
+ * 스캔이 찾은 파일 하나. **경로와 분류뿐이다** — 본문은 이 스키마에 자리가 없다 (P1).
+ * ⚠ `language` 는 확장자 표(`plugin/…/src/cli/scan-tables.ts`)가 정한 이름이다.
+ */
+export const ScanFile = z.object({
+  path: RepoPath,
+  language: z.string().min(1).max(40),
+}).strict()
+export type ScanFile = z.infer<typeof ScanFile>
+
+/**
+ * `<repo>/.contextops/cache/scan.json` — `scan` 이 만들고 init Skill 이 읽는다 (SPEC §8.3).
+ *
+ * 🔴 **`summary` 만 서버로 간다** (`ContextItemsBatchDraft.scan_summary`). `files` 는
+ *   Claude 가 「무엇을 읽을지」 고르는 로컬 목록이고 업로드 스키마에 자리가 없다.
+ * ★ 그래서 `summary` 를 **모델이 짓지 않는다.** 결정론 스캔이 잰 값이 그대로 올라간다.
+ */
+export const ScanResult = z.object({
+  repo: RepoName,
+  files: z.array(ScanFile).max(SCAN_LIMITS.files),
+  summary: ScanSummary,
+}).strict()
+export type ScanResult = z.infer<typeof ScanResult>
+
+/**
+ * `<repo>/.contextops/cache/draft.json` — init Skill 이 쓰고 `upload-draft` 가 읽는다.
+ *
+ * ★ 왜 `ContextItemsBatchDraft` 를 그대로 안 쓰나 — 그 body 에는 `scan_summary` 가 있다.
+ *   모델이 쓰는 파일에 그 칸을 두면 **모델이 스캔 결과를 지어낼 수 있다.**
+ *   초안은 항목만 적고, 나머지 둘은 `upload-draft` 가 `scan.json` 에서 붙인다.
+ */
+export const ContextItemDraftFile = z.object({
+  items: z.array(ContextItemDraft).min(1).max(MAX_DRAFT_ITEMS),
+}).strict()
+export type ContextItemDraftFile = z.infer<typeof ContextItemDraftFile>

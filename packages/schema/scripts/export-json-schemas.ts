@@ -1,8 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { JSON_SCHEMA_FILES, toJsonSchemaText, type JsonSchemaName } from '../src/json-schema'
-import { SCHEMA_OUT_DIR } from './out-dir'
+import { JSON_SCHEMA_FILES, SCHEMA_OUT_DIR, toJsonSchemaText, type JsonSchemaName } from '../src/json-schema'
 
 // 산출기. 값은 여기 적지 마라 — 무엇을 내보낼지는 src/json-schema.ts 의 표가 정한다.
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')

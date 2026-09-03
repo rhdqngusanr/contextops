@@ -50,6 +50,31 @@ export const RepoPath = z.string().min(1).max(400)
 export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, 'sha256 16진수 64자여야 한다')
 export const CommitSha = z.string().regex(/^[0-9a-f]{40}$/, 'commit sha 40자여야 한다')
 
+/**
+ * 등록된 레포의 이름 (`POST /projects/{id}/repos` 의 `name`).
+ * ★ 왜 원자로 올렸나 — 같은 길이 제한이 세 곳(`SOURCE_REF.repository_path.repo` ·
+ *   `ContextItemsBatchDraft.repo` · `CreateRepo.name`)에 손으로 적혀 있었다.
+ *   한쪽만 늘어나면 근거가 가리키는 이름이 등록된 이름과 안 맞게 된다 (P7 이 끊기는 자리).
+ */
+export const RepoName = z.string().min(1).max(100)
+
+/**
+ * 기기 토큰의 접두사 (SPEC §11). **세션 JWT 와 기기 토큰을 한 헤더에서 가르는 근거**라
+ * 발급(`apps/web/src/lib/api/token.ts`)·검증(`auth.ts`)·플러그인이 전부 이 값을 본다.
+ * 세 곳에 각각 적혀 있으면 한 글자만 갈려도 「알 수 없는 토큰」으로 조용히 막힌다.
+ */
+export const TOKEN_PREFIX = 'ctx_'
+
+/**
+ * 발급된 기기 토큰의 모양. 값 자체는 `~/.contextops/credentials.json` 에만 산다.
+ * ⚠ 길이를 고정하지 않는다 — 발급기(`mintToken`)가 바이트 수를 바꿔도 옛 토큰이
+ *   갑자기 「형식이 틀렸다」가 되면 안 된다. 검증은 서버의 sha256 대조가 한다.
+ */
+export const DeviceToken = z.string().regex(
+  new RegExp(`^${TOKEN_PREFIX}[A-Za-z0-9_-]{16,200}$`),
+  `${TOKEN_PREFIX} 로 시작하는 기기 토큰이어야 한다`,
+)
+
 /** `item_<slug>` (SPEC §3). */
 export const ItemId = z.string().regex(/^item_[a-z0-9_]{3,40}$/)
 
@@ -110,7 +135,7 @@ export const SOURCE_REF = {
 
   repository_path: z.object({
     kind: z.literal('repository_path'),
-    repo: z.string().min(1).max(100),
+    repo: RepoName,
     path: RepoPath,
     start_line: z.int().min(1).optional(),
     end_line: z.int().min(1).optional(),

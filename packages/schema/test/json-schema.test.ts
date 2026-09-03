@@ -2,8 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { JSON_SCHEMA_FILES, toJsonSchemaText, type JsonSchemaName } from '../src/json-schema'
-import { SCHEMA_OUT_DIR } from '../scripts/out-dir'
+import { JSON_SCHEMA_FILES, SCHEMA_OUT_DIR, toJsonSchemaText, type JsonSchemaName } from '../src/json-schema'
 
 // =====================================================================
 //  플러그인에 배포되는 JSON Schema 가 Zod 정본과 **어긋나지 않는지** 잠근다.

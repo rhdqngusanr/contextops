@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
+import { TOKEN_PREFIX } from '@contextops/schema'
 
 // =====================================================================
 //  프로젝트 토큰 (SPEC §11 「`ctx_` + 32바이트 base64url · DB엔 sha256만 ·
@@ -10,8 +11,12 @@ import { createHash, randomBytes } from 'node:crypto'
 //  ★ 숫자는 전부 여기 상수다 — 길이·기한을 라우트에 적으면 발급과 검증이 갈라진다.
 // =====================================================================
 
-/** 접두사. 세션 JWT 와 기기 토큰을 **한 헤더에서** 구별하는 근거다 (`auth.ts`). */
-export const TOKEN_PREFIX = 'ctx_'
+/**
+ * 접두사. 세션 JWT 와 기기 토큰을 **한 헤더에서** 구별하는 근거다 (`auth.ts`).
+ * ⚠ 값의 정본은 `packages/schema` 다 — 플러그인도 같은 값으로 토큰 모양을 판다
+ *   (`DeviceToken`). 여기서 다시 적으면 한 글자 차이로 조용히 「알 수 없는 토큰」이 된다.
+ */
+export { TOKEN_PREFIX }
 export const TOKEN_BYTES = 32
 /** SPEC §11 「만료 90일」의 정본. `devices.expires_at` 을 이 값으로 채운다. */
 export const TOKEN_TTL_DAYS = 90

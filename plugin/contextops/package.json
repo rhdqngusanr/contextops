@@ -1,0 +1,32 @@
+{
+  "name": "@contextops/plugin",
+  "private": true,
+  "type": "module",
+  "_comment_version": [
+    "🔴 배포되는 버전의 정본은 `.claude-plugin/plugin.json` 이다 — Claude Code 가 읽는 것이",
+    "  그 파일이다. 여기 version 이 있는 이유는 pnpm 워크스페이스 멤버라서일 뿐이고,",
+    "  둘이 갈라지지 않게 `test/plugin-manifest.test.ts` 가 같은 값인지 잰다."
+  ],
+  "version": "0.1.0",
+  "_comment_bin": [
+    "bin/contextops-cli.mjs 는 **커밋되는 빌드 산출물**이다 (SPEC §1.2 「esbuild 단일 ESM",
+    "번들, 런타임 의존 0」). 플러그인을 설치하는 사람은 pnpm install 을 하지 않는다 —",
+    "`node ${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs` 가 그대로 돌아야 한다.",
+    "★ 소스와 갈리지 않게 test/bundle.test.ts 가 방금 빌드한 바이트와 대조한다."
+  ],
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@contextops/schema": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "esbuild": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

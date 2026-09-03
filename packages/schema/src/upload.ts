@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CommitSha, ItemId, MilestoneId, RepoPath, Sha256, SourceRef } from './common'
+import { CommitSha, ItemId, MilestoneId, RepoName, RepoPath, Sha256, SourceRef } from './common'
 import { ContextItemDraft } from './item'
 
 // =====================================================================
@@ -17,23 +17,47 @@ import { ContextItemDraft } from './item'
 // =====================================================================
 
 /**
+ * 🔴 **스캔 산출물의 상한표.** 스키마와 **스캐너가 같은 값을 봐야 한다** —
+ * 스캐너가 더 많이 담으면 업로드가 400 이고, 덜 담으면 상한이 거짓말이 된다.
+ * ★ 스캐너는 `plugin/contextops/src/cli/scan.ts` 에서 이 표를 그대로 읽는다.
+ */
+export const SCAN_LIMITS = {
+  files: 5000,
+  languages: 30,
+  entrypoints: 50,
+  infra_files: 100,
+  env_keys: 200,
+  dependencies: 500,
+  excluded: 100,
+  /** 제외 사유 한 줄의 길이. 경로가 길다는 이유로 스캔이 실패하지 않게 자르는 기준. */
+  note_chars: 200,
+} as const
+
+/**
  * `scan` 이 만든 요약 (SPEC §8.3). **경로와 이름만** 담는다 — 파일 본문은 없다.
  * ⚠ `env_keys` 는 **키 이름**이다. 값은 이 스키마에 자리가 없다.
  */
 export const ScanSummary = z.object({
   file_count: z.int().min(0),
-  languages: z.array(z.string().min(1).max(40)).max(30).default([]),
-  entrypoints: z.array(RepoPath).max(50).default([]),
-  infra_files: z.array(RepoPath).max(100).default([]),
-  env_keys: z.array(z.string().min(1).max(100)).max(200).default([]),
-  dependencies: z.array(z.string().min(1).max(200)).max(500).default([]),
-  excluded: z.array(z.string().min(1).max(200)).max(100).default([]),
+  languages: z.array(z.string().min(1).max(40)).max(SCAN_LIMITS.languages).default([]),
+  entrypoints: z.array(RepoPath).max(SCAN_LIMITS.entrypoints).default([]),
+  infra_files: z.array(RepoPath).max(SCAN_LIMITS.infra_files).default([]),
+  env_keys: z.array(z.string().min(1).max(100)).max(SCAN_LIMITS.env_keys).default([]),
+  dependencies: z.array(z.string().min(1).max(200)).max(SCAN_LIMITS.dependencies).default([]),
+  excluded: z.array(z.string().min(1).max(SCAN_LIMITS.note_chars)).max(SCAN_LIMITS.excluded).default([]),
 }).strict()
+
+/**
+ * 한 번에 올릴 수 있는 초안 수. `.contextops/cache/draft.json`(`ContextItemDraftFile`)과
+ * 이 body 가 **같은 상한**을 봐야 한다 — 로컬 검증은 통과하는데 업로드가 400 이 되면
+ * init Skill 은 왜 막혔는지 사람에게 설명할 수 없다.
+ */
+export const MAX_DRAFT_ITEMS = 50
 
 /** `POST /projects/{id}/context-items:batch-draft` (SPEC §5) */
 export const ContextItemsBatchDraft = z.object({
-  items: z.array(ContextItemDraft).min(1).max(50),
-  repo: z.string().min(1).max(100),
+  items: z.array(ContextItemDraft).min(1).max(MAX_DRAFT_ITEMS),
+  repo: RepoName,
   scan_summary: ScanSummary,
 }).strict()
 
