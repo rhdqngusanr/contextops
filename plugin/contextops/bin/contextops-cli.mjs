@@ -18988,7 +18988,8 @@ var DeviceToken = external_exports.string().regex(
   new RegExp(`^${TOKEN_PREFIX}[A-Za-z0-9_-]{16,200}$`),
   `${TOKEN_PREFIX} \uB85C \uC2DC\uC791\uD558\uB294 \uAE30\uAE30 \uD1A0\uD070\uC774\uC5B4\uC57C \uD55C\uB2E4`
 );
-var ItemId = external_exports.string().regex(/^item_[a-z0-9_]{3,40}$/);
+var ITEM_ID_BODY_MAX = 40;
+var ItemId = external_exports.string().regex(new RegExp(`^item_[a-z0-9_]{3,${ITEM_ID_BODY_MAX}}$`));
 var MilestoneId = external_exports.string().regex(/^[A-Z]{1,4}-M\d{1,2}$|^M\d{1,2}$/);
 var CalendarDate = external_exports.iso.date();
 var Semver = external_exports.string().regex(/^\d+\.\d+\.\d+$/, "major.minor.\uC218\uC815 \uC138 \uC790\uB9AC\uC5EC\uC57C \uD55C\uB2E4");
@@ -19114,6 +19115,22 @@ var ITEM_DATA = {
 var variantsOf = (base) => nonEmpty(ITEM_TYPES.map((type) => base.extend({ type: external_exports.literal(type), data: ITEM_DATA[type] }).strict()));
 var ContextItem = external_exports.discriminatedUnion("type", variantsOf(ItemBase));
 var ContextItemDraft = external_exports.discriminatedUnion("type", variantsOf(DraftBase));
+var AiSourceSpan = external_exports.object({
+  start_char: external_exports.int().min(0),
+  end_char: external_exports.int().min(0),
+  heading_path: external_exports.array(external_exports.string().max(200)).max(10).default([])
+}).strict();
+var AI_MAX_ITEMS_PER_CHUNK = 40;
+var AI_MAX_OPEN_QUESTIONS_PER_CHUNK = 20;
+var AiDraftBase = DraftBase.omit({ source_refs: true, owner_id: true }).extend({ span: AiSourceSpan });
+var AiContextItemDraft = external_exports.discriminatedUnion("type", variantsOf(AiDraftBase));
+var AiStructureOutput = external_exports.object({
+  items: external_exports.array(AiContextItemDraft).max(AI_MAX_ITEMS_PER_CHUNK),
+  open_questions: external_exports.array(external_exports.object({
+    question: external_exports.string().min(3).max(500),
+    span: AiSourceSpan
+  }).strict()).max(AI_MAX_OPEN_QUESTIONS_PER_CHUNK)
+}).strict();
 
 // ../../packages/schema/src/upload.ts
 var SCAN_LIMITS = {
@@ -19209,7 +19226,12 @@ var ERROR_CODES = [
   //  ⚠ SPEC §5 의 나열에는 없다. **잡히지 않은 예외도 봉투로 나가야** 해서 더했다 —
   //     안 그러면 그 한 응답만 `{error:{code,…}}` 가 아니고, 화면은 그 모양을 못 읽는다.
   //     스택·본문은 절대 싣지 않는다 (SPEC §11 로그 규칙과 같은 이유).
-  "INTERNAL"
+  "INTERNAL",
+  //  ⚠ SPEC §7 공통 규약의 마지막 갈래다 — 「출력은 Zod 로 재검증, 실패 시 오류 위치를
+  //     넣어 1회 재시도, 재실패 시 `AI_OUTPUT_INVALID`」. `INTERNAL`(500)로 내면
+  //     「AI 가 계약과 다른 걸 냈다」와 「서버가 터졌다」가 화면에서 구별되지 않는다
+  //     (docs/feedback/FINDINGS.md 48번).
+  "AI_OUTPUT_INVALID"
 ];
 var ApiMeta = external_exports.object({ request_id: external_exports.uuid() }).strict();
 var ApiFailure = external_exports.object({

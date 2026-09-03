@@ -49,17 +49,25 @@ export const JSON_SCHEMA_FILES = {
 export type JsonSchemaName = keyof typeof JSON_SCHEMA_FILES
 
 /**
+ * Zod 하나 → JSON Schema. **표에 없는 스키마도 같은 설정으로** 뽑기 위한 자리다 —
+ * 서버측 AI 의 도구 `input_schema`(SPEC §7 「input_schema = 해당 Zod 의 JSON Schema」)가
+ * 파일로 나가지 않으면서 이 함수를 쓴다. 설정을 두 곳에 적으면 갈라진다.
+ *
  * `io: 'input'` — 플러그인이 검증하는 것은 **보내기 전의 payload** 다.
  * default 가 있는 필드는 입력에서 빠져도 되므로 output 스키마로 재면 멀쩡한 초안이 빨개진다.
  */
-export function toJsonSchema(name: JsonSchemaName): Record<string, unknown> {
-  return z.toJSONSchema(JSON_SCHEMA_FILES[name], {
+export function toJsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
+  return z.toJSONSchema(schema, {
     target: 'draft-2020-12',
     io: 'input',
     // 겹치는 부분 스키마는 `$defs` 로 한 번만 적는다. 인라인이면 항목 10종이 유니온마다
     // 통째로 복사돼 파일이 100KB 를 넘고, 사람이 열어 볼 수 없게 된다.
     reused: 'ref',
   }) as Record<string, unknown>
+}
+
+export function toJsonSchema(name: JsonSchemaName): Record<string, unknown> {
+  return toJsonSchemaOf(JSON_SCHEMA_FILES[name])
 }
 
 export function toJsonSchemaText(name: JsonSchemaName): string {

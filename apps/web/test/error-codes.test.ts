@@ -95,10 +95,10 @@ describe('🔴 정의만 있고 아무 일도 안 하는 코드가 없다 (FINDI
     ).toEqual([])
   })
 
-  it('열 코드가 전부 실제로 내는 자리를 가졌다', () => {
-    //  ⚠ 여덟이었다. 예산 가드가 `BUDGET_EXCEEDED`·`RATE_LIMITED` 를 내면서 열이 됐다
-    //    (`lib/ai/budget.ts` · PLAN P3 첫 행). 이 목록은 `ERROR_CODES` 와 같아야 한다 —
-    //    같아졌으므로 이제 「하나도 죽어 있지 않다」를 통째로 잰다.
+  it('모든 코드가 실제로 내는 자리를 가졌다', () => {
+    //  ⚠ 여덟 → 열(예산 가드의 `BUDGET_EXCEEDED`·`RATE_LIMITED`) → **열하나**
+    //    (`AI_OUTPUT_INVALID` 를 `lib/ai/structure.ts` 가 낸다 · PLAN P3 첫 행 ②).
+    //    이 목록은 `ERROR_CODES` 와 같아야 한다 — 「하나도 죽어 있지 않다」를 통째로 잰다.
     const live = ERROR_CODES.filter((code) => callersOf(code).length > 0)
     expect([...live].sort()).toEqual([...ERROR_CODES].sort())
   })

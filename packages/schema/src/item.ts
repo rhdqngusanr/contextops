@@ -165,3 +165,57 @@ export function parseContextItem(input: unknown): ContextItem {
 export function parseContextItemDraft(input: unknown): ContextItemDraft {
   return ContextItemDraft.parse(input) as ContextItemDraft
 }
+
+// ---------------------------------------------------------------------
+//  서버측 AI(§7.1)가 내는 모양 — 초안에서 **근거만** chunk 기준으로 바꾼 것
+//
+//  🔴 **왜 `ContextItemDraft` 를 그대로 안 쓰나** — SPEC §7.1 은
+//    「`source_ref.start_char/end_char` 는 **chunk offset** 을 문서 offset 으로 변환해
+//    검증」이라고 적는다. 즉 모델이 내는 offset 은 문서 기준이 아니다. 그리고
+//    `document_version_id`(uuid)는 **서버가 아는 값**이라 모델이 되풀이할 이유가 없다 —
+//    지어내면 근거가 남의 문서를 가리키게 되고 그게 P7 이 무너지는 자리다.
+//    `owner_id` 도 같은 이유로 뺐다 (사람의 uuid 를 모델이 알 리 없다).
+//
+//  ⚠ 타입별 `data` 는 **위 `ITEM_DATA` 표를 그대로 읽는다.** 새 ItemType 을 더할 때
+//    여기 고칠 것은 없다 — `variantsOf` 가 표를 도는 자리 하나다.
+//
+//  ⚠ 이 계약은 **외부 입력**이다 (LLM 응답). 그래서 라우트 body 와 같은 곳에 둔다 —
+//    「모든 외부 입력은 packages/schema 로 파싱한다」(CLAUDE.md).
+// ---------------------------------------------------------------------
+
+/** chunk 안의 원문 구간. `end_char` 는 exclusive 다 (`slice` 와 같은 뜻). */
+export const AiSourceSpan = z.object({
+  start_char: z.int().min(0),
+  end_char: z.int().min(0),
+  heading_path: z.array(z.string().max(200)).max(10).default([]),
+}).strict()
+export type AiSourceSpan = z.infer<typeof AiSourceSpan>
+
+/** chunk 하나가 낼 수 있는 항목 수 상한 — 넘으면 계약 위반으로 1회 재시도한다. */
+export const AI_MAX_ITEMS_PER_CHUNK = 40
+/** chunk 하나가 낼 수 있는 열린 질문 수 상한. */
+export const AI_MAX_OPEN_QUESTIONS_PER_CHUNK = 20
+
+const AiDraftBase = DraftBase.omit({ source_refs: true, owner_id: true }).extend({ span: AiSourceSpan })
+
+export const AiContextItemDraft = z.discriminatedUnion('type', variantsOf(AiDraftBase))
+
+type AiDraftOut = z.infer<typeof AiDraftBase>
+
+export type AiContextItemDraft = {
+  [K in ItemType]: AiDraftOut & { type: K; data: z.infer<(typeof ITEM_DATA)[K]> }
+}[ItemType]
+
+/** §7.1 의 출력 스키마 그 자체. 도구(tool use)의 `input_schema` 가 이것에서 나온다. */
+export const AiStructureOutput = z.object({
+  items: z.array(AiContextItemDraft).max(AI_MAX_ITEMS_PER_CHUNK),
+  open_questions: z.array(z.object({
+    question: z.string().min(3).max(500),
+    span: AiSourceSpan,
+  }).strict()).max(AI_MAX_OPEN_QUESTIONS_PER_CHUNK),
+}).strict()
+
+export type AiStructureOutput = {
+  items: AiContextItemDraft[]
+  open_questions: { question: string; span: AiSourceSpan }[]
+}

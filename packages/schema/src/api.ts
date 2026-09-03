@@ -16,7 +16,7 @@ import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './u
 // =====================================================================
 
 // ---------------------------------------------------------------------
-//  에러 코드 9종 — SPEC §5 마지막 줄이 정본이었고, 이제 이 표가 정본이다
+//  에러 코드 — SPEC §5 마지막 줄이 정본이었고, 이제 이 표가 정본이다
 // ---------------------------------------------------------------------
 
 /**
@@ -40,6 +40,11 @@ export const ERROR_CODES = [
   //     안 그러면 그 한 응답만 `{error:{code,…}}` 가 아니고, 화면은 그 모양을 못 읽는다.
   //     스택·본문은 절대 싣지 않는다 (SPEC §11 로그 규칙과 같은 이유).
   'INTERNAL',
+  //  ⚠ SPEC §7 공통 규약의 마지막 갈래다 — 「출력은 Zod 로 재검증, 실패 시 오류 위치를
+  //     넣어 1회 재시도, 재실패 시 `AI_OUTPUT_INVALID`」. `INTERNAL`(500)로 내면
+  //     「AI 가 계약과 다른 걸 냈다」와 「서버가 터졌다」가 화면에서 구별되지 않는다
+  //     (docs/feedback/FINDINGS.md 48번).
+  'AI_OUTPUT_INVALID',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
@@ -72,6 +77,9 @@ export const ERROR_STATUS: Record<ErrorCode, { status: number; message: string }
   RATE_LIMITED: { status: 429, message: '요청이 너무 잦다' },
   COMPILE_FAILED: { status: 500, message: 'Pack 컴파일에 실패했다' },
   INTERNAL: { status: 500, message: '서버에서 처리하지 못했다' },
+  //  ⚠ 502 다 — 우리가 터진 게 아니라 **상류가 계약을 어겼다.** 500 으로 내면
+  //     운영자가 우리 스택을 뒤지고, 화면은 「다시 해 보세요」를 못 고른다 (SPEC §7).
+  AI_OUTPUT_INVALID: { status: 502, message: 'AI 응답이 계약과 맞지 않는다' },
 }
 
 // ---------------------------------------------------------------------

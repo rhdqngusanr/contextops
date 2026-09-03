@@ -75,8 +75,15 @@ export const DeviceToken = z.string().regex(
   `${TOKEN_PREFIX} 로 시작하는 기기 토큰이어야 한다`,
 )
 
+/**
+ * `item_` 뒤에 올 수 있는 글자 수의 상한.
+ * ★ 왜 상수인가 — 서버측 AI(§7.1)가 같은 id 를 두 번 내면 뒤에 `_2` 를 붙여 갈라야 하는데,
+ *   그 자리가 「몇 글자까지 되나」를 알아야 한다. 두 곳에 40 을 적으면 조용히 갈라진다.
+ */
+export const ITEM_ID_BODY_MAX = 40
+
 /** `item_<slug>` (SPEC §3). */
-export const ItemId = z.string().regex(/^item_[a-z0-9_]{3,40}$/)
+export const ItemId = z.string().regex(new RegExp(`^item_[a-z0-9_]{3,${ITEM_ID_BODY_MAX}}$`))
 
 /** `BS-M1` 또는 `M1` (SPEC §3 RoadmapData). */
 export const MilestoneId = z.string().regex(/^[A-Z]{1,4}-M\d{1,2}$|^M\d{1,2}$/)
