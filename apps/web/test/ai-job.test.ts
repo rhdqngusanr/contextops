@@ -24,7 +24,9 @@ import {
   AI_JOB_SHAPES,
   createJob,
   runJob,
+  type AiJobProgress,
 } from '../src/lib/ai/job'
+import { chunkByHeading } from '../src/lib/ai/structure'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
@@ -703,5 +705,168 @@ describe('🔴 목록은 무거운 칸을 안 나른다 (FINDINGS 60 · SPEC §5
       input: { document_version_id: doc.current_version_id },
       error_code: null,
     })
+  })
+})
+
+// =====================================================================
+describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 · §9 화면 3)', () => {
+  /**
+   * 절 하나가 조각 하나가 되는 문서. `STRUCTURE_CHUNK_MIN_CHARS`(6,000)를 넘겨야
+   * 다음 절과 안 합쳐진다 — 아래 시험이 그 사실을 `chunkByHeading` 으로 잠근다.
+   */
+  function multiChunkDoc(sections: number): string {
+    const line = '이 문단은 환불 규칙을 설명한다. 접수 후 24시간 안에 종결한다.\n'
+    let out = '# paylab 문서\n'
+    for (let i = 1; i <= sections; i++) {
+      let body = ''
+      while (body.length < 7_000) body += line
+      out += `\n## ${i}. 절\n\n${body}`
+    }
+    return out
+  }
+
+  /** 계약을 지키는 조각 응답 하나 — 조각마다 항목 한 장. */
+  function chunkAnswer(n: number): StubReply {
+    return {
+      input: {
+        items: [{
+          id: `item_refund_${n}`,
+          type: 'policy',
+          title: `환불 SLA ${n}`,
+          body: '환불은 접수 후 24시간 안에 종결한다.',
+          scope: { kind: 'project' },
+          data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
+          span: { start_char: 0, end_char: 20 },
+        }],
+        open_questions: [],
+      },
+    }
+  }
+
+  /**
+   * 🔴 부를 때마다 **행을 먼저 읽어** 그때의 진행률을 적어 둔다.
+   * ★ 왜 이렇게 재나 — 「끝난 뒤의 값」은 진행률이 아니다. 화면 3 이 polling 으로
+   *   보는 것은 **도는 도중의 행**이고, 그 순간을 붙잡을 수 있는 자리가 LLM 왕복뿐이다.
+   */
+  function stubAiWatching(jobId: string, seen: unknown[], answer: (n: number) => StubReply): void {
+    let n = 0
+    setAiClientForTest({
+      messages: {
+        create: async (r: { tools: { name: string }[] }) => {
+          seen.push((await jobRow(jobId)).progress)
+          const reply = answer(n++)
+          return {
+            content: [{ type: 'tool_use', name: r.tools[0]!.name, input: reply.input }],
+            usage: { input_tokens: 100, output_tokens: 50 },
+          }
+        },
+      },
+    } as unknown as Anthropic)
+  }
+
+  it('🔴 조각마다 자란다 — polling 이 status 한 글자 말고 볼 것이 생겼다', async () => {
+    const content = multiChunkDoc(3)
+    //  문서가 진짜로 여러 조각인지부터 잠근다 — 한 조각이면 이 시험은 아무것도 안 잰다.
+    expect(chunkByHeading(content).length).toBe(3)
+
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId, content)
+    const seen: unknown[] = []
+    stubAiWatching(job.id, seen, chunkAnswer)
+
+    expect(await runJob(job.id)).toBe('succeeded')
+
+    //  🔴 조각을 부르기 **전에** 본 값들 — 0 → 1 → 2 로 늘어난다.
+    expect(seen).toEqual([
+      { done: 0, total: 3, unit: '조각' },
+      { done: 1, total: 3, unit: '조각' },
+      { done: 2, total: 3, unit: '조각' },
+    ])
+    expect((await jobRow(job.id)).progress).toEqual({ done: 3, total: 3, unit: '조각' })
+  })
+
+  it('🔴 첫 걸음에 이미 **총수**를 안다 — 회전이 막대가 되는 자리다', async () => {
+    const content = multiChunkDoc(2)
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId, content)
+    const seen: unknown[] = []
+    stubAiWatching(job.id, seen, chunkAnswer)
+
+    expect(await runJob(job.id)).toBe('succeeded')
+
+    //  아직 한 조각도 안 읽었는데 「2조각짜리 일」이라고 말할 수 있다.
+    expect(seen[0]).toEqual({ done: 0, total: 2, unit: '조각' })
+  })
+
+  it('아직 굴리지 않은 job 은 진행률이 `null` 이다 — 「0 걸음」과 다르다', async () => {
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId)
+    expect((await jobRow(job.id)).progress).toBeNull()
+  })
+
+  it('🔴 실패해도 **어디까지 갔는지** 남는다 — 「9/12 에서 죽었다」를 말할 수 있다', async () => {
+    const content = multiChunkDoc(3)
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId, content)
+    const seen: unknown[] = []
+    //  첫 조각만 계약을 지키고, 둘째 조각은 재시도까지 어긴다 (SPEC §7).
+    stubAiWatching(job.id, seen, (n) => (n === 0 ? chunkAnswer(n) : { input: { items: 'nope' } }))
+
+    expect(await runJob(job.id)).toBe('failed')
+
+    const row = await jobRow(job.id)
+    expect(row.errorCode).toBe('AI_OUTPUT_INVALID')
+    expect(row.result).toBeNull()
+    //  🔴 `result` 는 없는데 진행률은 있다 — 수명이 정하는 칸이 아니라서 살아남는다.
+    expect(row.progress).toEqual({ done: 1, total: 3, unit: '조각' })
+  })
+
+  it('🔴 목록이 진행률을 나른다 — 2초마다 두드리는 자리가 목록이다', async () => {
+    const content = multiChunkDoc(2)
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId, content)
+    stubAi(chunkAnswer)
+    expect(await runJob(job.id)).toBe('succeeded')
+
+    const listed = await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${projectId}/jobs`, { auth: owner }),
+      params({ id: projectId }),
+    )) as { jobs: Record<string, unknown>[] }
+
+    //  목록은 `result` 를 안 나르지만(FINDINGS 60) 진행률은 나른다 — 그게 목록의 일이다.
+    expect(listed.jobs[0]).toMatchObject({
+      shape: 'summary',
+      progress: { done: 2, total: 2, unit: '조각' },
+    })
+    expect('result' in listed.jobs[0]!).toBe(false)
+    expect(AI_JOB_FIELDS.progress.heavy).toBe(false)
+  })
+
+  it('🔴 걸음의 낱말은 **러너 표**가 정한다 — 화면에 `feature ===` 갈래가 없다', async () => {
+    const { owner, projectId } = await seed()
+
+    //  ① 구조화
+    const { job: structure } = await uploadDoc(owner, projectId, multiChunkDoc(2))
+    stubAi(chunkAnswer)
+    expect(await runJob(structure.id)).toBe('succeeded')
+
+    //  ② 탐지 — 걸음이 하나다 (묶음 하나를 한 번에 견준다)
+    const { job: conflict } = await uploadItems(owner, projectId)
+    stubAi(() => ({ input: { conflicts: [] } }))
+    expect(await runJob(conflict!.id)).toBe('succeeded')
+
+    const structureProgress = (await jobRow(structure.id)).progress as AiJobProgress
+    const conflictProgress = (await jobRow(conflict!.id)).progress as AiJobProgress
+
+    //  기능마다 낱말이 갈리고, 그 값은 **표에서 온다** — 시험이 낱말을 손으로 적지 않는다.
+    expect(structureProgress.unit).toBe(AI_JOB_RUNNERS.structure.unit)
+    expect(conflictProgress.unit).toBe(AI_JOB_RUNNERS.conflict.unit)
+    expect(structureProgress.unit).not.toBe(conflictProgress.unit)
+    //  표의 모든 러너가 낱말을 갖는다 — 하나 더할 때 빠뜨리면 타입이 막는다.
+    for (const [feature, runner] of Object.entries(AI_JOB_RUNNERS)) {
+      expect(runner.unit.length, `${feature} 의 unit`).toBeGreaterThan(0)
+    }
+    //  걸음이 하나인 job 도 「1 중 1」로 끝난다 — 막대가 끝까지 안 가는 job 이 없다.
+    expect(conflictProgress).toEqual({ done: 1, total: 1, unit: AI_JOB_RUNNERS.conflict.unit })
   })
 })

@@ -50,6 +50,12 @@ export interface AiJobRunContext<I> {
   readonly job: AiJobRef
   /** `input` 스키마로 이미 판 값이다. 러너가 다시 파싱하지 않는다. */
   readonly input: I
+  /**
+   * 🔴 **몇 걸음 갔는지 지금 남긴다** (FINDINGS 62). `unit` 은 러너 표가 정하므로
+   * 러너는 숫자 둘만 준다. 첫 보고를 **일을 시작하기 전에**(`done:0`) 해라 —
+   * 화면이 「몇 걸음짜리 일인가」를 알아야 회전이 막대가 된다.
+   */
+  report(done: number, total: number): Promise<void>
 }
 
 /**
@@ -63,8 +69,34 @@ export interface AiJobRunner<I = unknown> {
   readonly spec: string
   /** `ai_jobs.input` 의 계약. **id 만 담는다** (P1). */
   readonly input: z.ZodType<I>
+  /**
+   * 🔴 이 job 의 **한 걸음이 무엇인가** — 화면이 「12 **조각** 중 3」의 가운뎃말로 쓴다.
+   *
+   * ★ 왜 표에 두나 — 화면이 `feature === 'structure' ? '조각' : …` 로 가르면
+   *   기능이 늘 때마다 화면을 고쳐야 한다. 표에 두면 화면은 **읽기만** 한다
+   *   (CLAUDE.md 「확장은 표에 한 줄」).
+   * ⚠ 사람이 읽는 낱말이다. 세는 단위를 바꾸면 여기도 같이 바꿔라 — 안 그러면
+   *   막대는 12까지 가는데 라벨은 다른 것을 세고 있다고 말한다.
+   */
+  readonly unit: string
   run(ctx: AiJobRunContext<I>): Promise<unknown>
 }
+
+/**
+ * 🔴 `ai_jobs.progress` 의 계약 — **도는 동안** 화면 3 이 읽는 유일한 새 정보다.
+ *
+ * ★ 왜 `unit` 을 값에 실어 두나 — 그래야 응답 하나가 자기를 설명한다. 화면은
+ *   `done/total` 로 막대를 그리고 `unit` 을 라벨에 그대로 쓴다. 기능이 늘어도
+ *   화면에 갈래가 생기지 않는다.
+ * ⚠ `total` 은 **실제로 읽을 걸음 수**다 (§7.1 은 12 chunk 상한에서 잘린 뒤의 수).
+ *   문서가 몇 조각이었는지는 끝난 뒤 `result.chunks {used,total}` 이 말한다.
+ */
+export const AiJobProgress = z.object({
+  done: z.number().int().min(0),
+  total: z.number().int().min(0),
+  unit: z.string().min(1),
+}).strict()
+export type AiJobProgress = z.infer<typeof AiJobProgress>
 
 // ---------------------------------------------------------------------
 //  §7.1 문서 구조화
@@ -76,7 +108,9 @@ export const StructureJobInput = z.object({ document_version_id: z.uuid() }).str
 const structureJob: AiJobRunner<z.infer<typeof StructureJobInput>> = {
   spec: '§7.1',
   input: StructureJobInput,
-  async run({ db, job, input }) {
+  //  §7.1 은 문서를 heading 으로 나눠 chunk 마다 한 번씩 부른다 (`chunkByHeading`).
+  unit: '조각',
+  async run({ db, job, input, report }) {
     //  🔴 **그 프로젝트의 문서인지 여기서 확인한다.** 안 하면 job 의 input 하나로
     //     남의 팀 문서를 읽게 된다 — 근거가 남의 원문을 가리키는 자리다 (P7).
     const [version] = await db
@@ -94,6 +128,8 @@ const structureJob: AiJobRunner<z.infer<typeof StructureJobInput>> = {
       projectId: job.projectId,
       documentVersionId: version.id,
       content: version.content,
+      //  🔴 chunk 마다 행을 남긴다 — 그래서 polling 이 status 한 글자 말고 볼 것이 생긴다.
+      onProgress: report,
     })
 
     //  🔴 열린 질문은 **질문 카드 = `kind:'open_question'` 인 충돌 행**이다
@@ -131,11 +167,17 @@ export const ConflictJobInput = z.object({ changed_item_ids: z.array(ItemId).min
 const conflictJob: AiJobRunner<z.infer<typeof ConflictJobInput>> = {
   spec: '§7.2',
   input: ConflictJobInput,
-  async run({ db, job, input }) {
+  //  ⚠ 걸음이 **하나**다 — §7.2 는 바뀐 항목 묶음 하나를 LLM 왕복 한 번으로 견준다
+  //    (SPEC §7.2 · `AI_FEATURE_LIMITS` 의 그 줄). 항목 수로 세지 마라: 항목 40개를
+  //    한 번에 보내는데 막대가 40칸이면 39칸이 한꺼번에 찬다.
+  unit: '묶음',
+  async run({ db, job, input, report }) {
+    await report(0, 1)
     const out = await detectConflicts({
       projectId: job.projectId,
       changedItemIds: input.changed_item_ids,
     })
+    await report(1, 1)
 
     //  🔴 여기가 **`conflicts` 표에 쓰는 첫 코드**다. §7.2 가 내는 넷은 전부
     //     `anchor:'items'` 라 `a_item_id`·`b_item_id`·`severity` 만 찬다 —
@@ -230,6 +272,16 @@ export async function runJob(jobId: string, now: Date = new Date()): Promise<AiJ
       db,
       job: { id: claimed.id, projectId: claimed.projectId },
       input: runner.input.parse(claimed.input),
+      //  🔴 **여기가 진행률을 쓰는 유일한 자리다** (FINDINGS 62). 러너는 숫자 둘만
+      //     주고 `unit` 은 표에서 온다 — 러너마다 다른 낱말을 적을 자리가 없다.
+      //     ⚠ 계약으로 판 뒤에 쓴다. 어긋난 값은 우리가 만든 것이므로 job 이
+      //        `INTERNAL` 로 죽는 것이 맞다 (`createJob` 의 `input` 과 같은 판단).
+      report: async (done, total) => {
+        await db
+          .update(aiJobs)
+          .set({ progress: AiJobProgress.parse({ done, total, unit: runner.unit }), updatedAt: new Date() })
+          .where(eq(aiJobs.id, jobId))
+      },
     })
     await db
       .update(aiJobs)
@@ -343,6 +395,9 @@ export const AI_JOB_FIELDS = {
   project_id: { column: aiJobs.projectId, heavy: false },
   feature: { column: aiJobs.feature, heavy: false },
   status: { column: aiJobs.status, heavy: false },
+  //  ⚠ **무겁지 않다** — `{done,total,unit}` 세 칸이고, 목록에 없으면 이 칸이 있을
+  //    이유가 없다. 화면 3 이 2초마다 두드리는 것이 목록이고, 그때 볼 것이 이것이다.
+  progress: { column: aiJobs.progress, heavy: false },
   input: { column: aiJobs.input, heavy: false },
   result: { column: aiJobs.result, heavy: true },
   error_code: { column: aiJobs.errorCode, heavy: false },
@@ -376,6 +431,7 @@ type AiJobSummaryRow = {
   project_id: string
   feature: string
   status: AiJobStatus
+  progress: unknown
   input: unknown
   error_code: string | null
   started_at: Date | null
@@ -399,6 +455,9 @@ export function toAiJob(row: AiJobSummaryRow | AiJobFullRow) {
     project_id: row.project_id,
     feature: row.feature,
     status: row.status,
+    //  ⚠ `null` 이면 「아직 한 걸음도 보고하지 않았다」다 — 「0 걸음 갔다」와 다르다.
+    //    화면은 그때 막대가 아니라 회전을 그린다 (총수를 아직 모른다).
+    progress: row.progress,
     input: row.input,
     error_code: row.error_code,
     started_at: row.started_at === null ? null : row.started_at.toISOString(),

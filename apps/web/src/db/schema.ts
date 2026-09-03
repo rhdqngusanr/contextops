@@ -579,6 +579,20 @@ export const aiJobs = pgTable('ai_jobs', {
   input: jsonb('input').notNull(),
   /** 성공했을 때만 찬다 (CHECK). 화면 3·4 가 읽는 것이 이 칸이다. */
   result: jsonb('result'),
+  /**
+   * 🔴 **도는 동안** 러너가 몇 걸음 갔나 (`{done, total, unit}` · 정본은
+   * `lib/ai/job.ts` 의 `AiJobProgress`). 화면 3 의 polling 이 읽는 유일한 **새 정보**다.
+   *
+   * ★ 왜 `result` 로는 안 되나 — `result` 는 `succeeded` 여야 찰 수 있다 (CHECK).
+   *   즉 진행을 거기 쓰면 「끝난 것」의 뜻이 무너진다. 그래서 칸을 따로 둔다.
+   * ★ 왜 `AI_JOB_STATUS_RULES` 의 축이 **아닌가** — 그 표는 「이 상태면 이 칸이
+   *   차 있어야 한다」인데 진행률은 그렇게 못 적는다: `running` 이어도 첫 걸음을
+   *   보고하기 전까지는 비어 있고(총수는 러너가 문서를 나눠 봐야 안다),
+   *   `succeeded`·`failed` 에도 **남아 있어야 한다** — 「9/12 에서 죽었다」가
+   *   실패 화면이 사람에게 할 수 있는 유일한 말이다. 수명이 정하는 칸이 아니라
+   *   **수명과 나란히 흐르는 칸**이라 CHECK 밖이다.
+   */
+  progress: jsonb('progress'),
   /** 실패했을 때만 찬다 (CHECK). `@contextops/schema` 의 `ERROR_CODES` 중 하나다. */
   errorCode: text('error_code'),
   startedAt: timestamp('started_at', { withTimezone: true }),

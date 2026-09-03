@@ -36,6 +36,13 @@
       "when": 1788462325555,
       "tag": "0004_cooing_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788466080929,
+      "tag": "0005_long_polaris",
+      "breakpoints": true
     }
   ]
 }

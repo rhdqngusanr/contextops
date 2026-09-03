@@ -144,13 +144,14 @@ ai_usage         { id, project_id null /* 게스트 데모는 없다 */, feature
                    model text, input_tokens int, output_tokens int, cost_micros int /* USD 백만분의 1 */, day text /* UTC YYYY-MM-DD */ }
 ai_jobs          { id, project_id, feature enum('structure','conflict') /* ai_feature 4종 중 job 으로 도는 둘 · CHECK 이 좁힌다 */,
                    status enum('queued','running','succeeded','failed'), input jsonb /* 가리키는 id 만 · P1 */, result jsonb null,
+                   progress jsonb null /* {done,total,unit} · 도는 동안 갱신 · CHECK 밖 */,
                    error_code text null /* ERROR_CODES 하나 · 본문·스택 금지 */, started_at, finished_at }
 progress_events  { id, project_id, device_id, milestone_id text, criterion text null, status enum('in_progress','criterion_done','done_candidate','none'),
                    evidence jsonb /* [{path,start_line,end_line,commit_sha}] */, summary text, context_version text, source enum('agent','hook','manual'),
                    confirmed_by null, confirmed_at null }
 ```
 
-🔴 **한 요청 안에서 안 끝나는 AI 일은 `ai_jobs` 행 하나다** (§7.1 문서 구조화 · §7.2 충돌 탐지). 구조화와 탐지가 **같은 표**를 쓴다 — 다른 것은 `input`·`result` 두 칸의 내용뿐이고 그 모양의 정본은 `apps/web/src/lib/ai/job.ts` 의 `AI_JOB_RUNNERS` 표다. 어느 기능이 job 인가는 `AI_FEATURE_LIMITS` 의 `job` 축이 정하고 그 목록에서 `ai_jobs_feature_ck` 가 생성된다. 수명 4종이 어느 칸을 채워야 하는지는 `AI_JOB_STATUS_RULES` 표이고, 거기서 **CHECK 제약 4개**가 생성된다 — 「succeeded 인데 `result` 가 없는 행」은 들어올 수 없다. ⚠ `input` 에는 **가리키는 id 만** 들어간다(문서 버전 uuid · `item_<slug>`). 문서·항목 본문도, 모델 응답도, 드라이버 메시지도 이 표에 자리가 없다 (P1 · §11).
+🔴 **한 요청 안에서 안 끝나는 AI 일은 `ai_jobs` 행 하나다** (§7.1 문서 구조화 · §7.2 충돌 탐지). 구조화와 탐지가 **같은 표**를 쓴다 — 다른 것은 `input`·`result` 두 칸의 내용뿐이고 그 모양의 정본은 `apps/web/src/lib/ai/job.ts` 의 `AI_JOB_RUNNERS` 표다. 어느 기능이 job 인가는 `AI_FEATURE_LIMITS` 의 `job` 축이 정하고 그 목록에서 `ai_jobs_feature_ck` 가 생성된다. 수명 4종이 어느 칸을 채워야 하는지는 `AI_JOB_STATUS_RULES` 표이고, 거기서 **CHECK 제약 4개**가 생성된다 — 「succeeded 인데 `result` 가 없는 행」은 들어올 수 없다. 🔴 **`progress {done,total,unit}` 만 그 표 밖이다** — 러너가 한 걸음 갈 때마다 갱신하고(§7.1 은 chunk 마다) 끝난 뒤에도 **남는다**. 수명이 정하는 칸이 아니라 수명과 나란히 흐르는 칸이라 CHECK 이 없다: `running` 인데 아직 비어 있을 수 있고(총수는 러너가 문서를 나눠 봐야 안다), `failed` 인데 차 있어야 한다(「9/12 에서 죽었다」가 실패 화면이 할 수 있는 유일한 말이다). 한 걸음의 낱말(`unit`)은 `AI_JOB_RUNNERS` 표의 한 칸이고 화면은 그것을 **읽기만** 한다. ⚠ `input` 에는 **가리키는 id 만** 들어간다(문서 버전 uuid · `item_<slug>`). 문서·항목 본문도, 모델 응답도, 드라이버 메시지도 이 표에 자리가 없다 (P1 · §11).
 
 🔴 **충돌 한 장이 어느 칸을 채우는지는 `kind` 가 정한다.** 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표이고 축은 셋이다 — `anchor`(`items` 면 `a_item_id`·`b_item_id`, `document` 면 `a_ref`·`b_ref`) · `needsB`(b 쪽이 필요한가) · `detected`(§7.2 가 매기는 `severity` 를 갖는가). 그 규칙은 문서가 아니라 **DB CHECK 제약 5개**이고, `apps/web/src/db/schema.ts` 의 `conflictShapeCheck()` 가 그 표를 읽어 만든다 — 종류를 더하면 `db:generate` 한 번으로 제약이 따라온다. ⚠ 항목을 `SourceRef` 로 가리키지 마라. `SOURCE_REF` 에 「항목」 종류를 더하면 항목의 `source_refs` 가 다른 항목을 가리킬 수 있게 되고 원문까지 가는 사슬이 끊긴다 (P7).
 
@@ -341,8 +342,8 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | GET /projects/{id}/context-items | member | ?type&status&scope → items[] |
 | POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}], job} — 받아들인 항목이 있을 때만 탐지 job 을 만든다 (§7.2). 빈 탐지는 §7.5 의 상한만 태운다 |
 | PATCH /context-items/{id} | owner | {revision(현재), patch} → item · revision 불일치 409 |
-| GET /projects/{id}/jobs | member | ?feature&status&limit&offset → {jobs[] (**`shape:'summary'`** — `result` 없음), limit, offset} — **최신순.** job id 는 `POST /documents`·`batch-draft` 의 응답에만 있어서, 이 문이 없으면 화면 3 이 새로고침 한 번에 도는 job 을 잃는다 (FINDINGS 58). `?feature=structure&limit=1` 이 「마지막 구조화 job」이다 |
-| GET /projects/{id}/jobs/{jobId} | member | → {**shape:'full'**, id, feature, status, input, result, error_code, started_at, finished_at} — 화면 3 의 polling (§9). 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
+| GET /projects/{id}/jobs | member | ?feature&status&limit&offset → {jobs[] (**`shape:'summary'`** — `result` 없음 · `progress` 는 있다), limit, offset} — **최신순.** job id 는 `POST /documents`·`batch-draft` 의 응답에만 있어서, 이 문이 없으면 화면 3 이 새로고침 한 번에 도는 job 을 잃는다 (FINDINGS 58). `?feature=structure&limit=1` 이 「마지막 구조화 job」이다 |
+| GET /projects/{id}/jobs/{jobId} | member | → {**shape:'full'**, id, feature, status, progress, input, result, error_code, started_at, finished_at} — 화면 3 의 polling (§9). 도는 동안 갈리는 값은 `status` 와 **`progress {done,total,unit}`** 둘뿐이다 (§2). 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |
 | POST /conflicts/{id}/resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
 | POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer}]} → 항목 생성 |
@@ -384,6 +385,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - 출력 스키마: `{ items: ContextItemDraft[], open_questions: [{question, source_ref}] }`. `source_ref.start_char/end_char`는 chunk offset을 문서 offset으로 변환해 검증(범위 밖이면 재시도). 🔴 모델이 내는 계약은 `AiStructureOutput`(`packages/schema`)이다 — 초안에서 **근거만 chunk 기준 span 으로 바꾼 것**이고, `document_version_id`·`owner_id` 는 모델이 아니라 서버가 채운다 (모델이 uuid 를 지어내면 근거가 남의 문서를 가리킨다 · P7).
 - 예산: 문서당 최대 12 chunk. 🔴 **한 문서의 모든 chunk 호출은 `withBudget` 한 번 안에서 일어나고 장부에는 합계로 한 줄이 남는다** — chunk 마다 부르면 §7.5 의 「프로젝트당 시간당 5회」가 문서가 아니라 chunk 를 세어 6조각짜리 문서 하나가 상한을 넘긴다. 12 chunk × 10,000자 ≈ 48,000 토큰이라 `AI_MAX_INPUT_TOKENS`(60k) 안이다 — 두 숫자는 맞물려 있으니 한쪽을 고치면 다른 쪽을 같이 봐라.
 - 12 chunk 를 넘는 문서는 앞 12개만 읽고 **읽은 조각 수·전체 조각 수를 결과에 낸다.** 조용히 자르지 않는다 (화면이 사람에게 말해야 한다).
+- 🔴 **조각을 하나 읽을 때마다 `ai_jobs.progress` 를 갱신한다** (`structureDocument` 의 `onProgress` → `AI_JOB_RUNNERS` 의 `report`). 첫 보고는 첫 조각을 **부르기 전**의 `{done:0, total:N, unit:'조각'}` 이다 — 화면 3 이 첫 polling 에 「몇 조각짜리 일인가」를 알아야 회전이 막대가 된다. ⚠ `progress.total` 은 12 chunk 상한에서 **잘린 뒤**의 수(=실제로 읽을 조각)이고, 잘렸다는 사실은 끝난 뒤 `result.chunks {used,total}` 이 말한다.
 - 수치(6~10k자 · 12 chunk · 재시도 1회)의 정본은 `apps/web/src/lib/ai/structure.ts` 의 상수다.
 - 🔴 **부르는 자리는 `ai_jobs` 의 `structure` job 하나다** (§2 · `lib/ai/job.ts` 의 `AI_JOB_RUNNERS.structure`). `POST /documents` 가 문서를 만든 **트랜잭션 밖에서** job 을 만들고 응답을 보낸 뒤에 굴린다 — 안에서 만들면 러너가 아직 커밋되지 않은 문서 버전을 읽으러 간다. 그 러너가 `open_questions` 를 `kind:'open_question'` 인 **충돌 행**으로 옮긴다 (질문 카드 표를 따로 만들지 않는다). ⚠ 항목 초안은 행으로 만들지 않고 `result` 에만 남는다 — 사람이 화면 4 에서 고르기 전에 `context_items` 에 넣으면 승인 절차가 무의미해진다.
 

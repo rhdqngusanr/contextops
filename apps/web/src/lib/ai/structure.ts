@@ -366,6 +366,18 @@ export interface StructureInput {
   /** 빈도 제한의 열쇠가 아니다 (`structure` 는 project 범위다) — 장부의 행위자다. */
   readonly actor?: string
   readonly now?: Date
+  /**
+   * 🔴 조각 하나를 읽을 때마다 부른다 (FINDINGS 62). **첫 번은 읽기 전에**
+   * `(0, total)` 이다 — 화면이 「몇 조각짜리 일인가」를 첫 polling 에 알아야
+   * 회전이 막대가 된다.
+   *
+   * ★ 왜 여기서 DB 에 쓰지 않나 — 이 파일은 값을 낼 뿐 행을 쓰지 않는다
+   *   (파일 머리 주석 · 쓰는 자리는 `lib/ai/job.ts` 하나다). 그래서 진행도
+   *   **부르는 쪽이** 어디에 남길지 정한다.
+   * ⚠ `total` 은 12 chunk 상한에서 **잘린 뒤**의 수다 — 실제로 읽을 조각만 센다.
+   *   잘렸다는 사실은 끝난 뒤 `chunks {used,total}` 이 말한다.
+   */
+  readonly onProgress?: (done: number, total: number) => Promise<void> | void
 }
 
 export interface StructureResult {
@@ -410,6 +422,9 @@ export async function structureDocument(input: StructureInput): Promise<Structur
       let inputTokens = 0
       let outputTokens = 0
       let model = currentModel()
+      //  ⚠ 첫 조각을 부르기 **전에** 한 번 — 이 한 줄이 회전과 막대를 가른다.
+      let done = 0
+      await input.onProgress?.(done, used.length)
       for (const chunk of used) {
         const call = await structureChunk(chunk, used.length, input.documentVersionId)
         items.push(...call.items)
@@ -417,6 +432,7 @@ export async function structureDocument(input: StructureInput): Promise<Structur
         inputTokens += call.inputTokens
         outputTokens += call.outputTokens
         model = call.model
+        await input.onProgress?.(++done, used.length)
       }
       return { value: { items, questions }, model, inputTokens, outputTokens }
     },
