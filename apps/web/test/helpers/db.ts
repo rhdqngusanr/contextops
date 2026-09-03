@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
 
 import { setDbForTest, type Db } from '../../src/db/client'
+import { setJobStarterForTest } from '../../src/lib/ai/job'
 import * as schema from '../../src/db/schema'
 
 // =====================================================================
@@ -38,17 +39,33 @@ export async function applyMigrations(pg: PGlite): Promise<void> {
   }
 }
 
+/**
+ * 🔴 라우트가 `startJob()` 으로 굴린 job 의 id 들 — **굴리지는 않고 적어만 둔다.**
+ *
+ * ★ 왜 시험에서는 안 굴리나 — 배포에서 job 은 응답을 보낸 **뒤에** 돈다. 시험이
+ *   그걸 흉내 내면 어느 시험이든 뒤에서 LLM 스텁이 도는 셈이 되고, DB 를 닫은 뒤에
+ *   쓰기가 남아 조용히 갈라진다. **job 을 재는 시험은 `runJob()` 을 직접 부른다.**
+ */
+export function startedJobIds(): string[] {
+  return [...started]
+}
+
+let started: string[] = []
+
 /** 라우트가 `getDb()` 로 집어 갈 연결까지 꽂아 준다. */
 export async function freshDb(): Promise<{ pg: PGlite; db: Db }> {
   const pg = new PGlite()
   await applyMigrations(pg)
   const db = drizzle(pg, { schema }) as unknown as Db
   setDbForTest(db)
+  started = []
+  setJobStarterForTest((jobId) => { started.push(jobId) })
   return { pg, db }
 }
 
 export async function closeDb(pg: PGlite | undefined): Promise<void> {
   setDbForTest(undefined)
+  setJobStarterForTest(undefined)
   await pg?.close()
 }
 

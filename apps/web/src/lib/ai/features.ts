@@ -46,6 +46,19 @@ export interface AiFeatureLimit {
   readonly spec: string
   /** `null` 이면 빈도 제한이 없다 (하루 예산만 막는다). 왜인지 주석에 적어라. */
   readonly rate: AiRateLimit | null
+  /**
+   * 🔴 **한 요청 안에서 끝나는가.** `true` 면 `ai_jobs` 행으로 돌고 화면은 polling 한다
+   * (SPEC §9 화면 3 「구조화 진행 표시(polling)」).
+   *
+   * ★ 왜 이 축이 여기 있나 — 「job 으로 도는 기능」 목록을 따로 만들면 그 목록과
+   *   이 표가 갈라진다. 여기 한 줄이 곧 `AiJobFeature` 유니온이고, 그 유니온이
+   *   `AI_JOB_RUNNERS`(`lib/ai/job.ts`)의 키다 — **`true` 로 바꾸면 러너를 만들 때까지
+   *   타입 검사가 막힌다.**
+   * ★ 왜 §7.1·§7.2 만 `true` 인가 — 12 chunk 짜리 문서도 40개 항목의 탐지도 한 요청
+   *   안에서 안 끝난다. §7.3(`ask`)·§7.4(`demo`)는 사람이 눌러 놓고 기다리는 한 번이라
+   *   job 으로 만들면 기다림만 늘어난다.
+   */
+  readonly job: boolean
 }
 
 /**
@@ -54,9 +67,9 @@ export interface AiFeatureLimit {
  * ⚠ 값은 SPEC §7.5 에서 왔다. 여기 숫자를 바꾸면 SPEC 도 같이 고쳐라 —
  *   두 곳에 적힌 수치는 반드시 갈라진다 (CLAUDE.md).
  */
-export const AI_FEATURE_LIMITS: Record<AiFeature, AiFeatureLimit> = {
+export const AI_FEATURE_LIMITS = {
   //  §7.5 「문서 구조화는 프로젝트당 시간당 5회」
-  structure: { spec: '§7.1', rate: { calls: 5, windowSeconds: 3600, scope: 'project' } },
+  structure: { spec: '§7.1', job: true, rate: { calls: 5, windowSeconds: 3600, scope: 'project' } },
   //  §7.5 「충돌 탐지는 프로젝트당 시간당 10회」 — **§7.2 를 만든 바퀴가 정했다.**
   //  ★ 왜 프로젝트·시간인가 — 이 기능은 사람이 누르는 것이 아니라 **항목이 바뀐
   //    묶음마다** 서버가 부른다 (`detectConflicts()` 한 번 = 장부 한 줄). 그러니
@@ -66,12 +79,39 @@ export const AI_FEATURE_LIMITS: Record<AiFeature, AiFeatureLimit> = {
   //  ★ 왜 10인가 — 한 프로젝트가 한 시간에 열 번 넘게 항목 묶음을 바꿔 올리는 것은
   //    사람의 작업 리듬이 아니라 **루프**다. 그리고 10회면 하루 예산($3)보다
   //    먼저 걸리지 않는다 — 이 상한은 예산을 대신하는 것이 아니라 폭주를 끊는 것이다.
-  conflict: { spec: '§7.2', rate: { calls: 10, windowSeconds: 3600, scope: 'project' } },
+  conflict: { spec: '§7.2', job: true, rate: { calls: 10, windowSeconds: 3600, scope: 'project' } },
   //  §7.5 「IP·사용자당 분당 3회(`/ask`, `/demo`)」
-  ask: { spec: '§7.3', rate: { calls: 3, windowSeconds: 60, scope: 'actor' } },
+  ask: { spec: '§7.3', job: false, rate: { calls: 3, windowSeconds: 60, scope: 'actor' } },
   //  §7.4 「게스트 IP당 일 5회」 — 분당 3회(§7.5)보다 이쪽이 좁아서 이 값을 쓴다.
-  demo: { spec: '§7.4', rate: { calls: 5, windowSeconds: 86_400, scope: 'actor' } },
+  demo: { spec: '§7.4', job: false, rate: { calls: 5, windowSeconds: 86_400, scope: 'actor' } },
+  //  ⚠ `as const` 가 필요하다 — 그래야 `job` 이 `boolean` 이 아니라 `true`/`false`
+  //     **리터럴**로 남고, 아래 `AiJobFeature` 가 이 표에서 유니온을 뽑아낼 수 있다.
+  //     `satisfies` 는 기능이 하나라도 빠지면 여기서 막는다.
+} as const satisfies Record<AiFeature, AiFeatureLimit>
+
+/**
+ * 🔴 **job 으로 도는 기능** — 위 표의 `job: true` 에서 **뽑아낸다.** 손으로 안 적는다.
+ *
+ * ★ 기능 하나를 job 으로 바꾸는 절차는 한 줄이다: 표의 `job` 을 뒤집는다.
+ *   그러면 `AI_JOB_RUNNERS`(`lib/ai/job.ts`)가 러너 없는 키로 타입 검사에서 막히고,
+ *   `ai_jobs.feature` 의 CHECK 제약도 `db:generate` 로 따라온다.
+ */
+export type AiJobFeature = {
+  [K in AiFeature]: (typeof AI_FEATURE_LIMITS)[K]['job'] extends true ? K : never
+}[AiFeature]
+
+/**
+ * 기능 하나가 job 인가를 묻는 **유일한 문.** 이름을 손으로 세는 자리를 만들지 않는다.
+ * ⚠ 표를 읽는 순간 `job` 이 `boolean` 으로 넓어져서 TS 가 이 좁힘을 스스로 증명하지
+ *   못한다. 위 타입과 **같은 표**를 보고 있으므로 뜻은 어긋날 수 없다
+ *   (`packages/schema` 의 `DETECTED_CONFLICT_KINDS` 와 같은 자리의 판단이다).
+ */
+export function isAiJobFeature(f: AiFeature): f is AiJobFeature {
+  return AI_FEATURE_LIMITS[f].job
 }
+
+/** 같은 것의 런타임 목록. DB CHECK 과 시험이 이 값을 읽는다. */
+export const AI_JOB_FEATURES: readonly AiJobFeature[] = AI_FEATURES.filter(isAiJobFeature)
 
 // ---------------------------------------------------------------------
 //  모델과 값

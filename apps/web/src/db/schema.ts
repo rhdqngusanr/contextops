@@ -64,7 +64,7 @@ import type { Snapshot, SourceMapEntry } from '@contextops/compiler'
 //  ⚠ 서버측 AI 의 기능 4종은 **계약이 아니라 서버 전용**이라 `packages/schema` 가 아니라
 //    `src/lib/ai/features.ts` 가 정본이다 (그 파일 머리 주석). 여기서는 **읽기만** 한다.
 //    그 파일은 의존이 없다 — 순환이 생기지 않는다.
-import { AI_FEATURES } from '../lib/ai/features'
+import { AI_FEATURES, AI_JOB_FEATURES } from '../lib/ai/features'
 
 // ---------------------------------------------------------------------
 //  DB 안에서만 사는 값 목록
@@ -79,6 +79,44 @@ export const TEAM_MEMBER_STATUSES = ['active', 'invited'] as const
 export const REVISION_ORIGINS = ['doc', 'code', 'manual', 'proposal'] as const
 /** Proposal 수명 5종 (SPEC §2 · §5). `published` 는 발행 트랜잭션이 마지막에 찍는다 (§2.1 7단계). */
 export const PROPOSAL_STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'published'] as const
+
+/**
+ * 🔴 **AI job 의 수명 4종** (SPEC §2 · §7 · §9 화면 3 「구조화 진행 표시(polling)」).
+ *
+ * ★ 왜 여기인가 — 요청 payload 에는 안 나온다. 화면이 polling 으로 읽는 **응답**과
+ *   DB 가 소비처의 전부다 (위 절의 「둘째 사용자」 규칙).
+ */
+export const AI_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as const
+export type AiJobStatus = (typeof AI_JOB_STATUSES)[number]
+
+/** 수명 한 칸이 「어느 칸을 채우고 있어야 하는가」. */
+export interface AiJobStatusRule {
+  /** 누군가 집어 갔나 (`started_at` 이 찼나). */
+  readonly started: boolean
+  /** 끝났나 (`finished_at` 이 찼나). */
+  readonly finished: boolean
+  /** 결과가 있나 (`result`). */
+  readonly result: boolean
+  /** 에러 코드가 있나 (`error_code`). */
+  readonly error: boolean
+}
+
+/**
+ * 🔴 **수명 4종의 뜻을 문장이 아니라 표로 적는다.** 아래 `aiJobs` 의 CHECK 제약
+ * 넷이 이 표에서 **생성된다** — 그래서 네 상태가 전부 서로 다른 모양을 강제한다.
+ *
+ * ★ 왜 제약까지 가나 — 「succeeded 인데 result 가 없는 행」은 화면에 「끝남」으로
+ *   멀쩡히 뜨고 눌렀을 때 보여 줄 것이 없다. 그게 이 저장소가 매 바퀴 찾는
+ *   「정의만 있고 아무 일도 안 하는 것」이 job 에서 나타나는 모양이다.
+ * ★ 상태를 더하는 절차: ① `AI_JOB_STATUSES` **끝에** 값 ② 이 표에 한 줄
+ *   ③ `pnpm --filter web db:generate` — CHECK 이 따라온다.
+ */
+export const AI_JOB_STATUS_RULES: Record<AiJobStatus, AiJobStatusRule> = {
+  queued: { started: false, finished: false, result: false, error: false },
+  running: { started: true, finished: false, result: false, error: false },
+  succeeded: { started: true, finished: true, result: true, error: false },
+  failed: { started: true, finished: true, result: false, error: true },
+}
 
 //  ⚠ `TEAM_ROLES`·`SOURCE_DOCUMENT_KINDS`·`CONFLICT_KINDS`·`CONFLICT_STATUSES` 는
 //    여기 있었지만 **API 계약이 그 값을 쓰게 되면서** `@contextops/schema` 로 올라갔다
@@ -111,6 +149,8 @@ export const progressStatus = pgEnum('progress_status', PROGRESS_STATUSES)
 export const progressSource = pgEnum('progress_source', PROGRESS_SOURCES)
 /** 서버측 AI 기능 4종 (SPEC §7 · P3). 정본은 `src/lib/ai/features.ts` 의 `AI_FEATURES` 다. */
 export const aiFeature = pgEnum('ai_feature', AI_FEATURES)
+/** AI job 의 수명 4종 (SPEC §9 화면 3). 위 `AI_JOB_STATUSES` 가 정본이다. */
+export const aiJobStatus = pgEnum('ai_job_status', AI_JOB_STATUSES)
 
 // ---------------------------------------------------------------------
 //  공통 컬럼
@@ -288,17 +328,43 @@ export const contextItemRevisions = pgTable('context_item_revisions', {
  * @param needs   표의 한 줄을 보고 「이 종류는 그 칸이 필요한가」를 답한다
  */
 function conflictShapeCheck(column: string, needs: (rule: ConflictKindRule) => boolean) {
-  const kinds = CONFLICT_KINDS.filter((k) => needs(CONFLICT_KIND_RULES[k]))
-  const filled = `"${column}" is not null`
-  //  ⚠ `kind in ()` 는 SQL 이 아니다. 아무 종류도 안 쓰는 칸(지금은 `b_ref`)과
-  //     모든 종류가 쓰는 칸은 양쪽 끝의 갈래로 따로 낸다.
+  return shapeCheck({
+    table: 'conflicts',
+    by: 'kind',
+    column,
+    all: CONFLICT_KINDS,
+    filled: CONFLICT_KINDS.filter((k) => needs(CONFLICT_KIND_RULES[k])),
+  })
+}
+
+/**
+ * 🔴 **「어느 값일 때 이 칸이 차는가」를 표에서 DB CHECK 으로 내리는 공용 문.**
+ *
+ * ★ 원래 `conflicts` 전용이었다. `ai_jobs` 가 **둘째 사용자**가 되어 정본으로 올렸다
+ *   (CLAUDE.md 「둘째 사용자가 생기면 그때 정본으로 올린다」). 셋째가 오면 그대로 쓴다.
+ *
+ * @param by      종류를 가르는 컬럼 (`kind` · `status`)
+ * @param column  채워져야 하는가를 잴 컬럼
+ * @param all     `by` 컬럼이 가질 수 있는 값 전부
+ * @param filled  그중 이 칸이 **차야 하는** 값들 — 표에서 걸러 온 것이지 손으로 적은 게 아니다
+ */
+function shapeCheck(opts: {
+  table: string
+  by: string
+  column: string
+  all: readonly string[]
+  filled: readonly string[]
+}) {
+  const filled = `"${opts.column}" is not null`
+  //  ⚠ `kind in ()` 는 SQL 이 아니다. 아무 값도 안 쓰는 칸(지금은 `conflicts.b_ref`)과
+  //     모든 값이 쓰는 칸은 양쪽 끝의 갈래로 따로 낸다.
   const body: string =
-    kinds.length === 0 ? `"${column}" is null`
-    : kinds.length === CONFLICT_KINDS.length ? filled
-    : `(${filled}) = ("kind" in (${kinds.map((k) => `'${k}'`).join(', ')}))`
+    opts.filled.length === 0 ? `"${opts.column}" is null`
+    : opts.filled.length === opts.all.length ? filled
+    : `(${filled}) = ("${opts.by}" in (${opts.filled.map((v) => `'${v}'`).join(', ')}))`
   //  `sql.raw` 를 쓰는 근거: 이 문자열의 재료는 **전부 우리 표의 상수**다. 외부 입력이
-  //  섞이는 자리가 하나도 없다 (컬럼 이름도 아래 호출부가 리터럴로 준다).
-  return check(`conflicts_${column}_shape_ck`, sql.raw(body) as SQL)
+  //  섞이는 자리가 하나도 없다 (컬럼 이름도 호출부가 리터럴로 준다).
+  return check(`${opts.table}_${opts.column}_shape_ck`, sql.raw(body) as SQL)
 }
 
 export const conflicts = pgTable('conflicts', {
@@ -485,6 +551,63 @@ export const aiUsage = pgTable('ai_usage', {
   index('ai_usage_created_idx').on(t.createdAt),
 ])
 
+/**
+ * 🔴 **한 요청 안에서 안 끝나는 AI 일 하나** (SPEC §7.1·§7.2 · §9 화면 3).
+ *
+ * ★ 왜 표 **하나**인가 — 구조화(§7.1)와 탐지(§7.2)는 「무엇을 읽나」만 다르고
+ *   수명은 같다 (queued → running → succeeded|failed). 둘을 따로 만들면 화면 3 이
+ *   polling 할 자리가 둘이 되고, 세 번째 기능이 job 이 될 때 셋이 된다.
+ *   기능마다 다른 것은 `input`·`result` **두 칸의 내용**뿐이고, 그 모양의 정본은
+ *   `lib/ai/job.ts` 의 `AI_JOB_RUNNERS` 표다 (Zod 로 판 뒤에만 여기 들어온다).
+ *
+ * ⚠ **본문을 담지 않는다** (P1 · SPEC §11). `input` 은 **가리키는 id** 뿐이다
+ *   (`document_version_id` · `item_<slug>` 목록) — 문서 본문도 항목 본문도 아니다.
+ *   `error_code` 는 `ERROR_CODES` 의 코드 하나이고, **모델의 응답이나 드라이버
+ *   메시지를 여기 적지 마라.** 적으면 P1 이 막는 것이 DB 로 새는 자리가 된다.
+ *
+ * ⚠ 왜 `feature` 가 `ai_feature`(4종)인데 CHECK 으로 다시 좁히나 — 열은 장부
+ *   (`ai_usage`)와 **같은 enum** 이어야 「이 프로젝트가 이번 시간에 무엇을 썼나」를
+ *   한 낱말로 잇는다. 그런데 job 으로 도는 것은 그중 둘뿐이고, 그 둘이 어느 것인지는
+ *   `AI_FEATURE_LIMITS` 의 `job` 축이 정한다 — 그래서 목록이 아니라 **제약**으로 내린다.
+ */
+export const aiJobs = pgTable('ai_jobs', {
+  id: id(),
+  projectId: uuid('project_id').notNull().references(() => projects.id),
+  feature: aiFeature('feature').notNull(),
+  status: aiJobStatus('status').notNull().default('queued'),
+  /** 무엇을 대상으로 하는가. 기능마다 다르고 정본은 `AI_JOB_RUNNERS[feature].input` 이다. */
+  input: jsonb('input').notNull(),
+  /** 성공했을 때만 찬다 (CHECK). 화면 3·4 가 읽는 것이 이 칸이다. */
+  result: jsonb('result'),
+  /** 실패했을 때만 찬다 (CHECK). `@contextops/schema` 의 `ERROR_CODES` 중 하나다. */
+  errorCode: text('error_code'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  //  ★ 화면 3 은 「이 프로젝트의 최근 job」을 읽는다 (polling 이 매번 도는 질의다).
+  index('ai_jobs_project_created_idx').on(t.projectId, t.createdAt.desc()),
+  //  🔴 job 으로 도는 기능만 행이 될 수 있다 — 목록은 `AI_JOB_FEATURES` 에서 온다.
+  check('ai_jobs_feature_ck', sql.raw(`"feature" in (${AI_JOB_FEATURES.map((f) => `'${f}'`).join(', ')})`) as SQL),
+  //  🔴 넷 다 `AI_JOB_STATUS_RULES` 에서 생성된다. 손으로 상태 이름을 적지 마라.
+  aiJobShapeCheck('started_at', (r) => r.started),
+  aiJobShapeCheck('finished_at', (r) => r.finished),
+  aiJobShapeCheck('result', (r) => r.result),
+  aiJobShapeCheck('error_code', (r) => r.error),
+])
+
+/** `conflictShapeCheck` 와 같은 자리 — 표의 한 줄을 보고 그 상태가 그 칸을 갖는지 답한다. */
+function aiJobShapeCheck(column: string, needs: (rule: AiJobStatusRule) => boolean) {
+  return shapeCheck({
+    table: 'ai_jobs',
+    by: 'status',
+    column,
+    all: AI_JOB_STATUSES,
+    filled: AI_JOB_STATUSES.filter((st) => needs(AI_JOB_STATUS_RULES[st])),
+  })
+}
+
 // ---------------------------------------------------------------------
 //  인덱스 7개 — SPEC §2 마지막 줄이 정본이다
 //  ★ 이 표는 `test/migration.test.ts` 의 기대값이다. 인덱스를 더하면 여기 한 줄.
@@ -499,4 +622,6 @@ export const INDEX_NAMES = [
   //  ★ 예산·빈도 검사가 매 AI 호출 앞에서 도는 질의다 (SPEC §7.5).
   'ai_usage_day_feature_idx',
   'ai_usage_created_idx',
+  //  ★ 화면 3 의 polling 이 매번 도는 질의다 (SPEC §9).
+  'ai_jobs_project_created_idx',
 ] as const

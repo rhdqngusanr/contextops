@@ -1,3 +1,4 @@
+import { CONFLICT_KIND_RULES } from '@contextops/schema'
 import type {
   ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, SourceRef,
 } from '@contextops/schema'
@@ -80,5 +81,43 @@ export function toConflict(row: ConflictRow) {
     status: row.status,
     resolution: row.resolution,
     resolved_at: row.resolved_at === null ? null : row.resolved_at.toISOString(),
+  }
+}
+
+/**
+ * 🔴 **충돌 한 장을 행으로 만드는 유일한 문.** 어느 칸이 차고 어느 칸이 비는지는
+ * 부르는 쪽이 아니라 `CONFLICT_KIND_RULES` 가 정한다.
+ *
+ * ★ 왜 문이 필요한가 — 충돌 행을 만드는 자리는 셋이다 (§7.1 의 `open_questions` ·
+ *   §7.2 의 탐지 · 사람이 직접 적는 질문). 자리마다 `kind === 'open_question' ? …`
+ *   을 적으면 종류가 늘 때 세 곳을 찾아야 하고, 하나만 빠뜨리면 **반쪽짜리 행**이
+ *   들어온다 — 화면에는 「충돌 1건」으로 멀쩡히 뜨고 눌렀을 때 가리킬 것이 없다.
+ *
+ * ⚠ 이 함수는 표가 「안 쓴다」고 한 칸을 **조용히 null 로 만든다.** 마지막 판정은
+ *   여전히 DB CHECK 이다 (`db/schema.ts` 의 `conflictShapeCheck()`) — 표가 「써야
+ *   한다」고 한 칸을 안 주면 INSERT 가 거부된다. 여기서 대신 채워 주지 않는다.
+ */
+export function conflictRow(input: {
+  projectId: string
+  kind: ConflictKind
+  question: string
+  aItemId?: string | null
+  bItemId?: string | null
+  aRef?: SourceRef | null
+  bRef?: SourceRef | null
+  severity?: ConflictSeverity | null
+}) {
+  const rule = CONFLICT_KIND_RULES[input.kind]
+  const items = rule.anchor === 'items'
+  const document = rule.anchor === 'document'
+  return {
+    projectId: input.projectId,
+    kind: input.kind,
+    question: input.question,
+    aItemId: items ? input.aItemId ?? null : null,
+    bItemId: items && rule.needsB ? input.bItemId ?? null : null,
+    aRef: document ? input.aRef ?? null : null,
+    bRef: document && rule.needsB ? input.bRef ?? null : null,
+    severity: rule.detected ? input.severity ?? null : null,
   }
 }

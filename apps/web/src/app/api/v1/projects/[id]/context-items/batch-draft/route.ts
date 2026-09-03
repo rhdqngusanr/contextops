@@ -5,6 +5,7 @@ import { ContextItemDraft, ContextItemsBatchDraftEnvelope } from '@contextops/sc
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems, repos } from '../../../../../../../db/schema'
+import { createJob, startJob } from '../../../../../../../lib/ai/job'
 import { requireProject } from '../../../../../../../lib/api/guard'
 import { issuesOf, parseBody, pathUuid, route } from '../../../../../../../lib/api/route'
 
@@ -18,8 +19,8 @@ import { issuesOf, parseBody, pathUuid, route } from '../../../../../../../lib/a
 //  ★ 항목별로 받는다 (`{accepted, rejected[{index, issues}]}`). 40개 중 하나가
 //    어긋났다고 전부 버리면 scan 결과는 영원히 안 들어간다.
 //
-//  ⚠ 「충돌 탐지 job 시작 (§7.2)」은 아직이다 (PLAN P3). 없는 job 을 시작했다고
-//    응답하지 않는다.
+//  🔴 SPEC §5 「… · **충돌 탐지 job 시작**(§7.2)」. 들어온 항목이 하나도 없으면
+//     job 을 만들지 않는다 — 빈 탐지는 §7.5 의 시간당 상한만 태운다.
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
@@ -133,5 +134,15 @@ export const POST = route<{ id: string }>('POST /projects/{id}/context-items/bat
   })
 
   rejected.sort((a, b) => a.index - b.index)
-  return ctx.ok({ accepted, rejected })
+
+  //  🔴 **바뀐 항목 묶음 하나 = 탐지 한 번**이다 (§7.2 · `features.ts` 의 `conflict` 칸).
+  //     받아들인 것이 없으면 부를 것도 없다.
+  const job = accepted.length === 0 ? null : await createJob(ctx.db, {
+    projectId,
+    feature: 'conflict',
+    input: { changed_item_ids: accepted.map((a) => a.id) },
+  })
+  if (job) startJob(job.id)
+
+  return ctx.ok({ accepted, rejected, job })
 })

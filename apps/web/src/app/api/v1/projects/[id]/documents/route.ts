@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { CreateDocument } from '@contextops/schema'
 
 import { sourceDocumentVersions, sourceDocuments } from '../../../../../../db/schema'
+import { createJob, startJob } from '../../../../../../lib/ai/job'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
@@ -14,8 +15,10 @@ import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
 //    **뒤쪽 하나**다. zip 업로드는 경로 검사·개수·용량 상한(SPEC §11)이 따로 필요해서
 //    그 몫으로 다룬다 — 반쯤 검사하는 zip 경로를 여는 것이 제일 나쁘다.
 //
-//  ⚠ 「구조화 job 시작 (§7.1)」도 아직이다 (PLAN P3). 그래서 **일부러 아무 job 도
-//    걸지 않는다** — 없는 job 을 「대기 중」이라고 응답하면 화면이 영원히 기다린다.
+//  🔴 「구조화 job 시작 (§7.1)」은 **트랜잭션 밖**이다. 문서를 만든 트랜잭션이
+//     커밋된 **뒤에** job 행을 만들고, 굴리는 것은 응답을 보낸 뒤다 (`startJob()`).
+//     ★ 왜 밖인가 — 안에서 만들면 러너가 아직 커밋되지 않은 문서 버전을 읽으러
+//       가서 `NOT_FOUND` 로 죽는다. job 은 「이미 있는 것」을 가리켜야 한다.
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +62,15 @@ export const POST = route<{ id: string }>('POST /projects/{id}/documents', async
     return { document, version }
   })
 
+  //  🔴 SPEC §5 「document + **구조화 job 시작**(§7.1)」. 화면 3 은 이 `job.id` 를
+  //     polling 한다 (`GET /projects/{id}/jobs/{jobId}`).
+  const job = await createJob(ctx.db, {
+    projectId,
+    feature: 'structure',
+    input: { document_version_id: doc.version.id },
+  })
+  startJob(job.id)
+
   return ctx.ok({
     id: doc.document.id,
     project_id: projectId,
@@ -67,5 +79,6 @@ export const POST = route<{ id: string }>('POST /projects/{id}/documents', async
     current_version_id: doc.version.id,
     revision: doc.version.revision,
     content_hash: contentHash,
+    job,
   }, 201)
 })
