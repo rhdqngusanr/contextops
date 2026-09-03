@@ -15,7 +15,7 @@ import {
 } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
-import { AI_FEATURES, AI_FEATURE_LIMITS, AI_JOB_FEATURES } from '../src/lib/ai/features'
+import { AI_FEATURES, AI_FEATURE_LIMITS, AI_JOB_FEATURES, type AiFeature } from '../src/lib/ai/features'
 import {
   AI_JOB_COLUMNS,
   AI_JOB_FIELDS,
@@ -24,6 +24,7 @@ import {
   AI_JOB_SHAPES,
   createJob,
   runJob,
+  toAiJob,
   type AiJobProgress,
 } from '../src/lib/ai/job'
 import { chunkByHeading } from '../src/lib/ai/structure'
@@ -868,5 +869,137 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
     }
     //  걸음이 하나인 job 도 「1 중 1」로 끝난다 — 막대가 끝까지 안 가는 job 이 없다.
     expect(conflictProgress).toEqual({ done: 1, total: 1, unit: AI_JOB_RUNNERS.conflict.unit })
+  })
+})
+
+// =====================================================================
+//  FINDINGS 64 — **멈춘 job 과 도는 job 을 가른다** (SPEC §2 · §5 · §9 화면 3)
+//
+//  🔴 `status` 만으로는 「10초 전에 한 걸음 간 job」과 「40분째 안 간 job」이 같아 보인다.
+//     서버가 chunk 중간에 죽으면 그 행은 **영원히 `running`** 이고(집기는 `queued` 만
+//     집는다) 화면은 영원히 막대를 그린다. 여기서 재는 것은 셋이다:
+//     ① 러너 표의 `stallAfterSec` 을 넘기면 판정이 **갈린다** (기능마다 잣대가 다르다)
+//     ② 「끝났나」는 `AI_JOB_STATUS_RULES` 가 정한다 — 상태 이름을 손으로 안 센다
+//     ③ 그 판정과 **근거(`updated_at`)** 가 목록·상세 응답에 **둘 다** 실려 나간다
+// =====================================================================
+
+describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화면 3)', () => {
+  //  ⚠ 시계를 인자로 넣는다 — 기다리는 시험은 시험이 아니다.
+  const NOW = new Date('2026-09-04T12:00:00.000Z')
+  const ago = (sec: number) => new Date(NOW.getTime() - sec * 1000)
+
+  function rowOf(feature: AiFeature, status: AiJobStatus, updatedAt: Date) {
+    return {
+      id: '00000000-0000-4000-8000-000000000001',
+      project_id: '00000000-0000-4000-8000-000000000002',
+      feature,
+      status,
+      progress: null,
+      input: {},
+      error_code: null,
+      started_at: null,
+      finished_at: null,
+      created_at: updatedAt,
+      updated_at: updatedAt,
+    }
+  }
+
+  async function listRaw(auth: string, projectId: string) {
+    return await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${projectId}/jobs`, { auth }),
+      params({ id: projectId }),
+    )) as { jobs: Record<string, unknown>[] }
+  }
+
+  it('🔴 러너 표의 `stallAfterSec` 을 넘기면 판정이 갈린다 — 표의 모든 러너가 잣대를 갖는다', () => {
+    for (const feature of AI_JOB_FEATURES) {
+      const { stallAfterSec } = AI_JOB_RUNNERS[feature]
+      //  잣대가 0 이면 방금 만든 job 도 멈춘 것이 된다 — 표에 한 줄을 더할 때 빠뜨리는 자리다.
+      expect(stallAfterSec, `${feature} 의 잣대`).toBeGreaterThan(0)
+      //  같은 행인데 **시각 하나만** 다르다. 그 하나로 판정이 갈린다.
+      expect(toAiJob(rowOf(feature, 'running', ago(stallAfterSec - 5)), NOW).stalled, `${feature} 아직`)
+        .toBe(false)
+      expect(toAiJob(rowOf(feature, 'running', ago(stallAfterSec + 5)), NOW).stalled, `${feature} 멈춤`)
+        .toBe(true)
+    }
+  })
+
+  it('🔴 잣대가 **기능마다** 다르다 — 조각짜리 잣대로 묶음짜리 job 을 재지 않는다', () => {
+    const short = AI_JOB_RUNNERS.structure.stallAfterSec
+    const long = AI_JOB_RUNNERS.conflict.stallAfterSec
+    //  걸음이 하나인 §7.2 는 그 하나가 일 전체라 더 길다. 같아지면 표가 아무것도 안 가른다.
+    expect(short).toBeLessThan(long)
+
+    //  같은 경과 시간인데 기능이 다르면 답이 다르다 — 화면은 그 갈래를 갖지 않는다.
+    const between = ago((short + long) / 2)
+    expect(toAiJob(rowOf('structure', 'running', between), NOW).stalled).toBe(true)
+    expect(toAiJob(rowOf('conflict', 'running', between), NOW).stalled).toBe(false)
+  })
+
+  it('🔴 끝난 job 은 멈춘 것이 아니다 — 「끝났나」는 `AI_JOB_STATUS_RULES` 가 정한다', () => {
+    for (const status of AI_JOB_STATUSES) {
+      //  하루가 지나도 끝난 행은 멈춘 것이 아니다. 안 움직이는 것이 정상이다.
+      const job = toAiJob(rowOf('structure', status, ago(86_400)), NOW)
+      expect(job.stalled, `${status} 는 끝났나=${AI_JOB_STATUS_RULES[status].finished}`)
+        .toBe(!AI_JOB_STATUS_RULES[status].finished)
+    }
+  })
+
+  it('🔴 목록이 판정과 **근거**를 같이 나른다 — 화면 3 이 두드리는 자리가 목록이다', async () => {
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId)
+
+    //  ① 방금 만든 job — 한 번도 안 움직였지만 그게 정상이다.
+    const [before] = (await listRaw(owner, projectId)).jobs
+    expect(before!.status).toBe('queued')
+    expect(before!.stalled).toBe(false)
+    //  근거가 판정 **옆에** 있다. 만든 뒤 안 움직였으므로 만든 시각과 같다.
+    expect(before!.updated_at).toBe(before!.created_at)
+
+    //  ② 집는 코드가 죽었다고 치고 시계를 뒤로 민다 (`after()` 가 안 돌면 이 모양이다).
+    const stall = AI_JOB_RUNNERS.structure.stallAfterSec
+    await db.update(aiJobs)
+      .set({ updatedAt: new Date(Date.now() - (stall + 60) * 1000) })
+      .where(eq(aiJobs.id, job.id))
+
+    const [after] = (await listRaw(owner, projectId)).jobs
+    expect(after!.status).toBe('queued')
+    expect(after!.stalled).toBe(true)
+    //  판정만 오면 화면이 그 값을 설명할 수 없다 — 「몇 분째 그대로다」의 재료가 같이 온다.
+    expect(after!.updated_at).not.toBe(after!.created_at)
+  })
+
+  it('🔴 한 걸음 갈 때마다 근거가 움직인다 — 그래서 도는 job 은 멈춘 것이 아니다', async () => {
+    const { owner, projectId } = await seed()
+    const { job } = await uploadDoc(owner, projectId)
+    const created = (await jobRow(job.id)).updatedAt
+
+    stubAi((n) => ({
+      input: {
+        items: [{
+          id: `item_refund_${n}`,
+          type: 'policy',
+          title: `환불 SLA ${n}`,
+          body: '환불은 접수 후 24시간 안에 종결한다.',
+          scope: { kind: 'project' },
+          data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
+          span: { start_char: 0, end_char: 20 },
+        }],
+        open_questions: [],
+      },
+    }))
+    expect(await runJob(job.id)).toBe('succeeded')
+
+    //  행이 움직였다 — 이 값이 안 자라면 도는 job 도 멈춘 것으로 보인다.
+    expect((await jobRow(job.id)).updatedAt.getTime()).toBeGreaterThan(created.getTime())
+
+    //  ⚠ 상세도 같은 두 칸을 낸다 — 목록과 상세가 다른 근거로 답하면 화면이 갈린다.
+    const detail = await dataOf(await readJob(
+      req('GET', `/api/v1/projects/${projectId}/jobs/${job.id}`, { auth: owner }),
+      params({ id: projectId, jobId: job.id }),
+    )) as Record<string, unknown>
+    expect(detail.shape).toBe('full')
+    expect(detail.stalled).toBe(false)
+    expect(detail.updated_at).toBe((await jobRow(job.id)).updatedAt.toISOString())
   })
 })

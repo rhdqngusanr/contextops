@@ -6,6 +6,7 @@ import { ItemId, ListQuery, type ErrorCode } from '@contextops/schema'
 import { getDb, type Db } from '../../db/client'
 import {
   AI_JOB_STATUSES,
+  AI_JOB_STATUS_RULES,
   aiJobs,
   conflicts,
   sourceDocumentVersions,
@@ -15,7 +16,7 @@ import {
 import { conflictRow } from '../api/conflict'
 import { ApiError, fail } from '../api/error'
 import { detectConflicts } from './conflict'
-import { AI_JOB_FEATURES, isAiJobFeature, type AiJobFeature } from './features'
+import { AI_JOB_FEATURES, isAiJobFeature, type AiFeature, type AiJobFeature } from './features'
 import { structureDocument } from './structure'
 
 // =====================================================================
@@ -79,6 +80,19 @@ export interface AiJobRunner<I = unknown> {
    *   막대는 12까지 가는데 라벨은 다른 것을 세고 있다고 말한다.
    */
   readonly unit: string
+  /**
+   * 🔴 이 job 의 **한 걸음이 이 초를 넘게 안 움직이면 멈춘 것**이다 (FINDINGS 64).
+   *
+   * ★ 왜 필요한가 — 서버가 chunk 중간에 죽으면 그 행은 **영원히 `running`** 이다
+   *   (집기는 `queued` 만 집는다). `status` 만 보는 화면은 「10초 전에 한 걸음 간 job」과
+   *   「40분째 안 간 job」을 구별할 수 없어서 영원히 막대를 그린다.
+   * ★ 왜 화면이 아니라 **표**에 두나 — 기능마다 한 걸음의 길이가 다르다. 화면에 숫자를
+   *   두면 기능이 늘 때 화면이 갈래를 갖고(`feature === …`), 두 곳의 숫자가 갈린다
+   *   (CLAUDE.md 「수치를 하드코딩하지 마라」·「확장은 표에 한 줄」).
+   * ⚠ **판정만 하고 되살리지는 않는다.** 멈춘 job 을 `queued` 로 되돌리는 문은
+   *   실패한 job 의 재시도(FINDINGS 59)와 같은 자리라 거기서 같이 정한다.
+   */
+  readonly stallAfterSec: number
   run(ctx: AiJobRunContext<I>): Promise<unknown>
 }
 
@@ -110,6 +124,10 @@ const structureJob: AiJobRunner<z.infer<typeof StructureJobInput>> = {
   input: StructureJobInput,
   //  §7.1 은 문서를 heading 으로 나눠 chunk 마다 한 번씩 부른다 (`chunkByHeading`).
   unit: '조각',
+  //  ★ 왜 180 인가 — 한 걸음은 `STRUCTURE_CHUNK_MAX_CHARS`(10,000자) 짜리 조각 하나이고
+  //    왕복은 재시도까지 **두 번**이다 (`STRUCTURE_RETRIES + 1`). 그 둘이 3분을 넘으면
+  //    응답이 오는 중이 아니라 **부르던 함수가 죽은 것**이다.
+  stallAfterSec: 180,
   async run({ db, job, input, report }) {
     //  🔴 **그 프로젝트의 문서인지 여기서 확인한다.** 안 하면 job 의 input 하나로
     //     남의 팀 문서를 읽게 된다 — 근거가 남의 원문을 가리키는 자리다 (P7).
@@ -171,6 +189,11 @@ const conflictJob: AiJobRunner<z.infer<typeof ConflictJobInput>> = {
   //    (SPEC §7.2 · `AI_FEATURE_LIMITS` 의 그 줄). 항목 수로 세지 마라: 항목 40개를
   //    한 번에 보내는데 막대가 40칸이면 39칸이 한꺼번에 찬다.
   unit: '묶음',
+  //  ★ 왜 structure 보다 긴가 — 걸음이 **하나**라서 그 하나가 일 전체다. 항목 묶음을
+  //    통째로 한 프롬프트에 실어 견주므로 입력이 조각 하나보다 훨씬 크고, 그만큼
+  //    첫 걸음과 마지막 걸음 사이가 길다. 조각짜리 잣대를 쓰면 **멀쩡히 도는 job 을
+  //    멈췄다고 부른다.**
+  stallAfterSec: 300,
   async run({ db, job, input, report }) {
     await report(0, 1)
     const out = await detectConflicts({
@@ -404,6 +427,10 @@ export const AI_JOB_FIELDS = {
   started_at: { column: aiJobs.startedAt, heavy: false },
   finished_at: { column: aiJobs.finishedAt, heavy: false },
   created_at: { column: aiJobs.createdAt, heavy: false },
+  //  🔴 **마지막으로 이 행이 움직인 시각** (FINDINGS 64). 러너가 한 걸음 갈 때마다
+  //     갱신되므로, 이 칸이 없으면 화면은 「도는 job」과 「멈춘 job」을 구별할 수 없다.
+  //     ⚠ 무겁지 않다 — 문자열 하나다. 그리고 목록이 바로 그 판정을 하는 자리다.
+  updated_at: { column: aiJobs.updatedAt, heavy: false },
 } as const
 
 type AiJobFields = typeof AI_JOB_FIELDS
@@ -429,7 +456,9 @@ export const AI_JOB_LIST_COLUMNS: SummaryColumns = columnsOf(false)
 type AiJobSummaryRow = {
   id: string
   project_id: string
-  feature: string
+  //  ⚠ `string` 이 아니라 **표의 유니온**이다 — `stalled` 판정이 이 값으로 러너를 찾는다.
+  //    넓히면 거기서 캐스트가 하나 생기고, 캐스트는 표가 늘 때 조용히 틀린다.
+  feature: AiFeature
   status: AiJobStatus
   progress: unknown
   input: unknown
@@ -437,8 +466,27 @@ type AiJobSummaryRow = {
   started_at: Date | null
   finished_at: Date | null
   created_at: Date
+  updated_at: Date
 }
 type AiJobFullRow = AiJobSummaryRow & { result: unknown }
+
+/**
+ * 🔴 **이 job 이 멈췄나** — 끝나지 않았는데 한 걸음의 길이를 넘겨 안 움직였다 (FINDINGS 64).
+ *
+ * ★ 왜 서버가 판정해서 값으로 내보내나 — 잣대(`stallAfterSec`)가 **서버 전용 표**에 있다
+ *   (`features.ts` 머리 주석: 그 표를 계약 패키지로 올리면 플러그인 번들에 실려
+ *   사용자 기계로 배포된다). 그리고 화면의 시계는 서버와 어긋난다 — 경과를 재는 것은
+ *   시각 둘을 다 가진 쪽이어야 한다. `unit` 을 값에 실은 것과 같은 판단이다.
+ * ★ 「끝났나」를 손으로 세지 않는다 — `AI_JOB_STATUS_RULES` 의 `finished` 축을 읽는다.
+ *   상태가 늘어도 이 함수는 안 고친다.
+ */
+function isStalled(row: { feature: AiFeature; status: AiJobStatus; updated_at: Date }, now: Date): boolean {
+  //  끝난 job 은 안 움직이는 것이 정상이다. 「멈췄다」는 **아직 갈 길이 남은 행**의 말이다.
+  if (AI_JOB_STATUS_RULES[row.status].finished) return false
+  //  job 이 아닌 기능은 `ai_jobs_feature_ck` 가 막지만, 표를 읽는 문은 여기서도 하나다.
+  if (!isAiJobFeature(row.feature)) return false
+  return now.getTime() - row.updated_at.getTime() > AI_JOB_RUNNERS[row.feature].stallAfterSec * 1000
+}
 
 /**
  * 응답 모양을 한 자리에서 만든다 — job 을 만드는 라우트가 둘, 읽는 라우트가 둘이다.
@@ -446,8 +494,11 @@ type AiJobFullRow = AiJobSummaryRow & { result: unknown }
  * ★ 두 모양을 **행이 정한다** — 라우트가 고르지 않는다. `result` 칸이 함께 왔으면
  *   `full`, 안 왔으면 `summary` 다. 그래서 라우트가 고르는 것은 **어느 칸 표를
  *   `select()` 에 주나** 하나뿐이고, 응답의 `shape` 는 거기서 저절로 따라온다.
+ *
+ * ⚠ `now` 는 `stalled` 를 재는 기준 시각이다. 인자로 받는 이유는 시험이 시계를 옮겨
+ *   **판정이 갈리는 것을 볼 수 있어야** 하기 때문이다 (기다리는 시험은 시험이 아니다).
  */
-export function toAiJob(row: AiJobSummaryRow | AiJobFullRow) {
+export function toAiJob(row: AiJobSummaryRow | AiJobFullRow, now: Date = new Date()) {
   const summary = {
     //  ⚠ 첫 칸이다 — 응답을 눈으로 읽는 사람이 「무엇이 빠졌나」를 먼저 본다.
     shape: ('result' in row ? 'full' : 'summary') as AiJobShape,
@@ -463,6 +514,12 @@ export function toAiJob(row: AiJobSummaryRow | AiJobFullRow) {
     started_at: row.started_at === null ? null : row.started_at.toISOString(),
     finished_at: row.finished_at === null ? null : row.finished_at.toISOString(),
     created_at: row.created_at.toISOString(),
+    //  ⚠ **마지막으로 움직인 시각**이다 (「만든 시각」이 아니다). 화면은 이 값으로
+    //    「8분째 그대로다」를 사람에게 말하고, 아래 `stalled` 는 그 판정의 결론이다.
+    updated_at: row.updated_at.toISOString(),
+    //  🔴 근거(`updated_at`)를 **옆에** 두고 판정을 낸다 — 판정만 내면 화면이 그 값을
+    //     설명할 수 없다 (DESIGN_BRIEF 「근거 없는 숫자는 화면에 없다」).
+    stalled: isStalled(row, now),
   }
   return 'result' in row ? { ...summary, result: row.result } : summary
 }

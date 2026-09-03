@@ -48,5 +48,8 @@ export const GET = route<{ id: string }>('GET /projects/{id}/jobs', async (ctx) 
     .limit(query.limit)
     .offset(query.offset)
 
-  return ctx.ok({ jobs: rows.map(toAiJob), limit: query.limit, offset: query.offset })
+  //  ⚠ `rows.map(toAiJob)` 로 쓰지 마라 — `map` 이 둘째 인자로 **번호**를 넣는데
+  //    `toAiJob` 의 둘째 인자는 「지금 몇 시인가」다 (`stalled` 를 재는 기준).
+  //    한 줄로 줄이면 목록의 둘째 행부터 1970년을 기준으로 재게 된다.
+  return ctx.ok({ jobs: rows.map((row) => toAiJob(row)), limit: query.limit, offset: query.offset })
 })
