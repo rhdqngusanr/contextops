@@ -63,6 +63,46 @@ function Get-LastLines([string] $path, [int] $n = 3) {
     return (($take -join " / ") -replace "\s+", " ").Trim()
 }
 
+#  워크스페이스 멤버를 센다 (루트는 뺀다).
+#
+#  ★ 왜 이 함수가 있나 — `pnpm -r <script>` 는 매칭되는 패키지가 하나도 없으면
+#    "No projects matched the filters" 를 찍고 **exit 0** 이다. 그대로 두면 ci.ps1 이
+#    **아무것도 검사하지 않았는데 `typecheck OK · test OK`** 로 보고한다.
+#    (직접 재현: 빈 워크스페이스에서 `pnpm -r test` → EXIT=0)
+#    가짜 초록보다 SKIP 이 낫다 — SKIP 은 「대상이 생기면 풀린다」를 약속하고
+#    OK 는 「검사했다」를 약속한다. 지키지 못할 약속을 하지 마라.
+function Get-WorkspaceMembers([string] $dir) {
+    $tmp = Join-Path $env:TEMP ("ci-members-{0}.json" -f $PID)
+    Push-Location $dir
+    & cmd.exe /c "pnpm ls -r --depth -1 --json > `"$tmp`" 2>nul"
+    Pop-Location
+    if (-not (Test-Path $tmp)) { return @() }
+    $raw = Get-Content $tmp -Raw -Encoding UTF8
+    Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
+    try { $all = $raw | ConvertFrom-Json } catch { return @() }
+    return @($all | Where-Object { $_.path -and ($_.path.TrimEnd('\') -ne $dir.TrimEnd('\')) })
+}
+
+#  그 멤버들 중 `test` 스크립트를 실제로 가진 것을 센다.
+#  ★ 왜 따로 세나 — 멤버가 있어도 `test` 스크립트가 없으면 `pnpm -r test` 는 그 패키지를
+#    **조용히 건너뛰고 exit 0** 이다. 멤버 수만 세면 「패키지는 있는데 아무도 테스트를
+#    안 도는」 상태가 다시 가짜 OK 가 된다 (pnpm-workspace.yaml 의 「셋 중 하나라도
+#    없으면 검사 없이 초록」과 같은 함정이다).
+function Get-TestableMembers($members) {
+    return @($members | Where-Object {
+        $pj = Join-Path $_.path "package.json"
+        $ok = $false
+        if (Test-Path $pj) {
+            try {
+                $j = (Get-Content $pj -Raw -Encoding UTF8) | ConvertFrom-Json
+                if ($j.scripts -and $j.scripts.test) { $ok = $true }
+            } catch { $ok = $false }
+        }
+        $ok
+    })
+}
+
 Write-Host ""
 Write-Host "=== ContextOps CI ===" -ForegroundColor Cyan
 
@@ -91,17 +131,31 @@ if (-not $hasWorkspace) {
 } else {
     #  ⚠ 검사 명령을 여기 적지 마라 — 루트 package.json 의 스크립트가 정본이다.
     #    여기와 .github/workflows/ci.yml 에 각각 적으면 셋이 갈라진다.
-    $r = Invoke-Layer "typecheck" "pnpm typecheck"
-    if ($r.code -eq 0) { Add-Layer "typecheck" "OK" "$($r.sec)초" }
-    else               { Add-Layer "typecheck" "FAIL" (Get-LastLines $r.log) }
+    #
+    #  먼저 **검사 대상이 있는지** 센다. 없는데 OK 를 찍으면 그게 제일 나쁜 고장이다.
+    $members  = Get-WorkspaceMembers $root
+    $testable = Get-TestableMembers $members
 
-    # ── 3층 · 테스트 ──────────────────────────────────────────────
-    if ($red -gt 0) {
-        Add-Layer "test" "SKIP" "앞 층이 빨갛다"
+    if ($members.Count -eq 0) {
+        Add-Layer "typecheck" "SKIP" "워크스페이스 멤버 0개"
+        Add-Layer "test"      "SKIP" "워크스페이스 멤버 0개"
     } else {
-        $r = Invoke-Layer "test" "pnpm test"
-        if ($r.code -eq 0) { Add-Layer "test" "OK" "$($r.sec)초" }
-        else               { Add-Layer "test" "FAIL" (Get-LastLines $r.log) }
+        $r = Invoke-Layer "typecheck" "pnpm typecheck"
+        if ($r.code -eq 0) { Add-Layer "typecheck" "OK" ("{0}초 · 멤버 {1}개" -f $r.sec, $members.Count) }
+        else               { Add-Layer "typecheck" "FAIL" (Get-LastLines $r.log) }
+
+        # ── 3층 · 테스트 ──────────────────────────────────────────
+        if ($red -gt 0) {
+            Add-Layer "test" "SKIP" "앞 층이 빨갛다"
+        } elseif ($testable.Count -eq 0) {
+            Add-Layer "test" "SKIP" ("test 스크립트를 가진 멤버 0개 (멤버 {0}개)" -f $members.Count)
+        } else {
+            $r = Invoke-Layer "test" "pnpm test"
+            #  note 에 **몇 개를 돌렸는지** 남긴다 — .ci/result 한 줄만 보고도
+            #  「0개를 돌고 초록」인지 사람이 알 수 있어야 한다.
+            if ($r.code -eq 0) { Add-Layer "test" "OK" ("{0}초 · 멤버 {1}개" -f $r.sec, $testable.Count) }
+            else               { Add-Layer "test" "FAIL" (Get-LastLines $r.log) }
+        }
     }
 }
 
