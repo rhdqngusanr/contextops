@@ -5,90 +5,136 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 17바퀴 · `8cde1f5`_
+_마지막 갱신: 2026-09-04 · 루프 18바퀴 · `a1f0a79`_
 
 ---
 
 ## 지금 어디인가
 
-**P3 둘째 행이 시작됐다. 그 행의 「둘째 결정」을 먼저 끝냈다 — `conflicts` 표의 모양.**
-§7.2 가 내는 것(`a_item_id`·`b_item_id`·`severity`)을 **담을 칸이 생겼고**, 어느 칸이
-차는지는 `CONFLICT_KIND_RULES` 의 새 축 `anchor` 가 정하고 **DB CHECK 제약 5개가
-막는다** (그 제약은 표에서 **생성된다** — 손으로 적은 kind 이름이 한 곳도 없다).
-마이그레이션이 `0002` → **`0003`** 이 됐다.
+**§7.1·§7.2 를 부르는 자리가 생겼다. 그리고 `conflicts` 표가 처음으로 찬다.**
+세 바퀴 동안 「만들었는데 아무도 안 부른다」였던 것이 닫혔다 —
+**FINDINGS 52(부르는 라우트 0곳)와 28(충돌 행 만드는 코드 0곳)이 같이 닫혔다.**
 
-⚠ **여전히 그 표에 쓰는 코드는 0곳이다** (FINDINGS 28). 담을 칸만 생겼다 —
-채우는 것은 `detectConflicts()` 를 부르는 job 자리와 같이 온다.
-⚠ **진짜 Claude 를 부른 적이 없다.** API 키가 없어 스텁으로만 쟀다 (🙋 사람).
+`ai_jobs` 표 하나로 **구조화와 탐지가 같은 자리**를 쓴다 (마이그레이션 `0004`).
+어느 기능이 job 인가는 `AI_FEATURE_LIMITS` 의 새 축 `job` 이 정하고, 거기서
+`AiJobFeature` 유니온과 DB CHECK 이 **생성된다**. 수명 4종이 어느 칸을 채워야 하는지는
+`AI_JOB_STATUS_RULES` 표이고 거기서 CHECK 4개가 생성된다.
 
-**다음은 P3 둘째 행의 「첫째 결정」**이다 — job 상태를 어디에 두나 (아래 「다음 바퀴」).
+⚠ **여전히 진짜 Claude 를 부른 적이 없다.** 키가 없어 스텁으로만 쟀다 (🙋 사람).
+⚠ **화면 3·4 자체는 아직 없다.** 이번 바퀴는 그 화면이 두드릴 **문**을 만든 것이다.
 
 | 있는 것 | 없는 것 |
 |---|---|
-| `loop/` · `tools/` · pnpm workspace + catalog | **`conflicts` 표에 쓰는 코드** (FINDINGS 28 — 담을 칸은 이제 있다) |
+| `loop/` · `tools/` · pnpm workspace + catalog | 웹 화면 **1·3·4·6·8·9** |
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
-| `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
-| `apps/web` — 라우트 28개 · 테스트 **194** | **`structureDocument`·`detectConflicts` 를 부르는 라우트** (52·28) |
+| `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | **도는 job 을 다시 찾을 문** (FINDINGS 58 — 새로고침하면 화면 3 이 길을 잃는다) |
+| `apps/web` — 라우트 **29개** · 테스트 **213** | **실패한 job 재시도** (FINDINGS 59) |
 | 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | `ask`·`demo` 를 부르는 자리 (기능 표의 나머지 둘 · §7.3·§7.4) |
-| 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | 구조화·탐지 job 상태를 담을 자리 (화면 3 이 polling 한다 · SPEC §9) |
-| 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · `AiConflictOutput` · 시험 24 | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
-| 🔴 **`conflicts` 표가 §7.2 를 담는다** — `a_item_id`·`b_item_id`·`severity` · CHECK 5개 · 복합 FK · 마이그레이션 `0003` | 질문 → 만들어진 항목의 **근거 사슬** (FINDINGS 56) |
-| 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
-| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
+| 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
+| 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · 시험 24 | zip 업로드 (FINDINGS 26 의 남은 절반 — SPEC §11 상한과 같이 와야 한다) |
+| 🔴 **`conflicts` 표가 §7.2 를 담는다** — CHECK 5개 · 복합 FK · 마이그레이션 `0003` | 질문 → 만들어진 항목의 **근거 사슬** (FINDINGS 56) |
+| 🔴 **job 자리** — `ai_jobs` 표 · `lib/ai/job.ts` · `AI_JOB_RUNNERS` · 라우트 3개 · 시험 **19** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
+| 🔴 **충돌 행을 만드는 코드** — 러너 둘이 유일한 자리다 (FINDINGS 28 닫음) | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
+| 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | |
+| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | |
 | **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | |
-| ✅ **모든 Pack 에 `workflow.md`** — 진행 보고 문단이 항상 나간다 (FINDINGS 43·8) | |
 
-검사 층: `principles OK 9 · typecheck 6초·멤버 4 · test 44초·멤버 4 · build 28초 ·
-walkthrough 52초` → **GREEN**. 관통 **7단계**
+검사 층: `principles OK 9 · typecheck 7초·멤버 4 · test 49초·멤버 4 · build 19초 ·
+walkthrough 55초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
-`apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없고 라우트가 없다.
-시험 합계 **617** (schema 113 · compiler 136 · plugin 174 · web 194).
+`apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없다.
+시험 합계 **636** (schema 113 · compiler 136 · plugin 174 · web 213).
 
 ## 다음 바퀴가 할 일
 
-🔴 **`docs/PLAN.md` P3 둘째 행 — 웹 화면 3·4 (가져오기 · 정리 · 질문 카드).**
-그 행이 §7.1·§7.2 를 **처음으로 부르는 자리**다. FINDINGS **52·28·25·29·26·56** 이
-전부 이 행을 기다린다.
+🔴 **`docs/PLAN.md` P3 둘째 행 ② — 웹 화면 3 (가져오기 · 구조화 진행).**
+문은 다 났다. 이제 그 문을 두드리는 화면이다.
 
-**시작하기 전에 아는 것 (세 바퀴가 깔아 둔 자리):**
+**시작하기 전에 아는 것:**
 
-- ✅ **둘째 결정(`conflicts` 표의 모양)은 이번 바퀴에 끝났다** (`8cde1f5`). 담을 칸은
-  있다 — `a_item_id`·`b_item_id`·`severity`. **INSERT 를 손으로 채우지 마라**:
-  어느 칸이 차는지는 `CONFLICT_KIND_RULES` 가 정하고 DB CHECK 이 막는다.
-  표를 읽어서 채우는 본보기가 `apps/web/test/api-routes.test.ts` 의 `seedConflict()` 다.
-- 🔴 **그래서 다음은 「첫 결정」 하나만 남았다 — job 상태를 어디에 두나.**
-  12 chunk 짜리 문서도 40개 항목의 탐지도 한 요청 안에서 안 끝난다. SPEC §9 화면 3 이
-  「구조화 진행 표시(polling)」라고 적은 것이 그 뜻이다.
-  **구조화와 탐지가 같은 자리를 쓴다** — 둘을 따로 만들지 마라.
-- 🔴 **`detectConflicts()` 의 결과를 행으로 옮기는 코드가 그 job 안에 있다** (FINDINGS 28).
-  §7.2 가 내는 넷은 전부 `anchor:'items'` 라 `aItemId`/`bItemId`/`severity` 만 채운다 —
-  `aRef` 는 `null` 이어야 하고, 안 그러면 **DB 가 거부한다** (일부러 그렇게 만들었다).
-- 🔴 **키가 없으면 `client.ts` 가 던진다.** lib 은 던지는 데까지가 제 일이다 —
-  §7.5 의 「픽스처 결과로 떨어지는」 갈래는 **라우트·화면**이 받는다. 두 lib 이 던지는
-  것은 넷이다: `BUDGET_EXCEEDED` · `RATE_LIMITED` · `AI_OUTPUT_INVALID` · 키 없음(`Error`).
-  **앞의 셋은 `ApiError` 라 봉투로 나가고, 넷째만 다르다.**
-- **베껴라, 새로 짜지 마라** — `structure.ts` 와 `conflict.ts` 가 이제 **같은 모양 둘**이다.
-  §7.3(`ask`)·§7.4(`demo`)도 그 모양이다: `withBudget(기능, {projectId, inputChars, actor?, now?},
-  async () => { …callClaude… })` → Zod 재검증 → 오류 위치를 넣어 1회 재시도 → `AI_OUTPUT_INVALID`.
-  ⚠ **공통 프롬프트는 §7.3 을 만들기 전에 손봐라** (FINDINGS **55**) — 지금 공통 7줄 중
-  3줄이 §7.2 에서 무의미하다. 넷 중 셋에 안 맞으면 그건 공통이 아니다.
-- **`withBudget` 은 「일 하나」에 한 번이다.** §7.1 은 문서 하나 · §7.2 는 탐지 한 번.
-  §7.3·§7.4 도 「무엇마다 한 번인가」를 **먼저** 정해라 — 그게 빈도 상한의 뜻이다.
-- **DB 는 안 건드렸다** — 마이그레이션은 여전히 `0002` 까지다.
+- 🔴 **FINDINGS 58 을 화면보다 먼저 해라** — `GET /projects/{id}/jobs` 목록이 없다.
+  화면부터 만들면 「응답에서 받은 job id 를 state 에 들고 있는」 코드를 짜게 되고,
+  그 코드는 **새로고침에서 조용히 무너진다.** 라우트 한 줄이면 되고 응답 모양
+  (`toAiJob()`)은 이미 있다. 인덱스(`ai_jobs_project_created_idx`)도 미리 있다.
+- 🔴 **키가 없을 때 화면이 무엇을 보여 주나 — 그 결정이 아직 없다.** job 은
+  `failed`·`error_code='INTERNAL'` 로 끝난다. §7.5 는 「픽스처 결과를 보여 준다」고
+  적었는데 **그 픽스처가 어디 있는지도, 고르는 코드도 없다.** lib 은 던지는 데까지가
+  제 일이고 job 은 코드를 남기는 데까지다 — **고르는 것은 화면이다.**
+  ⚠ 갈래는 넷이다: `BUDGET_EXCEEDED` · `RATE_LIMITED` · `AI_OUTPUT_INVALID` ·
+  `INTERNAL`(키 없음 포함). 앞의 둘만 「기다리면 풀린다」다 — FINDINGS **59** 참고.
+- **job 을 재는 본보기는 `test/ai-job.test.ts` 다.** 시험은 `runJob()` 을 **직접**
+  부른다 — `freshDb()` 가 `startJob()` 을 「적어만 두는」 것으로 갈아 끼우기 때문이다
+  (`startedJobIds()`). 배포에서는 `after()` 가 응답 뒤에 굴린다.
+- **화면 4(정리)는 이제 볼 것이 생겼다** — 충돌 카드가 실제로 행으로 들어온다.
+  `anchor` 가 `items` 면 항목 두 장, `document` 면 원문 구간이다. 화면이 그 표를
+  **읽어서** 무엇을 그릴지 골라야 한다 (한쪽으로 접으면 P7 이 끊긴다).
+- **DB 는 `0004` 까지다.** 표 18개 · 인덱스 8개.
 
 ⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
 ⚠ **Anthropic API 키도 사람이 준다.**
 
-**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57** 은 문서·한 줄짜리다.
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57·58** 은 문서·한 줄짜리다.
 **14**(`.ps1` 두 개가 LF)도 그렇다. **55**(공통 프롬프트)는 §7.3 전이 제일 싸다.
 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿 `head` 한 줄이고 둘 다 golden 을 깬다.
-🔴 **50 은 여전히 값싸고 여전히 급하다** — 이제 `callClaude()` 를 부르는 제품 파일이
-**둘**이고, 그 게이트는 예산 가드를 건너뛰는 새 파일을 못 잡는다.
+🔴 **50 은 여전히 값싸고 더 급해졌다** — `callClaude()` 를 부르는 제품 파일이 둘이고
+그 게이트는 예산 가드를 건너뛰는 새 파일을 못 잡는다.
 
-⚠ FINDINGS **24·25·26·28·29·31·33·35·52·56** 은 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
-**53** 은 **API 키가 생긴 뒤**가 주인이다. **54** 는 이번 바퀴에 절반이 닫혔다 (`8cde1f5`).
+⚠ FINDINGS **24·25·29·31·33·35·56·58·59** 는 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
+**53** 은 **API 키가 생긴 뒤**가 주인이다. **26** 은 절반(구조화 job)이 닫혔고 zip 만 남았다.
 
 ## 잰 것
+
+**18바퀴 · P3 둘째 행 ① — job 자리 · §7.1·§7.2 를 부르는 첫 코드** (`a1f0a79`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 7초 / test 49초 / build 19초 / walkthrough 55초 |
+| 새 시험 | **+19** — web 194 → **213** (`ai-job.test.ts`). 합계 **636** |
+| 마이그레이션 | `0003` → **`0004`** (`0004_cooing_nextwave.sql`). 표 17 → **18** · 인덱스 7 → **8** |
+| 새 표 | `ai_jobs` — `feature`(기존 `ai_feature` enum) · `status`(새 pgEnum `ai_job_status` 4종) · `input`·`result` jsonb · `error_code` · `started_at`·`finished_at` |
+| 새 제약 | CHECK **5개**. `ai_jobs_feature_ck` 는 `AI_JOB_FEATURES` 에서, 나머지 넷은 `AI_JOB_STATUS_RULES` 에서 **생성된다** — 마이그레이션 SQL 에 손으로 적은 상태 이름이 0곳이다 |
+| 계약 | `AI_FEATURE_LIMITS` 에 축 하나: **`job`**. 표를 `as const satisfies` 로 바꿔 거기서 `AiJobFeature` 유니온을 **뽑아낸다** (`DETECTED_CONFLICT_KINDS` 와 같은 수법). `job:true` 로 바꾸면 러너를 만들 때까지 타입 검사가 막힌다 |
+| 새 파일 | `src/lib/ai/job.ts`(`AI_JOB_RUNNERS`·`createJob`·`runJob`·`startJob`) · 라우트 `GET /projects/{id}/jobs/{jobId}` |
+| 새 문 | `conflictRow()`(`lib/api/conflict.ts`) — 충돌 행을 만드는 유일한 자리. `CONFLICT_KIND_RULES` 를 읽어 어느 칸을 비울지 정한다 |
+| 정본으로 올린 것 | `shapeCheck()` — `conflicts` 전용이었는데 `ai_jobs` 가 **둘째 사용자**가 됐다 (CLAUDE.md 규칙대로 그때 올렸다) |
+| 갈리는 것을 봤나 | **봤다.** 수명 4종 × 칸 4개 = **16갈래가 전부 DB 에서 거부된다** (표대로 채운 4행은 통과) · job 이 아닌 기능(`ask`)은 행이 못 된다 · 러너의 `input` 을 서로 바꿔 넣으면 판이 실패한다 · 본문을 담으려 하면 `.strict()` 가 막는다 |
+| 행이 실제로 생기나 | **생긴다.** 탐지 종류 넷을 넣으면 `conflicts` 행 **넷**이 생기고 종류마다 `a_item_id`·`b_item_id`·`severity` 만 찬다 (`a_ref` 는 null). `GET /conflicts` 가 그 행을 그대로 읽는다 — **「충돌 N건」이 0 이 아니게 됐다** |
+| 질문 카드도 생기나 | **생긴다.** §7.1 의 `open_questions` → `kind:'open_question'` 행. `a_ref.kind === 'source_document'` 이고 항목 칸은 비어 있다 (P7) |
+| 두 번 굴리면 | **한 번만 돈다.** 조건부 UPDATE(`status='queued'`)로 집는다 — 둘째 호출은 `undefined` 이고 LLM 호출 수가 그대로다 |
+| 실패를 쟀나 | **쟀다.** 두 번 다 계약과 다른 출력 → `failed`·`AI_OUTPUT_INVALID`·`result` null · 키 없음 → `INTERNAL` · **남의 프로젝트 문서를 가리키는 job → `NOT_FOUND` 이고 LLM 을 아예 안 부른다** (P7) |
+| P1 을 쟀나 | **쟀다.** 픽스처 문서(`fixtures/paylab-docs/goals.md`)의 **모든 문장**이 `ai_jobs` 행 어디에도 없다. `input` 계약에는 본문을 담을 칸 자체가 없다 |
+| 닫은 FINDINGS | **52**(부르는 라우트 0곳) · **28**(충돌 행 만드는 코드 0곳) · **26 절반**(구조화 job) |
+| 새 FINDINGS | **58**(도는 job 을 다시 찾을 문이 없다 · 구멍) · **59**(실패한 job 재시도가 없다 · 격차) |
+| 2-B 확인 (죽은 정의 찾기) | `CONFLICT_KINDS` 5종 — **이제 다섯 다 살아 있다** (넷은 탐지 러너가, `open_question` 은 구조화 러너가 만든다. 그전까지는 시험이 손으로 넣는 행뿐이었다) · `INDEX_NAMES` — 8개 중 **`ai_jobs_project_created_idx` 만 읽는 코드가 없다** → FINDINGS 58 |
+
+**🔴 결정 — job 표를 기능마다 만들지 않고 하나로 뒀다**
+
+구조화(§7.1)와 탐지(§7.2)는 「무엇을 읽나」만 다르고 **수명이 같다**
+(queued → running → succeeded|failed). 둘을 따로 만들면 화면 3 이 polling 할 자리가
+둘이 되고, §7.3·§7.4 가 job 이 되는 날 넷이 된다. 기능마다 다른 것은 `input`·`result`
+**두 칸의 내용**뿐이고, 그 모양은 `AI_JOB_RUNNERS` 표가 Zod 로 정한다.
+
+**🔴 결정 — 「어느 기능이 job 인가」를 새 목록이 아니라 기존 표의 축으로 뒀다**
+
+`AI_JOB_FEATURES` 를 손으로 적으면 그 목록과 `AI_FEATURE_LIMITS` 가 반드시 갈라진다.
+대신 축 하나(`job`)를 더하고 **거기서 유니온·런타임 목록·DB CHECK 셋을 전부 뽑아냈다.**
+기능을 job 으로 바꾸는 절차가 「표의 `false` 를 `true` 로」 한 줄이 됐고, 그 다음은
+타입 검사와 `db:generate` 가 밀어 준다.
+
+**🔴 결정 — 굴리는 것은 `after()` 이고, 시험은 그것을 흉내 내지 않는다**
+
+서버리스는 응답을 보내면 함수를 얼린다 — 떠 있는 promise 는 거기서 죽고 job 은 영원히
+`queued` 로 남는다. 그래서 `after()`(Next 15)를 쓴다. 요청 문맥이 없는 자리
+(`scripts/dev-server.ts` · 관통)에서는 `after()` 가 던지므로 그때만 그냥 띄운다 —
+거기엔 얼어붙을 서버리스가 없다. **시험은 `startJob()` 을 「적어만 두는」 것으로 갈아
+끼우고 `runJob()` 을 직접 부른다** — 안 그러면 어느 시험이든 뒤에서 스텁이 돌고,
+DB 를 닫은 뒤에 쓰기가 남아 조용히 갈라진다.
+
+**🔴 결정 — 실패는 코드 하나만 남긴다**
+
+`error_message` 칸을 **일부러 만들지 않았다.** 드라이버 예외의 message 에는 질의문이
+통째로 들어 있고, 모델의 응답에는 문서 본문이 들어 있다. 「받아서 안 쓴다」가 아니라
+**담을 칸이 없어야** P1 이다 (§11 의 로그 규칙과 같은 자리).
 
 **17바퀴 · P3 둘째 행 ⓪ — `conflicts` 표가 §7.2 의 출력을 담는다** (`8cde1f5`)
 
@@ -558,7 +604,14 @@ hooks.json 이 가리키는 것 **전부**로 넓혀 뒀으므로, `stop.mjs` �
 
 ## 눈 판정 대기
 
-_(없음)_ — 이번 바퀴에 만진 것은 화면이 아니라 컴파일러·계약이다.
+_(없음)_ — 이번 바퀴에 만진 것은 화면이 아니라 DB·계약·라우트다.
+**산출물은 시험이 직접 읽는다**: 충돌 행 넷의 칸이 종류마다 표대로 찼는지,
+`GET /conflicts` 응답이 그 행을 그대로 내는지, `ai_jobs` 행에 문서 본문이 없는지.
+⚠ **아직 눈으로 못 본 것 하나가 늘었다** — 화면 3 이 없으므로 「구조화 진행 표시」를
+사람이 본 적이 없다. job 이 `queued → running → succeeded` 로 가는 것을 본 것은
+시험뿐이다.
+
+_(아래는 이전 바퀴의 눈 판정 기록이다)_ — 이번 바퀴에 만진 것은 화면이 아니라 컴파일러·계약이다.
 **관통이 낸 Pack 을 직접 읽었다** (`.ci/walkthrough-pack/` · 파일 4개).
 ⚠ `.ci/` 는 다음 관통이 통째로 지운다 — 근거로 인용할 거면 **적기 전에 밖으로 복사**해라.
 

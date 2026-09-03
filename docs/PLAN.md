@@ -158,7 +158,16 @@
       `CONFLICT_KIND_RULES` 의 새 축 `anchor` 에서 **CHECK 제약 5개가 생성된다**
       (`conflictShapeCheck()`) · 복합 FK 로 없는 항목을 가리키는 카드를 막는다 (P7).
       마이그레이션 `0003` · 시험 190→194. SPEC §2·§7.2 를 코드와 같게 고쳤다.
-      🔴 **남은 것: 쓰는 코드가 아직 0곳이다** (FINDINGS 28) — job 자리와 같이 온다.
+      ① ✅ **job 자리 — §7.1·§7.2 를 부르는 첫 코드** (`a1f0a79` · FINDINGS **52·28** 닫음) —
+      `ai_jobs` 표 하나로 구조화와 탐지가 **같은 자리**를 쓴다 (마이그레이션 `0004`).
+      `AI_FEATURE_LIMITS` 의 새 축 `job` 에서 `AiJobFeature` 유니온과 DB CHECK 이
+      **생성되고**, `AI_JOB_STATUS_RULES` 에서 수명 CHECK 4개가 생성된다.
+      `lib/ai/job.ts` 가 낸 것을 **행으로 옮기는 유일한 자리**다 — 충돌 표가 처음 찬다.
+      라우트 셋(`POST /documents` · `batch-draft` · `GET …/jobs/{jobId}`). 시험 194→213.
+      🔴 **남은 것: 화면 3·4 자체**와, 새로고침하면 job 을 다시 못 찾는 것
+      (FINDINGS **58** — 화면 3 보다 **먼저** 해라) · 실패한 job 재시도 (**59**).
+      ⚠ 여전히 **진짜 키로 부른 적이 없다** — 완료 기준(「paylab 문서 → 항목 12 + 충돌 3」)은
+      키가 있어야 잰다 (🙋).
 
 ## P4 — 나머지 화면과 데모 (SPEC 9/12~9/13)
 

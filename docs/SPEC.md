@@ -142,14 +142,19 @@ devices          { id, user_id, project_id, name, token_hash text unique, last_s
 sync_reports     { id, device_id, project_id, version_id, status enum('applied','outdated','modified','failed','manual'), manifest_hash, reported_at }
 ai_usage         { id, project_id null /* 게스트 데모는 없다 */, feature enum('structure','conflict','ask','demo'), actor_hash text null /* sha256 — 원문 저장 금지 */,
                    model text, input_tokens int, output_tokens int, cost_micros int /* USD 백만분의 1 */, day text /* UTC YYYY-MM-DD */ }
+ai_jobs          { id, project_id, feature enum('structure','conflict') /* ai_feature 4종 중 job 으로 도는 둘 · CHECK 이 좁힌다 */,
+                   status enum('queued','running','succeeded','failed'), input jsonb /* 가리키는 id 만 · P1 */, result jsonb null,
+                   error_code text null /* ERROR_CODES 하나 · 본문·스택 금지 */, started_at, finished_at }
 progress_events  { id, project_id, device_id, milestone_id text, criterion text null, status enum('in_progress','criterion_done','done_candidate','none'),
                    evidence jsonb /* [{path,start_line,end_line,commit_sha}] */, summary text, context_version text, source enum('agent','hook','manual'),
                    confirmed_by null, confirmed_at null }
 ```
 
+🔴 **한 요청 안에서 안 끝나는 AI 일은 `ai_jobs` 행 하나다** (§7.1 문서 구조화 · §7.2 충돌 탐지). 구조화와 탐지가 **같은 표**를 쓴다 — 다른 것은 `input`·`result` 두 칸의 내용뿐이고 그 모양의 정본은 `apps/web/src/lib/ai/job.ts` 의 `AI_JOB_RUNNERS` 표다. 어느 기능이 job 인가는 `AI_FEATURE_LIMITS` 의 `job` 축이 정하고 그 목록에서 `ai_jobs_feature_ck` 가 생성된다. 수명 4종이 어느 칸을 채워야 하는지는 `AI_JOB_STATUS_RULES` 표이고, 거기서 **CHECK 제약 4개**가 생성된다 — 「succeeded 인데 `result` 가 없는 행」은 들어올 수 없다. ⚠ `input` 에는 **가리키는 id 만** 들어간다(문서 버전 uuid · `item_<slug>`). 문서·항목 본문도, 모델 응답도, 드라이버 메시지도 이 표에 자리가 없다 (P1 · §11).
+
 🔴 **충돌 한 장이 어느 칸을 채우는지는 `kind` 가 정한다.** 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표이고 축은 셋이다 — `anchor`(`items` 면 `a_item_id`·`b_item_id`, `document` 면 `a_ref`·`b_ref`) · `needsB`(b 쪽이 필요한가) · `detected`(§7.2 가 매기는 `severity` 를 갖는가). 그 규칙은 문서가 아니라 **DB CHECK 제약 5개**이고, `apps/web/src/db/schema.ts` 의 `conflictShapeCheck()` 가 그 표를 읽어 만든다 — 종류를 더하면 `db:generate` 한 번으로 제약이 따라온다. ⚠ 항목을 `SourceRef` 로 가리키지 마라. `SOURCE_REF` 에 「항목」 종류를 더하면 항목의 `source_refs` 가 다른 항목을 가리킬 수 있게 되고 원문까지 가는 사슬이 끊긴다 (P7).
 
-인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
+인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`, `ai_jobs(project_id,created_at desc)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
 
 ### 2.1 발행 트랜잭션 (Drizzle `db.transaction`)
 
@@ -332,10 +337,11 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | POST /projects/{id}/repos | owner | {name, remote_url?, path_prefix?} → repo |
 | POST /projects/{id}/tokens | member | {device_name} → {token(1회 표시), device_id} |
 | DELETE /devices/{id} | 본인·owner | → 204 |
-| POST /projects/{id}/documents | member | multipart(zip) 또는 {title, kind, content} → document + 구조화 job 시작 (§7.1) |
+| POST /projects/{id}/documents | member | multipart(zip) 또는 {title, kind, content} → document + `job:{id,status}` — 구조화 job 을 만들고 **응답을 보낸 뒤에** 굴린다 (§7.1) |
 | GET /projects/{id}/context-items | member | ?type&status&scope → items[] |
-| POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}]} · 충돌 탐지 job 시작 (§7.2) |
+| POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}], job} — 받아들인 항목이 있을 때만 탐지 job 을 만든다 (§7.2). 빈 탐지는 §7.5 의 상한만 태운다 |
 | PATCH /context-items/{id} | owner | {revision(현재), patch} → item · revision 불일치 409 |
+| GET /projects/{id}/jobs/{jobId} | member | → {id, feature, status, input, result, error_code, started_at, finished_at} — 화면 3 의 polling (§9). 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |
 | POST /conflicts/{id}/resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
 | POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer}]} → 항목 생성 |
@@ -378,6 +384,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - 예산: 문서당 최대 12 chunk. 🔴 **한 문서의 모든 chunk 호출은 `withBudget` 한 번 안에서 일어나고 장부에는 합계로 한 줄이 남는다** — chunk 마다 부르면 §7.5 의 「프로젝트당 시간당 5회」가 문서가 아니라 chunk 를 세어 6조각짜리 문서 하나가 상한을 넘긴다. 12 chunk × 10,000자 ≈ 48,000 토큰이라 `AI_MAX_INPUT_TOKENS`(60k) 안이다 — 두 숫자는 맞물려 있으니 한쪽을 고치면 다른 쪽을 같이 봐라.
 - 12 chunk 를 넘는 문서는 앞 12개만 읽고 **읽은 조각 수·전체 조각 수를 결과에 낸다.** 조용히 자르지 않는다 (화면이 사람에게 말해야 한다).
 - 수치(6~10k자 · 12 chunk · 재시도 1회)의 정본은 `apps/web/src/lib/ai/structure.ts` 의 상수다.
+- 🔴 **부르는 자리는 `ai_jobs` 의 `structure` job 하나다** (§2 · `lib/ai/job.ts` 의 `AI_JOB_RUNNERS.structure`). `POST /documents` 가 문서를 만든 **트랜잭션 밖에서** job 을 만들고 응답을 보낸 뒤에 굴린다 — 안에서 만들면 러너가 아직 커밋되지 않은 문서 버전을 읽으러 간다. 그 러너가 `open_questions` 를 `kind:'open_question'` 인 **충돌 행**으로 옮긴다 (질문 카드 표를 따로 만들지 않는다). ⚠ 항목 초안은 행으로 만들지 않고 `result` 에만 남는다 — 사람이 화면 4 에서 고르기 전에 `context_items` 에 넣으면 승인 절차가 무의미해진다.
 
 ### 7.2 충돌·오래됨 탐지 `detectConflicts(projectId, changedItemIds)`
 - 입력: 변경된 항목 + 같은 type/scope의 기존 active 항목(최대 40개, body 요약 300자).
@@ -388,6 +395,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - LLM은 "최신이 맞다"를 판단하지 않는다. 질문만 만든다.
 - 🔴 **`detectConflicts()` 한 번이 `withBudget('conflict')` 한 번이고 LLM 왕복도 한 번(+재시도 1회)이다.** 장부(`ai_usage`)의 행 수가 곧 빈도이므로, 항목을 나눠 여러 번 부르면 §7.5 의 상한이 「탐지 N회」가 아니라 「묶음 N개」가 된다 (§7.1 의 「문서 하나」와 같은 자리의 결정).
 - 수치(후보 40개 · body 300자 · 재시도 1회)의 정본은 `apps/web/src/lib/ai/conflict.ts` 의 상수다.
+- 🔴 **부르는 자리는 `ai_jobs` 의 `conflict` job 하나다** (§2 · `AI_JOB_RUNNERS.conflict`). `batch-draft` 가 **받아들인 항목이 있을 때만** 만든다. 낸 것을 행으로 옮기는 것도 그 러너다 — `detectConflicts()` 자신은 DB 에 쓰지 않는다.
 
 ### 7.3 질의 `ask(projectId, question)`
 - 입력: active 항목 전체(project당 상한 150개, 초과 시 type별 priority 상위) + 질문. 벡터 DB 없음.
