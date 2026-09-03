@@ -251,23 +251,31 @@ while ($true) {
     Log ("바퀴 {0} 끝 — {1} · {2}초 · {3}턴 · 비용 {4} · 커밋 {5}개 (누적 USD {6:N2})" -f `
          $cycle, $verdict, $elapsed, $turns, $cost, $newCommits, $totalCost)
 
-    # ── 사용량 한도면 물러선다 ────────────────────────────────────
-    #  안 물러서면 실패 응답만 받으며 남은 밤을 통째로 버린다.
+    # ── 일시적 실패면 물러선다 ────────────────────────────────────
+    #  사용량 한도든 서버 과부하든, 안 물러서면 실패 응답만 받으며 밤을 버린다.
     #
     #  🔴 여기가 rift 에서 **오탐이었다.** stream-json 전체를 훑어 rate.?limit 를
     #    찾았는데, 그 문자열은 사용량 메타데이터의 **필드 이름**(rate_limit)으로
     #    늘 들어 있다. 그래서 **성공한 바퀴 뒤에도** 20분을 물러섰다.
-    #  ★ 이제 **결과 줄의 에러 문구만** 본다. 성공한 바퀴는 아예 후보가 안 된다.
+    #  ★ 그래서 **결과 줄의 에러 문구만** 본다. 성공한 바퀴는 아예 후보가 안 된다.
+    #
+    #  🔴 2026-09-03 여기가 **놓치는 쪽으로도** 틀렸다 (실측). 밤 10시대에 세 바퀴가
+    #    연달아 "API Error: 500 Internal server error" · "API Error: 529 Overloaded" 로
+    #    끝났다 — 사용량 한도가 아니라 **Anthropic API 자체의 일시 과부하**다.
+    #    옛 정규식이 이걸 안 잡아서 **물러서지 않고 그대로 재시도**했고, 세 바퀴가
+    #    거의 빈손(0~1턴)으로 끝나며 아래 「빈 바퀴 감지」를 태워 루프가 멈췄다.
+    #    ★ 첫 바퀴(58턴·677초)는 **실제로 일을 했는데** 커밋 직전에 500 을 맞아
+    #      끊겼다 — 그 결과가 워킹트리에 그대로 남는다(다음 바퀴가 이어받는다).
     $limitHit = $false
-    if ($isErr -and $resultText -match "usage limit|rate limit|quota exceeded|too many requests|429") {
+    if ($isErr -and $resultText -match "usage limit|rate limit|quota exceeded|too many requests|429|API Error:\s*5\d\d|Overloaded|Internal server error") {
         $limitHit = $true
     }
 
     if ($limitHit) {
-        Log "사용량 한도로 보인다 — $backoffMin 분 물러선다."
+        Log "일시적 실패로 보인다(사용량 한도 또는 서버 과부하) — $backoffMin 분 물러선다."
         Start-Sleep -Seconds ($backoffMin * 60)
         $backoffMin = [Math]::Min($backoffMin * 2, $LOOP.BackoffMaxMin)
-        $cycle--            # 한도로 못 한 바퀴는 바퀴로 세지 않는다
+        $cycle--            # 이걸로 못 한 바퀴는 바퀴로도, 빈 바퀴로도 세지 않는다
         continue
     }
     $backoffMin = $LOOP.BackoffMin
