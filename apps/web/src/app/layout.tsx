@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react'
 
+import './globals.css'
+
 // =====================================================================
-//  루트 레이아웃 — 지금은 화면이 없다. 이 앱의 몸통은 `app/api/v1` 이다.
+//  루트 레이아웃
 //
-//  ⚠ 화면(SPEC §9 의 9개)은 PLAN P1 넷째 행부터다. 여기에 미리 색·간격을 적지 마라 —
-//    토큰의 정본은 `docs/DESIGN_BRIEF.md` §3 이고, 그 전에 임의 값을 심으면
-//    나중에 두 곳이 갈라진다.
+//  ★ 색·간격·글꼴의 정본은 `globals.css` 의 `:root` 하나다 (docs/DESIGN_BRIEF.md §3).
+//    여기에 style 을 적지 마라 — 두 곳이 되는 순간 갈라진다.
+//
+//  ⚠ 다크 고정이다. `color-scheme: dark` 를 선언해야 브라우저 기본 스크롤바·폼
+//    컨트롤이 밝은 색으로 튀지 않는다 (라이트 모드는 만들지 않는다).
 // =====================================================================
 
 export const metadata = {
@@ -15,7 +19,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" style={{ colorScheme: 'dark' }}>
       <body>{children}</body>
     </html>
   )

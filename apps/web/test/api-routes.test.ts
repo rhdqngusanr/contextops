@@ -6,9 +6,10 @@ import { CONFLICT_CHOICES, ContextItem, type ConflictChoice } from '@contextops/
 import { conflicts, contextItemRevisions, contextItems, repos, sourceDocumentVersions, sourceDocuments } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { RESOLUTION_OUTCOME } from '../src/lib/api/conflict'
-import { POST as createTeam } from '../src/app/api/v1/teams/route'
+import { GET as listTeams, POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
+import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { GET as listItems } from '../src/app/api/v1/projects/[id]/context-items/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
@@ -107,6 +108,49 @@ describe('teams · projects — 만든 사람이 owner 다', () => {
     const owner = sessionJwt('bad-json-sub')
     const res = await createTeam(req('POST', '/api/v1/teams', { auth: owner, raw: '{not json' }), params({}))
     expect(res.status).toBe(400)
+  })
+})
+
+// =====================================================================
+//  `GET /teams` — 화면이 주소의 slug 를 uuid 로 바꾸는 유일한 문 (SPEC §5)
+//
+//  ★ 이게 없으면 로그인한 사람이 **자기 프로젝트로 갈 수가 없다** — 화면 주소는
+//    slug 인데(SPEC §9) 라우트는 전부 uuid 를 받는다.
+// =====================================================================
+
+describe('GET /teams — 내 팀과 그 안의 프로젝트', () => {
+  it('내가 만든 팀과 프로젝트가 같이 온다 (화면이 두 번 부르지 않게)', async () => {
+    const { owner, projectId } = await seed()
+    const data = await dataOf(await listTeams(req('GET', '/api/v1/teams', { auth: owner }), params({})))
+    const teams = data.teams as { slug: string; role: string; projects: { id: string; slug: string }[] }[]
+    expect(teams).toHaveLength(1)
+    expect(teams[0]?.slug).toBe('paylab')
+    expect(teams[0]?.role).toBe('owner')
+    expect(teams[0]?.projects.map((p) => p.id)).toEqual([projectId])
+  })
+
+  it('🔴 남의 팀은 목록에 없다 — 존재 자체가 안 보인다', async () => {
+    await seed()
+    const stranger = sessionJwt('stranger-sub')
+    const data = await dataOf(await listTeams(req('GET', '/api/v1/teams', { auth: stranger }), params({})))
+    //  ⚠ 소속이 하나도 없어도 500 이 아니라 빈 목록이다 (`inArray(…, [])` 를 안 보낸다).
+    expect(data.teams).toEqual([])
+  })
+
+  it('인증이 없으면 401 이다', async () => {
+    const res = await listTeams(req('GET', '/api/v1/teams'), params({}))
+    expect(res.status).toBe(401)
+  })
+
+  it('기기 토큰으로는 볼 수 없다 — 토큰은 프로젝트 안의 물건이다', async () => {
+    const { owner, projectId } = await seed()
+    const token = (await dataOf(await createToken(
+      req('POST', `/api/v1/projects/${projectId}/tokens`, { auth: owner, body: { device_name: 'mac' } }),
+      params({ id: projectId }),
+    ))).token as string
+    const res = await listTeams(req('GET', '/api/v1/teams', { auth: token }), params({}))
+    expect(res.status).toBe(403)
+    expect((await errorOf(res)).code).toBe('FORBIDDEN')
   })
 })
 

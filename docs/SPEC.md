@@ -320,6 +320,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 | Method · Path | 권한 | 요청 → 응답 |
 |---|---|---|
+| GET /teams | 로그인 | → teams[{id, slug, name, role, projects[]}] — 화면의 주소는 slug 인데(§9) 라우트는 uuid 를 받는다. 이 문이 없으면 브라우저가 slug→uuid 를 못 바꾼다 |
 | POST /teams | 로그인 | {name, slug} → team |
 | POST /teams/{id}/projects | owner | {name, slug, description} → project |
 | POST /projects/{id}/repos | owner | {name, remote_url?, path_prefix?} → repo |

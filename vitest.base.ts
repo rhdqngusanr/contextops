@@ -5,6 +5,13 @@ import { defineConfig } from 'vitest/config'
 //     export { default } from '../../vitest.base.js'
 //   값을 패키지 쪽에 적기 시작하면 패키지마다 갈라진다.
 export default defineConfig({
+  //  ★ 왜 여기에 JSX 설정이 있나 — `apps/web` 의 화면 코드는 `.tsx` 이고 tsconfig 는
+  //    `jsx: "preserve"` 다 (변환은 Next 가 한다). vitest 는 Next 를 안 거치므로
+  //    자기가 변환할 줄 알아야 `components/*.tsx` 의 **표**를 시험에서 들여올 수 있다.
+  //    ⚠ 이 값을 패키지 쪽 vitest.config.ts 에 적지 마라 — 그 순간 갈라진다.
+  //    ⚠ 키는 `esbuild` 가 아니라 `oxc` 다. vite 8 은 oxc 로 변환하고, 둘 다 있으면
+  //      「esbuild 옵션은 무시한다」고 경고만 하고 **조용히 안 먹는다.**
+  oxc: { jsx: { runtime: 'automatic' } },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],

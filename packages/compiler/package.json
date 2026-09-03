@@ -3,9 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "_comment_exports": [
+    "공개 문은 둘이고, **둘 다 여기 적혀 있다** (CLAUDE.md 「index.ts 하나로만 내보낸다」의 뜻은",
+    "  ad-hoc 으로 안쪽 경로를 직접 import 하지 말라는 것이다 — 선언된 문은 다르다).",
+    "🔴 './tag' 가 따로 있는 이유: index.ts 는 hash.ts 를 재수출하고 hash.ts 는 node:crypto 를",
+    "  쓴다. 화면 7(Pack Explorer)은 **브라우저에서** traceLines() 로 역추적 태그를 되읽어야",
+    "  하는데, index 를 들여오면 webpack 이 node:crypto 에서 죽는다 (sideEffects:false 로도",
+    "  안 된다 — 번들러는 흔들기 전에 먼저 해석한다).",
+    "★ 그래도 형식은 갈라지지 않는다: 쓰는 traceTag() 와 읽는 parseTraceTag() 가 **같은 파일**",
+    "  (src/tag.ts)이고, test/tag.test.ts 가 왕복을 잠근다.",
+    "⚠ 새 문을 여기 없이 만들지 마라. 여기 적힌 것이 이 패키지의 전부다."
+  ],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./tag": "./src/tag.ts"
   },
+  "sideEffects": false,
   "scripts": {
     "test": "vitest run"
   },

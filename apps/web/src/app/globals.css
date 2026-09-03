@@ -1,0 +1,351 @@
+/* =====================================================================
+   globals.css — 화면이 쓰는 **모든** 색·간격·글꼴의 정본 (docs/DESIGN_BRIEF.md §3)
+
+   🔴 화면 코드에 색 리터럴을 적지 마라. `var(--…)` 만 쓴다.
+      `apps/web/test/design-tokens.test.ts` 가 아래 `:root` 를 DESIGN_BRIEF §3 색 표와
+      **대조**하고, `src/app`·`src/components` 어디에 `#rrggbb` 가 있으면 빨개진다.
+      ★ 왜 게이트인가 — 「토큰만 쓴다」를 문서에만 적으면 급한 화면 하나가 반드시
+        즉석 색을 찍고, 그때부터 두 번째 방언이 생긴다. 게이트는 문서보다 강하다.
+
+   ★ 여기에 화면별 규칙을 쌓지 마라. 여기 있는 것은 **토큰 + 모든 화면이 공유하는 것**
+     뿐이다. 한 화면에만 필요한 모양은 그 화면 옆의 `*.module.css` 로 간다.
+
+   ⚠ 다크 고정이다. 라이트 모드는 만들지 않는다 (DESIGN_BRIEF §3 「테마」).
+   ===================================================================== */
+
+:root {
+  /* ── 색 — DESIGN_BRIEF §3 「색」 표와 한 줄씩 대응한다 (시험이 대조한다) ── */
+  --bg: #08090B;
+  --surface: #0C0E12;
+  --surface-hi: #0A0E1A;
+  --line: #1B1E24;
+  --line-soft: #16181D;
+  --line-hi: #22262E;
+  --ink: #EDEFF3;
+  --ink-2: #D5DAE2;
+  --ink-3: #A7AEB9;
+  --ink-4: #3A404A;
+  --accent: #1F4EE0;
+  --accent-hi: #3D66F0;
+  --accent-ink: #7B9CFF;
+  --accent-soft: #24304F;
+  --ok: #5FC48F;
+  --ok-bg: #1E3B2C;
+  --warn: #E2B04A;
+  --warn-bg: #4A3B20;
+  --bad: #EF7D72;
+  --bad-bg: #402322;
+  --llm: #E9A25A;
+
+  /* ── 간격 — DESIGN_BRIEF §3 「레이아웃」 의 4/8/12/16/24/32/48 ──
+     ⚠ padding·margin·gap 은 이 변수로만 적는다. 시험이 px 리터럴을 막는다. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* ── 글꼴 ──
+     ⚠ 웹폰트를 받아 오지 않는다. 빌드가 네트워크에 기대면 오프라인에서 못 짓고,
+       Pretendard 는 Google Fonts 에 없다. 설치돼 있으면 쓰고 아니면 폴백이다. */
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'D2Coding', monospace;
+
+  /* 스케일 (DESIGN_BRIEF §3 「타이포」) */
+  --fs-label: 11.5px;
+  --fs-table: 13.5px;
+  --fs-body: 14.5px;
+  --fs-sub: 16.5px;
+  --fs-section: 21px;
+  --fs-page: 32px;
+
+  /* 레이아웃 상수 — 숫자를 화면마다 적으면 조용히 갈라진다 */
+  --radius: 10px;
+  --nav-w: 220px;
+  --content-max: 1200px;
+  /* 화면 5 의 상세 드로어 · 화면 7 의 3열 (DESIGN_BRIEF §4 「화면 7」 좌 240 / 우 320) */
+  --drawer-w: 360px;
+  --pack-tree-w: 240px;
+  --pack-side-w: 320px;
+}
+
+/* ── 바탕 ─────────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { color: var(--ink); margin: 0; font-weight: 600; line-height: 1.3; }
+h1 { font-size: var(--fs-page); letter-spacing: -0.4px; }
+h2 { font-size: var(--fs-section); }
+h3 { font-size: var(--fs-sub); }
+p { margin: 0; }
+
+a { color: var(--accent-ink); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* 버전·해시·경로·ID·수치는 모노다 — 「기계가 보증한 값」이 읽히게 (DESIGN_BRIEF §3). */
+code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ── 공통 조각 ────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  /* 그림자 없음 (DESIGN_BRIEF §3 「레이아웃」) */
+}
+
+.label {
+  font-size: var(--fs-label);
+  color: var(--ink-3);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.meta { font-size: var(--fs-label); color: var(--ink-3); }
+
+/* 글자 세기 — 화면이 색 이름을 직접 고르지 않게 (토큰 → 클래스 한 겹). */
+.ink { color: var(--ink); }
+.ink-3 { color: var(--ink-3); }
+.ink-4 { color: var(--ink-4); }
+.ink-bad { color: var(--bad); }
+.ink-ok { color: var(--ok); }
+.ink-warn { color: var(--warn); }
+
+.text-section { font-size: var(--fs-section); }
+.text-label { font-size: var(--fs-label); }
+.text-center { text-align: center; }
+.grow { flex: 1 1 auto; min-width: 0; }
+.pad { padding: var(--sp-5); }
+.pad-sm { padding: var(--sp-3); }
+.items-start { align-items: flex-start; }
+.drawer { width: var(--drawer-w); flex: 0 0 var(--drawer-w); }
+.pack-tree { width: var(--pack-tree-w); flex: 0 0 var(--pack-tree-w); }
+.pack-side { width: var(--pack-side-w); flex: 0 0 var(--pack-side-w); }
+
+/* 코드·경로·diff·표는 **항상** 가로 스크롤 컨테이너 안에 있다.
+   ★ 왜 — 본문이 가로로 밀리면 옆의 근거가 화면 밖으로 나가고, 그러면
+     「근거가 항상 옆에 있다」(DESIGN_BRIEF §2-1)가 깨진다. */
+.scroll-x { overflow-x: auto; max-width: 100%; }
+
+/* ── 버튼 — accent 는 한 화면에 주요 액션 하나뿐 ─────────────────── */
+
+.btn {
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--line-hi);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.btn:hover { background: var(--surface-hi); color: var(--ink); }
+.btn:disabled { color: var(--ink-4); border-color: var(--line); cursor: not-allowed; }
+.btn:disabled:hover { background: transparent; color: var(--ink-4); }
+
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+.btn-primary:hover { background: var(--accent-hi); border-color: var(--accent-hi); color: var(--ink); }
+.btn-primary:disabled { background: var(--surface); border-color: var(--line); }
+
+.btn-sm { font-size: var(--fs-table); padding: var(--sp-1) var(--sp-3); }
+
+/* ── 입력 ─────────────────────────────────────────────────────────── */
+
+.field { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.input, .textarea, .select {
+  font-family: inherit;
+  font-size: var(--fs-body);
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-3);
+  width: 100%;
+}
+.input:focus, .textarea:focus, .select:focus { outline: none; border-color: var(--accent-ink); }
+.input.mono { font-family: var(--font-mono); }
+.textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
+
+/* ── 표 — 목록은 카드가 아니라 표다 (DESIGN_BRIEF §3) ────────────── */
+
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-table); }
+.table th {
+  text-align: left;
+  font-size: var(--fs-label);
+  color: var(--ink-3);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  vertical-align: top;
+}
+.table tbody tr:hover { background: var(--surface-hi); }
+.table tbody tr[aria-selected='true'] { background: var(--accent-soft); }
+
+/* ── 칩 — 상태를 **색만으로** 구분하지 않는다: 아이콘 + 라벨 병기 ── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.chip-icon { font-family: var(--font-mono); }
+
+.tone-ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.tone-warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+.tone-bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad); }
+.tone-neutral { background: var(--surface-hi); color: var(--ink-3); border-color: var(--line-hi); }
+/* llm 은 AI 산출물에만 붙는다 (DESIGN_BRIEF §3). */
+.tone-llm { background: transparent; color: var(--llm); border-color: var(--llm); }
+
+/* CtxTag — 역추적 칩. 작고 회색이고 모노다 (P7 의 얼굴). */
+.ctx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--ink-3);
+  background: var(--surface-hi);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius);
+  padding: 0 var(--sp-2);
+}
+
+/* ── 화면 뼈대 ────────────────────────────────────────────────────── */
+
+.shell { display: flex; min-height: 100vh; }
+
+.nav {
+  width: var(--nav-w);
+  flex: 0 0 var(--nav-w);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  padding: var(--sp-5) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.nav-link {
+  display: block;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  color: var(--ink-3);
+  font-size: var(--fs-table);
+}
+.nav-link:hover { background: var(--surface-hi); color: var(--ink-2); text-decoration: none; }
+.nav-link[aria-current='page'] { background: var(--accent-soft); color: var(--ink); }
+
+.main { flex: 1 1 auto; min-width: 0; padding: var(--sp-6); }
+.main-inner { max-width: var(--content-max); display: flex; flex-direction: column; gap: var(--sp-5); }
+
+/* 가운데 한 장짜리 화면 (로그인 · 팀/프로젝트 만들기) */
+.center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+}
+.center-card { width: 100%; max-width: 440px; padding: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-5); }
+
+/* ── loading / empty / error — 세 상태는 화면마다 있어야 한다 ────── */
+
+/* loading 은 skeleton 이고 문구가 없다 (DESIGN_BRIEF §5). */
+.skeleton {
+  background: var(--surface-hi);
+  border-radius: var(--radius);
+  height: var(--sp-4);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+
+.state-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  padding: var(--sp-6);
+  color: var(--ink-3);
+  font-size: var(--fs-body);
+}
+
+/* ── 모달 ─────────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+  z-index: 10;
+}
+.modal { width: 100%; max-width: 560px; padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* ── 줄 배치 ──────────────────────────────────────────────────────── */
+
+.row { display: flex; align-items: center; gap: var(--sp-3); }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+.col { display: flex; flex-direction: column; gap: var(--sp-3); }
+.col-tight { display: flex; flex-direction: column; gap: var(--sp-2); }
+.wrap { flex-wrap: wrap; }
+
+/* ── 화면 7 · Pack 본문 — 줄 번호 + 소스 그대로 ───────────────────
+   ⚠ 렌더된 Markdown 이 아니다. 역추적 태그가 보여야 P7 을 눈으로 잴 수 있다. */
+
+.pack-body {
+  margin: 0;
+  padding: 0 0 var(--sp-3) 0;
+  font-size: var(--fs-table);
+  line-height: 1.7;
+  white-space: normal;
+}
+.pack-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: 100%;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  padding: 0 var(--sp-3);
+  cursor: pointer;
+}
+.pack-line:hover { background: var(--surface-hi); }
+.pack-line[aria-selected='true'] { background: var(--accent-soft); border-left-color: var(--accent-ink); }
+.pack-lineno { flex: 0 0 auto; min-width: var(--sp-6); text-align: right; user-select: none; }
+/* 본문은 줄바꿈을 지킨다 — 잘린 문장이 없는지 눈으로 봐야 한다 (loop/PROMPT.md ⑦3층) */
+.pack-linetext { white-space: pre-wrap; word-break: break-word; }
