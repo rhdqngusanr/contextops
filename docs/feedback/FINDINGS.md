@@ -29,6 +29,28 @@
 
 ## 다음에 고칠 것
 
+### 65. `source_documents.kind` **6종이 아무것도 안 바꾼다** — roadmap 과 notes 가 똑같이 구조화된다   [격차]
+- **증상**: 문서를 올릴 때 `kind`(`goal`·`policy`·`roadmap`·`adr`·`notes`·`wiki`)를 받아
+  행에 저장하고 응답으로 되돌려준다. 그런데 **그 값을 읽어서 무언가를 바꾸는 코드가 0곳**이다.
+  특히 §7.1 구조화가 그 값을 **모른다** — `structureDocument()` 가 받는 것은 `content`
+  뿐이라, 로드맵 문서와 잡기(notes)가 **똑같은 프롬프트**로 똑같이 뜯긴다. 종류가 6개인데
+  동작은 하나다.
+- **근거**: 이번 바퀴 직접 확인 —
+  `grep -ran "SOURCE_DOCUMENT_KINDS|\.kind" apps/web/src packages/compiler/src` 의 소비처는
+  `documents/route.ts:39`(INSERT)·`:78`(응답에 되싣기)·`db/schema.ts:131`(pgEnum) 셋뿐이다 ·
+  `lib/ai/prompt.ts`·`lib/ai/structure.ts` 에 `kind` 라는 낱말이 **없다**
+  (`structure.ts:238` 의 `kind:'source_document'` 는 `SourceRef` 의 종류라서 다른 것이다)
+- **정본**: `docs/SPEC.md` §2 · §7.1
+- **고칠 방향**: 둘 중 하나만 해라 (CLAUDE.md 「살린다 아니면 지운다」).
+  ① **살린다** — 종류마다 「이 문서에서 주로 나오는 항목 타입」이 다르다 (roadmap → milestone,
+  policy → policy/rule, adr → decision). 그 대응을 **표 하나**(`Record<SourceDocumentKind, …>`)로
+  두고 §7.1 프롬프트가 읽게 한 뒤, 「종류를 바꾸면 뽑히는 것이 달라진다」를 시험으로 잠근다.
+  ⚠ 표를 `packages/schema` 에 둘지 서버에 둘지는 **프롬프트가 유일한 소비처인가**로 정해라
+  (`features.ts` 머리 주석의 판단과 같다).
+  ② **지운다** — 6종을 2종(`doc`·`notes`)으로 줄이고 왜 줄였는지 커밋에 한 줄.
+  ⚠ enum 값은 직렬화된다 — 중간을 지우지 말고 끝에서만 줄여라.
+- **상태**: 대기 (화면 3 이 종류를 고르는 자리라 그 화면과 같이 정하는 것이 싸다)
+
 ### 64. `ai_jobs.updated_at` 을 **아무도 읽지 않는다** — 멈춘 job 과 도는 job 이 같아 보인다   [격차]
 - **증상**: `runJob()` 은 집을 때·걸음마다·끝날 때 `updated_at` 을 쓴다 (이번 바퀴에
   진행률까지 그 칸을 건드리게 됐다). 그런데 **읽는 코드가 0곳**이다 — `AI_JOB_FIELDS`
@@ -48,7 +70,19 @@
   `AI_FEATURE_LIMITS` 옆처럼 **기능 표**에 있어야 한다 (기능마다 한 걸음의 길이가
   다르다). ⚠ 그리고 「멈춘 job 을 되살리는」 문은 FINDINGS 59 와 **한 묶음**이다 —
   `running` 을 `queued` 로 되돌리는 것도 같은 자리다. 둘을 같은 바퀴에 정해라.
-- **상태**: 대기 (화면 3 이 주인 · 표에 한 줄은 값싸다)
+- **상태**: ✅ `1bc1116` — 표에 한 줄(`AI_JOB_FIELDS.updated_at`)로 응답까지 따라왔고,
+  **판정까지 했다.** 잣대는 `AiJobRunner.stallAfterSec`(러너 표의 한 칸 · structure 180 ·
+  conflict 300)이다 — `AI_FEATURE_LIMITS` 가 아니라 **러너 표**를 고른 이유는 「한 걸음」의
+  낱말(`unit`)이 이미 거기 있어서다. 같은 개념(한 걸음)의 길이와 이름이 갈라지면 안 된다.
+  그리고 §7.3·§7.4 는 job 이 아니라 그 표에는 이 칸이 뜻이 없다.
+  판정은 **서버가 해서 값(`stalled`)으로 내보낸다** — 잣대가 서버 전용 표에 있고
+  (`features.ts`: 계약 패키지로 올리면 플러그인 번들로 사용자 기계에 배포된다) 화면의
+  시계는 서버와 어긋난다. 근거(`updated_at`)를 판정 옆에 같이 낸다.
+  「끝났나」는 `AI_JOB_STATUS_RULES.finished` 를 읽는다 — 상태 이름을 손으로 안 센다.
+  ⚠ **되살리는 문은 안 만들었다** — FINDINGS 59 와 한 묶음이라고 이 항목이 적어 둔 그대로다.
+  시험 **+5** (231 → 236) · 눈으로 읽은 근거:
+  `docs/evidence/2026-09-04-jobs-stalled/stalled.txt` (같은 행에서 시각 하나만 밀면
+  `stalled` 가 `false → true → false` 로 뒤집힌다)
 
 ### 62. 도는 동안 **진행률이 0 정보**다 — 화면 3 이 보여 줄 것이 「돌고 있음」뿐이다   [격차]
 - **증상**: `ai_jobs` 는 `queued → running → succeeded/failed` 만 남긴다. chunk 진행
@@ -100,6 +134,9 @@
 - **🔴 이번 바퀴에 한 칸 더 벌어졌다** (`82b886b`): job 응답에 `progress` 가 생겼는데
   `POST /documents` 가 내는 `{id,status}` 에는 그것도 없다. 화면이 그 객체로 첫 막대를
   그리려 하면 `undefined` 다.
+- **🔴 또 벌어졌다** (FINDINGS 64 를 닫으면서): 이제 job 응답에는 `updated_at` 과
+  **`stalled`**(서버가 내는 「멈췄나」 판정)까지 있다. `{id,status}` 에는 넷 다 없다 —
+  화면이 그 객체를 job 으로 들고 다니면 「멈춤」을 **`undefined` 로 읽는다**(=거짓).
 - **상태**: 대기 (화면 3 이 주인 · 값싸다)
 
 ### 60. job 목록이 **`result` 를 통째로 실어 나른다** — polling 이 무거워진다   [격차]

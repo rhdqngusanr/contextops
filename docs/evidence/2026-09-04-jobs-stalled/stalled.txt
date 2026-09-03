@@ -1,0 +1,126 @@
+>>> ① 올린 직후 — 한 번도 안 움직였지만 그게 정상이다  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (572 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "3dfb0bd2-061d-444f-a44e-91cbb8f8cb00",
+      "project_id": "a50400a6-b5f8-41b9-97e0-0a36ebae97ac",
+      "feature": "structure",
+      "status": "queued",
+      "progress": null,
+      "input": {
+        "document_version_id": "6c7e042d-027b-42ec-9abd-04aeaae6c35d"
+      },
+      "error_code": null,
+      "started_at": null,
+      "finished_at": null,
+      "created_at": "2026-09-03T20:32:03.825Z",
+      "updated_at": "2026-09-03T20:32:03.825Z",
+      "stalled": false
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ② 집는 코드가 죽었다 — 180초 잣대를 넘겼다 (queued 인 채 8분)  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (571 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "3dfb0bd2-061d-444f-a44e-91cbb8f8cb00",
+      "project_id": "a50400a6-b5f8-41b9-97e0-0a36ebae97ac",
+      "feature": "structure",
+      "status": "queued",
+      "progress": null,
+      "input": {
+        "document_version_id": "6c7e042d-027b-42ec-9abd-04aeaae6c35d"
+      },
+      "error_code": null,
+      "started_at": null,
+      "finished_at": null,
+      "created_at": "2026-09-03T20:32:03.825Z",
+      "updated_at": "2026-09-03T20:24:03.830Z",
+      "stalled": true
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ③ 같은 행, 시각만 잣대 안쪽(150초 전) — 도는 중이다  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (595 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "3dfb0bd2-061d-444f-a44e-91cbb8f8cb00",
+      "project_id": "a50400a6-b5f8-41b9-97e0-0a36ebae97ac",
+      "feature": "structure",
+      "status": "running",
+      "progress": null,
+      "input": {
+        "document_version_id": "6c7e042d-027b-42ec-9abd-04aeaae6c35d"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:32:03.834Z",
+      "finished_at": null,
+      "created_at": "2026-09-03T20:32:03.825Z",
+      "updated_at": "2026-09-03T20:29:33.834Z",
+      "stalled": false
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ④ 끝난 뒤 — 하루가 지나도 끝난 행은 멈춘 것이 아니다  GET /projects/{id}/jobs?feature=structure&limit=1 => 200 (688 bytes)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "3dfb0bd2-061d-444f-a44e-91cbb8f8cb00",
+      "project_id": "a50400a6-b5f8-41b9-97e0-0a36ebae97ac",
+      "feature": "structure",
+      "status": "succeeded",
+      "progress": {
+        "done": 1,
+        "unit": "조각",
+        "total": 1
+      },
+      "input": {
+        "document_version_id": "6c7e042d-027b-42ec-9abd-04aeaae6c35d"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T20:32:03.838Z",
+      "finished_at": "2026-09-03T20:32:03.851Z",
+      "created_at": "2026-09-03T20:32:03.825Z",
+      "updated_at": "2026-09-03T20:32:03.851Z",
+      "stalled": false
+    }
+  ],
+  "limit": 1,
+  "offset": 0
+}
+
+>>> ⑤ 상세도 같은 두 칸을 낸다 (result 는 길어서 이 근거에서만 뺐다)  GET /projects/{id}/jobs/{jobId} => 200 (552 bytes)
+{
+  "shape": "full",
+  "id": "3dfb0bd2-061d-444f-a44e-91cbb8f8cb00",
+  "project_id": "a50400a6-b5f8-41b9-97e0-0a36ebae97ac",
+  "feature": "structure",
+  "status": "succeeded",
+  "progress": {
+    "done": 1,
+    "unit": "조각",
+    "total": 1
+  },
+  "input": {
+    "document_version_id": "6c7e042d-027b-42ec-9abd-04aeaae6c35d"
+  },
+  "error_code": null,
+  "started_at": "2026-09-03T20:32:03.838Z",
+  "finished_at": "2026-09-03T20:32:03.851Z",
+  "created_at": "2026-09-03T20:32:03.825Z",
+  "updated_at": "2026-09-03T20:32:03.851Z",
+  "stalled": false
+}
