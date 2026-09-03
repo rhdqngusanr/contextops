@@ -15,6 +15,13 @@
       "when": 1788428277825,
       "tag": "0001_far_doctor_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788456831243,
+      "tag": "0002_big_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

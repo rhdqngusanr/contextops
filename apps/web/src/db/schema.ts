@@ -55,6 +55,11 @@ import {
 } from '@contextops/schema'
 import type { Snapshot, SourceMapEntry } from '@contextops/compiler'
 
+//  ⚠ 서버측 AI 의 기능 4종은 **계약이 아니라 서버 전용**이라 `packages/schema` 가 아니라
+//    `src/lib/ai/features.ts` 가 정본이다 (그 파일 머리 주석). 여기서는 **읽기만** 한다.
+//    그 파일은 의존이 없다 — 순환이 생기지 않는다.
+import { AI_FEATURES } from '../lib/ai/features'
+
 // ---------------------------------------------------------------------
 //  DB 안에서만 사는 값 목록
 //  ★ 왜 여기 있나 — 이 셋은 업로드 payload 에도 Pack 에도 안 나온다. 소비처가
@@ -96,6 +101,8 @@ export const packTarget = pgEnum('pack_target', PACK_TARGETS)
 export const syncStatus = pgEnum('sync_status', REPORTABLE_SYNC_STATUSES)
 export const progressStatus = pgEnum('progress_status', PROGRESS_STATUSES)
 export const progressSource = pgEnum('progress_source', PROGRESS_SOURCES)
+/** 서버측 AI 기능 4종 (SPEC §7 · P3). 정본은 `src/lib/ai/features.ts` 의 `AI_FEATURES` 다. */
+export const aiFeature = pgEnum('ai_feature', AI_FEATURES)
 
 // ---------------------------------------------------------------------
 //  공통 컬럼
@@ -377,8 +384,39 @@ export const progressEvents = pgTable('progress_events', {
   createdAt: createdAt(),
 }, (t) => [index('progress_events_project_milestone_created_idx').on(t.projectId, t.milestoneId, t.createdAt.desc())])
 
+/**
+ * 🔴 **서버측 AI 호출 장부** (SPEC §2 · §7.5 · P3).
+ *
+ * ★ 왜 표가 필요한가 — 하루 예산과 빈도 제한은 **요청 사이에 남아 있어야** 한다.
+ *   프로세스 메모리에 세면 서버리스에서 인스턴스마다 따로 세고, 콜드 스타트마다
+ *   0으로 돌아간다. 그러면 「하루 $3」은 문서에만 있는 숫자가 된다.
+ *
+ * ⚠ **본문을 담지 않는다** (P1 · SPEC §11). 무엇을 물었는지·무엇이 왔는지는 여기 없다.
+ *   행에 있는 것은 「어느 기능이 · 언제 · 토큰 몇 개를 · 얼마어치 썼나」뿐이다.
+ * ⚠ `actor_hash` 는 sha256 이다 — IP 나 사용자 ID 원문을 저장하지 않는다.
+ */
+export const aiUsage = pgTable('ai_usage', {
+  id: id(),
+  /** 게스트 데모(§7.4)는 프로젝트가 없다 — 그래서 nullable 이다. */
+  projectId: uuid('project_id').references(() => projects.id),
+  feature: aiFeature('feature').notNull(),
+  /** 빈도 제한을 `actor` 범위로 세는 열쇠. 원문이 아니라 sha256 이다 (SPEC §11). */
+  actorHash: text('actor_hash'),
+  model: text('model').notNull(),
+  inputTokens: integer('input_tokens').notNull(),
+  outputTokens: integer('output_tokens').notNull(),
+  /** USD 의 100만분의 1. 정수로 센다 — 부동소수로 하루치를 더하면 조용히 갈라진다. */
+  costMicros: integer('cost_micros').notNull(),
+  /** UTC 날짜(`YYYY-MM-DD`). 하루 예산의 창(window)이다. */
+  day: text('day').notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  index('ai_usage_day_feature_idx').on(t.day, t.feature),
+  index('ai_usage_created_idx').on(t.createdAt),
+])
+
 // ---------------------------------------------------------------------
-//  인덱스 5개 — SPEC §2 마지막 줄이 정본이다
+//  인덱스 7개 — SPEC §2 마지막 줄이 정본이다
 //  ★ 이 표는 `test/migration.test.ts` 의 기대값이다. 인덱스를 더하면 여기 한 줄.
 //    (unique 제약이 만드는 인덱스는 여기 세지 않는다 — 그건 제약의 부산물이다)
 // ---------------------------------------------------------------------
@@ -388,4 +426,7 @@ export const INDEX_NAMES = [
   'progress_events_project_milestone_created_idx',
   'sync_reports_project_device_reported_idx',
   'conflicts_project_status_idx',
+  //  ★ 예산·빈도 검사가 매 AI 호출 앞에서 도는 질의다 (SPEC §7.5).
+  'ai_usage_day_feature_idx',
+  'ai_usage_created_idx',
 ] as const

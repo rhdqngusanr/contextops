@@ -96,7 +96,7 @@ describe('drizzle 마이그레이션이 Postgres 에서 실제로 적용된다',
     )
     const inDb = created.map((r) => r.table_name).sort()
     const inTs = tables.map(getTableName).sort()
-    expect(inTs.length).toBe(16) // SPEC §2 의 표 개수
+    expect(inTs.length).toBe(17) // SPEC §2 의 표 개수
     expect(inDb).toEqual(inTs)
   })
 
@@ -115,11 +115,11 @@ describe('drizzle 마이그레이션이 Postgres 에서 실제로 적용된다',
     }
   })
 
-  it('인덱스 5개가 실제로 생긴다 (SPEC §2)', async () => {
+  it('인덱스 7개가 실제로 생긴다 (SPEC §2)', async () => {
     const inDb = (
       await rows<{ indexname: string }>(`select indexname from pg_indexes where schemaname = 'public'`)
     ).map((r) => r.indexname)
-    expect(INDEX_NAMES.length).toBe(5)
+    expect(INDEX_NAMES.length).toBe(7)
     for (const name of INDEX_NAMES) expect(inDb, `인덱스 ${name}`).toContain(name)
   })
 

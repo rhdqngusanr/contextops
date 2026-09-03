@@ -103,7 +103,7 @@ contextops/
 | DB | Supabase Postgres, Drizzle ORM + drizzle-kit | RLS 미사용, 서버 service role + 앱 레벨 권한 검사 |
 | Auth | Supabase Auth (GitHub OAuth + Email magic link) | 플러그인은 프로젝트 토큰(opaque, sha256 저장) |
 | 실시간 | Supabase Realtime (progress_events, context_versions 구독) | Roadmap·Sync 즉시 갱신 |
-| 서버 AI | `@anthropic-ai/sdk`, 모델 `claude-sonnet-4-5` (환경변수로 교체 가능), tool use로 구조화 출력 | 예산 가드 필수 |
+| 서버 AI | `@anthropic-ai/sdk`, 모델 `claude-opus-5` (환경변수로 교체 가능 · 쓸 수 있는 이름의 정본은 `apps/web/src/lib/ai/features.ts` 의 `AI_MODELS` 표), tool use로 구조화 출력 | 예산 가드 필수 |
 | 플러그인 CLI | esbuild → 단일 ESM 번들, 런타임 의존 0 | `node ${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs` |
 | 테스트 | vitest (schema·compiler·api), Playwright 1 시나리오 | |
 | 배포 | Vercel (web), Supabase cloud | Vercel Cron `0 */6 * * *` → `/api/health` (Supabase pause 방지) |
@@ -138,12 +138,14 @@ context_versions { id, project_id, semver text, snapshot_hash text, snapshot jso
 pack_files       { version_id, path, content text, sha256, source_map jsonb, target enum('claude','agents','cursor'), unique(version_id,path) }
 devices          { id, user_id, project_id, name, token_hash text unique, last_seen_at, revoked_at }
 sync_reports     { id, device_id, project_id, version_id, status enum('applied','outdated','modified','failed','manual'), manifest_hash, reported_at }
+ai_usage         { id, project_id null /* 게스트 데모는 없다 */, feature enum('structure','conflict','ask','demo'), actor_hash text null /* sha256 — 원문 저장 금지 */,
+                   model text, input_tokens int, output_tokens int, cost_micros int /* USD 백만분의 1 */, day text /* UTC YYYY-MM-DD */ }
 progress_events  { id, project_id, device_id, milestone_id text, criterion text null, status enum('in_progress','criterion_done','done_candidate','none'),
                    evidence jsonb /* [{path,start_line,end_line,commit_sha}] */, summary text, context_version text, source enum('agent','hook','manual'),
                    confirmed_by null, confirmed_at null }
 ```
 
-인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`.
+인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
 
 ### 2.1 발행 트랜잭션 (Drizzle `db.transaction`)
 
@@ -387,6 +389,10 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - 환경변수 `AI_DAILY_BUDGET_USD`(기본 3), `AI_MAX_INPUT_TOKENS`(기본 60k/호출). 토큰 추정 = chars/2.5(ko) 보수적.
 - 초과 시 `BUDGET_EXCEEDED` → 화면은 "오늘의 AI 예산 소진 — 샘플 결과를 보여드립니다"로 픽스처 결과 표시.
 - Rate limit: IP·사용자당 분당 3회(`/ask`, `/demo`), 문서 구조화는 프로젝트당 시간당 5회. Claude Console 월 한도는 운영자가 $30 설정.
+- 🔴 **공개 API 는 `withBudget(feature, ctx, fn)` 하나다.** `feature` 는 §7.1~§7.4 의 넷(`structure`·`conflict`·`ask`·`demo`)이고 정본 표는 `apps/web/src/lib/ai/features.ts` 다 — 기능별 빈도 상한·모델 정가·기본 한도가 전부 그 표에 있다. 빈도 초과는 `RATE_LIMITED`, 입력·하루 상한 초과는 `BUDGET_EXCEEDED`.
+- 하루치와 창(window)은 **`ai_usage` 표**(§2)로 센다 — 프로세스 메모리에 세면 서버리스에서 인스턴스마다 따로 세고 콜드 스타트마다 0으로 돌아간다. 그 표에는 프롬프트·응답 본문이 들어갈 칸이 없고, 행위자는 sha256 으로만 남는다 (P1 · §11).
+- **실패한 호출도 장부에 남는다**(추정치로). 안 남기면 계속 실패하는 루프가 장부 밖에서 예산을 태운다.
+- ⚠ `conflict` 에는 빈도 상한이 **없다** — §7.2 가 「무엇마다 세나」를 정하기 전에는 숫자를 지어내지 않는다. 그동안은 하루 예산이 막는다.
 
 ---
 

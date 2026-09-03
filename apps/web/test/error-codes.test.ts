@@ -25,14 +25,15 @@ const webSrc = fileURLToPath(new URL('../src', import.meta.url))
 
 /**
  * 아직 **내는 자리가 없는** 코드 → 그 코드를 만들 PLAN 행.
- * 지금은 API 2군까지 왔고, 남은 둘은 P3 가 주인이다.
  * ⚠ `STALE_BASE`·`COMPILE_FAILED` 는 발행 트랜잭션이 실제로 내게 되어 여기서 지웠다
- *   (`lib/api/publish.ts` · PLAN P1 셋째 행). 표를 늘려서 초록을 만들지 마라.
+ *   (`lib/api/publish.ts` · PLAN P1 셋째 행).
+ * ⚠ `BUDGET_EXCEEDED`·`RATE_LIMITED` 도 지웠다 — 예산 가드(`lib/ai/budget.ts`)가
+ *   실제로 던진다 (PLAN P3 첫 행 · SPEC §7.5). **표를 늘려서 초록을 만들지 마라.**
+ *
+ * 🔴 **지금은 비어 있다.** 열 코드가 전부 내는 자리를 가졌다는 뜻이고,
+ *    새 코드를 `ERROR_CODES` 에 더하면 이 표에 한 줄 적거나 소비처를 만들어야 한다.
  */
-const WITHOUT_OWNER: Partial<Record<ErrorCode, string>> = {
-  BUDGET_EXCEEDED: 'PLAN P3 첫 행 — 서버측 AI 예산 가드 (SPEC §7.5)',
-  RATE_LIMITED: 'PLAN P3 첫 행 — 게스트 데모의 IP당 상한 (SPEC §7.4)',
-}
+const WITHOUT_OWNER: Partial<Record<ErrorCode, string>> = {}
 
 function sourceFiles(dir: string, found: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -94,11 +95,11 @@ describe('🔴 정의만 있고 아무 일도 안 하는 코드가 없다 (FINDI
     ).toEqual([])
   })
 
-  it('API 1·2군이 쓰는 여덟은 실제로 내는 자리가 있다', () => {
+  it('열 코드가 전부 실제로 내는 자리를 가졌다', () => {
+    //  ⚠ 여덟이었다. 예산 가드가 `BUDGET_EXCEEDED`·`RATE_LIMITED` 를 내면서 열이 됐다
+    //    (`lib/ai/budget.ts` · PLAN P3 첫 행). 이 목록은 `ERROR_CODES` 와 같아야 한다 —
+    //    같아졌으므로 이제 「하나도 죽어 있지 않다」를 통째로 잰다.
     const live = ERROR_CODES.filter((code) => callersOf(code).length > 0)
-    expect([...live].sort()).toEqual([
-      'COMPILE_FAILED', 'FORBIDDEN', 'INTERNAL', 'NOT_FOUND',
-      'REVISION_CONFLICT', 'STALE_BASE', 'UNAUTHORIZED', 'VALIDATION_FAILED',
-    ])
+    expect([...live].sort()).toEqual([...ERROR_CODES].sort())
   })
 })

@@ -12,6 +12,7 @@
     "dev:db": "tsx scripts/dev-server.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "catalog:",
     "@contextops/compiler": "workspace:*",
     "@contextops/schema": "workspace:*",
     "drizzle-orm": "catalog:",
