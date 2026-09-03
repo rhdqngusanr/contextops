@@ -29,6 +29,92 @@
 
 ## 다음에 고칠 것
 
+### 28. 충돌 행을 **만드는 코드가 0곳**이다 — 충돌 화면 전체가 빈 채로 초록이다   [구멍]
+- **증상**: `GET /projects/{id}/conflicts` 와 `POST /conflicts/{id}/resolve` 는 있는데
+  `conflicts` 에 INSERT 하는 곳이 없다. 그래서 `CONFLICT_KINDS` 5종 · `CONFLICT_CHOICES`
+  4종 · `RESOLUTION_OUTCOME` 표 · `GET /roadmap` 의 `conflicts` 수가 **전부 항상 0** 이다.
+  시험은 DB 에 직접 행을 넣어서 재고 있어서, 이 상태로도 영원히 초록이다.
+- **근거**: `grep -rn "insert(conflicts)" apps/web/src` → **0건** (이번 바퀴 직접 확인) ·
+  관통 산출물의 roadmap 응답에서 `conflicts: 0` (`.ci/walkthrough-publish.json`)
+- **정본**: `docs/SPEC.md` §7.2 (충돌 탐지) · §5
+- **고칠 방향**: **주인은 PLAN P3 첫 행**(`detectConflicts`)이다. 거기서 만들게 배선하고
+  「탐지가 돌면 충돌 수가 0이 아니다」를 관통에서 잠가라. 지금 손으로 넣는 문을 만들지 마라 —
+  소비처 없는 라우트가 하나 더 생긴다. ⚠ FINDINGS 25(충돌→항목 상태)와 **같은 행**이다.
+- **상태**: 대기 (P3 첫 행이 주인 · 지금 고치지 마라)
+
+### 29. `roadmap` 의 `conflicts` 는 마일스톤별이 아니라 **프로젝트 전체 수**다   [구멍]
+- **증상**: SPEC §5 의 roadmap 응답은 마일스톤 줄마다 `conflicts` 를 갖는데, 충돌 행에
+  **마일스톤을 가리키는 칸이 없다.** 그래서 모든 줄이 같은 숫자(프로젝트의 열린 충돌 수)를
+  달고 나간다 — 마일스톤이 셋이면 화면에 같은 숫자가 세 번 뜬다.
+- **근거**: `apps/web/src/app/api/v1/projects/[id]/roadmap/route.ts` 의 `openConflicts` ·
+  `apps/web/src/db/schema.ts` `conflicts` 에 milestone 칸 없음 (`e5f61c8`)
+- **정본**: `docs/SPEC.md` §2 · §5 · §9(화면 8)
+- **고칠 방향**: FINDINGS 25 와 **같이** 정해라 — 충돌이 무엇을 가리키는지(항목? 마일스톤?)를
+  §7.2 가 정할 때 한 번에 결정한다. 지금 `relates_to` 로 억지로 이으면 그때 다시 짠다.
+- **상태**: 대기 (P3 첫 행이 주인 · 지금 고치지 마라)
+
+### 30. domain Pack 파일의 제목이 「# 도메인」이다 — 어느 도메인인지 본문에 없다   [격차]
+- **증상**: 관통이 만든 `.claude/rules/domain-refund.md` 의 첫 줄이 `# 도메인` 이다.
+  도메인 이름은 **파일 이름에만** 있다. 이 파일은 agent 가 통째로 읽는 것이라, 여러
+  도메인 파일이 한 맥락에 들어오면 **어느 규칙이 어느 도메인 것인지 구별할 수 없다.**
+  `DocVars.title` 에 도메인 이름이 이미 들어와 있는데 `domain` 템플릿의 `head` 가 안 읽는다
+  (`scoped` 템플릿은 읽는다) — 「값은 있는데 아무 일도 안 하는」 자리다.
+- **근거**: `.ci/walkthrough-pack/.claude/rules/domain-refund.md` 첫 줄 (재생성:
+  `pnpm --filter web exec tsx scripts/walkthrough-publish.ts`) ·
+  `packages/compiler/templates/index.ts:104` (`head: (v) => ['# 도메인', notice(v)]`) vs
+  `:131` (scoped 는 `# 경로 규칙 — ${v.title}`)
+- **정본**: `docs/SPEC.md` §4.1 · §4.2
+- **고칠 방향**: `head` 를 `# 도메인 — ${v.title}` 로 고친다. ⚠ **golden 이 빨개진다** —
+  `TEMPLATE_VERSION` 을 올리고 expected 를 갱신한 이유를 커밋 메시지에 적어라
+  (loop/PROMPT.md ⑤). 옆 줄의 주석(「제목은 절이 갖는다」)은 `domain` **항목**이 있을 때만
+  맞는 말이다. domain scope 정책만 있고 domain 항목이 없는 프로젝트가 이 고장을 만든다.
+- **상태**: 대기
+
+### 27. `unique(project_id, snapshot_hash)` 는 **절대 걸리지 않는다**   [격차]
+- **증상**: SPEC §2 는 `context_versions` 에 `unique(project_id, snapshot_hash)` 를 두어
+  「같은 내용을 두 버전으로 발행하지 않는다」를 말하는 것처럼 보인다. 그런데
+  `snapshot_hash` 는 `context_version`(=semver)을 **포함해서** 계산된다 — 번호만 올리면
+  언제나 다른 해시다. 즉 이 제약은 `unique(project_id, semver)` 의 약한 메아리이고,
+  **내용이 하나도 안 바뀐 발행을 막지 못한다.** (이번 바퀴에 그 검사를 넣었다가 시험이
+  「막힐 줄 알았는데 201」로 잡아내서 도로 뺐다 — 넣었으면 죽은 코드였다)
+- **근거**: `packages/compiler/src/hash.ts` `snapshotHash` 가 `context_version` 을 넣는다 ·
+  `apps/web/src/lib/api/publish.ts` 의 4단계 앞 주석 · `test/api-publish.test.ts`
+  「같은 semver 를 두 번 발행할 수 없다」 옆의 ⚠ 주석 (`e5f61c8`)
+- **정본**: `docs/SPEC.md` §2 · §3(manifest_hash) · §4.1 7단계
+- **고칠 방향**: **셋 중 하나를 골라라. 손으로 두 번째 해시를 계산하지 마라** — 해시 규칙이
+  두 곳이 되는 것이 P4 가 제일 싫어하는 모양이다.
+  ① `snapshot_hash` 에서 `context_version` 을 뺀다 (「무엇을 컴파일했나의 지문」이라는
+     그 함수의 주석과 맞는다). ⚠ golden 전부 빨개진다 — 템플릿이 아니라 **해시** 변경이라
+     `COMPILER_VERSION` 을 올려라
+  ② SPEC §2 에서 그 제약을 지우고 「내용 중복 발행은 막지 않는다」를 한 줄로 적는다
+  ③ Manifest 의 `manifest_hash` 로 막는다 (파일 해시만 보므로 semver 를 안 탄다) —
+     단 Pack 머리말에 `snapshot:` 앞 8자가 들어가서 이것도 갈린다. **확인하고 골라라**
+- **상태**: 대기
+
+### 31. `REVISION_ORIGINS` 의 `doc` 을 만드는 곳이 0곳이다   [구멍]
+- **증상**: 4종 중 셋은 이번 바퀴에 전부 살았다 — `code`(batch-draft) · `manual`(PATCH·
+  질문 답변) · `proposal`(발행 트랜잭션). **`doc` 만 만드는 코드가 없다.**
+- **근거**: `grep -rn "origin: '" apps/web/src packages` → `manual` 2 · `code` 1 ·
+  `proposal` 1 · **`doc` 0** (이번 바퀴 직접 확인)
+- **정본**: `docs/SPEC.md` §2 · §7.1
+- **고칠 방향**: **주인은 PLAN P3 첫 행**(`structureDocument`)이다. 문서에서 구조화된 항목의
+  개정이 `doc` 이다. 그 행에서 배선하고 「문서에서 온 항목과 scan 에서 온 항목의 origin 이
+  다르다」를 시험으로 잠가라. 지금 억지로 만들지 마라.
+- **상태**: 대기 (P3 첫 행이 주인 · 지금 고치지 마라)
+
+### 32. SPEC §2.1 이 가리키는 「§6.5」가 SPEC 에 없다   [격차]
+- **증상**: §2.1 4단계가 「semver는 요청값, 추천값은 §6.5」라고 적는데 **§6 에는 하위 절이
+  없다.** 그래서 「서버가 Proposal 내용으로 semver 를 추천한다」(§6 첫 줄)를 구현하려는
+  다음 사람이 읽을 정본이 없다. 이번 바퀴는 추천을 만들지 않았다 — 없는 § 을 근거로
+  숫자를 지어내면 그게 「없는 것 위에 짓는」 것이다.
+- **근거**: `docs/SPEC.md` §2.1 4단계 · §6 전체 (하위 절 없음) — 이번 바퀴 직접 확인
+- **정본**: `docs/SPEC.md` §6
+- **고칠 방향**: §6 에 「6.1 semver 추천 규칙」을 한 절 적는다 — 제안 항목에
+  `deprecate` 가 있으면 major, `add`/`update` 가 있으면 minor, 설명만 바뀌면 수정 자리.
+  적은 뒤에 `POST /versions/publish` 응답에 `recommended_semver` 를 더할지 정해라.
+  (owner 가 조정한다고 §6 이 적으므로 **강제하지는 않는다**)
+- **상태**: 대기
+
 ### 20. SPEC §5 의 콜론 경로(`:batch-draft`·`:resolve`)는 파일 시스템에 못 만든다   [격차]
 - **증상**: SPEC §5 는 `POST /projects/{id}/context-items:batch-draft` ·
   `POST /conflicts/{id}:resolve` · `POST /proposals/{id}:submit` 처럼 콜론을 쓴다.
@@ -39,7 +125,7 @@
 - **고칠 방향**: §5 표의 콜론을 전부 경로 구간으로 고친다. **코드를 되돌리지 마라** —
   되돌릴 방법이 없다. 아직 안 만든 것들(`:submit`·`:approve`·`:reject`·`:publish`·
   `:confirm`)도 같이 고쳐라 — 그래야 API 2군이 두 번 고민하지 않는다.
-- **상태**: [PLACEHOLDER] — §5 의 콜론 7군데를 경로 구간으로 고쳤고(표 5줄 + §3.1 한 줄 +
+- **상태**: ✅ `e5f61c8` — §5 의 콜론 7군데를 경로 구간으로 고쳤고(표 5줄 + §3.1 한 줄 +
   §13 WBS 한 줄), §5 머리에 「되살리지 마라」를 두 줄로 남겼다. 같은 바퀴가 만든 API 2군은
   처음부터 `/versions/publish`·`/proposals/{id}/submit` 로 갔다.
 
@@ -130,7 +216,12 @@
   그 행에서 `GET /sync-status` 가 **보고가 없는 기기**에 `unknown` 을 매기게 배선하고,
   「보고 있는 기기 vs 없는 기기가 서로 다른 값을 낸다」를 시험으로 잠근다.
   지금 DB enum 에 `unknown` 을 더하지 마라 — 그러면 기기가 「모르겠다」고 자칭할 수 있게 된다.
-- **상태**: 대기 (P1 API 2군 행이 주인 · 지금 고치지 마라)
+- **상태**: ✅ `e5f61c8` — `GET /sync-status` 가 **기기부터 세고** 마지막 보고를 붙인다
+  (`lib/api/sync.ts` 의 `statusOfDevice` 하나가 매긴다). 보고부터 세면 한 번도 보고
+  안 한 기기가 목록에서 사라진다 — 그게 정확히 화면이 보여 줘야 할 것이다.
+  잠근 것: `test/api-publish.test.ts` 「보고한 기기는 applied · 안 한 기기는 unknown」
+  + 「기기가 unknown 을 자칭하면 400」. 관통 `publish` 단계도 같은 것을 잰다.
+  DB enum 에 `unknown` 은 **안 넣었다** (원래 조언대로).
 
 ### 17. SPEC §2 의 sync_reports 상태에 `failed` 가 있는데 코드 정본에는 없다   [격차]
 - **증상**: SPEC §2 는 `sync_reports.status enum('applied','outdated','modified','failed','manual')`
@@ -206,7 +297,13 @@
   `done_candidate` 는 「완료 확인」 UI 를 띄우고 `criterion_done` 은 기준 하나만 체크하는
   식으로. 그리고 `confidence` 3단계를 잠글 때 쓴 판정법을 그대로 쓴다: **값만 바꾸고
   결과가 갈리는가.** 지금 소비처 없이 시험만 늘리면 FINDINGS 12번과 같은 자리가 하나 더 생긴다.
-- **상태**: 대기 (P2/P4 행이 주인 · 지금 고치지 마라)
+- **상태**: ✅ `e5f61c8` (절반) — **`status` 4종은 살렸다.** `apps/web/src/lib/api/progress.ts`
+  의 `PROGRESS_EFFECT` 표가 4종을 마일스톤 상태로 접고, `GET /roadmap` 이 그 결과를 낸다.
+  잠근 것: `test/progress-rollup.test.ts` 「네 값이 **세 갈래**로 갈린다」 ·
+  「보고만으로는 done 이 안 된다(사람의 확정이 있어야 한다)」 · 관통이 같은 것을
+  `not_started → in_progress` 로 잰다.
+  ⚠ **`source` 3종(`agent`·`hook`·`manual`)은 아직 저장만 된다.** 화면이 「누가 보고했나」를
+  아이콘으로 가르는 자리(P4 Roadmap 화면)가 주인이다 — 그때 이 항목을 닫아라.
 
 ### 10. SPEC §4.2 템플릿 발췌가 코드와 세 곳 다르다 — SPEC 을 코드에 맞춰라   [격차]
 - **증상**: 컴파일러를 만들면서 SPEC 대로 두면 **계산이 안 되거나 값이 죽는** 곳이 셋이었다.
