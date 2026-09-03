@@ -1,10 +1,11 @@
 import { after } from 'next/server'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { ItemId, type ErrorCode } from '@contextops/schema'
+import { ItemId, ListQuery, type ErrorCode } from '@contextops/schema'
 
 import { getDb, type Db } from '../../db/client'
 import {
+  AI_JOB_STATUSES,
   aiJobs,
   conflicts,
   sourceDocumentVersions,
@@ -14,7 +15,7 @@ import {
 import { conflictRow } from '../api/conflict'
 import { ApiError, fail } from '../api/error'
 import { detectConflicts } from './conflict'
-import { isAiJobFeature, type AiJobFeature } from './features'
+import { AI_JOB_FEATURES, isAiJobFeature, type AiJobFeature } from './features'
 import { structureDocument } from './structure'
 
 // =====================================================================
@@ -286,6 +287,29 @@ let starter: JobStarter = defaultStarter
 export function setJobStarterForTest(s: JobStarter | undefined): void {
   starter = s ?? defaultStarter
 }
+
+// ---------------------------------------------------------------------
+//  질의 — 화면 3 이 **도는 job 을 다시 찾는** 자리 (FINDINGS 58)
+// ---------------------------------------------------------------------
+
+/**
+ * 🔴 `GET /projects/{id}/jobs` 의 질의 (SPEC §5 `?feature&status`).
+ *
+ * ★ 왜 목록이 필요한가 — job id 는 `POST /documents` 의 **응답에만** 있다. 화면이
+ *   그 id 를 state 에만 들고 있으면 새로고침 한 번에 길을 잃고, 사람은 「안 됐나 보다」
+ *   하며 문서를 다시 올린다 — 그게 §7.5 의 시간당 5회를 태우는 자리다.
+ *   그래서 **id 없이도 다시 찾을 수 있는 문**이 하나 있어야 한다.
+ *
+ * ★ 왜 `packages/schema` 가 아니라 여기인가 — `feature` 의 값 목록이
+ *   `AI_JOB_FEATURES`(서버 전용 표 `features.ts`)에서 온다. 그 표를 계약 패키지로
+ *   올리면 플러그인 번들에 통째로 실려 사용자 기계로 배포된다 (`features.ts` 머리 주석).
+ *   대신 `ListQuery`(계약)를 **넓히기만** 한다 — `limit`·`offset` 의 뜻과 상한은
+ *   다른 목록 라우트와 한 곳에서 갈린다.
+ */
+export const AiJobQuery = ListQuery.extend({
+  feature: z.enum(AI_JOB_FEATURES as readonly [AiJobFeature, ...AiJobFeature[]]).optional(),
+  status: z.enum(AI_JOB_STATUSES).optional(),
+}).strict()
 
 // ---------------------------------------------------------------------
 //  응답 — 화면 3 이 polling 으로 읽는 모양 하나

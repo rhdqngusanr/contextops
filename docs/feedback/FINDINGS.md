@@ -43,7 +43,15 @@
   응답 모양은 `toAiJob()` 이 이미 있다. ⚠ **화면 3 을 만드는 바퀴가 이걸 먼저 해라.**
   화면부터 만들면 「응답에서 받은 id 를 state 에 들고 있는」 코드를 짜게 되고,
   그 코드는 새로고침에서 조용히 무너진다.
-- **상태**: 대기 (값싸다 · P3 둘째 행 「화면 3」의 앞)
+- **상태**: ✅ `PENDING` — `GET /projects/{id}/jobs?feature&status&limit&offset` 을 냈다.
+  **최신순**이라 `?feature=structure&limit=1` 하나가 「이 프로젝트의 마지막 구조화 job」이다 —
+  화면 3 은 polling 을 시작하기 전에 여기부터 읽으면 되고, id 를 state 에 들고 있을 이유가 없다.
+  질의 계약 `AiJobQuery` 는 `lib/ai/job.ts` 에 뒀다 (`ListQuery` 를 넓힌다) — `feature` 의 값이
+  `AI_JOB_FEATURES` 에서 오는데 그 표를 `packages/schema` 로 올리면 **플러그인 번들에 실려
+  사용자 기계로 배포된다** (`features.ts` 머리 주석). 시험 **+7** (213 → 220):
+  응답을 잃고도 찾아낸다 · 최신순 · `feature`/`status` 를 뒤집으면 결과가 갈린다 ·
+  `limit`/`offset` 이 자른다 · job 이 아닌 기능(`ask`)·없는 상태는 400 · 남의 프로젝트는 404.
+  `ai_jobs_project_created_idx` 가 **처음으로 읽는 코드를 가졌다.** SPEC §5 에 같은 줄.
 
 ### 59. **실패한 job 을 다시 굴릴 문이 없다**   [격차]
 - **증상**: 예산 초과(`BUDGET_EXCEEDED`)·빈도 초과(`RATE_LIMITED`)로 죽은 job 은

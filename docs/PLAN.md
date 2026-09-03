@@ -164,8 +164,11 @@
       **생성되고**, `AI_JOB_STATUS_RULES` 에서 수명 CHECK 4개가 생성된다.
       `lib/ai/job.ts` 가 낸 것을 **행으로 옮기는 유일한 자리**다 — 충돌 표가 처음 찬다.
       라우트 셋(`POST /documents` · `batch-draft` · `GET …/jobs/{jobId}`). 시험 194→213.
-      🔴 **남은 것: 화면 3·4 자체**와, 새로고침하면 job 을 다시 못 찾는 것
-      (FINDINGS **58** — 화면 3 보다 **먼저** 해라) · 실패한 job 재시도 (**59**).
+      ② ✅ **도는 job 을 다시 찾는 문** (`PENDING` · FINDINGS **58** 닫음) —
+      `GET /projects/{id}/jobs?feature&status&limit&offset` · 최신순. 질의 계약 `AiJobQuery`
+      (`ListQuery` 를 넓힌다 — `feature` 의 값이 서버 전용 표에서 와서 계약 패키지로 못 올린다).
+      시험 213→220. `ai_jobs_project_created_idx` 가 처음으로 읽는 코드를 가졌다.
+      🔴 **남은 것: 화면 3·4 자체** · 실패한 job 재시도 (**59**).
       ⚠ 여전히 **진짜 키로 부른 적이 없다** — 완료 기준(「paylab 문서 → 항목 12 + 충돌 3」)은
       키가 있어야 잰다 (🙋).
 

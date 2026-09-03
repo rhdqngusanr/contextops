@@ -20,6 +20,7 @@ import { AI_JOB_RUNNERS, createJob, runJob } from '../src/lib/ai/job'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
+import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
 import { GET as listConflicts } from '../src/app/api/v1/projects/[id]/conflicts/route'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
@@ -495,6 +496,97 @@ describe('🔴 라우트가 job 을 만들고, 화면이 그것을 polling 한�
     const res = await readJob(
       req('GET', `/api/v1/projects/${otherId}/jobs/${doc.job.id}`, { auth: other }),
       params({ id: otherId, jobId: doc.job.id }),
+    )
+    expect(res.status).toBe(404)
+    expect((await errorOf(res)).code).toBe('NOT_FOUND')
+  })
+})
+
+// =====================================================================
+describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 · SPEC §5 · §9 화면 3)', () => {
+  /** 화면이 하는 그대로 — **id 를 하나도 모르는 채로** 목록 라우트만 두드린다. */
+  async function list(auth: string, projectId: string, query = '') {
+    const data = await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${projectId}/jobs${query}`, { auth }),
+      params({ id: projectId }),
+    ))
+    return data as { jobs: { id: string; feature: string; status: string }[]; limit: number; offset: number }
+  }
+
+  it('🔴 응답을 잃어버려도 마지막 구조화 job 을 찾아낸다 — 문서를 다시 올릴 이유가 없다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+
+    //  화면 3 이 새로고침 뒤에 하는 질의가 이것 하나다.
+    const found = await list(owner, projectId, '?feature=structure&limit=1')
+    expect(found.jobs.length).toBe(1)
+    expect(found.jobs[0]!.id).toBe(doc.job.id)
+    expect(found.jobs[0]!.status).toBe('queued')
+  })
+
+  it('최신순이다 — 문서를 둘 올리면 **나중 것**이 첫 행이다', async () => {
+    const { owner, projectId } = await seed()
+    const first = await uploadDoc(owner, projectId, '# 목표 하나\n첫 문서다.')
+    const second = await uploadDoc(owner, projectId, '# 목표 둘\n나중 문서다.')
+
+    const found = await list(owner, projectId, '?feature=structure')
+    expect(found.jobs.map((j) => j.id)).toEqual([second.job.id, first.job.id])
+  })
+
+  it('🔴 `feature` 를 뒤집으면 결과가 갈린다 — 구조화와 탐지가 같은 표에 있어도 섞이지 않는다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const items = await uploadItems(owner, projectId)
+
+    expect((await list(owner, projectId, '?feature=structure')).jobs.map((j) => j.id)).toEqual([doc.job.id])
+    expect((await list(owner, projectId, '?feature=conflict')).jobs.map((j) => j.id)).toEqual([items.job!.id])
+    //  거르지 않으면 둘 다 나온다 — 필터가 실제로 줄인 것이지 원래 하나였던 게 아니다.
+    expect((await list(owner, projectId)).jobs.length).toBe(2)
+  })
+
+  it('🔴 `status` 를 뒤집으면 결과가 갈린다 — 끝난 것과 도는 것을 화면이 가른다', async () => {
+    const { owner, projectId } = await seed()
+    const done = await uploadDoc(owner, projectId, '# 끝날 문서\n하나.')
+    stubAi(() => ({ input: { items: [], open_questions: [] } }))
+    expect(await runJob(done.job.id)).toBe('succeeded')
+    const waiting = await uploadDoc(owner, projectId, '# 기다리는 문서\n둘.')
+
+    expect((await list(owner, projectId, '?status=queued')).jobs.map((j) => j.id)).toEqual([waiting.job.id])
+    expect((await list(owner, projectId, '?status=succeeded')).jobs.map((j) => j.id)).toEqual([done.job.id])
+    expect((await list(owner, projectId, '?status=running')).jobs).toEqual([])
+  })
+
+  it('`limit`·`offset` 이 실제로 자른다', async () => {
+    const { owner, projectId } = await seed()
+    const first = await uploadDoc(owner, projectId, '# 하나\n첫째.')
+    const second = await uploadDoc(owner, projectId, '# 둘\n둘째.')
+
+    const page = await list(owner, projectId, '?limit=1&offset=1')
+    expect(page).toMatchObject({ limit: 1, offset: 1 })
+    expect(page.jobs.map((j) => j.id)).toEqual([first.job.id])
+    expect((await list(owner, projectId, '?limit=1')).jobs.map((j) => j.id)).toEqual([second.job.id])
+  })
+
+  it('계약 밖 질의는 400 이다 — job 이 아닌 기능도, 없는 상태도 물을 수 없다', async () => {
+    const { owner, projectId } = await seed()
+    for (const q of ['?feature=ask', '?status=zzz', '?limit=0', '?document_id=1']) {
+      const res = await listJobs(
+        req('GET', `/api/v1/projects/${projectId}/jobs${q}`, { auth: owner }),
+        params({ id: projectId }),
+      )
+      expect(res.status, `질의 ${q}`).toBe(400)
+      expect((await errorOf(res)).code).toBe('VALIDATION_FAILED')
+    }
+  })
+
+  it('🔴 남의 프로젝트 목록은 404 다 — 목록은 `{jobId}` 보다 넓은 문이라 여기서 막아야 한다', async () => {
+    const { owner, projectId } = await seed()
+    await uploadDoc(owner, projectId)
+
+    const other = sessionJwt('peeper')
+    const res = await listJobs(
+      req('GET', `/api/v1/projects/${projectId}/jobs`, { auth: other }),
+      params({ id: projectId }),
     )
     expect(res.status).toBe(404)
     expect((await errorOf(res)).code).toBe('NOT_FOUND')
