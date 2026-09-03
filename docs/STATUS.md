@@ -5,57 +5,57 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 18바퀴 · `a1f0a79`_
+_마지막 갱신: 2026-09-04 · 루프 19바퀴 · `a4a2682`_
 
 ---
 
 ## 지금 어디인가
 
-**§7.1·§7.2 를 부르는 자리가 생겼다. 그리고 `conflicts` 표가 처음으로 찬다.**
-세 바퀴 동안 「만들었는데 아무도 안 부른다」였던 것이 닫혔다 —
-**FINDINGS 52(부르는 라우트 0곳)와 28(충돌 행 만드는 코드 0곳)이 같이 닫혔다.**
-
-`ai_jobs` 표 하나로 **구조화와 탐지가 같은 자리**를 쓴다 (마이그레이션 `0004`).
-어느 기능이 job 인가는 `AI_FEATURE_LIMITS` 의 새 축 `job` 이 정하고, 거기서
-`AiJobFeature` 유니온과 DB CHECK 이 **생성된다**. 수명 4종이 어느 칸을 채워야 하는지는
-`AI_JOB_STATUS_RULES` 표이고 거기서 CHECK 4개가 생성된다.
+**화면 3 이 두드릴 문이 이제 다 났다 — 마지막 하나가 「id 없이 다시 찾기」였다.**
+`GET /projects/{id}/jobs?feature&status&limit&offset` 을 냈다 (FINDINGS 58 닫음).
+최신순이라 `?feature=structure&limit=1` 하나가 「이 프로젝트의 마지막 구조화 job」이고,
+화면은 job id 를 state 에 들고 있을 이유가 없다 — 새로고침에서 조용히 무너지던 자리다.
+`ai_jobs_project_created_idx` 가 **처음으로 읽는 코드를 가졌다.**
 
 ⚠ **여전히 진짜 Claude 를 부른 적이 없다.** 키가 없어 스텁으로만 쟀다 (🙋 사람).
-⚠ **화면 3·4 자체는 아직 없다.** 이번 바퀴는 그 화면이 두드릴 **문**을 만든 것이다.
+⚠ **화면 3·4 자체는 아직 없다.** 지난 두 바퀴와 이번 바퀴는 그 화면이 두드릴 **문**이다.
+⚠ **응답을 눈으로 읽고 격차 둘을 찾았다** (`docs/evidence/2026-09-04-jobs-list/`) —
+목록이 `result` 를 통째로 나른다(**60**) · 질의 오류인데 문구가 「요청 **본문**」이다(**61**).
 
 | 있는 것 | 없는 것 |
 |---|---|
 | `loop/` · `tools/` · pnpm workspace + catalog | 웹 화면 **1·3·4·6·8·9** |
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
-| `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | **도는 job 을 다시 찾을 문** (FINDINGS 58 — 새로고침하면 화면 3 이 길을 잃는다) |
-| `apps/web` — 라우트 **29개** · 테스트 **213** | **실패한 job 재시도** (FINDINGS 59) |
+| `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | **실패한 job 재시도** (FINDINGS 59 — 예산·빈도 초과는 기다리면 풀리는데 되돌릴 문이 없다) |
+| `apps/web` — 라우트 **30개** · 테스트 **220** | 목록이 `result` 를 통째로 나른다 (FINDINGS 60) |
 | 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | `ask`·`demo` 를 부르는 자리 (기능 표의 나머지 둘 · §7.3·§7.4) |
 | 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
 | 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · 시험 24 | zip 업로드 (FINDINGS 26 의 남은 절반 — SPEC §11 상한과 같이 와야 한다) |
 | 🔴 **`conflicts` 표가 §7.2 를 담는다** — CHECK 5개 · 복합 FK · 마이그레이션 `0003` | 질문 → 만들어진 항목의 **근거 사슬** (FINDINGS 56) |
-| 🔴 **job 자리** — `ai_jobs` 표 · `lib/ai/job.ts` · `AI_JOB_RUNNERS` · 라우트 3개 · 시험 **19** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
+| 🔴 **job 자리** — `ai_jobs` 표 · `lib/ai/job.ts` · `AI_JOB_RUNNERS` · 라우트 **4개** · 시험 **26** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
 | 🔴 **충돌 행을 만드는 코드** — 러너 둘이 유일한 자리다 (FINDINGS 28 닫음) | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
 | 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | |
 | 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | |
 | **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | |
 
-검사 층: `principles OK 9 · typecheck 7초·멤버 4 · test 49초·멤버 4 · build 19초 ·
-walkthrough 55초` → **GREEN**. 관통 **7단계**
+검사 층: `principles OK 9 · typecheck 7초·멤버 4 · test 49초·멤버 4 · build 18초 ·
+walkthrough 74초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없다.
-시험 합계 **636** (schema 113 · compiler 136 · plugin 174 · web 213).
+시험 합계 **643** (schema 113 · compiler 136 · plugin 174 · web 220).
 
 ## 다음 바퀴가 할 일
 
-🔴 **`docs/PLAN.md` P3 둘째 행 ② — 웹 화면 3 (가져오기 · 구조화 진행).**
-문은 다 났다. 이제 그 문을 두드리는 화면이다.
+🔴 **`docs/PLAN.md` P3 둘째 행 ③ — 웹 화면 3 (가져오기 · 구조화 진행).**
+**문은 다 났다.** 이제 그 문을 두드리는 화면이다.
 
 **시작하기 전에 아는 것:**
 
-- 🔴 **FINDINGS 58 을 화면보다 먼저 해라** — `GET /projects/{id}/jobs` 목록이 없다.
-  화면부터 만들면 「응답에서 받은 job id 를 state 에 들고 있는」 코드를 짜게 되고,
-  그 코드는 **새로고침에서 조용히 무너진다.** 라우트 한 줄이면 되고 응답 모양
-  (`toAiJob()`)은 이미 있다. 인덱스(`ai_jobs_project_created_idx`)도 미리 있다.
+- 🔴 **화면 3 이 새로고침 뒤에 하는 질의는 하나다** — `GET /projects/{id}/jobs
+  ?feature=structure&limit=1`. 그 답의 `id` 로 `GET …/jobs/{jobId}` 를 polling 한다.
+  **job id 를 state 에만 들고 있지 마라** — 그게 FINDINGS 58 이었다.
+  ⚠ 목록은 지금 `result` 를 통째로 나른다 (FINDINGS **60**) — 2초마다 목록을 두드리는
+  화면을 짜기 전에 그것부터 좁혀라. 값싸다.
 - 🔴 **키가 없을 때 화면이 무엇을 보여 주나 — 그 결정이 아직 없다.** job 은
   `failed`·`error_code='INTERNAL'` 로 끝난다. §7.5 는 「픽스처 결과를 보여 준다」고
   적었는데 **그 픽스처가 어디 있는지도, 고르는 코드도 없다.** lib 은 던지는 데까지가
@@ -73,16 +73,48 @@ walkthrough 55초` → **GREEN**. 관통 **7단계**
 ⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
 ⚠ **Anthropic API 키도 사람이 준다.**
 
-**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57·58** 은 문서·한 줄짜리다.
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57·60·61** 은 문서·한 줄짜리다.
 **14**(`.ps1` 두 개가 LF)도 그렇다. **55**(공통 프롬프트)는 §7.3 전이 제일 싸다.
 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿 `head` 한 줄이고 둘 다 golden 을 깬다.
 🔴 **50 은 여전히 값싸고 더 급해졌다** — `callClaude()` 를 부르는 제품 파일이 둘이고
 그 게이트는 예산 가드를 건너뛰는 새 파일을 못 잡는다.
 
-⚠ FINDINGS **24·25·29·31·33·35·56·58·59** 는 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
+⚠ FINDINGS **24·25·29·31·33·35·56·59·60** 은 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
 **53** 은 **API 키가 생긴 뒤**가 주인이다. **26** 은 절반(구조화 job)이 닫혔고 zip 만 남았다.
 
 ## 잰 것
+
+**19바퀴 · P3 둘째 행 ② — 도는 job 을 다시 찾는 문** (`a4a2682`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 7초 / test 49초 / build 18초 / walkthrough 74초 |
+| 새 시험 | **+7** — web 213 → **220** (`ai-job.test.ts`). 합계 **643** |
+| 새 라우트 | `GET /projects/{id}/jobs?feature&status&limit&offset` — 라우트 29 → **30**. 최신순 |
+| 계약 | `AiJobQuery`(`lib/ai/job.ts`) = `ListQuery` 를 `feature`·`status` 로 넓힌 것. **`packages/schema` 에 두지 않았다** — `feature` 의 값이 `AI_JOB_FEATURES`(서버 전용 표)에서 오고, 그 표를 계약 패키지로 올리면 플러그인 번들에 실려 **사용자 기계로 배포된다** (`features.ts` 머리 주석) |
+| 갈리는 것을 봤나 | **봤다.** `feature` 를 뒤집으면 structure/conflict 가 갈린다 (안 거르면 둘 다 나온다 — 필터가 줄인 것이지 원래 하나였던 게 아니다) · `status` 셋(queued/succeeded/running)이 갈린다 · `limit=1&offset=1` 이 둘째 행만 낸다 |
+| 새로고침을 쟀나 | **쟀다.** 시험이 **job id 를 하나도 모르는 채로** 목록만 두드려 방금 만든 job 을 찾아낸다 — 그게 화면 3 이 새로고침 뒤에 하는 일 그대로다 |
+| 막는 것을 쟀나 | **쟀다.** job 이 아닌 기능(`ask`)·없는 상태·`limit=0`·모르는 질의 키는 **400** · 남의 프로젝트 목록은 **404** (목록은 `{jobId}` 보다 넓은 문이라 여기서 막는다) |
+| 눈으로 읽었나 | **읽었다** — `docs/evidence/2026-09-04-jobs-list/get-jobs.txt` (200 응답 두 벌 + 400 한 벌을 직접 출력해서 읽었다). 거기서 격차 둘이 나왔다 |
+| 닫은 FINDINGS | **58**(도는 job 을 다시 찾을 문이 없다) |
+| 새 FINDINGS | **60**(목록이 `result` 를 통째로 나른다 · 격차) · **61**(질의 오류인데 문구가 「요청 **본문**」 · 격차) |
+| 2-B 확인 (죽은 정의 찾기) | `SourceRef` 4종 — **살아 있다** (`compiler/src/tag.ts` 의 `SRC_TAG` 가 종류마다 **다른 문자열**을 내고 `compiler/test/liveness.test.ts` 가 잠근다). ⚠ 다만 `proposal`·`manual` 을 **만드는 제품 코드는 아직 0곳**이다 — 클라이언트가 보낼 수 있을 뿐이다 · `scope.kind` 3종 — **살아 있다** (`partition.ts:68~70` 이 셋을 서로 다른 Pack 파일로 보낸다 · liveness 가 `CLAUDE.md`/`domain-payment.md`/`scoped-payment.md` 셋을 잠근다) · `INDEX_NAMES` 8개 — **이제 8개 전부 읽는 코드가 있다** (`ai_jobs_project_created_idx` 가 이번 바퀴에 마지막으로 채워졌다) |
+
+**🔴 결정 — 질의 계약을 `packages/schema` 로 올리지 않았다**
+
+「모든 외부 입력은 `packages/schema` 로 파싱한다」가 규칙이고, 그 규칙의 이유는
+「라우트마다 손으로 검사하면 한 곳만 빠져도 P1 방어선이 뚫린다」다. 여기서는 손으로
+검사하지 않는다 — `ListQuery`(계약)를 넓힌 Zod 하나로 `parseQuery` 가 판다.
+반대로 `feature` 의 값 목록을 계약 패키지로 올리면 **서버측 AI 기능 이름이 플러그인
+번들로 사용자 기계에 배포된다** (`features.ts` 가 명시적으로 금한 것이다).
+그래서 값 목록은 서버에 두고, **수치(`limit` 상한·기본값)만** 계약에서 읽는다 —
+수치가 두 곳에 갈리는 것이 이 규칙이 진짜로 막으려는 것이다.
+
+**🔴 결정 — 최신순 하나만 낸다 (`?order=` 를 만들지 않았다)**
+
+화면이 묻는 것은 「지금 무엇이 도나」이고 그 답은 늘 마지막 행이다. 정렬 축을
+질의로 열면 인덱스(`project_id, created_at desc`)를 안 타는 질의가 생기고,
+그때 느려지는 것은 **2초마다 도는 polling** 이다. 둘째 사용자가 생기면 그때 연다.
 
 **18바퀴 · P3 둘째 행 ① — job 자리 · §7.1·§7.2 를 부르는 첫 코드** (`a1f0a79`)
 

@@ -29,6 +29,38 @@
 
 ## 다음에 고칠 것
 
+### 60. job 목록이 **`result` 를 통째로 실어 나른다** — polling 이 무거워진다   [격차]
+- **증상**: `GET /projects/{id}/jobs` 는 `AI_JOB_COLUMNS` 를 그대로 읽어서 **행마다
+  `result` 전부**를 낸다. `result.items` 에는 §7.1 이 문서에서 뽑은 항목 초안이 통째로
+  들어 있다 (제목·본문·`data`·`span`). `limit` 상한이 **200**(`LIST_LIMIT_MAX`)이라
+  한 요청이 항목 수천 개를 나를 수 있고, 화면 3 이 이 목록을 2초마다 두드리면 그
+  payload 가 매번 다시 간다. **찾는 데 필요한 것은 `id`·`feature`·`status` 뿐이다.**
+- **근거**: 이번 바퀴 직접 출력해서 읽었다 —
+  `docs/evidence/2026-09-04-jobs-list/get-jobs.txt` (job 2개짜리 목록이 이미 47줄 ·
+  succeeded 행이 `result` 를 다 싣고 있다) · `packages/schema/src/api.ts:112`
+  `LIST_LIMIT_MAX = 200`
+- **정본**: `docs/SPEC.md` §5 · §9 화면 3
+- **고칠 방향**: 목록에서 `result`(그리고 아마 `input`)를 뺀다 — 전문은 이미
+  `GET …/jobs/{jobId}` 가 낸다. ⚠ **칸을 라우트에서 손으로 고르지 마라.**
+  `AI_JOB_COLUMNS` 옆에 `AI_JOB_LIST_COLUMNS` 를 두고 **둘 다 `toAiJob()` 이 아는
+  모양**이게 해라 — 안 그러면 「목록에는 있는데 상세에는 없는 칸」이 조용히 생긴다.
+  응답 모양이 둘이 되므로 화면이 어느 쪽을 받았는지 알 수 있어야 한다.
+- **상태**: 대기 (값싸다 · 화면 3 을 만들기 전이 제일 싸다)
+
+### 61. `VALIDATION_FAILED` 의 문구가 **질의 오류에 안 맞는다**   [격차]
+- **증상**: `?feature=ask` 로 물으면 400 이 나는데 message 가 「**요청 본문**이 계약과
+  맞지 않는다」다. 본문을 보낸 적이 없다. `details` 는 정확하지만(`path:'feature'`),
+  화면이 message 를 그대로 띄우면 사람은 body 를 고치러 간다.
+- **근거**: 이번 바퀴 직접 출력 — `docs/evidence/2026-09-04-jobs-list/get-jobs.txt`
+  마지막 블록 · `packages/schema/src/api.ts:74` (`ERROR_STATUS`/`ERROR_HINT` 의 그 줄)
+- **정본**: `docs/SPEC.md` §5 (에러 코드 표)
+- **고칠 방향**: 코드를 나누지 마라 — `VALIDATION_FAILED` 하나로 충분하고 갈래를
+  더하면 표가 늘어난다. **문구를 「요청이 계약과 맞지 않는다」로 좁히면** body·query·
+  path 셋 다에 참이다. ⚠ 한 곳(`api.ts`)만 고치면 되지만 `packages/schema` 라
+  **플러그인 번들이 갈린다** — `pnpm --filter @contextops/plugin build` 를 같이 돌려라
+  (`test/bundle.test.ts` 가 표류로 잡는다).
+- **상태**: 대기 (값싸다)
+
 ### 58. **도는 job 을 다시 찾을 문이 없다** — 새로고침하면 화면 3 이 길을 잃는다   [구멍]
 - **증상**: job id 는 `POST /documents` 의 **응답에만** 있다. 화면 3 이 그 id 를 들고
   polling 하는데, 사용자가 새로고침하거나 다른 화면에 갔다 오면 **그 id 를 다시 찾을
@@ -43,7 +75,7 @@
   응답 모양은 `toAiJob()` 이 이미 있다. ⚠ **화면 3 을 만드는 바퀴가 이걸 먼저 해라.**
   화면부터 만들면 「응답에서 받은 id 를 state 에 들고 있는」 코드를 짜게 되고,
   그 코드는 새로고침에서 조용히 무너진다.
-- **상태**: ✅ `PENDING` — `GET /projects/{id}/jobs?feature&status&limit&offset` 을 냈다.
+- **상태**: ✅ `a4a2682` — `GET /projects/{id}/jobs?feature&status&limit&offset` 을 냈다.
   **최신순**이라 `?feature=structure&limit=1` 하나가 「이 프로젝트의 마지막 구조화 job」이다 —
   화면 3 은 polling 을 시작하기 전에 여기부터 읽으면 되고, id 를 state 에 들고 있을 이유가 없다.
   질의 계약 `AiJobQuery` 는 `lib/ai/job.ts` 에 뒀다 (`ListQuery` 를 넓힌다) — `feature` 의 값이
