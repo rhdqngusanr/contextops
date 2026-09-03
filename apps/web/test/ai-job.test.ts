@@ -16,7 +16,15 @@ import {
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
 import { AI_FEATURES, AI_FEATURE_LIMITS, AI_JOB_FEATURES } from '../src/lib/ai/features'
-import { AI_JOB_RUNNERS, createJob, runJob } from '../src/lib/ai/job'
+import {
+  AI_JOB_COLUMNS,
+  AI_JOB_FIELDS,
+  AI_JOB_LIST_COLUMNS,
+  AI_JOB_RUNNERS,
+  AI_JOB_SHAPES,
+  createJob,
+  runJob,
+} from '../src/lib/ai/job'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
@@ -590,5 +598,110 @@ describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 �
     )
     expect(res.status).toBe(404)
     expect((await errorOf(res)).code).toBe('NOT_FOUND')
+  })
+})
+
+// =====================================================================
+describe('🔴 목록은 무거운 칸을 안 나른다 (FINDINGS 60 · SPEC §5 · §9 화면 3)', () => {
+  /** §7.1 이 낸 항목 초안 하나 — **목록에 새면 여기 적은 문장이 payload 에 보인다.** */
+  const DRAFT_TITLE = '환불 SLA'
+  const DRAFT_BODY = '이 문장이 목록 응답에 있으면 polling 이 초안을 매번 다시 나른 것이다.'
+
+  /** 문서 하나를 올려 구조화 job 을 **끝까지** 굴린다 — `result` 가 찬 행을 만든다. */
+  async function succeededJob(owner: string, projectId: string) {
+    const { job } = await uploadDoc(owner, projectId)
+    stubAi(() => ({
+      input: {
+        items: [{
+          id: 'item_refund_sla',
+          type: 'policy',
+          title: DRAFT_TITLE,
+          body: DRAFT_BODY,
+          scope: { kind: 'project' },
+          data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
+          span: { start_char: 0, end_char: 20 },
+        }],
+        open_questions: [],
+      },
+    }))
+    expect(await runJob(job.id)).toBe('succeeded')
+    return job.id
+  }
+
+  async function listRaw(auth: string, projectId: string) {
+    return await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${projectId}/jobs`, { auth }),
+      params({ id: projectId }),
+    )) as { jobs: Record<string, unknown>[] }
+  }
+
+  async function detailRaw(auth: string, projectId: string, jobId: string) {
+    return await dataOf(await readJob(
+      req('GET', `/api/v1/projects/${projectId}/jobs/${jobId}`, { auth }),
+      params({ id: projectId, jobId }),
+    )) as Record<string, unknown>
+  }
+
+  it('🔴 표가 두 모양을 정한다 — 라우트가 칸을 손으로 고르는 자리가 없다', () => {
+    const heavy = Object.entries(AI_JOB_FIELDS).filter(([, f]) => f.heavy).map(([k]) => k)
+    //  표에 무거운 칸이 하나도 없으면 이 표는 아무것도 안 가른다 — 그러면 목록도 안 가볍다.
+    expect(heavy.length).toBeGreaterThan(0)
+    expect(Object.keys(AI_JOB_COLUMNS)).toEqual(Object.keys(AI_JOB_FIELDS))
+    expect(Object.keys(AI_JOB_LIST_COLUMNS))
+      .toEqual(Object.keys(AI_JOB_FIELDS).filter((k) => !heavy.includes(k)))
+  })
+
+  it('🔴 표의 `heavy` 를 뒤집으면 응답이 갈린다 — 목록에 없고 상세에 있다', async () => {
+    const { owner, projectId } = await seed()
+    const jobId = await succeededJob(owner, projectId)
+
+    const [listed] = (await listRaw(owner, projectId)).jobs
+    const detail = await detailRaw(owner, projectId, jobId)
+
+    for (const [name, field] of Object.entries(AI_JOB_FIELDS)) {
+      //  무거운 칸: 상세에만 있다. 가벼운 칸: 둘 다에 있다. **표가 응답을 정한다.**
+      expect(name in listed!, `목록의 ${name}`).toBe(!field.heavy)
+      expect(name in detail, `상세의 ${name}`).toBe(true)
+    }
+  })
+
+  it('🔴 `shape` 로 화면이 가른다 — 「`result` 가 없다」와 「아직 안 받았다」는 다르다', async () => {
+    const { owner, projectId } = await seed()
+    const jobId = await succeededJob(owner, projectId)
+
+    expect((await listRaw(owner, projectId)).jobs[0]!.shape).toBe('summary')
+    expect((await detailRaw(owner, projectId, jobId)).shape).toBe('full')
+    //  `shape` 는 표에 있는 두 값 중 하나다 — 화면이 셋째 값을 만날 일이 없다.
+    expect(AI_JOB_SHAPES).toEqual(['summary', 'full'])
+  })
+
+  it('🔴 목록 payload 에 항목 초안이 0건이다 — 2초마다 다시 나르던 것이 그것이다', async () => {
+    const { owner, projectId } = await seed()
+    const jobId = await succeededJob(owner, projectId)
+
+    const listed = JSON.stringify(await listRaw(owner, projectId))
+    const detail = JSON.stringify(await detailRaw(owner, projectId, jobId))
+
+    //  초안의 제목도 본문도 목록에는 한 글자도 없다 — 그런데 **상세에는 그대로 있다.**
+    expect(listed.includes(DRAFT_TITLE)).toBe(false)
+    expect(listed.includes(DRAFT_BODY)).toBe(false)
+    expect(detail.includes(DRAFT_TITLE)).toBe(true)
+    expect(detail.includes(DRAFT_BODY)).toBe(true)
+    //  가벼워진 것을 자릿수로도 잰다 (같은 job 한 장인데 목록이 훨씬 짧다).
+    expect(listed.length * 2).toBeLessThan(detail.length)
+  })
+
+  it('찾는 데 필요한 칸은 목록에 그대로 있다 — `input` 은 「내 문서의 job 인가」를 가른다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+
+    const [listed] = (await listRaw(owner, projectId)).jobs
+    expect(listed).toMatchObject({
+      id: doc.job.id,
+      feature: 'structure',
+      status: 'queued',
+      input: { document_version_id: doc.current_version_id },
+      error_code: null,
+    })
   })
 })

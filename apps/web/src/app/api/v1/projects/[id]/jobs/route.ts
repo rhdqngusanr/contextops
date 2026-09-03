@@ -1,7 +1,7 @@
 import { and, desc, eq, type SQL } from 'drizzle-orm'
 
 import { aiJobs } from '../../../../../../db/schema'
-import { AI_JOB_COLUMNS, AiJobQuery, toAiJob } from '../../../../../../lib/ai/job'
+import { AI_JOB_LIST_COLUMNS, AiJobQuery, toAiJob } from '../../../../../../lib/ai/job'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 
@@ -18,6 +18,10 @@ import { parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 //    `?feature=structure&limit=1` 이 「이 프로젝트의 마지막 구조화 job」이다.
 //    정렬은 `ai_jobs_project_created_idx`(project_id, created_at desc)와 같은 순서다.
 //
+//  ⚠ **목록은 `result` 를 안 나른다** (`AI_JOB_LIST_COLUMNS` · FINDINGS 60). 2초마다
+//    두드리는 자리라 `result.items`(문서에서 뽑은 항목 초안 전부)를 매번 다시 보내면
+//    polling 이 그만큼 무거워진다. 응답의 `shape:'summary'` 가 그 사실을 말한다 —
+//    전문이 필요하면 `…/jobs/{jobId}`(`shape:'full'`)를 한 번 읽는다.
 //  ⚠ 남의 프로젝트는 `requireProject` 가 막는다. 여기서 걸러지지 않으면 job id 를
 //    몰라도 목록 하나로 남의 결과를 통째로 읽게 된다 — `{jobId}` 라우트보다 넓은 문이다.
 // =====================================================================
@@ -37,7 +41,7 @@ export const GET = route<{ id: string }>('GET /projects/{id}/jobs', async (ctx) 
   if (query.status) where.push(eq(aiJobs.status, query.status))
 
   const rows = await ctx.db
-    .select(AI_JOB_COLUMNS)
+    .select(AI_JOB_LIST_COLUMNS)
     .from(aiJobs)
     .where(and(...where))
     .orderBy(desc(aiJobs.createdAt))

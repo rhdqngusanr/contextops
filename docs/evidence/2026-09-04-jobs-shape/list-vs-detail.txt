@@ -1,0 +1,118 @@
+>>> GET /projects/{id}/jobs => 200  (953 bytes · job 2개)
+{
+  "jobs": [
+    {
+      "shape": "summary",
+      "id": "88bf0376-e308-4715-8a69-e6aa8171f40b",
+      "project_id": "7d669eb3-1592-4afd-87d2-bce08e9a6226",
+      "feature": "structure",
+      "status": "queued",
+      "input": {
+        "document_version_id": "53747a05-c38a-438d-8465-3c11efe3c17f"
+      },
+      "error_code": null,
+      "started_at": null,
+      "finished_at": null,
+      "created_at": "2026-09-03T19:54:41.191Z"
+    },
+    {
+      "shape": "summary",
+      "id": "076976b0-1208-4fa8-97a2-48f7a7ff1a63",
+      "project_id": "7d669eb3-1592-4afd-87d2-bce08e9a6226",
+      "feature": "structure",
+      "status": "succeeded",
+      "input": {
+        "document_version_id": "5078b93a-3cb7-4492-b0b9-efcf527258ca"
+      },
+      "error_code": null,
+      "started_at": "2026-09-03T19:54:41.172Z",
+      "finished_at": "2026-09-03T19:54:41.186Z",
+      "created_at": "2026-09-03T19:54:41.171Z"
+    }
+  ],
+  "limit": 50,
+  "offset": 0
+}
+
+>>> GET /projects/{id}/jobs/{jobId} => 200  (2063 bytes · 같은 job 1개)
+{
+  "shape": "full",
+  "id": "076976b0-1208-4fa8-97a2-48f7a7ff1a63",
+  "project_id": "7d669eb3-1592-4afd-87d2-bce08e9a6226",
+  "feature": "structure",
+  "status": "succeeded",
+  "input": {
+    "document_version_id": "5078b93a-3cb7-4492-b0b9-efcf527258ca"
+  },
+  "error_code": null,
+  "started_at": "2026-09-03T19:54:41.172Z",
+  "finished_at": "2026-09-03T19:54:41.186Z",
+  "created_at": "2026-09-03T19:54:41.171Z",
+  "result": {
+    "items": [
+      {
+        "id": "item_refund_sla",
+        "body": "환불은 접수 후 24시간 안에 종결한다. 초과하면 CS 리드에게 에스컬레이션한다.",
+        "data": {
+          "rule": "환불은 접수 후 24시간 안에 종결한다",
+          "severity": "must",
+          "enforcement": "review"
+        },
+        "tags": [],
+        "type": "policy",
+        "scope": {
+          "kind": "project"
+        },
+        "title": "환불 SLA",
+        "priority": 50,
+        "confidence": "medium",
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "end_char": 20,
+            "start_char": 0,
+            "heading_path": [
+              "목표"
+            ],
+            "document_version_id": "5078b93a-3cb7-4492-b0b9-efcf527258ca"
+          }
+        ]
+      },
+      {
+        "id": "item_goal_success_rate",
+        "body": "분기 목표는 결제 승인 성공률 99.5% 이고 측정은 일 단위다.",
+        "data": {
+          "metric": "결제 승인 성공률",
+          "outcome": "결제 승인 성공률 99.5% 를 분기 안에 달성한다"
+        },
+        "tags": [],
+        "type": "goal",
+        "scope": {
+          "kind": "project"
+        },
+        "title": "결제 승인 성공률 99.5%",
+        "priority": 50,
+        "confidence": "medium",
+        "source_refs": [
+          {
+            "kind": "source_document",
+            "end_char": 18,
+            "start_char": 0,
+            "heading_path": [
+              "목표"
+            ],
+            "document_version_id": "5078b93a-3cb7-4492-b0b9-efcf527258ca"
+          }
+        ]
+      }
+    ],
+    "chunks": {
+      "used": 1,
+      "total": 1
+    },
+    "merge_candidates": [],
+    "open_question_ids": [
+      "13bc3126-11e5-4919-a35b-aeb29b17fe3c"
+    ]
+  }
+}

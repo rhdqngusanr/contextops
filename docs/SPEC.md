@@ -341,8 +341,8 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | GET /projects/{id}/context-items | member | ?type&status&scope → items[] |
 | POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}], job} — 받아들인 항목이 있을 때만 탐지 job 을 만든다 (§7.2). 빈 탐지는 §7.5 의 상한만 태운다 |
 | PATCH /context-items/{id} | owner | {revision(현재), patch} → item · revision 불일치 409 |
-| GET /projects/{id}/jobs | member | ?feature&status&limit&offset → {jobs[], limit, offset} — **최신순.** job id 는 `POST /documents`·`batch-draft` 의 응답에만 있어서, 이 문이 없으면 화면 3 이 새로고침 한 번에 도는 job 을 잃는다 (FINDINGS 58). `?feature=structure&limit=1` 이 「마지막 구조화 job」이다 |
-| GET /projects/{id}/jobs/{jobId} | member | → {id, feature, status, input, result, error_code, started_at, finished_at} — 화면 3 의 polling (§9). 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
+| GET /projects/{id}/jobs | member | ?feature&status&limit&offset → {jobs[] (**`shape:'summary'`** — `result` 없음), limit, offset} — **최신순.** job id 는 `POST /documents`·`batch-draft` 의 응답에만 있어서, 이 문이 없으면 화면 3 이 새로고침 한 번에 도는 job 을 잃는다 (FINDINGS 58). `?feature=structure&limit=1` 이 「마지막 구조화 job」이다 |
+| GET /projects/{id}/jobs/{jobId} | member | → {**shape:'full'**, id, feature, status, input, result, error_code, started_at, finished_at} — 화면 3 의 polling (§9). 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |
 | POST /conflicts/{id}/resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
 | POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer}]} → 항목 생성 |
