@@ -135,6 +135,13 @@
 - [ ] **7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드**
       **완료 기준**: paylab 문서 → 항목 12 + 충돌 3 · **모든 AI 호출이 `withBudget()` 경유** (P3) ·
       `source_ref` offset 이 문서 범위 안
+      ① ✅ **예산 가드** (`fdf098b`) — `withBudget()` · AI 경계(`lib/ai/client.ts`) ·
+      `ai_usage` 장부 · `AI_FEATURES`/`AI_FEATURE_LIMITS`/`AI_MODELS` 표.
+      `principles.ps1` 의 **P3·P3b 가 SKIP 에서 켜졌다** (OK 7 → OK 9).
+      ② ⬜ **`structureDocument`** (SPEC §7.1) — 지금은 `withBudget()` 소비처가 0곳이다
+      (FINDINGS 49). 같은 바퀴에 `AI_OUTPUT_INVALID` 를 에러 표에 더해라 (FINDINGS 48).
+      ③ ⬜ **`detectConflicts`** (SPEC §7.2) — 충돌을 **만드는** 코드가 여기서 생긴다
+      (FINDINGS 28·25·29·31 이 전부 이 행을 기다린다). 빈도 상한도 여기서 정한다 (FINDINGS 51).
 - [ ] **웹 화면 3·4** — 가져오기 · 정리 · 질문 카드 10장
       **완료 기준**: 문서 없이 **질문만으로 v1.0 발행 가능**
 

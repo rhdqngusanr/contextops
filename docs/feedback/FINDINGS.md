@@ -29,6 +29,70 @@
 
 ## 다음에 고칠 것
 
+### 48. SPEC §7 이 쓰라는 `AI_OUTPUT_INVALID` 가 **에러 코드 표에 없다**   [구멍]
+- **증상**: §7 공통 규약은 「출력은 Zod 로 재검증, 실패 시 오류 위치를 넣어 1회 재시도,
+  재실패 시 `AI_OUTPUT_INVALID`」다. 그런데 `ERROR_CODES` 10종에 그 이름이 없다
+  (`UNAUTHORIZED`·`FORBIDDEN`·`NOT_FOUND`·`VALIDATION_FAILED`·`STALE_BASE`·
+  `REVISION_CONFLICT`·`BUDGET_EXCEEDED`·`RATE_LIMITED`·`COMPILE_FAILED`·`INTERNAL`).
+  그래서 §7.1 을 만드는 사람은 **재실패를 낼 코드가 없다** — `INTERNAL`(500)로 내면
+  「AI 가 계약과 다른 걸 냈다」와 「서버가 터졌다」가 화면에서 구별되지 않는다.
+- **근거**: `docs/SPEC.md` §7 첫 문단 · `packages/schema/src/api.ts` 의 `ERROR_CODES`
+  (이번 바퀴 직접 대조) · `apps/web/test/error-codes.test.ts` 는 지금 **10종 전부**
+  소비처가 있다고 잰다 — 즉 표에 없는 이름은 시험도 못 잡는다
+- **정본**: `docs/SPEC.md` §7 · §5
+- **고칠 방향**: `ERROR_CODES` **끝에** `AI_OUTPUT_INVALID` 를 더하고 `ERROR_STATUS` 에
+  한 줄(502 가 맞다 — 우리 잘못이 아니라 상류가 계약을 어긴 것이다). 절차는 그 표 옆
+  주석의 넷이고, ④(`WITHOUT_OWNER` 에서 지우기)는 **§7.1 을 만드는 바퀴**가 한다.
+  ⚠ `packages/schema` 를 고치면 **번들이 갈린다** — `pnpm --filter @contextops/plugin build`
+  와 `schemas` 를 같이 돌리고 커밋해라 (docs/STATUS.md).
+- **왜 이번 바퀴에 안 했나**: 이번 바퀴의 일은 예산 가드였고, 코드를 더하면 소비처가
+  없는 채로 `WITHOUT_OWNER` 에 한 줄이 새로 생긴다 — 방금 비운 표를 도로 채우게 된다.
+  **§7.1 과 같은 바퀴에 해라.**
+- **상태**: 대기 (P3 첫 행 ②가 주인)
+
+### 49. `withBudget()` 에 **소비처가 0곳**이다   [구멍]
+- **증상**: 이번 바퀴에 예산 가드를 만들었고 시험 18개가 잰다. 그런데
+  `grep -rn "withBudget" apps/web/src | grep -v lib/ai/` → **0건**이다.
+  라우트도 서비스도 아직 아무도 안 부른다. `AI_FEATURES` 4종(`structure`·`conflict`·
+  `ask`·`demo`) 전부 실제 호출부가 없다 — 지금은 시험만 부르는 문이다.
+- **근거**: 이번 바퀴 직접 확인 · `tools/principles.ps1` 의 P3 는 「2개 호출부」로 초록인데
+  그 둘은 `lib/ai/client.ts`(예외)와 `lib/ai/budget.ts`(주석에 글자가 있어 세어졌다)다
+  — **제품 경로에는 한 건도 없다**
+- **정본**: `docs/SPEC.md` §7.1 · §7.2
+- **고칠 방향**: PLAN P3 첫 행의 ②(`structureDocument`)·③(`detectConflicts`)가 주인이다.
+  그 둘이 `withBudget('structure'|'conflict', …)` 로 부르면 닫힌다.
+  ⚠ 지금 소비처를 급히 만들지 마라 — 부를 내용(프롬프트·Zod 출력 계약)이 §7.1 의 일이다.
+- **상태**: 대기 (P3 첫 행 ②·③이 주인 · 다음 바퀴)
+
+### 50. `principles.ps1` 의 P3 가 **주석의 글자**를 호출부로 센다   [격차]
+- **증상**: P3 검사는 `messages\.create|messages\.stream` 이 **문자열로** 나오는 파일을
+  호출부로 세고, 그 파일에 `withBudget` 이라는 **글자**가 있으면 통과시킨다. 그래서
+  ①주석에 그 이름을 적은 파일이 호출부로 세어지고(이번 바퀴에 「2개 호출부」가 됐다),
+  ②반대로 **진짜 호출부가 주석에만 `withBudget` 을 적어도 통과한다.**
+  두 번째가 위험한 쪽이다 — 「급해서 임시로」 부른 자리가 주석 한 줄로 초록이 된다.
+- **근거**: `tools/principles.ps1` 132~165줄 · 이번 바퀴 `principles.ps1` 출력의
+  「P3 OK · 2개 호출부」 (실제 `messages.create` 호출은 `lib/ai/client.ts` **한 곳**)
+- **정본**: `docs/SPEC.md` §0.1 P3
+- **고칠 방향**: 셀 때 주석 줄을 빼라(`^\s*(//|\*|/\*)` 로 시작하는 줄 제거 후 검사).
+  ⚠ 게이트를 좁히는 변경이므로 **갈리는 것을 보고** 넣어라 — 주석만 고쳐서 FAIL 이
+  나는지, 진짜 호출부를 만들어서 OK 가 되는지 둘 다 확인한 뒤 커밋한다.
+  ⚠ 같은 무딤이 P2 검사에도 있다 (`Get-SourceFiles` 를 그대로 쓴다) — 같이 봐라.
+- **상태**: 대기 (값싸다 · 게이트는 문서보다 강하다)
+
+### 51. SPEC §7.5 에 **충돌 탐지의 빈도 상한이 없다**   [격차]
+- **증상**: §7.5 의 Rate limit 은 `/ask`·`/demo`(분당 3회)와 문서 구조화(프로젝트당
+  시간당 5회) 셋뿐이다. §7.2 충돌 탐지에는 아무 숫자도 없다. 이번 바퀴의
+  `AI_FEATURE_LIMITS` 는 그 칸을 `rate: null`(빈도 제한 없음)로 두고 이유를 주석에 적었다 —
+  **지어내지 않았다.** 그래도 하루 예산 말고는 그 기능을 막는 것이 없다.
+- **근거**: `docs/SPEC.md` §7.5 · `apps/web/src/lib/ai/features.ts` 의 `conflict` 칸 ·
+  `apps/web/test/ai-budget.test.ts` 「conflict 는 빈도 상한이 없다」(12회 연속 통과를 잰다)
+- **정본**: `docs/SPEC.md` §7.2 · §7.5
+- **고칠 방향**: §7.2 를 만드는 바퀴가 「무엇마다 세나」를 먼저 정해라 — 이 기능은 사람이
+  누르는 게 아니라 **항목이 바뀔 때 서버가 부르는** 것이라 창 단위가 무엇인지가 답의
+  절반이다. 정하면 `AI_FEATURE_LIMITS` 의 그 칸 하나만 고치면 되고, SPEC §7.5 에도
+  같은 줄을 적어라 (수치를 두 곳에 적으면 갈린다).
+- **상태**: 대기 (P3 첫 행 ③이 주인)
+
 ### 43. ✅ `workflow` 항목이 없으면 **agent 가 진행 보고를 배우지 못한다**   [구멍]
 - **증상**: SPEC §4.3 은 진행 보고 문단이 「`workflow.md` 에 **항상** 포함되는 고정
   텍스트」라고 적는다. 그런데 컴파일러는 `workflow` **타입 항목이 하나라도 있을 때만**

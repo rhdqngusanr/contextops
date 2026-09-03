@@ -5,83 +5,118 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 13바퀴 · `bc08125`_
+_마지막 갱신: 2026-09-04 · 루프 14바퀴 · `fdf098b`_
 
 ---
 
 ## 지금 어디인가
 
-**P2 가 끝났고, 그 뒤에 열린 구멍 하나(FINDINGS 43·8)를 닫았다.**
-이제 **workflow 항목이 0개인 저장소도 `.claude/rules/workflow.md` 를 받는다** —
-agent 가 `progress` 를 배울 자리가 모든 Pack 에 생겼다. `TEMPLATE_VERSION` 1.0 → **1.1**.
+**P3 가 시작됐다. 첫 행의 ①(예산 가드)이 끝났고 `principles.ps1` 이 OK 7 → OK 9 가 됐다.**
+`withBudget()` 은 이제 SPEC 의 이름이 아니라 **코드**다. P3 검사와 P3b(예산 가드 파일
+존재)가 **SKIP 에서 켜졌다** — 대상이 생겼는데 SKIP 이던 자리가 닫혔다.
 
-다음은 **`docs/PLAN.md` P3 첫 행 — 서버측 AI (`structureDocument` · `detectConflicts` ·
-예산 가드 · SPEC §7)** 다. 앞을 막는 FINDINGS 는 **없다** (남은 것은 전부 격차이거나
-P3·P4 가 주인이다).
+다음은 **같은 행의 ② `structureDocument` (SPEC §7.1)** 다.
+⚠ **지금 `withBudget()` 의 소비처는 0곳이다** (FINDINGS 49) — 문은 만들었고 아직 아무도
+안 지난다. ②가 그 문을 처음 지나는 코드다.
 
 | 있는 것 | 없는 것 |
 |---|---|
-| `loop/` · `tools/` · pnpm workspace + catalog | 서버측 AI (`structureDocument`·`detectConflicts`) · 예산 가드 |
+| `loop/` · `tools/` · pnpm workspace + catalog | **`structureDocument`·`detectConflicts`** (P3 첫 행 ②③) |
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
 | `packages/compiler` (파이프라인 7단계 · 테스트 **130** · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
-| `apps/web` — 라우트 28개 · 테스트 124 | 충돌을 **만드는** 코드 (P3 · FINDINGS 28) |
+| `apps/web` — 라우트 28개 · 테스트 **142** | 충돌을 **만드는** 코드 (P3 ③ · FINDINGS 28) |
+| 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | **`withBudget()` 을 부르는 제품 코드** (FINDINGS 49) |
 | 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
-| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
-| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | 배포되는 JSON Schema 가 P7 규칙을 못 담는다 (FINDINGS 47 · 런타임은 샌 데 없다) |
+| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
+| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | `AI_OUTPUT_INVALID` 에러 코드 (FINDINGS 48 — §7.1 이 쓸 이름인데 표에 없다) |
 | ✅ **모든 Pack 에 `workflow.md`** — 진행 보고 문단이 항상 나간다 (FINDINGS 43·8) | |
 
-검사 층: `principles OK 7 · typecheck 6초·멤버 4 · test 42초·멤버 4 · build 21초 ·
-walkthrough 49초` → **GREEN**. 관통 **7단계**
+검사 층: `principles OK 9 · typecheck 6초·멤버 4 · test 44초·멤버 4 · build 21초 ·
+walkthrough 50초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`.
 
 ## 다음 바퀴가 할 일
 
-🔴 **`docs/PLAN.md` P3 첫 행 — 7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드 (SPEC §7).**
-`docs/feedback/FINDINGS.md` 맨 위(43)는 이번 바퀴에 닫혔고, 그 위를 막는 것은 없다.
+🔴 **`docs/PLAN.md` P3 첫 행 ② — `structureDocument(docVersion)` (SPEC §7.1).**
+`docs/feedback/FINDINGS.md` 맨 위(48)는 **그 행과 같은 바퀴에 하는 일**이다.
+
+**②를 시작하기 전에 아는 것 (이번 바퀴가 깔아 둔 자리):**
+
+- 🔴 **서버 AI 를 부르는 방법은 하나다**:
+  `withBudget('structure', { projectId, inputChars, actor? }, () => callClaude({...}))`.
+  - `withBudget` 은 `src/lib/ai/budget.ts` · `callClaude` 는 `src/lib/ai/client.ts`.
+  - **`client.ts` 를 직접 부르지 마라** — 그게 예산 가드를 우회하는 유일한 길이고,
+    `principles.ps1` P3 는 지금 그걸 못 잡는다 (FINDINGS 50).
+  - `withBudget` 은 **본문을 받지 않는다.** `inputChars`(글자수)만 준다 (P1).
+- 🔴 **기능·한도·정가는 표 하나다**: `src/lib/ai/features.ts`.
+  `AI_FEATURES`(P3 의 「4개 기능」) · `AI_FEATURE_LIMITS`(빈도) · `AI_MODELS`(정가) ·
+  기본값 셋(`DEFAULT_DAILY_BUDGET_USD` 3 · `DEFAULT_MAX_INPUT_TOKENS` 60k · `2.5 글자/토큰`).
+  **수치를 라우트에 적지 마라 — 표를 읽어라.**
+- **`callClaude` 는 검증하지 않는다.** 도구 블록이 없으면 `value: undefined` 를 낸다 —
+  일부러다. §7 의 「Zod 재검증 → 1회 재시도」는 **부르는 쪽**의 일이고, 여기서 던지면
+  그 재시도가 토큰 사용량을 잃어 장부가 0으로 남는다.
+- **키가 없으면 `client.ts` 가 던진다.** 그건 고장이 아니라 §7.5 의 「픽스처 결과로
+  떨어지는」 갈래가 받을 자리다 — ②가 그 갈래를 만들어야 한다 (🙋 키는 사람이 준다).
+- **DB 를 건드렸다**: 마이그레이션 `0002` (`ai_usage` 표 · enum `ai_feature` ·
+  인덱스 둘). 표 16 → **17**, 인덱스 5 → **7**. `test/migration.test.ts` 의 숫자를
+  같이 올렸다 — 표를 더하면 거기도 고쳐야 한다.
+- 🔴 **에러 코드 10종이 전부 소비처를 가졌다.** `test/error-codes.test.ts` 의
+  `WITHOUT_OWNER` 표가 **비었다**. 새 코드를 더하면 그 표에 한 줄 적거나 소비처를
+  같이 만들어야 초록이다 — `AI_OUTPUT_INVALID`(FINDINGS 48)가 정확히 그 경우다.
+- **시계는 하나다.** `withBudget` 의 `ctx.now` 가 창(window) 계산과 장부 행의
+  `created_at` 을 **둘 다** 정한다. `defaultNow()` 에 맡기면 두 시계가 갈려서
+  빈도 제한이 조용히 안 걸린다 — 이번 바퀴에 시험 3개가 그렇게 빨개졌다.
 
 ⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
-⚠ **Anthropic API 키도 사람이 준다** (아래 「막힌 것」). 키가 없으면 P3 는
-**픽스처 결과로 떨어지는 갈래**(`BUDGET_EXCEEDED` → 픽스처)까지만 잰다 — 그것도 SPEC §7.4 다.
+⚠ **Anthropic API 키도 사람이 준다.** 키가 없으면 ②는 **스텁 클라이언트로만** 잴 수 있다
+(`setAiClientForTest`). 실제 응답을 본 것이 아니라는 걸 STATUS 에 적어라.
 
-**P3 를 시작하기 전에 아는 것:**
-
-- **`withBudget()` 는 아직 없다.** SPEC §7 의 이름이지 코드가 아니다 — `apps/web/src` 에
-  구현 0건이다 (이번 바퀴 `grep` 확인 · 이름이 나오는 곳은 SPEC·`.env.example` 주석·
-  `principles.ps1` 검사뿐). **만드는 게 그 행의 일이다.**
-  `tools/principles.ps1` 의 P3 검사는 지금 **SKIP** 이다. 대상이 생기는 순간 켜져야 한다 —
-  **켜지지 않으면 그게 고장이다** (loop/PROMPT.md ⑥).
-- **에러 코드는 이미 표에 있고 시험이 잰다** (`apps/web/test/error-codes.test.ts`).
-  `BUDGET_EXCEEDED` 를 실제로 던지는 라우트가 생기면 그 시험의 「살아 있는 코드」 수가 늘어난다.
-- **충돌을 만드는 코드가 없다** (FINDINGS 28) — 지금 충돌 카드는 씨앗이 넣는다.
-  7.2 가 그 주인이다.
-
-**컴파일러를 다시 건드릴 때 아는 것 (이번 바퀴가 깔아 둔 자리):**
-
-- **「항목이 없어도 나가는 문서」는 `DOCS` 표의 `always` 한 칸이다.** 켜는 절차 세 걸음이
-  그 칸 주석에 있고, ①만 하면 `packages/compiler/test/always.test.ts` 가 빨개진다.
-- 🔴 **P7 의 예외는 `packages/schema` 의 `PRODUCT_TEXT_PACK_FILES` 표 하나다.**
-  `source_item_ids` 의 `.min(1)` 은 **풀린 게 아니라 좁혀졌다** — 표 밖의 경로가 빈 근거로
-  오면 여전히 막힌다. 「표에 이름이 늘었으면 알린다」를
-  `packages/schema/test/manifest-evidence.test.ts` 가 잰다. **여기 한 줄을 더할 때는
-  왜 그 파일이 근거 없이 나가도 되는지를 커밋 메시지에 적어라.**
-- 🔴 **`TEMPLATE_VERSION` 은 컴파일러 입력 계약의 리터럴이다** (`src/input.ts`).
-  올리면 golden `input.json` 3개와 `test/fixtures.ts` 도 같이 올려야 한다 —
-  이번 바퀴에 시험 25개가 「컴파일 입력이 계약과 다르다」로 한꺼번에 빨개졌다.
-- **Pack 파일은 codepoint 순으로 정렬된다** — `.claude/...` 가 `CLAUDE.md` 보다 **앞**이다.
-  `files[0]` 이 CLAUDE.md 라고 가정한 시험 둘이 이번에 빨개졌다. `path` 로 찾아라.
-- 🔴 **`packages/schema` 를 고치면 번들이 갈린다.** `bin/contextops-cli.mjs` 는
-  schema 를 통째로 담는다 — `pnpm --filter @contextops/plugin build` 를 부르고 같이 커밋해라
-  (`test/bundle.test.ts` 가 바이트로 대조한다). `pnpm --filter @contextops/schema schemas` 도.
-
-**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44** 는 문서·한 줄짜리다.
+**값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·50** 은 문서·한 줄짜리다.
 **14**(`.ps1` 두 개가 LF)도 그렇다. 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿
-`head` 한 줄이고 둘 다 golden 을 깬다. 같이 하면 `TEMPLATE_VERSION` 을 한 번만 올린다
-(30: domain 파일 제목이 「# 도메인」 · 46: 항목 없는 workflow.md 제목이 「# 작업 절차」).
+`head` 한 줄이고 둘 다 golden 을 깬다. 같이 하면 `TEMPLATE_VERSION` 을 한 번만 올린다.
 
-⚠ FINDINGS **24·25·26·28·29·31·33·35** 는 **P3 가**, **36** 은 **P4 화면 9** 가 주인이다.
+⚠ FINDINGS **24·25·26·28·29·31·33·35·48·49·51** 은 **P3 가**, **36** 은 **P4 화면 9** 가 주인이다.
 
 ## 잰 것
+
+**14바퀴 · P3 첫 행 ① — 예산 가드 `withBudget()`** (`fdf098b`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 6초 / test 44초 / build 21초 / walkthrough 50초 |
+| `principles.ps1` | **OK 7 → OK 9.** `P3`(모든 LLM 호출이 withBudget 경유)와 `P3b`(예산 가드 파일 존재)가 **SKIP 에서 켜졌다** — 대상이 생겼는데 SKIP 이던 자리가 닫혔다 |
+| 새 시험 | **+18** — web 124 → **142** (`ai-budget.test.ts`). 전체 541 → **559** |
+| 새 파일 | `src/lib/ai/` 4개 (`features` 표 · `budget` 문 · `client` 경계 · `model` 이름) |
+| 마이그레이션 | **0002** — `ai_usage` 표(10칸) · enum `ai_feature`(4) · 인덱스 2. 표 16 → **17**, 인덱스 5 → **7** |
+| 갈리는 것을 봤나 | **봤다.** 예산 0 → 던짐 / 3 → 통과 · 모델 opus↔haiku 로 같은 토큰의 값이 5배 갈림 · ask 4번째 호출에서 `RATE_LIMITED`, 다른 actor 는 통과 · 창이 지나면 다시 통과 |
+| 잡은 고장 | **시계가 둘이었다.** 창 계산은 `ctx.now`, 장부 행은 `defaultNow()` → 빈도 제한이 안 걸렸다. 시험 3개가 잡았고 `created_at` 을 같은 `now` 로 묶어 고쳤다 |
+| 에러 코드 | `WITHOUT_OWNER` 표가 **비었다** — 10종 전부 내는 자리를 가졌다 (`BUDGET_EXCEEDED`·`RATE_LIMITED` 를 예산 가드가 낸다) |
+| 번들 | **안 건드렸다** — `packages/schema` 를 고치지 않았다 (서버 전용 표는 `apps/web` 에 뒀다) |
+| 새 FINDINGS | **48**(`AI_OUTPUT_INVALID` 가 표에 없다 · 구멍) · **49**(withBudget 소비처 0곳 · 구멍) · **50**(P3 검사가 주석을 호출부로 센다 · 격차) · **51**(§7.5 에 conflict 빈도 상한 없음 · 격차) |
+
+**🔴 결정 — 서버 AI 표를 `packages/schema` 가 아니라 `apps/web` 에 뒀다**
+
+`AI_FEATURES`·`AI_FEATURE_LIMITS`·`AI_MODELS` 는 업로드 payload 에도 Pack 에도 안 나온다.
+소비처가 서버뿐이다. 그리고 `packages/schema` 는 **플러그인 번들에 통째로** 들어가서
+(`bin/contextops-cli.mjs` 810KB), 거기 두면 서버 전용 정가표가 **사용자 기계로 배포된다.**
+API 계약이 이 값을 쓰게 되는 순간 올린다 — 그때가 「둘째 사용자」다 (CLAUDE.md).
+
+**🔴 결정 — 하루치를 메모리가 아니라 DB 표로 센다**
+
+서버리스에서 메모리로 세면 인스턴스마다 따로 세고 콜드 스타트마다 0으로 돌아간다.
+그러면 「하루 $3」은 문서에만 있는 숫자다. 대신 표를 하나 더했고(SPEC §2 에도 적었다),
+**본문이 들어갈 칸을 안 만들었다** — 행에 있는 것은 「어느 기능이·언제·토큰 몇 개를·
+얼마어치 썼나」뿐이고 행위자는 sha256 이다 (P1 · §11). 시험이 그 칸 없음을 잰다.
+
+**🔴 결정 — 실패한 호출도 장부에 남긴다 (추정치로)**
+
+안 남기면 계속 실패하는 루프가 **장부 밖에서** 예산을 태운다. 기록이 실패해도
+원래 오류를 덮지 않는다.
+
+**모델을 `claude-sonnet-4-5` → `claude-opus-5` 로 바꿨다** (SPEC §1.2 · `.env.example`).
+정가를 아는 모델이어야 예산을 셀 수 있고, `AI_MODELS` 표 밖의 이름은 **켜질 때 죽는다** —
+표에 없으면 정가를 몰라서 하루 예산이 조용히 무한이 되기 때문이다.
 
 **13바퀴 · FINDINGS 43·8 — workflow 항목이 0개여도 `workflow.md` 를 낸다** (`bc08125`)
 
