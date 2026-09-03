@@ -1,0 +1,34 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: paylab
+      POSTGRES_USER: paylab
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paylab"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    secrets:
+      - db_password
+
+volumes:
+  pgdata:
+
+secrets:
+  db_password:
+    file: ./.secrets/db_password

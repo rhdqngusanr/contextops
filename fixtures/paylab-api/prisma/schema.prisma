@@ -1,0 +1,104 @@
+// paylab-api — Postgres 스키마
+// 금액은 전부 원 단위 정수(Int)다. 소수는 쓰지 않는다.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentStatus {
+  created
+  authorized
+  captured
+  failed
+  cancelled
+}
+
+enum RefundStatus {
+  requested
+  reviewing
+  approved
+  rejected
+}
+
+enum LedgerKind {
+  authorize
+  capture
+  refund
+  adjustment
+}
+
+model Merchant {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  payments  Payment[]
+
+  @@map("merchants")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  merchantId     String        @map("merchant_id")
+  merchant       Merchant      @relation(fields: [merchantId], references: [id])
+  orderId        String        @map("order_id")
+  amount         Int
+  currency       String        @default("KRW")
+  status         PaymentStatus @default(created)
+  psp            String
+  pspPaymentId   String?       @map("psp_payment_id")
+  idempotencyKey String        @map("idempotency_key")
+  attempts       Int           @default(0)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  refunds        Refund[]
+  entries        LedgerEntry[]
+
+  @@unique([merchantId, idempotencyKey])
+  @@index([status, createdAt])
+  @@map("payments")
+}
+
+model Refund {
+  id        String       @id @default(uuid())
+  paymentId String       @map("payment_id")
+  payment   Payment      @relation(fields: [paymentId], references: [id])
+  amount    Int
+  reason    String
+  status    RefundStatus @default(requested)
+  createdAt DateTime     @default(now()) @map("created_at")
+  // 종결 시각. 아직 아무도 채우지 않는다 — 환불 SLA 를 재는 자리다.
+  closedAt  DateTime?    @map("closed_at")
+
+  @@index([status, createdAt])
+  @@map("refunds")
+}
+
+model LedgerEntry {
+  id        String     @id @default(uuid())
+  paymentId String     @map("payment_id")
+  payment   Payment    @relation(fields: [paymentId], references: [id])
+  kind      LedgerKind
+  amount    Int
+  memo      String?
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@index([paymentId, createdAt])
+  @@map("ledger_entries")
+}
+
+model WebhookEvent {
+  id         String   @id @default(uuid())
+  psp        String
+  pspEventId String   @map("psp_event_id")
+  type       String
+  receivedAt DateTime @default(now()) @map("received_at")
+  processed  Boolean  @default(false)
+
+  @@unique([psp, pspEventId])
+  @@map("webhook_events")
+}

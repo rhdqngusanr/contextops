@@ -32,6 +32,11 @@ New-Item -ItemType Directory -Force -Path $shots | Out-Null
 #  prereq : 이 파일/폴더가 있어야 이 단계가 켜진다
 #  cmd    : 그때 돌릴 명령. 없으면 만들어라 — 관통은 이 순서로 돈다
 $stages = @(
+    @{ name = "fixture"
+       what = "paylab 픽스처가 관통 재료를 갖췄다 — 충돌 3 · 질문 4 · M1~M3 (SPEC §10.1)"
+       prereq = "fixtures\paylab-docs"
+       cmd = "node tools/fixtures.mjs" },
+
     @{ name = "compile"
        what = "픽스처 snapshot → Pack 이 결정론적으로 나온다 (P4)"
        prereq = "packages\compiler\src"
