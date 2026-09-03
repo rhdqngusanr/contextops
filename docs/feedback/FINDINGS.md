@@ -42,6 +42,35 @@
   `OK` 가 아니라 `SKIP 워크스페이스 멤버 0개` 로 보고한다. 게이트는 문서보다 강하다.
 - **상태**: 대기
 
+### 5. `confidence` 3단계 · `enforcement` 4종 · 항목 `status` 4종이 아직 아무것도 바꾸지 않는다   [구멍]
+- **증상**: 값 목록은 있고 파싱도 되지만 **읽는 코드가 없다.** SPEC §4.1 의 partition 표는
+  `type` 과 `scope.kind` 로만 갈리고 이 셋은 어디에도 안 나온다. 「10종 중 8종이 무효인데
+  화면에는 멀쩡히 뜨는」 고장의 씨앗이다.
+- **근거**: `grep -rn "confidence\|enforcement" packages` → 선언과 테스트뿐 ·
+  `docs/SPEC.md` §4.1 partition 표에 셋 다 없음
+- **정본**: `docs/SPEC.md` §3 (표) · §4.1 (소비처)
+- **고칠 방향**: **컴파일러 바퀴에서 둘 중 하나만** 한다 — 어중간하게 두지 마라.
+  - 살린다: `status !== 'active'` 는 Pack 에서 제외(→ `excluded`), `confidence: 'low'` 는
+    역추적 태그에 표시, `enforcement` 는 scoped rules frontmatter 에 — 각각 「값을 바꾸면
+    출력이 갈린다」를 golden 으로 잠근다
+  - 지운다: SPEC §3 의 표에서도 빼고 왜 뺐는지 커밋 메시지에 한 줄
+- **상태**: 대기
+
+### 4. SPEC §3 이 코드보다 느슨한 곳 3군데 — SPEC 을 코드에 맞춰라   [격차]
+- **증상**: `packages/schema` 를 만들면서 SPEC 대로 두면 **뒷 단계가 못 쓰는** 값이 통과한다.
+  세 곳을 코드에서 조였고, 정본(SPEC)이 아직 느슨한 채로 남아 있다.
+  | 어디 | SPEC | 코드 | 왜 조였나 |
+  |---|---|---|---|
+  | `Scope.value` | 항상 optional | `domain`·`path` 는 필수 | 값이 없으면 컴파일러가 `domain-{slug}.md`·`scoped-{slug}.md` 파일 이름을 못 만든다 (SPEC §4.1) |
+  | `ProposalItem` | `draft`·`target_item_id` 둘 다 optional | `add`→draft 필수 · `update`/`deprecate`→target 필수 | 안 그러면 연산 3종이 아무것도 바꾸지 않는다 |
+  | `ProgressEvent.milestone_id` | `z.string()` | `MilestoneId` 정규식 또는 `'none'` | 형식이 두 곳(RoadmapData·ProgressEvent)에서 갈리면 roadmap 대조가 조용히 빗나간다 |
+- **근거**: `packages/schema/src/common.ts` Scope · `src/upload.ts` ProposalItem·ProgressEvent ·
+  잠근 시험은 `test/scope-and-enums.test.ts` · `test/upload-allowlist.test.ts` (`a4ac92d`)
+- **정본**: `docs/SPEC.md` §3
+- **고칠 방향**: SPEC §3 의 세 줄을 코드와 같게 고친다. **코드를 되돌리지 마라** — 셋 다
+  뒷 단계가 실제로 요구하는 것이고, 시험으로 잠겨 있다.
+- **상태**: 대기
+
 ### 2. SPEC §1.2 는 Node 20 LTS 인데 실제 실행·CI 는 22 다   [격차]
 - **증상**: 개발 기계의 node 가 v22.22.2 다. `.nvmrc` 를 22 로 적었고 GitHub CI 도
   거기서 읽는다. SPEC 과 코드가 갈렸다.
@@ -66,4 +95,14 @@
 
 ## 고친 것
 
-_(아직 없음)_
+### 6. `pnpm` 11 의 설치 스크립트 허용 키는 `allowBuilds` 다 — 다른 이름은 조용히 안 먹는다   [고장]
+- **증상**: `tsx`(→`esbuild`)를 넣자 모든 `pnpm install`·`pnpm --filter … run` 이
+  `ERR_PNPM_IGNORED_BUILDS` 로 **exit 1** 이 됐다. `pnpm-workspace.yaml` 에
+  `ignoredBuiltDependencies` / `onlyBuiltDependencies` 를 적으면 `pnpm config get` 은
+  값을 **읽어서 보여 주는데도** 설치는 계속 실패했다 (`--force` 도 소용 없음).
+- **근거**: 이 바퀴에서 직접 재현. `pnpm approve-builds esbuild` 를 돌리자
+  `pnpm-workspace.yaml` 에 `allowBuilds: { esbuild: true }` 가 **새로 쓰였고** 그때 통과했다.
+- **정본**: `pnpm-workspace.yaml` (주석으로 남겨 뒀다)
+- **고칠 방향**: 새 의존성이 설치 스크립트를 가지면 **손으로 적지 말고**
+  `pnpm approve-builds <pkg>` 를 돌려라. 무인 세션에서 이걸 모르면 install 이 통째로 막힌다.
+- **상태**: ✅ `a4ac92d` (막힘은 풀렸다 · 함정은 여기 남긴다)

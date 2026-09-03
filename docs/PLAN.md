@@ -18,8 +18,8 @@
 - [x] **모노레포 뼈대** — pnpm workspace(`apps/*`, `packages/*`, `plugin`) · `tsconfig.base.json` ·
       vitest · `.github/workflows/ci.yml` — `5dfefb4`
       **완료 기준**: `pnpm -r test` 가 0개 테스트로라도 초록. `tools/ci.ps1` 의 typecheck·test 층이 SKIP 이 아니게 됨
-- [ ] **`packages/schema` 전체** — SPEC §3 의 Zod 계약 전부 (ItemType 10종 · SourceRef 4종 ·
-      type별 data · Proposal · ProgressEvent · Manifest) + JSON Schema export
+- [x] **`packages/schema` 전체** — SPEC §3 의 Zod 계약 전부 (ItemType 10종 · SourceRef 4종 ·
+      type별 data · Proposal · ProgressEvent · Manifest) + JSON Schema export — `a4ac92d`
       **완료 기준**: 스키마 단위 테스트 초록 · `plugin/contextops/schemas/*.json` 생성 ·
       **업로드 스키마에 `content`류 필드 0건** (P1 — `tools/principles.ps1` 이 센다)
 - [ ] **`packages/compiler` 전체** — partition · sort · render · sourcemap · hash (SPEC §4)
