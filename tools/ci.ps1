@@ -29,6 +29,13 @@ $ciDir  = Join-Path $root ".ci"
 $logDir = Join-Path $ciDir "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
+#  🔴 저장소 루트에서 돈다. **부른 자리를 따라가지 않는다.**
+#    ★ 왜 — 층들은 `pnpm typecheck` 처럼 cwd 를 보는 명령을 부른다. apps/web 안에서
+#      ci.ps1 을 부르면 그 자리의 package.json 에는 typecheck 스크립트가 없어서
+#      멀쩡한 저장소가 `Command "typecheck" not found` 로 **RED** 가 된다 (직접 재현).
+#      가짜 초록만큼은 아니어도 가짜 빨강도 고장이다 — 다음 바퀴가 없는 고장을 쫓는다.
+Push-Location $root
+
 $layers = New-Object System.Collections.ArrayList
 $red    = 0
 
@@ -200,6 +207,8 @@ else {
 }
 
 # ── 한 줄 결과 ────────────────────────────────────────────────────
+Pop-Location
+
 $verdict = "GREEN"
 if ($red -gt 0) { $verdict = "RED" }
 
