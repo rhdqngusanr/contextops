@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "manifest_hash": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "applied",
+        "outdated",
+        "modified",
+        "manual"
+      ]
+    },
+    "files": {
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema1"
+      }
+    }
+  },
+  "required": [
+    "version",
+    "manifest_hash",
+    "status",
+    "files"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "__schema1": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "pattern": "^(?!\\/)(?!.*\\.\\.)(?![a-zA-Z]:)[^\\0]+$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,126 @@
+import { z } from 'zod'
+import { nonEmpty } from './table'
+
+// =====================================================================
+//  공통 조각 — 항목·업로드·Manifest 가 함께 쓰는 원자들.
+//  정본은 docs/SPEC.md §3 이다. 여기 있는 enum 값은 전부 DB·Pack·JSON Schema 로
+//  **직렬화된다** — 끝에만 더하고 중간을 지우지 마라.
+// =====================================================================
+
+/**
+ * 항목 타입 10종 (SPEC §3).
+ * ★ 새 타입을 더하는 절차는 `item.ts` 의 `ITEM_DATA` 표 옆 주석에 있다.
+ *   여기만 고치면 `ITEM_DATA` 가 키를 잃어 **타입 검사에서 막힌다** — 그게 의도다.
+ */
+export const ITEM_TYPES = [
+  'mission', 'goal', 'roadmap', 'architecture', 'domain',
+  'policy', 'adr', 'workflow', 'constraint', 'open_question',
+] as const
+export type ItemType = (typeof ITEM_TYPES)[number]
+export const ItemType = z.enum(ITEM_TYPES)
+
+/** 항목 수명 상태 4종 (SPEC §3). */
+export const ITEM_STATUSES = ['draft', 'review', 'active', 'deprecated'] as const
+export type ItemStatus = (typeof ITEM_STATUSES)[number]
+
+/** 근거의 확실성 3단계 (SPEC §3). */
+export const CONFIDENCE_LEVELS = ['high', 'medium', 'low'] as const
+export type Confidence = (typeof CONFIDENCE_LEVELS)[number]
+
+/** 적용 범위 3종 (SPEC §3). 컴파일러의 partition 표(SPEC §4.1)가 이 값으로 갈린다. */
+export const SCOPE_KINDS = ['project', 'domain', 'path'] as const
+export type ScopeKind = (typeof SCOPE_KINDS)[number]
+
+/** 근거 종류 4종 (SPEC §3). */
+export const SOURCE_REF_KINDS = ['source_document', 'repository_path', 'proposal', 'manual'] as const
+export type SourceRefKind = (typeof SOURCE_REF_KINDS)[number]
+
+// ---------------------------------------------------------------------
+//  문자열 원자 — 형식이 두 곳에 적히면 조용히 갈라진다. 여기가 정본이다.
+// ---------------------------------------------------------------------
+
+/**
+ * 저장소 **상대** 경로. 절대경로와 `..` 를 거부한다 (SPEC §3 · §8.5 6단계).
+ * ★ 왜 스키마에 있나 — sync 가 이 경로로 파일을 쓴다. 경계에서 막지 않으면
+ *   나중에 「경로를 검사하는 곳」이 라우트마다 흩어진다.
+ */
+export const RepoPath = z.string().min(1).max(400)
+  .regex(/^(?!\/)(?!.*\.\.)(?![a-zA-Z]:)[^\0]+$/, '저장소 상대 경로여야 한다 (절대경로·상위 이동 금지)')
+
+export const Sha256 = z.string().regex(/^[0-9a-f]{64}$/, 'sha256 16진수 64자여야 한다')
+export const CommitSha = z.string().regex(/^[0-9a-f]{40}$/, 'commit sha 40자여야 한다')
+
+/** `item_<slug>` (SPEC §3). */
+export const ItemId = z.string().regex(/^item_[a-z0-9_]{3,40}$/)
+
+/** `BS-M1` 또는 `M1` (SPEC §3 RoadmapData). */
+export const MilestoneId = z.string().regex(/^[A-Z]{1,4}-M\d{1,2}$|^M\d{1,2}$/)
+
+/** `YYYY-MM-DD`. */
+export const CalendarDate = z.iso.date()
+
+// ---------------------------------------------------------------------
+//  Scope
+// ---------------------------------------------------------------------
+
+/**
+ * ⚠ SPEC §3 은 `value` 를 무조건 optional 로 뒀지만, `domain`·`path` 는 값이 없으면
+ *   컴파일러가 파일 이름(`domain-{slug}.md` · `scoped-{slug}.md`)을 만들 수 없다.
+ *   그래서 여기서 요구한다 — 차이는 docs/feedback/FINDINGS.md 에 적었다.
+ */
+export const Scope = z.object({
+  kind: z.enum(SCOPE_KINDS),
+  /** `domain` 이면 도메인 slug · `path` 면 repo 상대 glob. */
+  value: z.string().min(1).max(200).optional(),
+}).strict().refine(
+  (s) => s.kind === 'project' || s.value !== undefined,
+  { message: 'domain·path scope 는 value 가 필요하다', path: ['value'] },
+)
+export type Scope = z.infer<typeof Scope>
+
+// ---------------------------------------------------------------------
+//  SourceRef — 근거 4종
+// ---------------------------------------------------------------------
+
+/**
+ * 🔴 근거 종류의 정본 표. **새 종류를 더하는 절차**:
+ *   ① `SOURCE_REF_KINDS` 끝에 값 추가 (중간에 끼우지 마라 — 직렬화된다)
+ *   ② 이 표에 한 줄 (`.strict()` 필수 — 그게 P1 방어선이다)
+ *   ③ `test/source-ref.test.ts` 의 `SAMPLES` 에 한 줄
+ *   ①만 하면 이 표가 키를 잃어 타입 검사가 막고, ③을 빠뜨리면 liveness 테스트가 빨개진다.
+ *
+ * ⚠ 전부 `.strict()` 다. P1 은 「받지 않는다」이므로 **모르는 키는 통과시키지 않는다** —
+ *   코드 본문을 실어 보내려는 여분의 키는 여기서 400 이 된다 (SPEC §3.1).
+ */
+export const SOURCE_REF = {
+  source_document: z.object({
+    kind: z.literal('source_document'),
+    document_version_id: z.uuid(),
+    start_char: z.int().min(0),
+    end_char: z.int().min(0),
+    heading_path: z.array(z.string().max(200)).max(10).default([]),
+  }).strict(),
+
+  repository_path: z.object({
+    kind: z.literal('repository_path'),
+    repo: z.string().min(1).max(100),
+    path: RepoPath,
+    start_line: z.int().min(1).optional(),
+    end_line: z.int().min(1).optional(),
+    commit_sha: CommitSha.optional(),
+  }).strict(),
+
+  proposal: z.object({
+    kind: z.literal('proposal'),
+    proposal_id: z.uuid(),
+  }).strict(),
+
+  manual: z.object({
+    kind: z.literal('manual'),
+    note: z.string().min(1).max(200),
+  }).strict(),
+} as const satisfies Record<SourceRefKind, z.ZodObject>
+
+/** 표를 그대로 유니온으로 올린다 — 표와 유니온이 갈라질 자리를 만들지 않는다. */
+export const SourceRef = z.discriminatedUnion('kind', nonEmpty(SOURCE_REF_KINDS.map((k) => SOURCE_REF[k])))
+export type SourceRef = z.infer<(typeof SOURCE_REF)[SourceRefKind]>

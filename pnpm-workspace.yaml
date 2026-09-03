@@ -15,9 +15,21 @@ packages:
   - "packages/*"
   - "plugin/contextops"
 
+# 설치 스크립트를 돌려도 되는 패키지. **여기 없는 패키지의 postinstall 은 안 돈다.**
+# ⚠ pnpm 11 의 이름은 `allowBuilds` 다 — `onlyBuiltDependencies`·`ignoredBuiltDependencies`
+#   는 `pnpm config get` 으로 읽히지만 **설치를 통과시키지 못한다.** 손으로 적지 말고
+#   `pnpm approve-builds <pkg>` 로 더해라 (그 명령이 이 표를 쓴다).
+allowBuilds:
+  esbuild: true
+
 # 의존성 버전의 정본. 패키지는 "catalog:" 라고만 쓴다.
 # ★ 왜 — 같은 버전을 패키지마다 적으면 한쪽만 올라가고 조용히 갈라진다.
 #   버전 고정표는 docs/SPEC.md §1.2 다.
 catalog:
   typescript: ^5.9.3
+  # @types/node — .nvmrc(22) 와 메이저를 맞춘다. 어긋나면 없는 API 가 타입에 보인다.
+  "@types/node": ^22.20.1
   vitest: ^4.1.11
+  zod: ^4.5.4
+  # tsx — .ts 를 그대로 실행한다. packages/schema 의 JSON Schema 산출기가 쓴다.
+  tsx: ^4.23.13

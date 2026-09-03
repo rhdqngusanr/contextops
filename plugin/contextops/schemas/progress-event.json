@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "milestone_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Z]{1,4}-M\\d{1,2}$|^M\\d{1,2}$"
+        },
+        {
+          "type": "string",
+          "const": "none"
+        }
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "in_progress",
+        "criterion_done",
+        "done_candidate",
+        "none"
+      ]
+    },
+    "criterion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "evidence": {
+      "default": [],
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "context_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "hook",
+        "manual"
+      ]
+    },
+    "client_event_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    }
+  },
+  "required": [
+    "milestone_id",
+    "status",
+    "summary",
+    "context_version",
+    "source",
+    "client_event_id"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "pattern": "^(?!\\/)(?!.*\\.\\.)(?![a-zA-Z]:)[^\\0]+$"
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
