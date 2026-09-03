@@ -5,89 +5,141 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 15바퀴 · `34eb766`_
+_마지막 갱신: 2026-09-04 · 루프 16바퀴 · `7cf9d50`_
 
 ---
 
 ## 지금 어디인가
 
-**P3 첫 행의 ②(문서 구조화)가 끝났다. `withBudget()` 이 처음으로 제품 소비처를 가졌다.**
-문서 → 항목 초안이 **코드로 돈다** (`lib/ai/structure.ts` · 시험 24개).
-에러 코드는 **11종 전부** 내는 자리를 가졌다 (`AI_OUTPUT_INVALID` 를 §7.1 이 낸다).
+**P3 첫 행의 ③(충돌 탐지)이 끝났다. `withBudget()` 의 두 번째 소비처가 생겼다.**
+항목 둘이 어긋나는 것을 **질문 카드로 만드는 코드가 돈다** (`lib/ai/conflict.ts` · 시험 24개).
+`AI_FEATURES` 4종 중 **둘**(`structure`·`conflict`)이 부르는 자리를 가졌다.
 
-다음은 **같은 행의 ③ `detectConflicts` (SPEC §7.2)** 다.
+**①②③이 다 끝났는데도 P3 첫 행은 열려 있다** — 완료 기준(「paylab 문서 → 항목 12 +
+충돌 3」)은 진짜 키와 라우트가 있어야 잰다. 다음은 **P3 둘째 행 「웹 화면 3·4」**다.
 
-⚠ **여기서 만든 것은 lib 하나다. 라우트가 아직 안 부른다** (FINDINGS 52) —
-사람이 문서를 올려도 항목은 안 생긴다. 그건 화면 3(P3 둘째 행)의 일이다.
+⚠ **여기서 만든 것도 lib 하나다. 부르는 자리가 없다** (FINDINGS 54) —
+게다가 **낸 것을 담을 칸도 없다**: `conflicts` 표는 `a_item_id` 도 `severity` 도 없다.
 ⚠ **진짜 Claude 를 부른 적이 없다.** API 키가 없어 스텁으로만 쟀다 (🙋 사람).
 
 | 있는 것 | 없는 것 |
 |---|---|
-| `loop/` · `tools/` · pnpm workspace + catalog | **`detectConflicts`** (P3 첫 행 ③) |
+| `loop/` · `tools/` · pnpm workspace + catalog | **`conflicts` 표에 쓰는 코드** (FINDINGS 54·28) |
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
-| `packages/compiler` (파이프라인 7단계 · 테스트 **130** · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
-| `apps/web` — 라우트 28개 · 테스트 **166** | 충돌을 **만드는** 코드 (P3 ③ · FINDINGS 28) |
-| 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | **`structureDocument` 를 부르는 라우트** (FINDINGS 52) |
-| 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | `conflict`·`ask`·`demo` 를 부르는 자리 (기능 표의 나머지 셋) |
-| 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
-| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
-| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | 구조화 job 상태를 담을 자리 (화면 3 이 polling 한다 · SPEC §9) |
+| `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | 웹 화면 **1·3·4·6·8·9** |
+| `apps/web` — 라우트 28개 · 테스트 **190** | **`structureDocument`·`detectConflicts` 를 부르는 라우트** (52·54) |
+| 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | `ask`·`demo` 를 부르는 자리 (기능 표의 나머지 둘 · §7.3·§7.4) |
+| 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | 구조화·탐지 job 상태를 담을 자리 (화면 3 이 polling 한다 · SPEC §9) |
+| 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · `AiConflictOutput` · 시험 24 | **토큰 발급 화면** (FINDINGS 36 — 지금은 라우트를 손으로 친다) |
+| 웹 화면 5개 (`/login` `/auth/callback` `/t/new` `…/context` `…/packs`) | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
+| 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
+| **`scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | |
 | ✅ **모든 Pack 에 `workflow.md`** — 진행 보고 문단이 항상 나간다 (FINDINGS 43·8) | |
 
-검사 층: `principles OK 9 · typecheck 6초·멤버 4 · test 46초·멤버 4 · build 30초 ·
-walkthrough 67초` → **GREEN**. 관통 **7단계**
+검사 층: `principles OK 9 · typecheck 5초·멤버 4 · test 42초·멤버 4 · build 17초 ·
+walkthrough 52초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
-`apps/web/e2e`. ⚠ 관통은 §7.1 을 **지나지 않는다** — 키가 없고 라우트가 없다.
+`apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없고 라우트가 없다.
+시험 합계 **613** (schema 113 · compiler 136 · plugin 174 · web 190).
+⚠ 15바퀴 STATUS 의 「compiler 130」은 낡은 값이었다 — 직접 세어 **136** 이다.
 
 ## 다음 바퀴가 할 일
 
-🔴 **`docs/PLAN.md` P3 첫 행 ③ — `detectConflicts(projectId, changedItemIds)` (SPEC §7.2).**
-그 행이 **충돌을 만드는 첫 코드**다 — FINDINGS **28·25·29·31** 이 전부 이 행을 기다린다.
-빈도 상한(FINDINGS 51)도 거기서 정한다.
+🔴 **`docs/PLAN.md` P3 둘째 행 — 웹 화면 3·4 (가져오기 · 정리 · 질문 카드).**
+그 행이 §7.1·§7.2 를 **처음으로 부르는 자리**다. FINDINGS **52·54·25·29·26** 이
+전부 이 행을 기다린다.
 
-**③을 시작하기 전에 아는 것 (이번 바퀴가 깔아 둔 자리):**
+**시작하기 전에 아는 것 (두 바퀴가 깔아 둔 자리):**
 
-- 🔴 **§7.1 이 길을 다 깔아 놨다. 베껴라, 새로 짜지 마라** —
-  `apps/web/src/lib/ai/structure.ts` 의 모양이 §7.2~§7.4 의 모양이다:
-  `withBudget(기능, {projectId, inputChars, actor?, now?}, async () => { …callClaude… })`.
-  - **시스템 프롬프트의 공통 금지와 `<untrusted>` 는 `lib/ai/prompt.ts` 에 있다.**
-    §7.2 는 `AI_SYSTEM_COMMON` 뒤에 자기 문단만 붙인다 — 공통 문장을 다시 적지 마라.
-  - **출력 계약은 `packages/schema` 에 둔다.** LLM 응답은 외부 입력이다.
-    §7.1 은 `AiStructureOutput` 을 `ITEM_DATA` 표에서 **파생**했다 (`item.ts` 아래).
-    §7.2 의 `conflicts[{kind,a_item_id,b_item_id?,question,severity}]` 도 같은 자리에.
-    `kind` 는 이미 `CONFLICT_KINDS` 5종이 정본이다 — 새로 적지 마라.
-  - **도구 스키마는 `toJsonSchemaOf(그 Zod)`** 다 (`packages/schema`). 손으로 짜지 마라.
-  - **재검증 → 1회 재시도 → `AI_OUTPUT_INVALID`** 는 `structureChunk()` 의 for 문이 정본.
-    재시도 프롬프트에 **오류 위치**를 넣는 것이 SPEC §7 이 요구하는 것이다.
-- 🔴 **`withBudget` 은 「일 하나」에 한 번이다 — LLM 왕복마다가 아니다.**
-  장부 행 수로 빈도를 세기 때문이다. §7.1 은 **문서 하나**가 한 번이고 그 안에 chunk
-  호출이 최대 12번 있다. §7.2 도 「무엇마다 한 번인가」를 **먼저** 정해라 —
-  그게 FINDINGS 51(빈도 상한)의 답의 절반이다.
-- **`AI_FEATURE_LIMITS.conflict.rate` 는 아직 `null` 이다** (빈도 제한 없음).
-  숫자를 정하면 `features.ts` 의 그 칸 **하나만** 고치고 SPEC §7.5 에도 같은 줄을 적어라.
-- **키가 없으면 `client.ts` 가 던진다.** lib 은 던지는 데까지가 제 일이다 —
-  §7.5 의 「픽스처 결과로 떨어지는」 갈래는 **라우트·화면**이 받는다 (FINDINGS 52).
-- 🔴 **에러 코드 11종이 전부 소비처를 가졌다.** `WITHOUT_OWNER` 표는 여전히 **비었다** —
-  새 코드를 더하면 그 표에 한 줄 적거나 소비처를 같이 만들어야 초록이다.
-- **시계는 하나다.** `withBudget` 의 `ctx.now` 가 창 계산과 장부 행의 `created_at` 을
-  둘 다 정한다. 시험에서 `now` 를 안 주면 창 경계를 재현할 수 없다.
+- 🔴 **첫 결정은 「job 상태를 어디에 두나」다.** 12 chunk 짜리 문서도 40개 항목의 탐지도
+  한 요청 안에서 안 끝난다. SPEC §9 화면 3 이 「구조화 진행 표시(polling)」라고 적은 것이
+  그 뜻이다. **구조화와 탐지가 같은 자리를 쓴다** — 둘을 따로 만들지 마라.
+- 🔴 **둘째 결정은 `conflicts` 표의 모양이다** (FINDINGS **54·25·29** 를 한 묶음으로).
+  이번 바퀴가 근거를 깔아 뒀다: §7.2 가 내는 **넷은 전부 항목 대 항목**이고
+  (`CONFLICT_KIND_RULES[k].needsB` 가 넷 다 `true`), `open_question` 하나만 문서 구간을
+  가리킨다. 그래서 `SOURCE_REF` 를 넓히는 길은 **P7 을 깬다** — 항목의 근거가 다른
+  항목을 가리키면 원문까지 가는 사슬이 끊긴다. `conflicts` 에 `a_item_id`·`b_item_id`·
+  `severity` 칸을 더하는 쪽이 남는 길이다. 마이그레이션이 `0003` 이 된다.
+- 🔴 **키가 없으면 `client.ts` 가 던진다.** lib 은 던지는 데까지가 제 일이다 —
+  §7.5 의 「픽스처 결과로 떨어지는」 갈래는 **라우트·화면**이 받는다. 두 lib 이 던지는
+  것은 넷이다: `BUDGET_EXCEEDED` · `RATE_LIMITED` · `AI_OUTPUT_INVALID` · 키 없음(`Error`).
+  **앞의 셋은 `ApiError` 라 봉투로 나가고, 넷째만 다르다.**
+- **베껴라, 새로 짜지 마라** — `structure.ts` 와 `conflict.ts` 가 이제 **같은 모양 둘**이다.
+  §7.3(`ask`)·§7.4(`demo`)도 그 모양이다: `withBudget(기능, {projectId, inputChars, actor?, now?},
+  async () => { …callClaude… })` → Zod 재검증 → 오류 위치를 넣어 1회 재시도 → `AI_OUTPUT_INVALID`.
+  ⚠ **공통 프롬프트는 §7.3 을 만들기 전에 손봐라** (FINDINGS **55**) — 지금 공통 7줄 중
+  3줄이 §7.2 에서 무의미하다. 넷 중 셋에 안 맞으면 그건 공통이 아니다.
+- **`withBudget` 은 「일 하나」에 한 번이다.** §7.1 은 문서 하나 · §7.2 는 탐지 한 번.
+  §7.3·§7.4 도 「무엇마다 한 번인가」를 **먼저** 정해라 — 그게 빈도 상한의 뜻이다.
 - **DB 는 안 건드렸다** — 마이그레이션은 여전히 `0002` 까지다.
 
 ⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
-⚠ **Anthropic API 키도 사람이 준다.** 없으면 §7.2 도 **스텁으로만** 잴 수 있다
-(`setAiClientForTest` · `test/ai-structure.test.ts` 의 `stubAi()` 를 그대로 베껴라).
-실제 응답을 본 것이 아니라는 걸 STATUS 에 적어라.
+⚠ **Anthropic API 키도 사람이 준다.**
 
 **값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44** 는 문서·한 줄짜리다.
-**14**(`.ps1` 두 개가 LF)도 그렇다. 🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿
-`head` 한 줄이고 둘 다 golden 을 깬다. 같이 하면 `TEMPLATE_VERSION` 을 한 번만 올린다.
-🔴 **50 은 이제 값싸지만 급하다** — 이번 바퀴에 `callClaude()` 를 부르는 제품 파일이
-생겨서, 그 게이트는 지금 **예산 가드를 건너뛰는 새 파일을 못 잡는다**.
+**14**(`.ps1` 두 개가 LF)도 그렇다. **55**(공통 프롬프트)는 §7.3 전이 제일 싸다.
+🔴 **30 과 46 은 한 묶음이다** — 둘 다 템플릿 `head` 한 줄이고 둘 다 golden 을 깬다.
+🔴 **50 은 여전히 값싸고 여전히 급하다** — 이제 `callClaude()` 를 부르는 제품 파일이
+**둘**이고, 그 게이트는 예산 가드를 건너뛰는 새 파일을 못 잡는다.
 
-⚠ FINDINGS **24·25·26·28·29·31·33·35·51·52** 는 **P3 가**, **36** 은 **P4 화면 9** 가,
+⚠ FINDINGS **24·25·26·28·29·31·33·35·52·54** 는 **P3 둘째 행**이, **36** 은 **P4 화면 9** 가,
 **53** 은 **API 키가 생긴 뒤**가 주인이다.
 
 ## 잰 것
+
+**16바퀴 · P3 첫 행 ③ — 충돌 탐지 `detectConflicts()`** (`7cf9d50`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 5초 / test 42초 / build 17초 / walkthrough 52초 |
+| 새 시험 | **+24** — web 166 → **190** (`ai-conflict.test.ts`). 합계 **613** |
+| 새 파일 | `src/lib/ai/conflict.ts`(§7.2) — 새 프롬프트 파일은 **안 만들었다** (`prompt.ts` 를 그대로 쓴다) |
+| 계약 | `CONFLICT_KIND_RULES` 표 하나가 **프롬프트·도구 스키마·검증 셋을 전부** 정한다. `AiConflict`·`AiConflictOutput`·`CONFLICT_SEVERITIES`·`Question`(§7.1 과 공유) |
+| 빈도 상한 | `conflict` 가 `rate: null` → **프로젝트당 시간당 10회.** 세는 단위는 「탐지 한 번」이다 (FINDINGS 51 닫음) |
+| 갈리는 것을 봤나 | **봤다.** 지어낸 id → 재시도 프롬프트에 `item_invented` 가 실림 → 두 번째가 맞으면 통과 / 두 번 다 틀리면 `AI_OUTPUT_INVALID`(호출 정확히 2회) · severity 를 뒤집으면 결과 순서가 뒤집힘 · type·scope 가 다르거나 active 가 아니면 후보 0 이고 **호출이 0회** · 11회째 `RATE_LIMITED`, 창이 지나면 다시 통과 |
+| 눈으로 읽었나 | **읽었다.** 도구 스키마 **711바이트 · `$defs` 2개**(§7.1 은 11,485바이트 · 24개) · 시스템 프롬프트에 탐지 4종이 표에서 한 줄씩 실리고 `open_question` 은 없다 · 사용자 턴이 `<untrusted>` 로 열린다 |
+| P7 을 실제로 쟀나 | **쟀다.** 프롬프트에 실리지 않은 항목 id 가 오면 **결과가 아니라 재시도**로 간다 — 모델이 지어낸 근거가 카드가 되는 길을 막았다 |
+| 번들 | `bin/contextops-cli.mjs` 812,036 → **814,385바이트** (schema 를 고쳐 다시 빌드 — `test/bundle.test.ts` 가 표류로 잡았다). `schemas/*.json` **10개는 안 바뀌었다** |
+| 마이그레이션 | **없다** — DB 를 안 건드렸다 (여전히 `0002` 까지) |
+| 닫은 FINDINGS | **51**(§7.5 에 충돌 빈도 상한 없음) |
+| 새 FINDINGS | **54**(`conflicts` 표가 §7.2 출력을 못 담고 부르는 자리도 없다 · 구멍) · **55**(공통 금지 7줄 중 3줄이 §7.2 에서 무의미 · 격차). **31 에 한 줄 더했다** — `origin='doc'` 이 0곳이라 `doc_vs_code` 는 영원히 0건이다 |
+| 2-B 확인 (죽은 정의 찾기) | `scope.kind` 3종 — **살아 있다.** `partition.ts` 가 셋을 서로 다른 파일로 보내고 `compiler/test/liveness.test.ts` 가 「3종이 서로 다른 파일로 간다」로 잠갔다 |
+
+**🔴 결정 — 탐지 한 번이 `withBudget` 한 번이고 LLM 왕복도 한 번이다**
+
+§7.1 은 문서 하나 안에 chunk 호출이 최대 12번 있다. §7.2 는 **한 번**으로 뒀다 —
+후보 40개 × 300자면 프롬프트가 한 번에 다 들어가고, 나누는 순간 §7.5 의 상한이
+「탐지 N회」가 아니라 「묶음 N개」가 되어 항목이 많은 프로젝트가 상한을 넘긴다.
+그래서 빈도 상한의 뜻이 **「이 프로젝트가 이번 시간에 탐지를 몇 번 돌렸나」**로 고정된다.
+
+**🔴 결정 — 종류별로 갈리는 것을 표 하나(`CONFLICT_KIND_RULES`)로 모았다**
+
+`CONFLICT_KINDS` 5종은 있었지만 「무엇이 무엇을 만드나」가 코드 어디에도 없었다.
+표에 넣은 것은 셋이다: `detected`(§7.2 가 내는가) · `needsB`(두 쪽이 필요한가) ·
+`hint`(모델에게 주는 한 줄). 그래서 **종류를 더하면 프롬프트·도구 스키마·검증이 따라온다.**
+
+- `open_question` 만 `detected:false` 라 **도구 스키마의 enum 에서 빠진다** — 모델이
+  고를 수 없는 이름을 실어 놓고 우리가 버리면 재시도가 늘고 재시도는 곧 돈이다.
+- 시험이 그 뜻을 잠근다: 「탐지 종류는 **전부** 프롬프트에 한 줄씩 실린다」·
+  「`- open_question:` 줄은 없다」·「도구 스키마에 `open_question` 이 없다」.
+
+**🔴 결정 — `severity` 의 값을 지어내지 않고 이미 있는 사다리를 빌렸다**
+
+SPEC §7.2 는 `severity` 라는 **이름만** 적고 값을 적지 않았다. `CONFIDENCE_LEVELS` 와
+같은 낱말(`high`·`medium`·`low`)을 쓰되 **상수는 따로 뒀다** — 확신 단계가 늘어야 할
+이유와 충돌 심각도가 늘어야 할 이유는 상관이 없고, 하나로 묶으면 한쪽 때문에 다른 쪽이
+바뀐다. 그리고 이 값이 **실제로 무언가를 바꾸게** 했다: 결과를 심각도 내림차순으로 낸다
+(화면 4 는 카드 10장만 보여 준다). 시험이 값을 뒤집어 순서가 갈리는 것을 잰다.
+
+**🔴 Zod 로 못 재는 셋을 손으로 잰다 — 여기가 P7 의 자리다**
+
+①프롬프트에 없던 항목 id ②표가 두 쪽을 요구하는데 `b_item_id` 가 없음 ③같은 짝의 중복
+(앞뒤가 뒤집혀도 같은 짝이다). 셋 다 **버리지 않고 재시도**로 보낸다 — 오류 위치를
+프롬프트에 실어야 두 번째가 나아진다 (SPEC §7).
+
+⚠ **못 본 것**: 진짜 Claude 응답. 프롬프트가 진짜 충돌을 잘 찾는지, 「판단하지 말고
+질문만 만들어라」를 모델이 지키는지는 **이 바퀴가 말하지 않는다.** 키가 생기면
+paylab 픽스처(충돌 3건이 이미 있다)로 「충돌 3」(PLAN 완료 기준)을 실제로 확인해라.
 
 **15바퀴 · P3 첫 행 ② — 문서 구조화 `structureDocument()`** (`34eb766`)
 

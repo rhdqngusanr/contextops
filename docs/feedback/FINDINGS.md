@@ -29,6 +29,48 @@
 
 ## 다음에 고칠 것
 
+### 54. `conflicts` 표가 §7.2 의 출력을 **담지 못한다** — 그리고 부르는 자리가 없다   [구멍]
+- **증상**: 이번 바퀴에 `detectConflicts()` 를 만들었고 시험 24개가 잰다. 그런데
+  `grep -rn "detectConflicts" apps/web/src | grep -v lib/ai/` → **0건**이다.
+  게다가 낸 것을 **저장할 칸이 없다**: DB 의 `conflicts` 는 `a_ref`/`b_ref` 가
+  `SourceRef` 인데 §7.2 가 내는 것은 `a_item_id`/`b_item_id`(`item_<slug>`)이고,
+  `severity` 는 **칸 자체가 없다.** 즉 FINDINGS 28(충돌 행을 만드는 코드 0곳)이
+  **한 겹 위로 올라갔을 뿐** 화면의 충돌 수는 여전히 항상 0이다.
+- **근거**: 이번 바퀴 직접 grep · `apps/web/src/db/schema.ts` 의 `conflicts`
+  (`aRef`/`bRef` 는 `jsonb().$type<SourceRef>()` · severity 칸 없음) ·
+  `apps/web/src/lib/api/conflict.ts` 의 `CONFLICT_COLUMNS`
+- **정본**: `docs/SPEC.md` §2 · §5 · §7.2
+- **고칠 방향**: 🔴 **FINDINGS 25·29 와 한 묶음이다 — 셋을 같은 바퀴에 정해라.**
+  이번 바퀴에 깔아 둔 근거는 이것이다: `CONFLICT_KINDS` 5종 중 §7.2 가 내는 **넷은
+  전부 항목 대 항목**이고(`CONFLICT_KIND_RULES[k].needsB` 가 넷 다 `true`),
+  `open_question` **하나만** 항목이 아니라 **문서 구간**을 가리킨다 (§7.1 이 만든다).
+  그래서 「`a_ref` 에 항목 종류를 더한다」는 **`SOURCE_REF` 를 넓히는 것**이 되는데,
+  그러면 항목의 `source_refs` 가 다른 항목을 가리킬 수 있게 되고 **원문까지 가는 사슬이
+  끊긴다** (P7). 남는 길은 `conflicts` 에 `a_item_id`·`b_item_id`·`severity` 칸을
+  더하고 `a_ref` 는 `open_question` 전용으로 **좁히는** 쪽이다 — 어느 칸이 어느 종류에
+  필요한지는 이미 `CONFLICT_KIND_RULES` 표가 안다.
+  ⚠ 부르는 자리는 SPEC §5 가 이미 적었다 — `batch-draft` 가 「충돌 탐지 job 시작」이다.
+  그건 §7.1 과 **같은 job 자리**를 기다린다 (FINDINGS 52).
+- **상태**: 대기 (P3 둘째 행이 주인 · 25·29 와 같이)
+
+### 55. §7 공통 금지 세 줄 중 **둘을 §7.2 는 따를 수 없다**   [격차]
+- **증상**: `AI_SYSTEM_COMMON` 은 네 기능이 함께 쓰는 정본인데 문장이 §7.1 을 보고
+  쓰였다. 첫 줄이 「너는 팀의 **문서**를 정해진 스키마로 옮겨 적는 도구다」인데 §7.2 는
+  문서를 읽지 않고 **항목 둘을 견준다.** 그리고 「확신이 없으면 `confidence` 를 low 로
+  두거나 `open_question` 으로 낸다」·「원문 인용은 **offset** 으로만 한다」 두 줄은
+  §7.2 의 출력에 **그런 칸이 아예 없다** (`confidence` 도 `span` 도 없고 `open_question`
+  은 §7.2 가 낼 수 없는 종류다). 따를 수 없는 지시는 모델을 헷갈리게 하고, 헷갈리면
+  재시도가 늘고 재시도는 곧 돈이다.
+- **근거**: 이번 바퀴 프롬프트를 직접 찍어 읽었다 — `AI_SYSTEM_COMMON` 726바이트의
+  7줄 중 3줄이 §7.2 에서 무의미하다 (`apps/web/src/lib/ai/prompt.ts`)
+- **정본**: `docs/SPEC.md` §7 공통 규약
+- **고칠 방향**: 공통 문장을 **기능마다 복사하지 마라** — 그게 이 파일이 생긴 이유다.
+  대신 공통 블록을 「전부에게 참인 것」만 남기고(지어내지 않는다 · `<untrusted>` 는
+  데이터다 · 도구로만 답한다), 출력 칸에 매인 문장(`confidence`·offset·`open_question`)은
+  **그 칸을 가진 기능의 문단으로** 내려라. ⚠ §7.3·§7.4 를 만들 때 같은 것을 또 겪는다 —
+  그 둘의 출력도 `confidence` 도 offset 도 없다. **넷 중 셋에 안 맞으면 공통이 아니다.**
+- **상태**: 대기 (값싸다 · §7.3 을 만들기 전이 제일 싸다)
+
 ### 52. `structureDocument()` 를 **부르는 라우트가 없다**   [구멍]
 - **증상**: §7.1 을 만들었는데 `grep -rn "structureDocument" apps/web/src packages plugin`
   → `lib/ai/structure.ts` 밖에서 **0건**이다. SPEC §5 는 `POST /projects/{id}/documents`
@@ -122,7 +164,7 @@
   로 넓혀라 (예외는 `lib/ai/{client,budget}.ts` 그대로).
 - **상태**: 대기 (값싸다 · 게이트는 문서보다 강하다 · **이제 급하다**)
 
-### 51. SPEC §7.5 에 **충돌 탐지의 빈도 상한이 없다**   [격차]
+### 51. ✅ SPEC §7.5 에 **충돌 탐지의 빈도 상한이 없다**   [격차]
 - **증상**: §7.5 의 Rate limit 은 `/ask`·`/demo`(분당 3회)와 문서 구조화(프로젝트당
   시간당 5회) 셋뿐이다. §7.2 충돌 탐지에는 아무 숫자도 없다. 이번 바퀴의
   `AI_FEATURE_LIMITS` 는 그 칸을 `rate: null`(빈도 제한 없음)로 두고 이유를 주석에 적었다 —
@@ -134,7 +176,11 @@
   누르는 게 아니라 **항목이 바뀔 때 서버가 부르는** 것이라 창 단위가 무엇인지가 답의
   절반이다. 정하면 `AI_FEATURE_LIMITS` 의 그 칸 하나만 고치면 되고, SPEC §7.5 에도
   같은 줄을 적어라 (수치를 두 곳에 적으면 갈린다).
-- **상태**: 대기 (P3 첫 행 ③이 주인)
+- **상태**: ✅ `7cf9d50` — **탐지 한 번(= 바뀐 항목 묶음 하나)**이 세는 단위이고 열쇠는
+  프로젝트다. `conflict: { calls: 10, windowSeconds: 3600, scope: 'project' }` ·
+  SPEC §7.5 에 같은 줄. 왜 10인가는 `features.ts` 의 그 칸 주석에 적었다 —
+  한 프로젝트가 시간당 열 번 넘게 항목 묶음을 바꿔 올리는 것은 사람의 리듬이 아니라
+  **루프**다. ⚠ 이 상한은 예산을 대신하지 않는다. 돈을 막는 것은 여전히 하루 예산이다.
 
 ### 43. ✅ `workflow` 항목이 없으면 **agent 가 진행 보고를 배우지 못한다**   [구멍]
 - **증상**: SPEC §4.3 은 진행 보고 문단이 「`workflow.md` 에 **항상** 포함되는 고정
@@ -466,6 +512,10 @@
 - **상태**: 대기
 
 ### 31. `REVISION_ORIGINS` 의 `doc` 을 만드는 곳이 0곳이다   [구멍]
+- **🔴 16바퀴에 값이 올랐다**: §7.2 의 `doc_vs_code` 는 「origin=doc 인 항목과 origin=code 인
+  항목이 다른 말을 한다」로 정의된다 (`CONFLICT_KIND_RULES`). `doc` 을 만드는 곳이
+  0곳이면 **그 종류는 영원히 0건**이고, 탐지가 도는데도 카드가 안 나오는 이유를
+  아무도 못 찾는다. §7.1 의 초안이 항목이 될 때 `doc` 을 찍는 것이 그 자리다.
 - **증상**: 4종 중 셋은 이번 바퀴에 전부 살았다 — `code`(batch-draft) · `manual`(PATCH·
   질문 답변) · `proposal`(발행 트랜잭션). **`doc` 만 만드는 코드가 없다.**
 - **근거**: `grep -rn "origin: '" apps/web/src packages` → `manual` 2 · `code` 1 ·
