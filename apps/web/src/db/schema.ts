@@ -37,6 +37,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import {
+  AI_JOB_STATUSES,
   CONFIDENCE_LEVELS,
   CONFLICT_KIND_RULES,
   CONFLICT_KINDS,
@@ -51,6 +52,7 @@ import {
   SOURCE_DOCUMENT_KINDS,
   type ScanSummary,
   TEAM_ROLES,
+  type AiJobStatus,
   type ConflictChoice,
   type ConflictKindRule,
   type Manifest,
@@ -79,15 +81,6 @@ export const TEAM_MEMBER_STATUSES = ['active', 'invited'] as const
 export const REVISION_ORIGINS = ['doc', 'code', 'manual', 'proposal'] as const
 /** Proposal 수명 5종 (SPEC §2 · §5). `published` 는 발행 트랜잭션이 마지막에 찍는다 (§2.1 7단계). */
 export const PROPOSAL_STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'published'] as const
-
-/**
- * 🔴 **AI job 의 수명 4종** (SPEC §2 · §7 · §9 화면 3 「구조화 진행 표시(polling)」).
- *
- * ★ 왜 여기인가 — 요청 payload 에는 안 나온다. 화면이 polling 으로 읽는 **응답**과
- *   DB 가 소비처의 전부다 (위 절의 「둘째 사용자」 규칙).
- */
-export const AI_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as const
-export type AiJobStatus = (typeof AI_JOB_STATUSES)[number]
 
 /** 수명 한 칸이 「어느 칸을 채우고 있어야 하는가」. */
 export interface AiJobStatusRule {
@@ -118,9 +111,12 @@ export const AI_JOB_STATUS_RULES: Record<AiJobStatus, AiJobStatusRule> = {
   failed: { started: true, finished: true, result: false, error: true },
 }
 
-//  ⚠ `TEAM_ROLES`·`SOURCE_DOCUMENT_KINDS`·`CONFLICT_KINDS`·`CONFLICT_STATUSES` 는
-//    여기 있었지만 **API 계약이 그 값을 쓰게 되면서** `@contextops/schema` 로 올라갔다
-//    (위 주석의 「둘째 사용자」 규칙). 이제 아래 `pgEnum` 이 그 표를 읽기만 한다.
+//  ⚠ `TEAM_ROLES`·`SOURCE_DOCUMENT_KINDS`·`CONFLICT_KINDS`·`CONFLICT_STATUSES`·
+//    **`AI_JOB_STATUSES`** 는 여기 있었지만 **화면·계약이 그 값을 쓰게 되면서**
+//    `@contextops/schema` 로 올라갔다 (위 주석의 「둘째 사용자」 규칙).
+//    이제 아래 `pgEnum` 이 그 표를 읽기만 한다.
+//    ⚠ 수명 **규칙**(`AI_JOB_STATUS_RULES`)은 안 올라갔다 — 그 표는 CHECK 제약을
+//      만드는 DB 의 말이고, 화면은 그 판정(`stalled`)을 서버가 낸 값으로 받는다.
 
 // ---------------------------------------------------------------------
 //  pgEnum — 위 표와 `@contextops/schema` 표를 **읽기만** 한다

@@ -1,17 +1,15 @@
 import { after } from 'next/server'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { ItemId, ListQuery, type ErrorCode } from '@contextops/schema'
+import { AI_JOB_STATUSES, ItemId, ListQuery, type AiJobStatus, type ErrorCode } from '@contextops/schema'
 
 import { getDb, type Db } from '../../db/client'
 import {
-  AI_JOB_STATUSES,
   AI_JOB_STATUS_RULES,
   aiJobs,
   conflicts,
   sourceDocumentVersions,
   sourceDocuments,
-  type AiJobStatus,
 } from '../../db/schema'
 import { conflictRow } from '../api/conflict'
 import { ApiError, fail } from '../api/error'

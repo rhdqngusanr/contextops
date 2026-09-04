@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CONFIDENCE_LEVELS, ERROR_CODES, ITEM_STATUSES, ITEM_TYPES, SOURCE_REF_KINDS, SYNC_STATUSES,
-  type SourceRef,
+  AI_JOB_STATUSES, CONFIDENCE_LEVELS, ERROR_CODES, ITEM_STATUSES, ITEM_TYPES,
+  SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES, type SourceRef,
 } from '@contextops/schema'
 
-import { ERROR_HINT } from '../src/lib/web/api'
+import { ERROR_HINT, hintFor } from '../src/lib/web/api'
+import { JUST_NOW, sinceText } from '../src/lib/web/time'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver } from '../src/lib/web/semver'
 import { toSlug } from '../src/lib/web/slug'
 import { readCallbackHash } from '../src/lib/web/auth'
 import {
-  CONFIDENCE_CHIP, ITEM_STATUS_CHIP, ITEM_TYPE_ICON, SYNC_CHIP,
+  AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, ITEM_STATUS_CHIP, ITEM_TYPE_ICON,
+  SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
 } from '../src/components/chips'
 import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 
@@ -53,8 +55,13 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
       (k) => `${CONFIDENCE_CHIP[k].icon}${CONFIDENCE_CHIP[k].label}`)
   })
 
+  it('AI job 수명 4종 (SPEC §9 화면 3)', () => {
+    assertLiveTable('AI_JOB_STATUS_CHIP', AI_JOB_STATUSES, AI_JOB_STATUS_CHIP,
+      (k) => `${AI_JOB_STATUS_CHIP[k].icon}${AI_JOB_STATUS_CHIP[k].label}`)
+  })
+
   it('🔴 상태를 색만으로 구분하지 않는다 — 아이콘과 라벨이 항상 있다 (DESIGN_BRIEF §3)', () => {
-    for (const table of [SYNC_CHIP, ITEM_STATUS_CHIP, CONFIDENCE_CHIP]) {
+    for (const table of [SYNC_CHIP, ITEM_STATUS_CHIP, CONFIDENCE_CHIP, AI_JOB_STATUS_CHIP]) {
       for (const [key, spec] of Object.entries(table) as [string, { icon: string; label: string }][]) {
         expect(spec.icon.length, `${key}: 아이콘이 없다`).toBeGreaterThan(0)
         expect(spec.label.length, `${key}: 라벨이 없다`).toBeGreaterThan(0)
@@ -160,5 +167,50 @@ describe('로그인 되돌아오기 (SPEC §5 인증 (a))', () => {
   it('오류가 오면 토큰이 없어도 조용히 통과시키지 않는다', () => {
     expect(readCallbackHash('#error=access_denied', now).ok).toBe(false)
     expect(readCallbackHash('', now).ok).toBe(false)
+  })
+})
+
+describe('🔴 문서 종류 6종이 전부 고를 수 있는 값이다 (SPEC §2 · 화면 3)', () => {
+  it('표의 키가 enum 과 같고 라벨이 서로 다르다', () => {
+    //  ⚠ DESIGN_BRIEF 는 다섯 개만 적지만 계약은 여섯이다. 화면이 다섯만 그리면
+    //    여섯째는 **아무도 고를 수 없는 값**이 된다 — 그게 「정의만 있고 아무 일도
+    //    안 하는 것」의 화면 쪽 모양이다.
+    assertLiveTable('SOURCE_DOCUMENT_KIND_LABEL', SOURCE_DOCUMENT_KINDS, SOURCE_DOCUMENT_KIND_LABEL,
+      (k) => SOURCE_DOCUMENT_KIND_LABEL[k])
+  })
+})
+
+describe('실패한 job 의 에러 코드가 화면 문구가 된다 (화면 3 · SPEC §7.5)', () => {
+  it('네 갈래가 전부 서로 다른 문장을 낸다', () => {
+    //  ⚠ 화면 3 이 실제로 만나는 넷이다 (docs/STATUS.md 「키가 없을 때」).
+    const codes = ['BUDGET_EXCEEDED', 'RATE_LIMITED', 'AI_OUTPUT_INVALID', 'INTERNAL']
+    expect(new Set(codes.map(hintFor)).size).toBe(codes.length)
+  })
+
+  it('🔴 모르는 코드도 코드를 그대로 띄우지 않는다', () => {
+    //  `AI_OUTPUT_INVALID` 같은 낱말은 팀장에게 아무 뜻이 없다.
+    expect(hintFor(null)).toBe(ERROR_HINT.INTERNAL)
+    expect(hintFor('WAT')).toBe(ERROR_HINT.INTERNAL)
+  })
+})
+
+describe('🔴 「마지막 보고: 8분 전」 (DESIGN_BRIEF §2-3 — 「실시간」이라고 쓰지 않는다)', () => {
+  const now = new Date('2026-09-04T12:00:00Z')
+  const ago = (seconds: number) => new Date(now.getTime() - seconds * 1000).toISOString()
+
+  it('단위가 커질수록 말이 갈린다', () => {
+    expect(sinceText(ago(59), now)).toBe(JUST_NOW)
+    expect(sinceText(ago(60), now)).toBe('1분 전')
+    expect(sinceText(ago(8 * 60), now)).toBe('8분 전')
+    expect(sinceText(ago(3 * 3600), now)).toBe('3시간 전')
+    expect(sinceText(ago(2 * 86400), now)).toBe('2일 전')
+  })
+
+  it('🔴 미래도 「방금」이다 — 서버 시계가 앞서면 「-3분 전」이 그려진다', () => {
+    expect(sinceText(new Date(now.getTime() + 180_000).toISOString(), now)).toBe(JUST_NOW)
+  })
+
+  it('읽을 수 없는 시각에 NaN 을 그리지 않는다', () => {
+    expect(sinceText('어제', now)).toBe(JUST_NOW)
   })
 })

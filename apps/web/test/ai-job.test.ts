@@ -4,15 +4,11 @@ import type Anthropic from '@anthropic-ai/sdk'
 import type { PGlite } from '@electric-sql/pglite'
 import { asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS } from '@contextops/schema'
-
 import {
-  AI_JOB_STATUSES,
-  AI_JOB_STATUS_RULES,
-  aiJobs,
-  conflicts,
-  type AiJobStatus,
-} from '../src/db/schema'
+  AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, type AiJobStatus,
+} from '@contextops/schema'
+
+import { AI_JOB_STATUS_RULES, aiJobs, conflicts } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
 import { AI_FEATURES, AI_FEATURE_LIMITS, AI_JOB_FEATURES, type AiFeature } from '../src/lib/ai/features'

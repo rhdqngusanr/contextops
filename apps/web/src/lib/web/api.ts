@@ -127,6 +127,19 @@ export function patch<T>(path: string, body: unknown): Promise<T> {
   return apiJson<T>(path, { method: 'PATCH', body: JSON.stringify(body) })
 }
 
+/**
+ * **행에 남은 에러 코드**를 화면 문구로 (`ai_jobs.error_code` 는 `string | null` 이다).
+ *
+ * ★ 왜 `messageOf` 로 안 되나 — 저것은 **방금 던져진 예외**를 위한 것이고, 이것은
+ *   실패한 채로 DB 에 앉아 있는 job 을 나중에 읽을 때다. 둘 다 위 `ERROR_HINT` 표
+ *   하나를 읽는다 — 화면이 문구를 지어내는 자리를 만들지 않는다.
+ * ⚠ 표에 없는 값이면 `INTERNAL` 이다. 코드를 그대로 화면에 띄우지 마라 —
+ *   `AI_OUTPUT_INVALID` 는 팀장에게 아무 뜻이 없다.
+ */
+export function hintFor(code: string | null): string {
+  return isErrorCode(code) ? ERROR_HINT[code] : ERROR_HINT.INTERNAL
+}
+
 /** 어떤 예외든 화면에 띄울 한 문장으로 만든다. 스택은 절대 띄우지 않는다. */
 export function messageOf(err: unknown): string {
   if (err instanceof ApiClientError) return err.message

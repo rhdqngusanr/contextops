@@ -1,4 +1,6 @@
-import type { ContextItem, Manifest, TeamRole } from '@contextops/schema'
+import type {
+  AiJobStatus, ContextItem, Manifest, SourceDocumentKind, TeamRole,
+} from '@contextops/schema'
 
 import { apiJson, apiText, post } from './api'
 
@@ -121,4 +123,80 @@ export function fetchPackFile(projectId: string, semver: string, path: string): 
   //    한 조각으로 받고, 그 파일은 영원히 404 다.
   const encoded = path.split('/').map(encodeURIComponent).join('/')
   return apiText(`/projects/${projectId}/packs/${semver}/files/${encoded}`)
+}
+
+// ---------------------------------------------------------------------
+//  화면 3 — 가져오기 (SPEC §5 documents · jobs · §9 화면 3)
+// ---------------------------------------------------------------------
+
+/**
+ * 도는 job 을 **다시 두드리는 간격**. SPEC §9 화면 3 의 「polling」이 이 숫자다.
+ *
+ * ★ 왜 여기인가 — 두드릴 문(`fetchJobs`) 바로 옆이다. 화면 안에 적으면 화면이
+ *   늘 때마다 다른 숫자가 생기고, 어느 화면은 200ms 로 두드린다.
+ * ⚠ 이보다 짧게 만들지 마라 — 목록 질의 하나가 매번 DB 를 친다. 한 걸음(조각 하나)이
+ *   몇 초 걸리는 일이라 2초보다 촘촘히 봐야 새로 보이는 것이 없다.
+ */
+export const JOB_POLL_MS = 2000
+
+/**
+ * job 응답의 **요약 모양**(`shape:'summary'`) — 목록이 내는 칸 그대로다.
+ * ⚠ `result` 가 없다. 전문이 필요하면 `…/jobs/{jobId}`(`shape:'full'`) 를 따로 읽는다
+ *   (`lib/ai/job.ts` 의 `AI_JOB_FIELDS` 표).
+ */
+export type AiJobSummary = {
+  shape: 'summary' | 'full'
+  id: string
+  project_id: string
+  feature: string
+  status: AiJobStatus
+  /** `null` 은 「0 걸음」이 아니라 **「아직 한 걸음도 보고 안 했다」**(총수를 모른다)다. */
+  progress: { done: number; total: number; unit: string } | null
+  input: unknown
+  error_code: string | null
+  started_at: string | null
+  finished_at: string | null
+  created_at: string
+  /** 마지막으로 이 job 이 **움직인** 시각. 아래 `stalled` 판정의 근거다. */
+  updated_at: string
+  /** 🔴 **서버가 낸 판정**이다 — 화면이 다시 재지 않는다 (잣대는 서버 전용 표에 있다). */
+  stalled: boolean
+}
+
+/**
+ * 🔴 **새로고침 뒤에 도는 job 을 되찾는 유일한 문**이다 (FINDINGS 58).
+ * job id 는 `POST /documents` 의 응답에만 있어서, 화면이 그것만 들고 있으면
+ * 새로고침 한 번에 진행 표시를 영원히 잃는다.
+ */
+export function fetchJobs(
+  projectId: string,
+  query: { feature?: string; status?: string; limit?: number },
+): Promise<{ jobs: AiJobSummary[]; limit: number; offset: number }> {
+  const q = new URLSearchParams()
+  if (query.feature) q.set('feature', query.feature)
+  if (query.status) q.set('status', query.status)
+  if (query.limit !== undefined) q.set('limit', String(query.limit))
+  const tail = q.toString()
+  return apiJson(`/projects/${projectId}/jobs${tail ? `?${tail}` : ''}`)
+}
+
+/**
+ * job 한 장의 **전문**(`shape:'full'`) — 목록에 없는 `result` 가 여기 있다 (FINDINGS 60).
+ * ⚠ polling 이 두드리는 자리가 아니다. 끝난 job 을 **한 번** 읽어 「무엇이 나왔나」를
+ *   말할 때만 부른다.
+ */
+export function fetchJob(projectId: string, jobId: string): Promise<AiJobSummary & { result: unknown }> {
+  return apiJson(`/projects/${projectId}/jobs/${jobId}`)
+}
+
+/**
+ * 문서를 올린다 → **구조화 job 이 같이 시작된다** (SPEC §5 · §7.1).
+ * ⚠ 응답의 `job` 은 `{id,status}` 뿐인 **셋째 모양**이라 (FINDINGS 63) 진행 표시에
+ *   쓰지 않는다 — 화면은 올린 뒤에도 `fetchJobs()` 가 낸 것만 그린다.
+ */
+export function createDocument(
+  projectId: string,
+  body: { title: string; kind: SourceDocumentKind; content: string },
+): Promise<{ id: string; current_version_id: string; job: { id: string; status: AiJobStatus } }> {
+  return post(`/projects/${projectId}/documents`, body)
 }

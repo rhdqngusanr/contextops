@@ -1,6 +1,7 @@
 import {
-  CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, SYNC_STATUSES,
-  type Confidence, type ItemStatus, type ItemType, type SyncStatus,
+  AI_JOB_STATUSES, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, SOURCE_DOCUMENT_KINDS,
+  SYNC_STATUSES, type AiJobStatus, type Confidence, type ItemStatus, type ItemType,
+  type SourceDocumentKind, type SyncStatus,
 } from '@contextops/schema'
 
 // =====================================================================
@@ -10,7 +11,7 @@ import {
 //     ★ 왜 — 색각 이상뿐 아니라 발표 영상·인쇄된 심사 자료에서 색이 뭉갠다.
 //     그래서 아래 표의 행에는 색(`tone`)만 있는 칸이 없다.
 //
-//  🔴 **표가 넷이고, 넷 다 스키마의 enum 을 키로 잡는다** (`Record<ItemType, …>`).
+//  🔴 **표가 여섯이고, 여섯 다 스키마의 enum 을 키로 잡는다** (`Record<ItemType, …>`).
 //     ★ 왜 이 모양인가 — 화면에 `switch (type)` 을 흩으면 타입이 늘 때 화면을 고쳐야
 //       하고, 반드시 한 곳을 빠뜨린다. 여기서는 enum 에 값을 더하면 **타입 검사가
 //       막고**, `test/web-tables.test.ts` 가 「표의 키가 enum 과 다르다」로 다시 막는다.
@@ -56,6 +57,22 @@ export const CONFIDENCE_CHIP: Record<Confidence, ChipSpec> = {
   low: { icon: '○', label: 'low', tone: 'warn' },
 }
 
+/**
+ * AI job 의 수명 4종 (SPEC §9 화면 3). **화면 3 이 이 표를 읽기만 한다.**
+ *
+ * ★ 왜 표인가 — 화면에 `status === 'running' ? … : …` 을 적으면 상태가 늘 때
+ *   그 화면이 조용히 빠뜨린다. 여기 한 줄이면 타입 검사가 막고 시험이 다시 막는다.
+ * ⚠ 「멈춘 것 같다」(`stalled`)는 여기 없다 — 그건 상태가 아니라 **상태 위의 판정**이고
+ *   서버가 낸 별도의 값이다 (`running` 이면서 멈춘 job 이 있다). 다섯째 행으로 만들면
+ *   화면이 둘을 하나로 뭉개서, 멈춘 job 이 「도는 중」과 같은 칩으로 보인다.
+ */
+export const AI_JOB_STATUS_CHIP: Record<AiJobStatus, ChipSpec> = {
+  queued: { icon: '◷', label: '차례 기다리는 중', tone: 'neutral' },
+  running: { icon: '◐', label: '정리하는 중', tone: 'neutral' },
+  succeeded: { icon: '✓', label: '정리 완료', tone: 'ok' },
+  failed: { icon: '✕', label: '정리 실패', tone: 'bad' },
+}
+
 /** 항목 타입 10종의 표 아이콘 (SPEC §3 · DESIGN_BRIEF §4 화면 5 「타입 아이콘」). */
 export const ITEM_TYPE_ICON: Record<ItemType, string> = {
   mission: '◆',
@@ -70,14 +87,36 @@ export const ITEM_TYPE_ICON: Record<ItemType, string> = {
   open_question: '?',
 }
 
+/**
+ * 원본 문서 종류 6종의 사람 말 (SPEC §2 · DESIGN_BRIEF §4 화면 3 「종류」).
+ * **화면 3 의 종류 고르개가 이 표를 읽어서 그린다** — `<option>` 을 손으로 적지 않는다.
+ *
+ * ⚠ DESIGN_BRIEF 는 다섯 개(목표/정책/로드맵/ADR/메모)만 적지만 계약은 **여섯**이다
+ *   (`wiki` 가 더 있다 — zip 으로 올린 위키 문서의 자리다). 화면이 다섯만 그리면
+ *   여섯째 값은 **아무도 고를 수 없는 값**이 되고, 그게 이 저장소가 매 바퀴 찾는
+ *   「정의만 있고 아무 일도 안 하는 것」이다. 그래서 표 전체를 그린다.
+ * 🔴 **고른 값이 아직 아무것도 바꾸지 않는다** — 저장되고 되돌아올 뿐 §7.1 프롬프트가
+ *   그 값을 모른다 (FINDINGS 65). 라벨을 붙였다고 살아난 것이 아니다.
+ */
+export const SOURCE_DOCUMENT_KIND_LABEL: Record<SourceDocumentKind, string> = {
+  goal: '목표',
+  policy: '정책',
+  roadmap: '로드맵',
+  adr: '결정 (ADR)',
+  notes: '메모',
+  wiki: '위키 문서',
+}
+
 /** 표를 늘릴 때 빠진 키를 시험이 셀 수 있게 목록도 같이 내보낸다. */
 export const CHIP_TABLES = {
   sync: { keys: SYNC_STATUSES, table: SYNC_CHIP },
   item_status: { keys: ITEM_STATUSES, table: ITEM_STATUS_CHIP },
   confidence: { keys: CONFIDENCE_LEVELS, table: CONFIDENCE_CHIP },
+  ai_job_status: { keys: AI_JOB_STATUSES, table: AI_JOB_STATUS_CHIP },
 } as const
 
 export const ITEM_TYPE_KEYS = ITEM_TYPES
+export const SOURCE_DOCUMENT_KIND_KEYS = SOURCE_DOCUMENT_KINDS
 
 // ---------------------------------------------------------------------
 //  그리는 쪽 — 표를 읽기만 한다
@@ -103,6 +142,10 @@ export function ItemStatusChip({ status }: { status: ItemStatus }) {
 
 export function ConfidenceChip({ confidence }: { confidence: Confidence }) {
   return <Chip spec={CONFIDENCE_CHIP[confidence]} />
+}
+
+export function AiJobStatusChip({ status }: { status: AiJobStatus }) {
+  return <Chip spec={AI_JOB_STATUS_CHIP[status]} />
 }
 
 export function TypeIcon({ type }: { type: ItemType }) {

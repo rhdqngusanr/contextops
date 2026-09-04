@@ -137,6 +137,22 @@ export const ROLE_RANK: Record<TeamRole, number> = { member: 0, owner: 1 }
 export const SOURCE_DOCUMENT_KINDS = ['goal', 'policy', 'roadmap', 'adr', 'notes', 'wiki'] as const
 export type SourceDocumentKind = (typeof SOURCE_DOCUMENT_KINDS)[number]
 
+/**
+ * AI job 의 수명 4종 (SPEC §2 · §9 화면 3 「구조화 진행 표시(polling)」).
+ *
+ * ★ 왜 여기로 올라왔나 — **둘째 사용자가 생겼다.** `apps/web/src/db/schema.ts` 에
+ *   있을 때 소비처는 DB 하나였는데, 화면 3 이 이 값마다 다른 칩을 그리게 되면서
+ *   화면도 `Record<AiJobStatus, …>` 를 갖게 됐다 (`components/chips.tsx`).
+ *   그 표의 키를 화면이 손으로 적으면 상태가 늘 때 조용히 하나가 빠진다.
+ * ⚠ **기능 목록(`AI_FEATURES`)은 여기로 올리지 마라.** 이 패키지는 플러그인 번들에
+ *   통째로 실려 사용자 기계로 배포된다 (`lib/ai/features.ts` 머리 주석). 수명 4종은
+ *   이미 job 응답의 `status` 로 나가는 값이라 숨길 것이 없지만, 서버가 어떤 AI 기능을
+ *   가졌는지는 그렇지 않다.
+ * ⚠ 직렬화된다 (`ai_job_status` pgEnum) — 끝에만 더하고 중간을 지우지 마라.
+ */
+export const AI_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as const
+export type AiJobStatus = (typeof AI_JOB_STATUSES)[number]
+
 /** 충돌 종류 5종 (SPEC §2 · §7.2). `open_question` 이 화면 4 의 「질문 카드」다. */
 export const CONFLICT_KINDS = ['contradiction', 'stale', 'duplicate', 'doc_vs_code', 'open_question'] as const
 export type ConflictKind = (typeof CONFLICT_KINDS)[number]

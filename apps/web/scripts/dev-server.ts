@@ -81,6 +81,10 @@ async function main(): Promise<void> {
   console.log(`  SUPABASE_JWT_SECRET=${TEST_JWT_SECRET}`)
   console.log(`  씨앗 정보  : http://127.0.0.1:${INFO_PORT}`)
   console.log('')
+  //  ⚠ 화면 3 은 씨앗이 없어도 열린다 — 「아직 올린 문서가 없습니다」가 그 화면의 empty 다.
+  //    ⚠ **키가 없으면** 붙여넣기 뒤의 job 은 `failed`(`INTERNAL`)로 끝난다. 그것도 눈으로
+  //      볼 것이다 — 실패 화면이 「몇 걸음에서 멈췄나」를 말하는지 보는 자리다.
+  console.log(`  화면 3     : ${base}/import`)
   console.log(`  화면 5     : ${base}/context   (항목 ${info.item_count}개 · 공식 v${info.semver})`)
   console.log(`  화면 7     : ${base}/packs/${info.semver}`)
   console.log('')
