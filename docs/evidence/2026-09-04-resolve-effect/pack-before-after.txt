@@ -1,0 +1,26 @@
+=== 충돌을 결정하면 진 항목이 Pack 에서 빠진다 (FINDINGS 71) ===
+충돌 24cbd4d9-4890-41a2-83ee-29bd38574ecc
+  A item_policy_retry       — PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다
+  B item_policy_retry_code  — PSP 호출 실패는 1초 간격으로 3회 재시도한다
+
+── 결정 전 · v1.0.0 의 재시도 줄 ──────────────────────────────
+  CLAUDE.md │ - **PL-M1 M1 — 재시도 정책 통일** `paths: src/payment`
+  CLAUDE.md │ done_when: 재시도가 지수 백오프로 통일된다 · 고정 간격 호출이 0건이다 <!-- ctx:item_road_m1 rev:2 conf:high src:doc:c70674b6-5d75-4ee3-9c1a-b9dfdd664822#0-400 -->
+  CLAUDE.md │ - [must] PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다 · 강제: 리뷰에서 본다 <!-- ctx:item_policy_retry rev:2 conf:high src:doc:c7f80b71-d28c-44d3-b119-36c652cb031d#0-400 -->
+  CLAUDE.md │ - [must] PSP 호출 실패는 1초 간격으로 3회 재시도한다 · 강제: Hook 이 막는다 <!-- ctx:item_policy_retry_code rev:2 conf:high src:repo:paylab-api:src/payment/retry.ts:14 -->
+
+── 결정: choice=a · 충돌 status=resolved ──
+
+── 결정 후 · v1.1.0 의 재시도 줄 ──────────────────────────────
+  CLAUDE.md │ - **PL-M1 M1 — 재시도 정책 통일** `paths: src/payment`
+  CLAUDE.md │ done_when: 재시도가 지수 백오프로 통일된다 · 고정 간격 호출이 0건이다 <!-- ctx:item_road_m1 rev:2 conf:high src:doc:c70674b6-5d75-4ee3-9c1a-b9dfdd664822#0-400 -->
+  CLAUDE.md │ - [must] PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다 · 강제: 리뷰에서 본다 <!-- ctx:item_policy_retry rev:2 conf:high src:doc:c7f80b71-d28c-44d3-b119-36c652cb031d#0-400 -->
+
+── 진 항목 item_policy_retry_code 의 지금 모습 ────────────────
+  status=deprecated · revision=3
+  개정 3 · origin=manual · created_by=있다
+  근거:
+    {"kind":"repository_path","path":"src/payment/retry.ts","repo":"paylab-api","start_line":14}
+    {"kind":"manual","note":"충돌 정리 — 24cbd4d9-4890-41a2-83ee-29bd38574ecc · 선택 a"}
+
+  ⚠ 「왜 폐기했나」는 근거의 충돌 id 로 간다 — 그 행에 질문·선택·사람·시각이 있다.
