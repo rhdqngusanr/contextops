@@ -29,6 +29,26 @@
 
 ## 다음에 고칠 것
 
+### 78. 2-B 이번 라운드 — `ItemStatus` 4종·`ChipSpec` 표 8개 다 살아 있다   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인 —
+  ① **`ItemStatus` 4종 — 살아 있다.** `packages/compiler/src/partition.ts:102` 의
+     `EXCLUDE_BY_STATUS` 가 정본이고 `active` 만 Pack 에 나간다. 나머지 셋은 **서로 다른
+     이유 문장**으로 빠지고, `compiler/test/liveness.test.ts:46` 이 「네 값이 서로 다른
+     Pack 지문을 낸다」를 잠근다 — 2단계 통과.
+  ② **`ChipSpec` 표 8개 — 전부 잠겨 있다.** `web-tables.test.ts` 의 `assertLiveTable`
+     이 여덟 표(`SYNC_CHIP`·`ITEM_STATUS_CHIP`·`CONFIDENCE_CHIP`·`AI_JOB_STATUS_CHIP`·
+     `CONFLICT_KIND_CHIP`·`CONFLICT_SEVERITY_CHIP`·`ITEM_TYPE_ICON`·
+     `SOURCE_DOCUMENT_KIND_LABEL`)의 **줄마다 다른 글자**를 재고, 여덟 중 일곱은
+     그리는 화면이 있다. ⚠ **`SYNC_CHIP` 하나만 그리는 화면이 0곳**이고 그건
+     **77** 그대로다 (아직 안 온 화면 9).
+  ③ 이번 바퀴가 더한 `ContextItemView` 도 같은 잣대로 잠갔다 — 값이 없으면 응답이
+     계약을 못 지나고, 값을 바꾸면 카드의 날짜가 바뀐다 (**72③**).
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: `SourceRef` 4종(**31**·**68** 과 같이) · 에러 코드 11종 ·
+  `enforcement` 4종 · `scope.kind` 3종 · `origin` 4종(**31** — `doc` 이 여전히 0곳)
+- **상태**: ✅ 이번 바퀴에 확인함 (`a45cef0` 바퀴)
+
 ### 76. 「A로 합침」은 **합치지 않는다** — 중복 카드의 버튼이 없는 일을 약속한다   [고장]
 - **증상**: `duplicate` 카드의 버튼은 「A로 합침」·「B로 합침」인데 서버가 하는 일은
   **진 쪽을 `deprecated` 로 보내는 것뿐**이다 (`RESOLUTION_ITEM_OUTCOME`). 이긴 쪽에는
@@ -188,7 +208,22 @@
   화면 5 의 「갱신」 칸도 같은 값을 기다린다 (DESIGN_BRIEF 화면 5 의 표에 그 칸이 있다).
   ①②는 계약을 넓히는 일이라 **71 과 같이** 정하는 것이 맞다 — 셋 다 「결정이 무엇을
   남기나」의 갈래다.
-- **상태**: 대기
+- **상태**: ③ ✅ `a45cef0` · **①② 대기** (76 과 같은 자리 — 아래를 읽어라)
+  - ③ — `ContextItemView`(`packages/schema`)를 더했다. `ContextItem` 에 `updated_at`
+    한 칸만 더한 것이고, 화면 4 는 항목 옆에 「갱신 2026-07-12」을, 화면 5 표는
+    「갱신」 칸을 그린다. 날짜를 만드는 자리는 `lib/web/time.ts` 의 `dateText` 하나다.
+    🔴 **그 칸을 `ItemBase` 에 넣지 않은 것이 이 항목의 핵심 판단이다** — 컴파일러가
+    받는 snapshot 의 항목이 `ContextItem` 이고 `snapshotHash()` 가 그것을 통째로 재서,
+    시각이 섞이면 **내용이 같은 묶음이 매번 다른 지문**을 갖는다 (`generated_at` 을
+    지문에서 뺀 것과 같은 이유 · `packages/compiler/src/hash.ts`). 그래서 서버의
+    조립 함수도 둘이다 — 발행은 `toContextItem()`, 응답은 `toContextItemView()`.
+    게이트 셋: 응답이 `ContextItemView` 로는 파싱되고 `ContextItem` 으로는 **안 된다** ·
+    항목의 값을 바꾸면 카드의 날짜가 따라 바뀐다 · `dateText` 가 시간대와 무관하다.
+    눈으로 읽은 것: `docs/evidence/2026-09-04-screen4-updated/item-updated-at.txt`.
+    ⚠ **화면 5 표의 「갱신」 칸은 아직 눈으로 못 봤다** — 그 화면을 글자로 뽑는
+    스크립트가 없다 (`docs/STATUS.md` 「눈 판정 대기」).
+  - ①② — 그대로 대기다. 둘 다 「담을 칸이 없다」는 같은 고장이고, ①은 **76** 이
+    남긴 그 자리다 (진 쪽 `source_refs` 를 이긴 쪽에 잇는 갈래를 정하는 날 같이 정한다).
 
 ### 73. 2-B 이번 라운드 — 셋 다 살아 있다 · `confidence` 는 **찍히기만** 한다   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
