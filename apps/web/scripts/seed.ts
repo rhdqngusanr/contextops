@@ -300,7 +300,7 @@ export const ARCHITECTURE = [
     '돈을 되돌리는 길'],
   ['item_arch_ledger', 'ledger', 'append only 다. 여기서 계산이 틀리면 정산이 틀린다',
     '- `ledger` 는 append only. 여기서 계산이 틀리면 정산이 틀린다.',
-    '돈이 남는 기록'],
+    '돈이 쌓이는 장부'],
 ] as const satisfies readonly (readonly [
   id: string, component: string, responsibility: string, quote: string, title: string,
 ])[]
