@@ -127,7 +127,7 @@ context_items    { id, project_id, type enum(10종), status enum('draft','review
                    current_revision int, scope jsonb, priority int default 50, owner_id null, unique(id) }
 context_item_revisions { item_id, revision, data jsonb /* type별 필드 */, source_refs jsonb[], confidence enum('high','medium','low'),
                    created_by, origin enum('doc','code','manual','proposal'), unique(item_id,revision) }
-conflicts        { id, project_id, kind enum('contradiction','stale','duplicate','doc_vs_code','open_question'),
+conflicts        { id, project_id, kind enum('contradiction','stale','duplicate','doc_vs_code','open_question','seed_question'),
                    a_item_id text null, b_item_id text null /* item_<slug> · (project_id,*) 복합 FK → context_items */,
                    a_ref jsonb null, b_ref jsonb null /* 항목이 아니라 원문 구간을 가리키는 종류 전용 */,
                    question text, severity enum('high','medium','low') null,
@@ -153,7 +153,9 @@ progress_events  { id, project_id, device_id, milestone_id text, criterion text 
 
 🔴 **한 요청 안에서 안 끝나는 AI 일은 `ai_jobs` 행 하나다** (§7.1 문서 구조화 · §7.2 충돌 탐지). 구조화와 탐지가 **같은 표**를 쓴다 — 다른 것은 `input`·`result` 두 칸의 내용뿐이고 그 모양의 정본은 `apps/web/src/lib/ai/job.ts` 의 `AI_JOB_RUNNERS` 표다. 어느 기능이 job 인가는 `AI_FEATURE_LIMITS` 의 `job` 축이 정하고 그 목록에서 `ai_jobs_feature_ck` 가 생성된다. 수명 4종이 어느 칸을 채워야 하는지는 `AI_JOB_STATUS_RULES` 표이고, 거기서 **CHECK 제약 4개**가 생성된다 — 「succeeded 인데 `result` 가 없는 행」은 들어올 수 없다. 🔴 **`progress {done,total,unit}` 만 그 표 밖이다** — 러너가 한 걸음 갈 때마다 갱신하고(§7.1 은 chunk 마다) 끝난 뒤에도 **남는다**. 수명이 정하는 칸이 아니라 수명과 나란히 흐르는 칸이라 CHECK 이 없다: `running` 인데 아직 비어 있을 수 있고(총수는 러너가 문서를 나눠 봐야 안다), `failed` 인데 차 있어야 한다(「9/12 에서 죽었다」가 실패 화면이 할 수 있는 유일한 말이다). 한 걸음의 낱말(`unit`)은 `AI_JOB_RUNNERS` 표의 한 칸이고 화면은 그것을 **읽기만** 한다. 🔴 **`updated_at` 은 그 걸음마다 같이 갱신되고, 응답이 그 값을 낸다** — 서버가 chunk 중간에 죽으면 그 행은 영원히 `running` 이라(집기는 `queued` 만 집는다) `status` 만으로는 「10초 전에 한 걸음 간 job」과 「40분째 안 간 job」이 같아 보인다. 넘기면 멈춘 것으로 보는 초(`stallAfterSec`)도 `AI_JOB_RUNNERS` 표의 한 칸이다 — 기능마다 한 걸음의 길이가 다르다(§7.1 은 조각 하나, §7.2 는 묶음 전체). ⚠ 판정만 하고 **되살리지는 않는다** — 멈춘 행을 `queued` 로 되돌리는 문은 실패한 job 의 재시도와 같은 자리다. ⚠ `input` 에는 **가리키는 id 만** 들어간다(문서 버전 uuid · `item_<slug>`). 문서·항목 본문도, 모델 응답도, 드라이버 메시지도 이 표에 자리가 없다 (P1 · §11).
 
-🔴 **충돌 한 장이 어느 칸을 채우는지는 `kind` 가 정한다.** 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표이고 축은 셋이다 — `anchor`(`items` 면 `a_item_id`·`b_item_id`, `document` 면 `a_ref`·`b_ref`) · `needsB`(b 쪽이 필요한가) · `detected`(§7.2 가 매기는 `severity` 를 갖는가). 그 규칙은 문서가 아니라 **DB CHECK 제약 5개**이고, `apps/web/src/db/schema.ts` 의 `conflictShapeCheck()` 가 그 표를 읽어 만든다 — 종류를 더하면 `db:generate` 한 번으로 제약이 따라온다. ⚠ 항목을 `SourceRef` 로 가리키지 마라. `SOURCE_REF` 에 「항목」 종류를 더하면 항목의 `source_refs` 가 다른 항목을 가리킬 수 있게 되고 원문까지 가는 사슬이 끊긴다 (P7).
+🔴 **충돌 한 장이 어느 칸을 채우는지는 `kind` 가 정한다.** 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표이고 축은 셋이다 — `anchor`(`items` 면 `a_item_id`·`b_item_id`, `document` 면 `a_ref`·`b_ref`, **`none` 이면 넷 다 빈다**) · `needsB`(b 쪽이 필요한가) · `detected`(§7.2 가 매기는 `severity` 를 갖는가). 그 규칙은 문서가 아니라 **DB CHECK 제약 5개**이고, `apps/web/src/db/schema.ts` 의 `conflictShapeCheck()` 가 그 표를 읽어 만든다 — 종류를 더하면 `db:generate` 한 번으로 제약이 따라온다. ⚠ 항목을 `SourceRef` 로 가리키지 마라. `SOURCE_REF` 에 「항목」 종류를 더하면 항목의 `source_refs` 가 다른 항목을 가리킬 수 있게 되고 원문까지 가는 사슬이 끊긴다 (P7).
+
+🔴 **`kind` 6종 중 둘은 「사람에게 묻는 것」이다** (`detected:false` · 값 목록은 `QUESTION_CONFLICT_KINDS`). `open_question` 은 §7.1 이 문서를 읽다 남긴 질문이라 원문 구간(`a_ref`)을 가리키고, **`seed_question` 은 프로젝트를 만드는 순간 심는 씨앗 질문 10장**이라 가리킬 것이 아직 없다 (`anchor:'none'`) — 그래서 넷이 다 빈다. 씨앗 질문 문구의 정본은 `apps/web/src/lib/api/seed-questions.ts` 이고, **그 문장이 행과 표를 잇는 열쇠라서 고치면 안 된다** (고칠 일이 생기면 줄을 하나 더한다). ★ 왜 별도 종류인가 — 같은 `open_question` 으로 심으면 없는 문서를 가리키는 `a_ref` 를 지어내야 하고, 그 근거는 아무 원문도 안 가리킨다 (P7).
 
 인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`, `ai_jobs(project_id,created_at desc)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
 
@@ -346,7 +348,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | GET /projects/{id}/jobs/{jobId} | member | → {**shape:'full'**, id, feature, status, progress, input, result, error_code, started_at, finished_at, updated_at, **stalled**} — 화면 3 의 polling (§9). 도는 동안 갈리는 값은 `status`·**`progress {done,total,unit}`**·`updated_at` 이다 (§2). 🔴 **`stalled` 는 서버가 내는 판정**이다 — 「끝나지 않았는데 `updated_at` 이 그 기능의 `stallAfterSec` 을 넘겼다」. 잣대가 서버 전용 표(`AI_JOB_RUNNERS`)에 있고 화면의 시계는 서버와 어긋나므로 재는 쪽이 시각 둘을 다 가진 서버다. 근거(`updated_at`)를 판정 옆에 같이 낸다. 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |
 | POST /conflicts/{id}/resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
-| POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer}]} → 항목 생성 |
+| POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer, draft?}]} → 항목 생성. **어느 종류가 질문인가는 `QUESTION_CONFLICT_KINDS` 가 정한다** (§2 — 지금은 `open_question`·`seed_question` 둘). 🔴 초안 없이 온 답이 **씨앗 질문**이면 서버가 표(`seed-questions.ts`)가 정한 자리로 답을 옮겨 초안을 만든다 — **여기에 LLM 이 없다.** `open_question` 에는 그 길이 없다 (자유 문장을 타입별 `data` 로 뜯는 것은 §7.1 의 일이다) — 초안이 안 오면 답만 기록하고 질문을 닫는다. 답이 목적지 칸(500자)보다 길면 `VALIDATION_FAILED` 이고 **아무 질문도 닫히지 않는다** |
 | POST /projects/{id}/proposals | member/device | Proposal → proposal |
 | POST /proposals/{id}/submit / /approve / /reject | 작성자 / owner | {note?} → proposal |
 | POST /projects/{id}/versions/publish | owner | {semver, base_version_id, change_summary} → version (§2.1) |
@@ -391,7 +393,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 ### 7.2 충돌·오래됨 탐지 `detectConflicts(projectId, changedItemIds)`
 - 입력: 변경된 항목 + 같은 type/scope의 기존 active 항목(최대 40개, body 요약 300자).
-- 출력: `conflicts: [{kind, a_item_id, b_item_id?, question, severity}]`. kind 규칙: `contradiction`(양립 불가), `stale`(날짜·버전이 더 최신 항목에 의해 무효), `duplicate`(같은 개념), `doc_vs_code`(문서 항목 vs 코드 origin 항목). 🔴 종류별 규칙(탐지가 내는가 · 두 쪽이 필요한가 · 모델에게 주는 한 줄)의 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표다 — 프롬프트가 그 표를 **읽어서** 싣는다. `CONFLICT_KINDS` 5종 중 `open_question` 만 `detected:false` 이고 그것은 §7.1 이 만든다.
+- 출력: `conflicts: [{kind, a_item_id, b_item_id?, question, severity}]`. kind 규칙: `contradiction`(양립 불가), `stale`(날짜·버전이 더 최신 항목에 의해 무효), `duplicate`(같은 개념), `doc_vs_code`(문서 항목 vs 코드 origin 항목). 🔴 종류별 규칙(탐지가 내는가 · 두 쪽이 필요한가 · 모델에게 주는 한 줄)의 정본은 `packages/schema` 의 `CONFLICT_KIND_RULES` 표다 — 프롬프트가 그 표를 **읽어서** 싣는다. `CONFLICT_KINDS` 6종 중 `detected:false` 인 둘(`open_question`·`seed_question`)은 탐지가 만들지 않는다 — 앞의 것은 §7.1 이, 뒤의 것은 프로젝트를 만드는 라우트가 만든다 (§2).
 - `a_item_id`·`b_item_id` 는 uuid 가 아니라 `item_<slug>` 다. 🔴 **프롬프트에 실리지 않은 id 가 오면 재시도한다** — 모델이 지어낸 id 는 남의 항목을 가리키고 그게 P7 이 무너지는 자리다. 같은 짝의 중복·자기 자신과의 충돌·「바뀐 항목이 한쪽도 없는 짝」도 같은 재시도로 간다.
 - `severity` 는 `high`·`medium`·`low` 3단계이고 정본은 `CONFLICT_SEVERITIES` 다 (화면 4 는 카드 10장만 보여 주므로 결과를 심각도 내림차순으로 낸다). ⚠ SPEC 은 원래 이 필드의 **이름만** 적었다 — 값은 이 저장소에 이미 있는 3단계 사다리와 같은 낱말로 정했다.
 - 낸 것을 **`conflicts` 행으로** 저장한다. 그 표는 §7.2 의 출력을 그대로 담는다 (`a_item_id`·`b_item_id`·`severity`) — 어느 칸이 채워지는가는 §2 가 적은 대로 `CONFLICT_KIND_RULES` 가 정하고 DB CHECK 이 막는다.
@@ -509,7 +511,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 |---|---|---|---|
 | 1 | `/` 랜딩 | Before/After 비교, "샘플 팀으로 둘러보기", 2분 영상, 왜 git/DeepWiki가 아닌가 3+1문장, 설치 4줄, 신뢰 경계 표 | 정적 |
 | 2 | `/login`, `/t/new`, `/t/[team]/p/new` | OAuth 버튼, 폼 | loading/error |
-| 3 | `…/import` 가져오기 | zip 드롭존 · 문서 붙여넣기 · 질문 카드 10장(진행바) | 구조화 진행 표시(polling) |
+| 3 | `…/import` 가져오기 | ~~zip 드롭존~~(아직 없다 — §11 상한이 먼저다) · 문서 붙여넣기 · **질문 카드 10장**(한 장씩 · `n / 10` · 건너뛰기 · 마지막 요약) | 구조화 진행 표시(polling) |
 | 4 | `…/review` 정리 | Conflict 카드(원문 A ↔ B/코드 라인, 선택 버튼 4개) · 병합 카드 · 질문 카드 | empty("충돌 없음") |
 | 5 | `…/context` | 항목 테이블(type/status/scope 필터) · 상세 드로어(원문 패널) · 발행 모달(semver 추천·변경 요약·영향 파일 수) · 버전 히스토리 | 409 재로드 안내 |
 | 6 | `…/proposals`, `…/proposals/[id]` | 함 목록(status/author 필터) · before/after Diff · 근거 링크 · 항목별 승인/거절 | |
