@@ -173,7 +173,31 @@
   한다 (89 가 `=== 6` 두 곳을 하나로 모은 것과 같은 이유).
   ⚠ 지난 STATUS 의 틀린 숫자는 **고치지 마라** — 그때 무엇을 봤는지의 기록이다.
   대신 이 항목이 「그 숫자는 초였다」를 남긴다.
-- **상태**: 대기
+- **상태**: ✅ `843bfd1` — **단계가 자기 검사 수를 내고, 관통은 읽기만 한다.**
+  단계 표(`tools/walkthrough.ps1`)에 칸 하나를 더했다 — `count_json`(산출물 JSON 의
+  `checks` 배열 길이 · publish·payload·sync) / `count_log`(그 단계 로그의 정규식 첫
+  캡처 그룹 · fixture·vitest·scan). **수의 정본은 각 단계의 산출물**이고 관통에는
+  수를 한 번도 적지 않았다.
+  🔴 **초와 개수를 다른 칸에 담았다** — `.ci/walkthrough.json` 이 이제
+  `stages[].sec`(초) 와 `stages[].checks`(개수) 를 따로 내고 맨 위에 합계 `checks` 를 낸다.
+  `note` 는 실패·SKIP 사유만 담는다. 이 고장은 한 칸에 담아서 났다.
+  **게이트를 세웠다** — 단계가 지났는데 **몇 개를 쟀는지 말을 못 하면 FAIL** 이다.
+  0 으로 떨어뜨리면 「검사가 0개였다」와 「셀 줄 몰랐다」가 같아 보인다(이 항목의 고장과
+  같은 종류의 침묵이다). 그래서 새 단계를 더하는 사람은 이 칸을 반드시 채우게 된다.
+  🔴 **빨개지는 것을 봤다**: fixture 의 정규식을 안 맞는 것으로 바꾸니
+  「검사 수를 못 셌다 — 이 단계의 count_json/count_log 를 표에 적어라」로 FAIL ·
+  뒤 단계 전부 SKIP · exit 1.
+  ⚠ **이번 관통이 낸 것만 센다** — 단계를 돌리기 전에 그 단계의 산출물 JSON 을 지운다.
+  남아 있으면 막힌 단계가 **지난 바퀴의** 검사 수를 자기 것처럼 보고한다.
+  `walkthrough-scan.ts` 는 자기 검사 수를 찍게 했다(그 단계 산출물은 CLI 가 쓰는
+  `ScanResult` 라 `checks` 를 담을 자리가 없다). 수는 손으로 안 적고 파일 목록에서 센다.
+  `ci.ps1` 의 walkthrough 층 note 도 「검사 N개 · M초」다 — 못 읽으면 `?` 다
+  (0 은 「검사가 없었다」로 읽힌다).
+  잰 것: 관통 검사 **639개** — fixture 20 · compile 142 · api 377 · publish 25 ·
+  scan 49 · payload 10 · sync 16 · shots SKIP.
+  ⚠ **이 639를 「관통 시나리오 검사」로 읽지 마라.** 단위가 섞여 있다 —
+  compile·api 는 vitest 테스트 수이고, publish·payload·sync 는 관통 단계의 검사 수다.
+  그래서 합계만 적지 말고 **단계별로** 적어라 (`.ci/walkthrough.json` 이 그렇게 낸다).
 
 ### 94. 데모 Pack 이 `ItemType` **10종 중 다섯**만 보여 준다 — 그리고 빠진 셋은 픽스처 문서에 이미 적혀 있다   [격차]
 - **증상**: **89·93 과 같은 모양의 셋째 표다.** 표는 살아 있다(아래 94-B 가 ②단계까지 쟀다).
@@ -209,6 +233,59 @@
   채우면 P7 이 깨진다. 표의 각 줄에 **「지금 몇 갈래이고 왜 그 수인가」**를 적어라 —
   89 가 `permission`·`none` 을 비워 둔 이유를 상수 옆에 적은 것과 같은 모양이다.
 - **상태**: 대기
+
+### 96. 관통 스크립트 셋이 `check()` 를 **각자 복사해서 들고 있다**   [격차]
+- **증상**: `walkthrough-publish.ts:45` · `walkthrough-payload.ts:42` ·
+  `walkthrough-sync.ts:34` 가 **글자까지 같은** 6줄
+  (`const checks: {name;ok;detail}[]` + `function check()`)을 각각 들고 있다.
+  「검사 N개 · 실패 M개」를 찍는 줄도 둘이 따로 적혀 있고 publish 는 아예 안 찍는다.
+  95 를 고치면서 관통(`tools/walkthrough.ps1`)이 **그 JSON 의 `checks` 모양에
+  의존**하게 됐는데, 그 모양의 정본이 되는 파일이 없다 — 한 곳만 이름을 바꾸면
+  그 단계는 조용히 「검사 수를 못 셌다」로 FAIL 한다(게이트가 잡기는 한다).
+- **근거**: 이번 바퀴 직접 확인.
+  `grep -n "function check" apps/web/scripts/*.ts plugin/contextops/scripts/*.ts` → 3곳.
+  세 파일의 산출물 키는 각각 `{checks, coverage, versions, pack_dir}` ·
+  `{checks, failed}` · `{at, pack, checks}` 로 **`checks` 만 같고 나머지가 다르다**.
+- **정본**: `CLAUDE.md` 「개념 하나 = 정본 파일 하나」 · `tools/walkthrough.ps1`(단계 표)
+- **고칠 방향**: 관통 단계가 공유하는 것은 **`check()` 와 그 산출물 모양** 둘이다.
+  ⚠ 그런데 세 파일은 **패키지가 둘**이다(`apps/web` · `plugin/contextops`).
+  공용 자리를 만들려면 `packages/schema` 나 새 패키지가 되는데, 그건 **의존 방향**
+  (`schema ← compiler ← web/plugin`)에 개발 도구를 얹는 것이다 — 값이 그만한지 먼저 재라.
+  값싼 갈래는 `checks` 배열의 모양만 `packages/schema` 의 타입 하나로 못 박고
+  (그건 이미 계약이 사는 자리다) `check()` 복사는 그대로 두는 것이다.
+  ⚠ **셋을 하나로 합치겠다고 관통 스크립트를 한 파일로 모으지 마라** — 단계가 갈라져
+  있는 것이 관통의 계약이다 (`walkthrough.ps1` 의 단계 표).
+- **상태**: 대기
+
+### 96-B. 2-B 이번 라운드 — `CONFLICT_KINDS` 6종 · `PROGRESS_STATUSES` 4종 다 살아 있다   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인 — 둘 다 **②단계(값을 바꾸면 결과가 달라지나)까지** 통과한다:
+  ① **`CONFLICT_KINDS` 6종.** 정본 표는 `schema/src/api.ts:261`(`CONFLICT_KIND_RULES` ·
+     `as const satisfies Record<ConflictKind, …>` 라 한 줄만 빠져도 타입 검사가 막는다)이고,
+     그 표에서 **타입으로 파생되는** 목록이 둘이다 — `DETECTED_CONFLICT_KINDS` 4종
+     (`api.ts:321`)과 `QUESTION_CONFLICT_KINDS` 2종(`api.ts:316`). 손으로 다시 안 적는다.
+     갈래마다 다른 것을 낸다: `lib/ai/conflict.ts:120`(§7.2 도구 스키마의 enum 과
+     종류별 hint — `detected:false` 는 아예 안 실린다) ·
+     `questions/route.ts:40`(질문 카드는 `QUESTION_CONFLICT_KINDS` 만) ·
+     `components/chips.tsx:150`(칩 라벨·아이콘) · `db/schema.ts:142`(pgEnum).
+     `anchor` 도 셋으로 갈린다(`items` 4 · `document` 1 · `none` 1).
+     시험이 ②단계를 잰다: `web-tables.test.ts:67`(6종이 **서로 다른** 칩을 낸다) ·
+     `web-conflict-card.test.ts:182·246·286`(detected 인가 아닌가로 카드가 갈린다) ·
+     `api-routes.test.ts:618`(질문 카드에 탐지 종류가 안 섞인다).
+  ② **`PROGRESS_STATUSES` 4종.** 소비처의 정본은 `lib/api/progress.ts:64`(`PROGRESS_EFFECT`
+     — 보고 상태가 마일스톤 상태로 어떻게 접히나)이고 `rollupMilestone()` 이 그 표만 읽는다.
+     `progress-rollup.test.ts:28` 이 「네 값이 **세 갈래**로 갈린다」를 잰다
+     (`in_progress`·`criterion_done` → `in_progress` · `done_candidate` → `done_candidate` ·
+     `none` → `not_started`). 둘이 같은 결과로 접히는 것은 **의도**이고 표에 이유가 적혀 있다
+     (완료 조건 하나가 끝난 것은 아직 마일스톤이 끝난 게 아니다).
+     🔴 표에 `done` 이 **없는 것**이 P5 의 자리다 — 보고만으로는 done 이 안 되고
+     owner 의 `confirm` 이 있어야 한다. `:32` 가 그걸 잰다.
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: `MILESTONE_STATUSES` 4종 · `PROGRESS_SOURCES` 3종(85-B 가
+  「아무도 안 읽는다」로 적었다 — **다시 재라**) · `SYNC_LIMITS`/`SCAN_LIMITS` 상수
+  (`SOURCE_DOCUMENT_KINDS` 는 82·65·81-B 가 이미 「골라도 같다」로 닫아 뒀다 —
+  같은 것을 또 캐지 마라)
+- **상태**: [기록]
 
 ### 94-B. 2-B 이번 라운드 — `ItemType` 10종은 살아 있다 · sync 상태 5종은 **69 그대로**   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
