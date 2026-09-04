@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
-import { PROGRESS_REPORT } from '@contextops/compiler'
+import { ENFORCEMENT_LABEL, PROGRESS_REPORT } from '@contextops/compiler'
 
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
@@ -39,6 +39,15 @@ import { seedPaylab } from './seed'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const outDir = join(root, '.ci', 'walkthrough-pack')
+
+/**
+ * 데모 Pack 이 보여 줘야 하는 **강제 수단의 최소 갈래 수** (FINDINGS 89).
+ * ★ 왜 2 인가 — 1 이면 「이 정책을 무엇이 강제하나」가 상수처럼 읽힌다. 사람은 같은 말이
+ *   모든 줄에 붙어 있으면 그게 값이 아니라 장식인 줄 안다. 둘부터 값으로 읽힌다.
+ * ★ 왜 4(전부)가 아닌가 — 픽스처의 줄은 전부 문서까지 역추적된다(P7). 문서에 근거가 없는
+ *   갈래는 **지어내면 안 된다.** 넷을 다 보이려면 goals.md 를 먼저 늘려야 한다.
+ */
+const PACK_ENFORCEMENT_MIN = 2
 
 const checks: { name: string; ok: boolean; detail: string }[] = []
 function check(name: string, ok: boolean, detail = ''): void {
@@ -96,9 +105,11 @@ async function main(): Promise<void> {
     const { owner, projectId } = seed
 
     check('픽스처 문서 2개가 들어갔다', seed.goalsVersion.length > 0 && seed.roadmapVersion.length > 0)
-    check('초안 6개가 전부 받아들여졌다', seed.accepted === 6 && seed.rejected.length === 0,
+    //  ⚠ 개수를 여기 적지 마라 — 씨앗이 낸 `drafted` 와 견준다. 픽스처에 한 줄을 더한
+    //    사람이 이 파일까지 고치게 만들면, 그 사람은 검사 쪽 숫자를 고쳐서 초록을 만든다.
+    check(`초안 ${seed.drafted}개가 전부 받아들여졌다`, seed.accepted === seed.drafted && seed.rejected.length === 0,
       seed.rejected.length > 0 ? JSON.stringify(seed.rejected) : `accepted ${seed.accepted}`)
-    check('초안이 전부 active 가 됐다 — 아니면 Pack 에 한 줄도 안 나온다', seed.itemUuids.length === 6)
+    check('초안이 전부 active 가 됐다 — 아니면 Pack 에 한 줄도 안 나온다', seed.itemUuids.length === seed.drafted)
 
     // ── ④ 발행 ────────────────────────────────────────────────────────
     const first = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
@@ -125,12 +136,15 @@ async function main(): Promise<void> {
     rmSync(outDir, { recursive: true, force: true })
     let hashMismatch = 0
     let untagged = 0
+    /** 받은 Pack 본문 전부. **사람이 읽는 종이**를 재는 검사들이 이걸 읽는다. */
+    const packTexts: string[] = []
     for (const f of manifest.files) {
       const res = await packFile(
         req('GET', `/api/v1/projects/${projectId}/packs/1.0.0/files/${f.path}`, { auth: owner }),
         params({ id: projectId, semver: '1.0.0', path: f.path.split('/') }),
       )
       const text = await res.text()
+      packTexts.push(text)
       if (sha256(text) !== f.sha256) hashMismatch++
       //  🔴 P7 — 근거 없는 파일이 없다. 태그가 하나도 없는 파일은 역추적이 끊긴 것이다.
       //     예외는 계약에 **이름으로** 적힌 제품 고정 텍스트뿐이다 (SPEC §4.3).
@@ -158,6 +172,19 @@ async function main(): Promise<void> {
       manifest.files.some((f) => f.path === workflowPath))
     check('그 파일이 진행 보고 문단을 전부 담는다', PROGRESS_REPORT.every((line) => workflowText.includes(line)),
       `${PROGRESS_REPORT.length}줄`)
+
+    //  🔴 **데모가 표의 한 갈래로 몰리지 않는다** (FINDINGS 89).
+    //  ★ 왜 이게 따로 필요한가 — `compiler/test/liveness.test.ts` 는 「네 값이 서로 다른
+    //    줄을 낸다」를 재고 여러 바퀴 초록이었다. 그런데 **심사자가 실제로 읽는 종이**에는
+    //    `review` 한 갈래뿐이었다. **표가 살아 있는 것과 데모가 그걸 보여 주는 것은
+    //    다른 질문이고, 뒤의 것은 아무도 안 세고 있었다.**
+    //  ⚠ 기준이 「넷 전부」가 아닌 이유 — 픽스처의 모든 줄은 goals.md 까지 역추적된다(P7).
+    //    갈래를 채우겠다고 문서에 없는 규칙을 씨앗에 적으면 근거 없는 줄이 생긴다.
+    //    갈래를 늘리려면 **문서를 먼저** 늘려라 (SPEC §10.1 이 그 문서의 정본이다).
+    const labels = Object.values(ENFORCEMENT_LABEL)
+    const shown = labels.filter((label) => packTexts.some((t) => t.includes(label)))
+    check(`Pack 이 강제 수단을 ${shown.length}갈래로 보여 준다 (표는 ${labels.length}갈래 · 최소 ${PACK_ENFORCEMENT_MIN})`,
+      shown.length >= PACK_ENFORCEMENT_MIN, shown.join(' · '))
 
     // ── ⑦ 낡은 기준으로 발행하면 409 ───────────────────────────────────
     const stale = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {

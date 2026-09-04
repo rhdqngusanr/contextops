@@ -59,7 +59,17 @@ function fromDoc(id: string, type: string, versionId: string, extra: Record<stri
   }
 }
 
-/** 항목 초안 6개 (SPEC §10.1 의 기대 결과를 낼 재료). */
+/**
+ * 항목 초안 (SPEC §10.1 의 기대 결과를 낼 재료).
+ *
+ * ⚠ **개수를 세는 곳을 만들지 마라** — 부르는 쪽은 `SeedResult.drafted` 를 읽는다.
+ *   여기 한 줄을 더하면 관통의 검사가 저절로 따라온다. 숫자를 두 곳에 적으면
+ *   픽스처를 늘린 사람이 관통을 빨갛게 만들고, 그 다음엔 검사 쪽 숫자를 고친다.
+ *
+ * ⚠ **문서에 없는 문장을 여기 적지 마라.** 모든 줄은 `source_refs` 로 원문까지
+ *   이어져야 한다 (P7). 데모에 필요한 갈래가 있는데 문서에 근거가 없으면,
+ *   지어내지 말고 「그 갈래는 이 픽스처로 못 보여 준다」고 남겨라.
+ */
 export function paylabDrafts(goalsVersion: string, roadmapVersion: string): Record<string, unknown>[] {
   return [
     fromDoc('item_mission_paylab', 'mission', goalsVersion, {
@@ -76,6 +86,23 @@ export function paylabDrafts(goalsVersion: string, roadmapVersion: string): Reco
       title: 'PSP 재시도는 지수 백오프 5회',
       body: '고정 간격 재시도는 금지한다 — 모든 인스턴스가 같은 박자로 다시 때린다.',
       data: { rule: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다', severity: 'must', enforcement: 'review' },
+    }),
+    //  🔴 goals.md §3.3 — SPEC §10.1 이 말하는 「의도된 어긋남 3곳」의 셋째다
+    //     (재시도 / 환불 SLA / **PII 로그 금지**). 앞의 둘만 항목이었고 이건 없었다.
+    //  ★ **`enforcement: 'hook'` 인 이유** — 이 규칙은 사람 눈으로 못 지킨다.
+    //    로그 호출은 저장소 전체에 흩어져 있어서 리뷰어가 매번 전부 볼 수 없다.
+    //    자동으로 막을 수 있는 것은 hook 뿐이고, 그게 팀이 선언한 수단이다
+    //    (M3 「PII 마스킹과 감사 로그」가 그걸 만드는 마일스톤이다).
+    //    ⚠ 지금 픽스처 코드에 위반이 1곳 남아 있는 것과 모순이 아니다 — 강제 수단을
+    //      선언한 것과 이미 있던 위반을 걷어낸 것은 다른 일이고, 그 차이가 M3 다.
+    fromDoc('item_policy_pii_log', 'policy', goalsVersion, {
+      title: '로그에 PII 를 남기지 않는다',
+      body: '애플리케이션 로그·접근 로그·에러 리포트·웹훅 수신 덤프 전부 해당한다.',
+      data: {
+        rule: '카드번호·CVC·개인정보를 어떤 로그에도 남기지 않는다 — 결제 ID 와 이벤트 ID 만 남긴다',
+        severity: 'must',
+        enforcement: 'hook',
+      },
     }),
     fromDoc('item_constraint_card', 'constraint', goalsVersion, {
       title: '카드 정보를 저장하지 않는다',
@@ -112,12 +139,17 @@ export type SeedResult = {
   /** `batch-draft` 가 거부한 것들. 관통은 이게 비었는지를 잰다. */
   rejected: { index: number; issues: unknown[] }[]
   accepted: number
+  /**
+   * 보낸 초안의 수. **부르는 쪽은 개수를 자기가 적지 말고 이걸 읽어라** —
+   * `paylabDrafts()` 에 한 줄을 더했을 때 검사가 저절로 따라오게 하려는 칸이다.
+   */
+  drafted: number
   /** active 로 바꾼 항목의 uuid 들. */
   itemUuids: string[]
 }
 
 /**
- * 팀 → 프로젝트 → 레포 → 문서 2개 → 초안 6개 → 전부 `active`.
+ * 팀 → 프로젝트 → 레포 → 문서 2개 → `paylabDrafts()` 전부 → 전부 `active`.
  * **발행은 하지 않는다** — 발행이 무엇을 하는지가 관통이 재는 것이고,
  * 여기서 미리 해 버리면 그 단계가 씨앗에 묻힌다.
  */
@@ -178,6 +210,7 @@ export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
     roadmapVersion,
     rejected: batch.rejected as { index: number; issues: unknown[] }[],
     accepted: (batch.accepted as unknown[]).length,
+    drafted: drafts.length,
     itemUuids: itemRows.map((r) => r.id),
   }
 }
