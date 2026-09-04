@@ -163,6 +163,11 @@ progress_events  { id, project_id, device_id, milestone_id text, criterion text 
 
 1. `projects` row 조회, `official_version_id` 확인 (base와 다르면 409 `STALE_BASE`)
 2. 승인된 Proposal(`approved`) 적용 → `context_items`/`revisions` 갱신 (add/update/deprecate)
+   - 🔴 이때 새 revision 의 `source_refs` 에 **`{kind:'proposal', proposal_id}` 를 붙인다** (P7).
+     `revisions.origin='proposal'` 만으로는 **Pack 줄에서 안 보여서** 사람이 「이 규칙은
+     어느 제안이 만들었나」로 되짚을 수 없다 — 되짚는 자리는 §4.1 의 태그 하나다.
+     ⚠ 근거가 이미 `SOURCE_REFS_MAX` 개면 **몰래 하나를 버리지 않고** 그 항목을 실패로
+     돌린다 (8단계). 버리면 그 항목만 역추적이 조용히 한 칸 짧아진다.
 3. active 항목 + revision을 ID 순으로 정렬해 `snapshot` 구성 → `snapshot_hash = sha256(canonical JSON)`
 4. `context_versions` INSERT (semver는 요청값, 추천값은 §6.5)
 5. `compiler.compile(snapshot, {templateVersion, compilerVersion})` → `pack_files` INSERT

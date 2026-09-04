@@ -29,6 +29,20 @@
 
 ## 다음에 고칠 것
 
+### 70. 2-B 이번 라운드 — 살아 있는 것 확인만 하고 새로 죽은 것은 못 찾았다   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다 — 안 남기면
+  다음 바퀴가 같은 셋을 또 센다.
+- **근거**: 이번 바퀴 직접 확인 —
+  ① **`SourceRef` 4종** 전부 생산자가 있다 (68 이 마지막 하나를 살렸다).
+  ② **`enforcement` 4종** — `packages/compiler/src/sections.ts:53` 의 `ENFORCEMENT_LABEL`
+     이 값마다 **다른 문장**을 낸다 (`liveness.test.ts` 가 잠근다).
+  ③ **`scope.kind` 3종** — `partition.ts:68·69` 가 **세 값을 서로 다른 파일**로 보낸다
+     (`sort.ts:17` 도 `SCOPE_ORDER` 로 읽는다).
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: `ItemType` 10종 · 에러 코드 9종 · `confidence` 3단계 ·
+  sync 상태 5종(**69** 가 그 항목이다).
+- **상태**: ✅ 이번 바퀴에 확인함 (`e0148d0` 바퀴)
+
 ### 69. sync 상태 `manual` 을 **찍는 코드가 0곳**이다 — 다섯 중 하나가 죽어 있다   [격차]
 - **증상**: `SYNC_STATUSES` 는 다섯이고 그중 넷이 DB enum(`REPORTABLE_SYNC_STATUSES`)이다.
   넷 중 셋(`applied`·`outdated`·`modified`)은 플러그인이 찍고, `unknown` 은 서버가
@@ -72,7 +86,21 @@
   줄에 `src:proposal:` 이 있다」**다 — 발행 시험(`api-publish.test.ts`)에서 태그를 읽어라.
   ⚠ 같은 자리에 `manual` 도 생산자가 없다. 그건 **화면 5(손으로 항목 추가)와
   질문 답변(FINDINGS 56)의 몫**이라 여기서 같이 만들지 마라 — 근거를 지어내게 된다.
-- **상태**: 대기
+- **상태**: ✅ `e0148d0` — `applyProposalItem()` 이 초안을 판 **직후 한 번만**
+  `withProposalRef()` 로 붙인다 (`add`·`update` 두 갈래에 따로 적으면 반쪽 사슬이 된다).
+  잠근 것은 「붙었다」가 아니라 **Pack 줄**이다 — `parseTraceTag()` 로 태그를 되읽어
+  `proposal:{id}` 와 `repo:…` 가 **둘 다** 있는지 본다 (`api-publish.test.ts` +2).
+  눈으로 읽은 줄: `docs/evidence/2026-09-04-p7-proposal/pack-line.txt`
+  **같이 정한 것 둘**:
+  ① 근거가 상한까지 차 있으면 **몰래 하나를 버리지 않고** 그 항목을 실패로 돌린다 —
+     버리면 그 항목만 역추적이 조용히 한 칸 짧아지고 아무도 모른다. SPEC §2.1 2단계에 적었다.
+  ② 상한 20 을 `SOURCE_REFS_MAX`(`packages/schema/src/common.ts`)로 올렸다 — 발행이
+     「자리가 있나」를 물어야 해서, 숫자가 두 곳이 되면 한쪽만 고쳐지고 조용히 갈라진다.
+  ⚠ 조각 **순서**는 골든과 다르다 (골든은 `proposal:` 이 앞, 발행은 뒤). 태그를 읽는
+  쪽은 순서를 안 봐서 고치지 않았다 — 맞추려고 골든을 건드리면 P4 게이트만 흔든다.
+  🔴 **`SourceRef` 4종이 이제 전부 생산자를 갖는다** — `source_document`(§7.1
+  `lib/ai/structure.ts:238`) · `repository_path`(scan → batch-draft) ·
+  `proposal`(발행) · `manual`(씨앗 질문 답변 · 손으로 고치기).
 
 ### 67. 화면 3 의 **세 길 중 둘이 없다** — 「문서 없이 질문만으로」가 막혀 있다   [구멍]
 - **증상**: DESIGN_BRIEF §4 화면 3 은 큰 선택 카드 **셋**이다 — ① wiki zip 올리기

@@ -1,0 +1,29 @@
+# FINDINGS 68 — 제안이 만든 줄의 Pack 태그 (P7)
+
+`e0148d0` 뒤. `apps/web/test/api-publish.test.ts` 의
+「제안으로 들어온 항목의 Pack 줄에 src:proposal 이 있다 (P7)」를 돌려서
+Pack 파일 본문에서 `ctx:item_traced_one` 이 들어간 줄을 그대로 찍었다.
+(찍는 줄은 임시였고 커밋에는 없다 — 시험이 재는 것은 `parseTraceTag()` 결과다.)
+
+## 고치기 전 (같은 경로가 내던 모양)
+
+    - PII 를 로그에 남기지 않는다 <!-- ctx:item_traced_one rev:1 conf:high src:repo:paylab-api:src/payment/retry.ts:14 -->
+
+`origin:'proposal'` 은 개정 행에 있었지만 **줄에서는 안 보였다.**
+사람이 Pack 을 읽고 되짚을 수 있는 자리는 이 태그 하나뿐이라, 「이 규칙은 어느 제안이
+만들었나」는 답이 없었다.
+
+## 고친 뒤 (실제로 찍은 줄)
+
+    - PII 를 로그에 남기지 않는다 <!-- ctx:item_traced_one rev:1 conf:high src:repo:paylab-api:src/payment/retry.ts:14,proposal:604710d7-08be-4b97-928e-ee2b1b1d5188 -->
+
+## 눈으로 읽고 판정한 것
+
+- `src:` 조각이 **둘**이다 — `repo:…`(원문)와 `proposal:{uuid}`(승인 기록).
+  제안 근거가 원문을 **덮지 않았다.** 덮었으면 사슬이 반대쪽에서 끊긴다.
+- uuid 는 그 발행에 적용된 제안의 id 다 (`applied_proposal_ids` 와 같다).
+- 태그 형식이 안 깨졌다 — `parseTraceTag()` 가 그대로 되읽는다.
+- 골든 픽스처(`packages/compiler/test/golden/case-1-small`)가 약속하던 모양
+  (`src:proposal:…,repo:…`)을 **진짜 발행이 처음으로 만들 수 있게 됐다.**
+  ⚠ 조각 **순서**는 골든과 다르다(골든은 proposal 이 앞) — 순서는 초안이 보낸
+  근거 뒤에 붙이기 때문이고, 태그를 읽는 쪽은 순서를 안 본다.
