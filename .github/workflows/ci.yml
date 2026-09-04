@@ -31,6 +31,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # 루프 문서(docs/STATUS.md)가 자기와 어긋나지 않는가 (FINDINGS 102).
+      #  ⚠ 무엇을 재는지는 tools/status-shape.mjs 가 정본이다.
+      - run: pnpm docs:check
+
       - run: pnpm typecheck
 
       - run: pnpm test

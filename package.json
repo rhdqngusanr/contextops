@@ -9,6 +9,8 @@
   "scripts": {
     "_comment_typecheck": "먼저 '무엇을 볼 것인가'를 세고 그 다음에 본다 (FINDINGS 92). tsc 는 exit 0 으로 '검사했다'만 말하고 '무엇을 봤나'는 말하지 않는다 — apps/web 의 scripts/ 가 여러 바퀴 동안 include 밖이었는데 이 층은 계속 초록이었다. 덮임 검사가 먼저 서지 않으면 뒤의 tsc 두 줄은 빈 집합을 검사하고도 통과할 수 있다.",
     "typecheck": "node tools/tsconfig-coverage.mjs && tsc --noEmit && pnpm -r exec tsc --noEmit",
+    "_comment_docs_check": "루프 문서가 자기와 어긋나지 않는지 센다 (FINDINGS 102). STATUS.md 는 '다음 바퀴의 유일한 기억'인데 다음 할 일을 말하는 자리가 둘이 됐고, 손이 안 닿는 아래쪽 자리가 두 바퀴 전에 닫힌 항목을 계속 가리켰다. 눈으로 안 잡히는 종류라 게이트로 올렸다.",
+    "docs:check": "node tools/status-shape.mjs",
     "test": "pnpm -r test",
     "build": "pnpm --filter web build"
   },

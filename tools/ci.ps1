@@ -220,6 +220,21 @@ else {
     else                   { Add-Layer "walkthrough" "FAIL" (Get-LastLines $r.log) }
 }
 
+# ── 6층 · 루프 문서가 자기와 어긋나지 않는가 ───────────────
+#  ★ 왜 이런 층이 있나 (FINDINGS 102) — `docs/STATUS.md` 는 「다음 바퀴의 유일한
+#    기억」인데 **다음 할 일을 말하는 자리가 둘**이 됐고 둘이 다른 말을 했다.
+#    아래쪽 자리는 **두 바퀴 전에 닫힌 항목**을 계속 가리켰고, 두 바퀴가 그걸 지나쳤다.
+#    **눈으로 안 잡히는 고장**이라 게이트로 올렸다.
+#  ⚠ 검사 내용을 여기 적지 마라 — 루트 package.json 의 `docs:check` 가 정본이다.
+#    그래야 .github/workflows/ci.yml 과 갈라지지 않는다.
+#  🔴 **이 층만 「앞 층이 빨갛다」로 건너뛰지 않는다.** 층 순서는 비용 순서이고
+#    그 뜻은 「앞이 빨가면 뒤는 **무의미**하다」인데, 문서가 어긋난 것과 타입이
+#    갈린 것은 서로 무의미하게 만들지 않는다. 값도 1초 미만이다.
+#    그래서 **제일 뒤에서 항상 돈다** — 빨간 바퀴에서도 문서 어긋남을 같이 본다.
+$r = Invoke-Layer "docs" "pnpm docs:check"
+if ($r.code -eq 0) { Add-Layer "docs" "OK" (Get-LastLines $r.log 1) }
+else               { Add-Layer "docs" "FAIL" (Get-LastLines $r.log 4) }
+
 # ── 한 줄 결과 ────────────────────────────────────────────────────
 Pop-Location
 

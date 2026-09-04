@@ -193,6 +193,12 @@ sync 상태 5종 · `confidence` 3단계 · `scope.kind` 3종 · `enforcement` 4
    ⚠ **검사 초록은 「안 죽었다」지 「고쳐졌다」가 아니다.** 못 봤으면 `STATUS.md` 에
    「눈 판정 대기」로 적어라
 8. **`docs/STATUS.md` 갱신** — 다음 바퀴의 유일한 기억이다.
+   🔴 **다음 할 일은 머리의 한 줄로만 적는다** — `**다음 바퀴의 일 — FINDINGS <번호>**`
+   (대기가 없으면 「FINDINGS 없음」). 그 번호는 FINDINGS 에서 **대기**여야 하고,
+   `ci.ps1` 의 `docs` 층이 그걸 센다. ★ 왜 — 이 파일에 「다음 할 일」 자리가 둘이 됐던 적이
+   있고, 손이 안 닿는 아래쪽 자리가 **두 바퀴 전에 닫힌 항목**을 계속 가리켰다 (FINDINGS 102).
+   그리고 `### 지난 바퀴 (N)` 이 상한을 넘으면 제일 오래된 것을 **`docs/history/cycles.md`
+   맨 위로 옮긴다** (베끼지 마라 — 게이트가 양쪽에 있는 것을 잡는다).
    **한 일이 아니라 잰 것을 써라.** (「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록,
    Pack 파일 6개 생성, manifest_hash 고정」 ○)
 
@@ -226,6 +232,7 @@ powershell -ExecutionPolicy Bypass -File tools/ci.ps1
 | `test` | vitest — schema · compiler golden · api | golden 이면 ⑤ 의 규칙을 읽어라 |
 | `build` | `next build` | 배포가 막힌다 |
 | `walkthrough` | 관통 시나리오 (있을 때만) | ④1 로 돌아간다 |
+| `docs` | 🔴 **`STATUS.md` 가 자기와 어긋나지 않는가** (`tools/status-shape.mjs`) — 다음 할 일을 말하는 자리가 **하나**이고 그 항목이 **대기**인가 · 지난 바퀴 기록이 상한 안인가 | ④8 을 안 했거나 반만 했다 |
 
 **같은 지적이 두 번 나오면 규칙이 아니라 게이트로 올려라.** ③ 에 적는 것으로 끝내지 말고
 `tools/principles.ps1` 이나 테스트로 만들어라 — **게이트는 문서보다 강하다.**
