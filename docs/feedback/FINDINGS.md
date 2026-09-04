@@ -693,7 +693,66 @@
   ⚠ **다른 항목의 data 칸도 같이 훑어라.** 하나를 손으로 고치면 다음 칸에서 또 난다 —
   값싼 게이트는 「씨앗의 `data` 문자열이 근거 원문 발췌 안에 있나」를 관통이 세는 것이다
   (관통은 이미 `repo:` 태그의 줄 범위를 픽스처에서 잘라 본다 — 같은 모양을 `doc:` 에).
-- **상태**: 대기
+- **상태**: ✅ `fb80f64` — **한 칸을 고치고 나머지를 표로 세웠다.**
+  ① 씨앗의 `metric` 을 표의 칸 그대로 뒀다 (`'PSP 장애 구간을 포함한 주간 성공률'`).
+  ② 항목이 시킨 대로 **다른 `data` 칸도 훑었다.** 훑고 나서 안 것이 하나 있다 —
+     **`data` 의 칸은 두 갈래이고, 전부 인용이라고 하면 게이트가 틀린다.**
+     `rule`·`statement`·`responsibility`·`invariants` 는 팀이 그 문단을 읽고 **스스로 적은
+     문장**이라 원문과 글자가 달라도 옳다 (`'PSP 호출 실패는 지수 백오프로 최대 5회
+     재시도한다'` 는 문서에 그대로 없다 — 그래도 거짓이 아니다). 반대로 목표 표의 세 칸 ·
+     용어 표 · 완료 기준 목록은 **문서에 있던 값을 옮긴 것**이라 글자가 같아야 한다.
+     기준을 「전부 인용」으로 내리면 정상적인 진술이 전부 빨개지고, **늘 빨간 게이트는
+     다음 사람이 끈다** (100 의 ⚠ 와 같은 판단이다).
+  ③ 그래서 갈래를 **표로** 적었다 — `QUOTED_DATA` (`apps/web/scripts/seed.ts`).
+     `goal: outcome·metric·deadline` · `domain: glossary` · `roadmap: paths·done_when` ·
+     `architecture: component` · `mission`·`policy`·`constraint` 는 `[]`.
+     **새 ItemType 은 표에 한 줄**이고, 줄이 없는 타입을 만나면 `fromDoc()` 이 **던진다**
+     (`[]` 라고라도 적어야 한다). 표가 인용이라 한 칸이 `data` 에 없어도 던진다.
+  ④ 판정은 **관통이 Pack 태그를 따라가서** 한다 (`walkthrough-publish.ts` 의
+     `followEvidence`) — 항목이 그려 준 그대로다. 이미 `doc:`·`repo:` 범위를 원문에서
+     잘라 보고 있었으므로 **같은 조각 안에서** 인용 칸을 찾게 했다. 인용 칸 **44개**.
+     ⚠ `> 0` 을 같이 잰다 — 표가 통째로 비어도 「어긋난 칸 0개」는 초록이다.
+     ★ 기대의 출처가 **표 밖**이다 (103·104-B 가 남긴 조건) — 픽스처 원문이 기대다.
+  ⑤ 훑다가 **주석의 거짓말 하나**를 고쳤다. `item_domain_payment` 옆에 「glossary 와
+     invariant 둘 다 그 표 안에 글자 그대로 있다」고 적혀 있었는데, `invariants` 는
+     표의 문장(`돈의 움직임을 한 줄씩 append 하는 표. 수정·삭제 없음`)을 **불변식으로
+     다시 적은 것**이라 글자가 다르다. 뜻은 같으니 고칠 것은 항목이 아니라 주석이었다.
+  **빨개지는 것을 둘 다 봤다** — `metric` 을 예전 값으로 되돌리니 그 칸을 짚으며 FAIL 했고
+  (`item_goal_success_rate: paylab-docs/goals.md#499-560 안에 「주간 승인 성공률」 가 없다`),
+  `QUOTED_DATA` 의 `goal` 줄 이름을 바꾸니 씨앗이 던졌다. 관통 검사 650 → **651**.
+- ★ **남길 한 줄** — 「범위가 맞나」와 「낱말이 맞나」는 **다른 질문**이다. 90 이 앞의 것을
+  잠갔고 이번이 뒤의 것을 잠갔다. 그리고 뒤의 질문은 **모든 칸에 물으면 안 된다** —
+  인용한 칸과 스스로 적은 칸을 가르는 표가 있어야 물음이 성립한다.
+
+### 101-B. 2-B 이번 라운드 — `LOCAL_FILES` 8종 · `IGNORED_LOCAL_PATHS` 3종 다 살아 있고 **잠겨 있다** (단, 자물쇠가 vitest 밖에 있다)   [기록]
+- 100-B 가 남긴 「다음 라운드의 후보」에서 **`plugin/…/cli/paths.ts` 의 경로 표**를 골랐다.
+  이 표를 고른 이유는 하나다 — **훅이 같은 경로를 자기 손으로 다시 적는다**
+  (`scripts/session-start.mjs` 는 번들이 아니라 import 를 못 해서 `cache/latest-manifest.json`
+  을 글자로 들고 있다). 같은 값이 두 곳에 살면 한쪽만 고쳐진다.
+- **`LOCAL_FILES` 8종** (`src/cli/paths.ts:21`) — ①소비처는 여덟 다 있다
+  (`project` 5 · `manifest` 6 · `scan` 5 · `draft` 1 · `proposalDraft` 1 ·
+  `pendingProposal` 2 · `syncReceipt` 5 · `latestCache` 1, `src/` 기준).
+  ②`latestCache` 를 `cache/zz-latest.json` 으로 바꾸니 **플러그인 시험 4개가 빨개졌다** —
+  `hooks.test.ts` 가 표로 캐시를 써 놓고 **훅은 자기 글자로 찾기** 때문이다. 되돌렸다.
+  ★ 이 표의 자물쇠는 「두 곳이 갈리면 훅이 못 찾는다」이고, 그걸 재는 시험이 이미 있다.
+- **`IGNORED_LOCAL_PATHS` 3종** (`src/cli/paths.ts:50`) — ②`pending-proposal.json` 을
+  빼고 돌렸다. 🔴 **`npx vitest run` 은 1개만 빨개졌고 그것도 `bundle.test.ts`(바이트
+  비교)였다.** 번들을 다시 빌드하니 **173개가 전부 초록**이다. 이 표를 직접 재는 시험
+  (`sync.test.ts:117` 「`.gitignore` 를 만든다」)은 기대를 **표에서 파생**시키므로
+  (`expect(rules).toEqual([...IGNORED_LOCAL_PATHS])`) 표를 줄이면 기대도 같이 줄어든다 —
+  103·104-B 와 **똑같은 모양**이다.
+  **그런데 잠겨 있다 — 자물쇠가 vitest 밖에 있다.** `tools/principles.ps1` 의 P6 이
+  `hooks/hooks.json` 의 `_writes`(`.contextops/pending-proposal.json` — **글자로 적힌
+  선언**)가 전부 ignore 목록 안인지 대조하고, 빼자 **P6 FAIL** 이 났다
+  (`stop.mjs 의 선언이 ignore 밖이다`). 되돌렸다.
+  ★ 그게 맞는 자리다 — SPEC §8.2·§0.1 이 「`pending-proposal.json` 이 ignore 안이라는
+    것이 **P6 의 정의**」라고 적고 있다. 훅이 쓰는 파일이 git 에 보이면 그 훅은
+    사용자 저장소를 고치는 도구가 된다.
+- ★ 이 라운드가 남긴 것 — **「어떤 시험을 돌렸나」가 답을 바꾼다.** 패키지 시험만 돌리면
+  이 표는 「살아 있는데 안 잠겼다」로 보인다. 2-B ②단계는 `npx vitest run` 이 아니라
+  **`tools/ci.ps1` 이 도는 전 층**을 기준으로 물어라 — 이 저장소의 자물쇠 절반은
+  `principles.ps1` 에 있다.
+- **상태**: 기록 — 고칠 것 없음
 
 ### 100-B. 2-B 이번 라운드 — `SEMVER_RULE` 3종 · `CACHE_CONTROL` 2종 다 살아 있다   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
