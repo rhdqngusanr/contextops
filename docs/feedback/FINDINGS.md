@@ -318,7 +318,25 @@
   ①이 값싸고 다른 문서(`scoped` 는 이미 `# 경로 규칙 — {title}` 이다)와 **모양이 같다.**
   ⚠ 템플릿을 고치면 `TEMPLATE_VERSION` 을 올리고 golden 의 expected 를 갱신한 이유를
   커밋 메시지에 적어라 (`loop/PROMPT.md` ⑤).
-- **상태**: 대기
+- **상태**: ✅ `7ba2feb` — ①로 고쳤다. `# 도메인 — refund` · `# 도메인 — payment`.
+  🔴 **이 지적은 세 번째다 — 30(9바퀴) → 91(39바퀴) → 97(43바퀴).** 셋 다 같은 줄이고
+  셋 다 「고칠 방향」까지 같았다. 세 바퀴가 **적기만 하고 안 고쳤다.** 그래서 이번에는
+  고치고 **게이트로 올렸다** (`CLAUDE.md` 「같은 지적이 두 번 나오면 규칙이 아니라 게이트로」).
+  게이트는 `packages/compiler/test/naming.test.ts` 이고 재는 것이 둘이다:
+  ① **표에서 대상을 찾는다** — `DOCS[id].path('a') !== DOCS[id].path('b')` 인 문서,
+     즉 **파일 이름이 정보를 나르는 문서**가 전부 대상이다. 이름으로 목록을 들지 않는다
+     (목록을 손으로 들면 다음 문서 종류에서 똑같이 빠진다 — 이게 세 번 난 이유다).
+     그 문서의 `head` 가 `title` 을 적는지 본다. ⚠ `paths` 를 제목과 **다르게** 줘서
+     scoped 의 frontmatter 가 우연히 초록을 만드는 것을 막았다.
+  ② **91·97 의 조건을 그대로 컴파일한다** — `scope.kind:'domain'` 규칙만 있고 그 도메인의
+     `domain` 항목은 없는 snapshot. 이름을 적을 사람이 아무도 없던 바로 그 경우다.
+  🔴 **빨개지는 것을 봤다**: `head` 를 옛 모양(`'# 도메인'`)으로 되돌리니 2개 FAIL
+  (머리말 시험 + 컴파일 시험). 표에서 찾으므로 `scoped` 도 같이 잠긴다.
+  `TEMPLATE_VERSION` **1.1 → 1.2** · golden 3케이스의 `input.json` 도 같이 올렸다
+  (`CompileInput.templateVersion` 이 `z.literal` 이라 안 올리면 INVALID_INPUT 이다).
+  golden 이 바뀐 것은 domain 파일 3개의 **첫 줄과 그 sha256·manifest_hash** 뿐이다.
+  CI: principles OK · typecheck OK · test OK · build OK · walkthrough 검사 **644개** → GREEN.
+  📎 눈 판정: `docs/evidence/2026-09-05-domain-name/` (`.ci/` 밖 · 사본 3개)
 
 ### 98. 아키텍처 다섯 줄이 §7 그림의 **흐름 순서를 잃고 이름 순**으로 나온다   [격차]
 - **증상**: 새로 선 `## Quick Map` 과 `.claude/rules/architecture.md` 의 다섯 줄 순서가
@@ -338,6 +356,58 @@
   그게 이 필드의 뜻이 맞는지 SPEC §3 을 먼저 읽어라. 아니면 이 항목은 **닫지 말고
   「그 값은 그런 뜻이 아니다」로 남겨라** (억지로 고치면 다음 사람이 더 헷갈린다).
 - **상태**: 대기
+
+### 99. 아키텍처 블록이 **같은 문장을 연달아 두 번** 적는다 — 네 줄이 사실 둘이다   [격차]
+- **증상**: `.claude/rules/architecture.md` 의 다섯 블록이 전부 이 모양이다 —
+  ```
+  ### ledger — append only 다. 여기서 계산이 틀리면 정산이 틀린다
+  - 구성요소: `ledger`
+  - 책임: append only 다. 여기서 계산이 틀리면 정산이 틀린다
+  ```
+  **네 줄이 말하는 사실은 둘**(구성요소 이름 · 책임)이고, 둘 다 **글자까지 똑같이**
+  두 번 나온다. 사람이 읽으면 「왜 같은 말을 또 하지」로 읽히고, agent 에게는 같은
+  문장을 두 번 실어 보내는 것이다. 다섯 블록 × 두 겹 = 종이의 절반이 메아리다.
+- **근거**: 이번 바퀴 눈 판정 — `.ci/walkthrough-pack/.claude/rules/architecture.md`
+  (사본: `docs/evidence/2026-09-05-domain-name/` 옆 바퀴 것은 `2026-09-04-itemtype-coverage/`).
+  원인은 **씨앗의 제목**이다: `apps/web/scripts/seed.ts:396` 이
+  ``title: `${component} — ${responsibility}` `` 로 제목을 만들고,
+  절 템플릿(`compiler/src/sections.ts:115`)은 `### {title}` 과 `- 구성요소:` ·
+  `- 책임:` 을 **각각** 낸다. 둘 다 혼자서는 맞다 — 겹치는 것은 조합이다.
+- **정본**: `docs/SPEC.md` §10.1(paylab 픽스처) · `packages/compiler/src/sections.ts`
+  (`architecture` 절) — **P7 은 아니다** (태그는 멀쩡하다)
+- **고칠 방향**: 갈래가 둘이고 **씨앗 쪽이 값싸다.**
+  ① 씨앗의 `ARCHITECTURE` 표에 **제목 칸을 더한다** — 사람이 읽는 한 줄
+     (예: 「원장은 append only」)로 두면 `### 제목` 과 `- 책임:` 이 서로 다른 말을 한다.
+     ⚠ 제목은 근거 원문일 필요가 없다 (P7 은 **줄의 태그**를 요구하지, 제목의 출처를
+     요구하지 않는다). 표에 칸 하나 = 「표에 한 줄」 모양 그대로다.
+  ② 템플릿에서 `- 구성요소:`/`- 책임:` 중 하나를 뺀다 — **이 갈래를 먼저 고르지 마라.**
+     제목이 「구성요소 — 책임」인 것은 **이 픽스처의 선택**이고, 다른 팀의 항목은
+     제목이 다를 수 있다. 템플릿을 씨앗에 맞춰 깎으면 다음 팀의 종이가 얇아진다.
+  ⚠ ①을 하면 golden 은 **안 깨진다**(golden 입력은 별도 파일이다) — 관통 Pack 만 바뀐다.
+- **상태**: 대기
+
+### 98-B. 2-B 이번 라운드 — `DocId` 7종 · `SectionKey` 12종 다 살아 있다   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+  ★ 이번에는 **schema 의 표 말고 컴파일러의 표**를 돌았다 — 지금까지 라운드가
+  `packages/schema` 쪽에만 몰려 있었고, 이번 바퀴에 고친 것(97)이 바로 그 표였다.
+- **근거**: 이번 바퀴 직접 확인 — 둘 다 **②단계(값을 바꾸면 결과가 달라지나)까지** 통과한다:
+  ① **`DocId` 7종** (`templates/index.ts` 의 `DOCS`). 일곱이 전부 **다른 파일 경로**를
+     내고, 여섯은 한 번의 컴파일에서 같이 나온다 — `CLAUDE.md` ·
+     `.claude/rules/{architecture,decisions,workflow}.md` · `domain-*.md` · `scoped-*.md`.
+     일곱째 `policies` 는 **CLAUDE.md 가 12,000자를 넘을 때만** 나오고, 그 경우가
+     golden `case-3-overflow` 에 있다 (`expected/.claude/rules/policies.md`).
+     ⚠ 즉 「평소 컴파일에 안 나온다」가 「죽었다」가 아니다 — **조건이 있는 문서**다.
+  ② **`SectionKey` 12종** (`src/sections.ts` 의 `SECTIONS`). 열둘이 전부
+     ⓐ `DOCS` 의 어떤 slot 에 있고(슬롯에 없는 절 **0개**) ⓑ `PARTITION` 이 실제로
+     항목을 보내는 절이다(아무 항목도 못 가는 절 **0개**). 줄 모양도 서로 다르다 —
+     같은 `architecture` 항목이 `quickmap` 에서는 한 줄(`- ledger: …`)이고
+     `architecture` 절에서는 네 줄 블록이다. `adr` 도 요약/전문 둘로 갈린다.
+     ⚠ 하나 예외를 적어 둔다: `scoped_rule` 의 렌더는 `policy`·`constraint` 절과
+     **같은 함수**를 부른다 (`sections.ts:180` 의 주석이 그 이유를 적어 뒀다).
+     그 절이 다른 것은 **줄 모양이 아니라 파일**이다 — `scope.kind` 가 그 갈래를 잠근다
+     (`liveness.test.ts` 「3종이 서로 다른 파일로 간다」).
+- **정본**: `packages/compiler/templates/index.ts` · `packages/compiler/src/sections.ts`
+- **상태**: 기록 — 고칠 것 없음
 
 ### 97-B. 2-B 이번 라운드 — `MILESTONE_STATUSES` 4종은 살아 있다 · `PROGRESS_SOURCES` 3종은 **85-B 그대로**   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
@@ -604,7 +674,8 @@
   ⚠ 더 나은 것은 **이름**(`환불`)이지만 그건 `domain` 항목이 있어야 나온다 — 없을 때
   slug 로 떨어지는 길을 먼저 만들어라. ⚠ 템플릿을 고치면 **golden 이 깨진다.**
   `loop/PROMPT.md` ③ 의 「템플릿 버전을 올리고 expected 를 갱신한 이유를 커밋에」를 읽어라.
-- **상태**: 대기
+- **상태**: ✅ `7ba2feb` — **97 과 같은 항목이다** (그리고 30 과도 같다). 97 에 전말을 적었다.
+  ⚠ 이 줄이 세 번 따로 적힌 것 자체가 기록이다 — **대장에 적는 것만으로는 안 고쳐진다.**
 
 ### 91-B. 2-B 이번 라운드 — `confidence` 3단계 · 에러 코드 **11종**(9종이 아니다) 다 살아 있다   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
@@ -2086,7 +2157,8 @@
   `TEMPLATE_VERSION` 을 올리고 expected 를 갱신한 이유를 커밋 메시지에 적어라
   (loop/PROMPT.md ⑤). 옆 줄의 주석(「제목은 절이 갖는다」)은 `domain` **항목**이 있을 때만
   맞는 말이다. domain scope 정책만 있고 domain 항목이 없는 프로젝트가 이 고장을 만든다.
-- **상태**: 대기
+- **상태**: ✅ `7ba2feb` — **91·97 과 같은 항목이다.** 이 진단(마지막 두 줄)이 처음부터
+  정확했는데 **34바퀴 동안 안 고쳐졌다.** 전말과 게이트는 97 에 적었다.
 
 ### 27. `unique(project_id, snapshot_hash)` 는 **절대 걸리지 않는다**   [격차]
 - **증상**: SPEC §2 는 `context_versions` 에 `unique(project_id, snapshot_hash)` 를 두어
