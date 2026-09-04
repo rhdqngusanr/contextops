@@ -29,6 +29,32 @@
 
 ## 다음에 고칠 것
 
+### 68. `SourceRef` 의 `proposal` 을 **만드는 제품 코드가 0곳**이다 — 제안이 만든 줄이 그 제안으로 역추적되지 않는다   [구멍]
+- **증상**: 개발자의 제안이 승인되어 발행되면 `insertRevision()` 이 `origin:'proposal'` 을
+  찍는다. 그런데 그 개정의 `source_refs` 는 **클라이언트가 보낸 것 그대로**이고
+  (`draft.source_refs` = 제안 Skill 이 만든 `repository_path`), 서버는
+  `{kind:'proposal', proposal_id}` 를 **붙이지 않는다.** 그래서 Pack 줄의 태그는
+  `src:repo:…` 하나로만 끝나고 **「이 줄은 어느 제안이 만들었나」로는 못 간다.**
+  골든 픽스처는 `src:proposal:b1a7d9e0-…,repo:…` 를 갖고 있어서 **Pack 형식은 그것을
+  약속하는데**, 진짜 발행은 그 모양을 절대 못 만든다.
+- **근거**: 이번 바퀴 직접 확인 —
+  `grep -rn "proposal_id" apps/web/src packages/*/src plugin/contextops/src` 의 소비처는
+  `components/evidence.tsx:34`(표시)·`compiler/src/tag.ts:32`(직렬화)·
+  `schema/src/common.ts:161`(선언) 셋뿐이다 · `kind: 'proposal'` 을 **쓰는** 자리는
+  시험·픽스처뿐이다 (`web-tables.test.ts:90` · `compiler/test/liveness.test.ts`) ·
+  `apps/web/src/lib/api/publish.ts:295-315` 가 `sourceRefs: draft.source_refs` 를
+  그대로 넣는다 · 제안 Skill 은 `repository_path` 만 시킨다
+  (`plugin/contextops/skills/propose/SKILL.md:40`)
+- **정본**: `docs/SPEC.md` §3(`SourceRef`) · §2.1(발행 트랜잭션) · §4(태그) · **P7**
+- **고칠 방향**: `insertRevision()` 이 이미 **어느 제안인지 알고 있다** (호출부가
+  `approved` 를 돌고 있다 — `publish.ts:83`·`172`). 인자에 `proposalId` 를 더하고
+  `sourceRefs: [...draft.source_refs, {kind:'proposal', proposal_id}]` 로 넣으면
+  사슬이 이어진다. ⚠ 잠글 것은 「붙었다」가 아니라 **「제안으로 들어온 항목의 Pack
+  줄에 `src:proposal:` 이 있다」**다 — 발행 시험(`api-publish.test.ts`)에서 태그를 읽어라.
+  ⚠ 같은 자리에 `manual` 도 생산자가 없다. 그건 **화면 5(손으로 항목 추가)와
+  질문 답변(FINDINGS 56)의 몫**이라 여기서 같이 만들지 마라 — 근거를 지어내게 된다.
+- **상태**: 대기
+
 ### 67. 화면 3 의 **세 길 중 둘이 없다** — 「문서 없이 질문만으로」가 막혀 있다   [구멍]
 - **증상**: DESIGN_BRIEF §4 화면 3 은 큰 선택 카드 **셋**이다 — ① wiki zip 올리기
   ② 문서 붙여넣기 ③ 질문 10개에 답하기. 이번 바퀴에 만든 화면은 **②만** 그린다.
@@ -72,7 +98,22 @@
   「이건 샘플이다」를 말하는 칸이 필요하고, 그 칸은 `AI_JOB_STATUS_RULES` 옆이다.
   🔴 **①이 먼저다.** ②는 P3 예산 가드의 뜻(「탈 것이 없으면 안 탄다」)과 부딪치는
   결정이라 SPEC §7.5 를 다시 읽고 정해야 하고, 그동안에도 화면은 거짓말을 하면 안 된다.
-- **상태**: 대기
+- **상태**: ✅ `4cb1ce8` — **①을 골랐고, ②는 「안 만든다」로 닫았다** (SPEC §7.5 를 다시
+  읽고 정했다). 문구는 「…내일 다시 시도해주세요.」다 — `RATE_LIMITED`(「잠시 후」)와
+  다른 문장이라 사람이 둘을 구별한다.
+  **②를 안 만드는 이유 둘** (SPEC §7.5 에 적었다): ① 실제 프로젝트에 픽스처 항목을
+  넣으면 그 줄이 **사용자의 원문으로 역추적되지 않는다 — P7 이 끊긴다.** §7.4 게스트
+  데모는 픽스처가 곧 원문이라 안 끊긴다. 그래서 「픽스처로 떨어진다」는 §7.4 전용이다.
+  ② job 이 「실패도 성공도 아닌」 **셋째 수명 모양**을 가져야 하는데, 예산이 없어서
+  못 한 일을 `succeeded` 로 적는 것은 `AI_JOB_STATUS_RULES` 의 뜻과 어긋난다.
+  화면 8 질의창 배지도 같은 약속을 **복사**하고 있어서 같이 고쳤다 — 반만 고치면
+  화면 8 을 만드는 바퀴가 그 거짓말을 되살린다.
+  게이트로 올렸다: `web-tables.test.ts` 가 문구를 **복사해** 갖고 있었는데
+  (정본이 셋이면 정본이 아니다) 이제 `docs/DESIGN_BRIEF.md` §5 를 **읽어서** 대조한다
+  (`briefSection5()` · 연결선은 `BRIEF_5_BULLET` 한 줄) · 「샘플」을 약속하는 문장이
+  코드에도 §5 에도 없다는 시험 하나. 웹 시험 258 → **259**.
+  눈으로 읽은 근거: `docs/evidence/2026-09-04-budget-hint/job-failed-hints.txt`
+  (실패 네 갈래가 전부 다른 문장을 내고, 어느 것도 없는 것을 약속하지 않는다)
 
 ### 65. `source_documents.kind` **6종이 아무것도 안 바꾼다** — roadmap 과 notes 가 똑같이 구조화된다   [격차]
 - **증상**: 문서를 올릴 때 `kind`(`goal`·`policy`·`roadmap`·`adr`·`notes`·`wiki`)를 받아

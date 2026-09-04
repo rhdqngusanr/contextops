@@ -1,0 +1,28 @@
+■ 실패 · 예산 소진 (BUDGET_EXCEEDED)
+  글자: | ✕ | 정리 실패 | 마지막 걸음 방금 | 오늘의 AI 예산이 소진되었습니다. 내일 다시 시도해주세요. | 4조각 중 1에서 멈췄습니다. |
+  마크업: <div class="row wrap"><span class="chip tone-bad"><span class="chip-icon" aria-hidden="true">✕</span>정리 실패</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span><div class="col-tight"><p class="ink-bad">오늘의 AI 예산이 소진되었습니다. 내일 다시 시도해주세요.</p><span class="meta">4조각 중 1에서 멈췄습니다.</span></div>
+
+■ 실패 · 빈도 초과 (RATE_LIMITED)
+  글자: | ✕ | 정리 실패 | 마지막 걸음 방금 | 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요. | 4조각 중 1에서 멈췄습니다. |
+  마크업: <div class="row wrap"><span class="chip tone-bad"><span class="chip-icon" aria-hidden="true">✕</span>정리 실패</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span><div class="col-tight"><p class="ink-bad">요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.</p><span class="meta">4조각 중 1에서 멈췄습니다.</span></div>
+
+■ 실패 · AI 출력 불량 (AI_OUTPUT_INVALID)
+  글자: | ✕ | 정리 실패 | 마지막 걸음 방금 | AI가 정리한 결과를 읽지 못했습니다. 다시 시도해주세요. | 4조각 중 1에서 멈췄습니다. |
+  마크업: <div class="row wrap"><span class="chip tone-bad"><span class="chip-icon" aria-hidden="true">✕</span>정리 실패</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span><div class="col-tight"><p class="ink-bad">AI가 정리한 결과를 읽지 못했습니다. 다시 시도해주세요.</p><span class="meta">4조각 중 1에서 멈췄습니다.</span></div>
+
+■ 실패 · 서버 오류 (INTERNAL)
+  글자: | ✕ | 정리 실패 | 마지막 걸음 방금 | 서버에서 처리하지 못했습니다. 잠시 후 다시 시도해주세요. | 4조각 중 1에서 멈췄습니다. |
+  마크업: <div class="row wrap"><span class="chip tone-bad"><span class="chip-icon" aria-hidden="true">✕</span>정리 실패</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span><div class="col-tight"><p class="ink-bad">서버에서 처리하지 못했습니다. 잠시 후 다시 시도해주세요.</p><span class="meta">4조각 중 1에서 멈췄습니다.</span></div>
+
+■ ERROR_HINT 표 전체
+  UNAUTHORIZED       로그인이 필요합니다. 다시 로그인해주세요.
+  FORBIDDEN          이 작업은 팀 owner만 할 수 있습니다.
+  NOT_FOUND          찾을 수 없습니다. 주소가 바뀌었거나 삭제되었을 수 있습니다.
+  VALIDATION_FAILED  입력한 내용을 다시 확인해주세요.
+  STALE_BASE         그 사이 새 버전이 발행되었습니다. 최신 내용을 불러왔어요. 다시 발행해주세요.
+  REVISION_CONFLICT  다른 사람이 먼저 수정했습니다. 최신 내용을 불러왔어요. 다시 저장해주세요.
+  BUDGET_EXCEEDED    오늘의 AI 예산이 소진되었습니다. 내일 다시 시도해주세요.
+  RATE_LIMITED       요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.
+  COMPILE_FAILED     발행이 취소되었습니다. 아무것도 바뀌지 않았습니다.
+  INTERNAL           서버에서 처리하지 못했습니다. 잠시 후 다시 시도해주세요.
+  AI_OUTPUT_INVALID  AI가 정리한 결과를 읽지 못했습니다. 다시 시도해주세요.
