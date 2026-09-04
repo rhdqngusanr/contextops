@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, ERROR_CODES, ITEM_STATUSES, ITEM_TYPES,
-  SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES, type SourceRef,
+  SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES, type ErrorCode, type SourceRef,
 } from '@contextops/schema'
 
 import { ERROR_HINT, hintFor } from '../src/lib/web/api'
@@ -107,16 +109,65 @@ describe('🔴 근거 4종이 서로 다른 한 줄을 낸다 (SPEC §3 · DESIG
   })
 })
 
+const designBrief = fileURLToPath(new URL('../../../docs/DESIGN_BRIEF.md', import.meta.url))
+
+/**
+ * `docs/DESIGN_BRIEF.md` §5 의 「- <라벨>: \`문장\`」 줄들을 `{라벨: 문장}` 으로 읽는다.
+ *
+ * ⚠ 이어지는 설명 줄(들여쓴 줄)은 **안 읽는다** — 정본은 불릿 첫 줄의 백틱 문장 하나다.
+ */
+function briefSection5(): Record<string, string> {
+  const md = readFileSync(designBrief, 'utf8')
+  const body = /\n## 5\. [^\n]*\n([\s\S]*?)\n## /.exec(md)
+  if (!body) throw new Error('DESIGN_BRIEF 에 §5 절이 없다')
+  const out: Record<string, string> = {}
+  for (const line of (body[1] as string).split('\n')) {
+    const m = /^- ([^:]+): `([^`]+)`/.exec(line)
+    if (m) out[(m[1] as string).trim()] = m[2] as string
+  }
+  return out
+}
+
+/**
+ * 🔴 **에러 코드 → DESIGN_BRIEF §5 불릿의 라벨.** 화면 문구의 정본이 §5 라는 것을
+ * 기계가 확인할 수 있는 **유일한 연결선**이다.
+ *
+ * ★ 새 에러 코드에 §5 가 문장을 정해 주면 여기 한 줄을 더한다 (`ERROR_HINT` 주석의 ⑤ 다음).
+ * ⚠ 여기 **없는** 코드는 §5 가 문장을 안 정한 것이다 — 그건 정상이다.
+ *   `발행 실패` 는 일부러 뺐다: §5 의 그 줄은 목업용 항목 id(`item_bs_m2`)를 문장 안에
+ *   품고 있어서 그대로 쓸 수 없다. `COMPILE_FAILED` 는 「전부 롤백」을 말하는 일반 문장이다.
+ */
+const BRIEF_5_BULLET: Partial<Record<ErrorCode, string>> = {
+  REVISION_CONFLICT: '409(항목 수정)',
+  BUDGET_EXCEEDED: '예산 소진',
+}
+
 describe('🔴 에러 코드 10종이 전부 화면 문구를 갖는다 (DESIGN_BRIEF §5)', () => {
   it('표의 키가 ERROR_CODES 와 같고 문구가 서로 다르다', () => {
     assertLiveTable('ERROR_HINT', ERROR_CODES, ERROR_HINT, (k) => ERROR_HINT[k])
   })
 
-  it('DESIGN_BRIEF §5 가 정한 문장을 그대로 쓴다', () => {
-    //  ⚠ 문구를 바꾸려면 DESIGN_BRIEF §5 를 먼저 고쳐라 — 화면 문구의 정본은 거기다.
-    expect(ERROR_HINT.REVISION_CONFLICT)
-      .toBe('다른 사람이 먼저 수정했습니다. 최신 내용을 불러왔어요. 다시 저장해주세요.')
-    expect(ERROR_HINT.BUDGET_EXCEEDED).toContain('오늘의 AI 예산이 소진되었습니다')
+  it('🔴 DESIGN_BRIEF §5 가 적은 문장을 **그 파일에서 읽어** 대조한다', () => {
+    //  ★ 왜 파일을 읽나 — 예전엔 여기에 문장을 **복사해** 두었다. 그러면 같은 문구가
+    //    세 곳(문서·코드·시험)에 있고, 문서만 고치면 시험이 안 잡고 시험만 고치면
+    //    문서가 뒤처진다. 정본이 DESIGN_BRIEF §5 라면 **거기서 읽어야** 정본이다.
+    //  ⚠ 문구를 바꾸려면 DESIGN_BRIEF §5 의 그 줄을 먼저 고쳐라.
+    const sentences = briefSection5()
+    for (const [code, bullet] of Object.entries(BRIEF_5_BULLET)) {
+      const said = sentences[bullet]
+      expect(said, `DESIGN_BRIEF §5 에 「${bullet}: \`…\`」 줄이 없다`).toBeDefined()
+      expect(ERROR_HINT[code as ErrorCode], `${code} 문구가 §5 와 갈렸다`).toBe(said)
+    }
+  })
+
+  it('🔴 없는 것을 약속하지 않는다 — 「샘플 결과」 (FINDINGS 66)', () => {
+    //  ★ 예산이 소진되면 화면은 「샘플 결과를 표시합니다」라고 말했는데
+    //    **표시하는 코드가 0곳**이었다. 사람은 샘플을 찾다가 화면이 고장난 줄 안다.
+    //  ⚠ 이 시험을 지우려면 **픽스처를 표시하는 코드가 먼저** 있어야 한다.
+    //    SPEC §7.5 는 그 갈래를 §7.4 게스트 데모에만 두기로 정했다 (P7 — 실제
+    //    프로젝트에 픽스처 항목을 넣으면 그 줄이 사용자의 원문으로 역추적되지 않는다).
+    expect(ERROR_HINT.BUDGET_EXCEEDED).not.toMatch(/샘플|예시 결과/)
+    for (const said of Object.values(briefSection5())) expect(said).not.toMatch(/샘플/)
   })
 
   it('서버 문구를 그대로 쓰지 않는다 — 화면 문구는 존댓말이다', () => {
