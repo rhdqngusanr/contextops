@@ -1,0 +1,346 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it } from 'vitest'
+import {
+  CONFLICT_ANCHORS, CONFLICT_CHOICES, CONFLICT_KINDS, CONFLICT_KIND_RULES, RESOLUTION_NOTE_MAX,
+  type ConflictKind, type ContextItem, type DetectedConflictKind, type SourceRef,
+} from '@contextops/schema'
+
+import {
+  CHOICE_LABEL, CONFLICT_SIDES, ConflictCard,
+  type ConflictCardHandlers, type ConflictCardState,
+} from '../src/components/conflict-card'
+import { SEED_ANSWER_MAX } from '../src/lib/api/seed-questions'
+import type { ConflictCard as ConflictRow } from '../src/lib/web/queries'
+
+// =====================================================================
+//  🔴 충돌 카드의 **모든 모양을 그려서 읽는다** (loop/PROMPT.md ⑦3층)
+//
+//  ★ 왜 — 브라우저로는 그때 마침 그 모양인 하나밖에 못 본다. 「가리키는 항목을 못
+//    찾은 카드」「결정 저장이 실패한 카드」「답했는데 항목이 안 생긴 카드」는 사람이
+//    손으로 만들기 어려운 상태라, 그냥 두면 **아무도 본 적 없는 채로** 배포된다.
+//
+//  재는 것 — 전부 DESIGN_BRIEF·이 저장소가 이미 배운 것이다:
+//    ① 종류마다 갈리는 것이 **표에서만** 온다 (`anchor`·`detected`·`byAi`)
+//    ② 없는 것을 지어내지 않는다 (못 찾은 항목 · 항목 0개면 「만들어졌습니다」 금지)
+//    ③ 없는 문을 그리지 않는다 (결정된 카드에 버튼이 없다)
+//    ④ 근거가 판정 **옆에** 있다 (P7 · DESIGN_BRIEF §2-1)
+//    ⑤ 상한을 화면이 손으로 적지 않는다 (`SEED_ANSWER_MAX` · `RESOLUTION_NOTE_MAX`)
+//    ⑥ 「실시간」이라는 낱말이 없다 (DESIGN_BRIEF §2-3) · 사람 이름·점수가 없다 (P5)
+//
+//  ⚠ 이 시험이 재지 **못하는** 것: 간격·색·글꼴. 그건 캡처가 있어야 한다
+//    (`docs/STATUS.md` 「눈 판정 대기」).
+// =====================================================================
+
+const NOOP: ConflictCardHandlers = { onDraft: () => {}, onChoose: () => {}, onAnswer: () => {} }
+
+const DOC_REF: SourceRef = {
+  kind: 'source_document',
+  document_version_id: '3f9c2e1a-0000-4000-8000-000000000000',
+  start_char: 120,
+  end_char: 480,
+  heading_path: ['결제', '재시도'],
+}
+
+const CODE_REF: SourceRef = {
+  kind: 'repository_path',
+  repo: 'paylab-api',
+  path: 'src/payment/retry.ts',
+  start_line: 14,
+  end_line: 30,
+}
+
+function item(over: Partial<ContextItem> = {}): ContextItem {
+  return {
+    id: 'item_retry_policy',
+    project_id: '00000000-0000-4000-8000-000000000000',
+    type: 'policy',
+    title: '결제 재시도는 5회까지',
+    body: '재시도는 지수 백오프로 5회까지 한다.',
+    status: 'active',
+    scope: { kind: 'project' },
+    priority: 50,
+    source_refs: [DOC_REF],
+    tags: [],
+    confidence: 'high',
+    revision: 3,
+    data: { rule: '재시도 5회', severity: 'must', enforcement: 'review' },
+    ...over,
+  } as ContextItem
+}
+
+/** 종류가 정한 칸만 채운 행을 만든다 — DB CHECK 과 같은 규칙을 시험이 흉내 낸다. */
+function row(kind: ConflictKind, over: Partial<ConflictRow> = {}): ConflictRow {
+  const rule = CONFLICT_KIND_RULES[kind]
+  return {
+    id: `c-${kind}`,
+    project_id: '00000000-0000-4000-8000-000000000000',
+    kind,
+    a_item_id: rule.anchor === 'items' ? 'item_retry_policy' : null,
+    b_item_id: rule.anchor === 'items' && rule.needsB ? 'item_retry_code' : null,
+    a_ref: rule.anchor === 'document' ? DOC_REF : null,
+    b_ref: rule.anchor === 'document' && rule.needsB ? CODE_REF : null,
+    question: '어느 쪽이 현재 상태인가요?',
+    severity: rule.detected ? 'high' : null,
+    status: 'open',
+    resolution: null,
+    resolved_at: null,
+    ...over,
+  }
+}
+
+function base(over: Partial<ConflictCardState> = {}): ConflictCardState {
+  return {
+    conflict: row('contradiction'),
+    canDecide: true,
+    a: item(),
+    b: item({ id: 'item_retry_code', title: '코드의 재시도는 3회', source_refs: [CODE_REF], revision: 1 }),
+    draft: '',
+    busy: false,
+    error: null,
+    created: null,
+    ...over,
+  }
+}
+
+function draw(over: Partial<ConflictCardState> = {}): string {
+  return renderToStaticMarkup(createElement(ConflictCard, { state: base(over), on: NOOP }))
+}
+
+/** 태그를 지우고 사람이 읽는 글자만 남긴다. */
+function text(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ').trim()
+}
+
+const SHAPES: { what: string; over: Partial<ConflictCardState> }[] = [
+  { what: '① 모순 — 두 항목이 다 있다', over: {} },
+  { what: '② 오래됨 — 다른 버튼 문구', over: { conflict: row('stale') } },
+  { what: '③ 중복', over: { conflict: row('duplicate') } },
+  { what: '④ 문서↔코드', over: { conflict: row('doc_vs_code') } },
+  { what: '⑤ 가리키는 항목을 못 찾았다', over: { a: null, b: null } },
+  { what: '⑥ 메모를 쓰는 중', over: { draft: '팀장이 8/4 에 확인함' } },
+  { what: '⑦ 저장 중', over: { busy: true } },
+  { what: '⑧ 저장 실패', over: { error: new Error('서버가 500 을 냈다') } },
+  {
+    what: '⑨ 결정됨 (메모 있음)',
+    over: {
+      conflict: row('contradiction', {
+        status: 'resolved', resolution: { choice: 'b', note: '8/4 QC 결과가 최신이다' },
+      }),
+    },
+  },
+  {
+    what: '⑩ 무시됨',
+    over: { conflict: row('contradiction', { status: 'dismissed', resolution: { choice: 'dismiss' } }) },
+  },
+  { what: '⑪ 열린 질문 (원문을 가리킨다)', over: { conflict: row('open_question'), a: null, b: null } },
+  { what: '⑫ 씨앗 질문 (가리킬 것이 없다)', over: { conflict: row('seed_question'), a: null, b: null } },
+  {
+    what: '⑬ 답 저장됨 — 항목이 생겼다',
+    over: {
+      conflict: row('seed_question', { status: 'resolved', resolution: { choice: 'a', note: '결제를 안전하게.' } }),
+      a: null, b: null, created: ['item_seed_mission'],
+    },
+  },
+  {
+    what: '⑭ 답 저장됨 — 항목이 안 생겼다',
+    over: {
+      conflict: row('open_question', { status: 'resolved', resolution: { choice: 'a', note: 'MQTT 를 골랐다.' } }),
+      a: null, b: null, created: [],
+    },
+  },
+  { what: '⑮ member 가 본 탐지 카드', over: { canDecide: false } },
+]
+
+describe('충돌 카드 — 모든 모양을 그려서 읽는다', () => {
+  it('열다섯 모양이 전부 그려지고, 서로 다르다', () => {
+    const drawn = SHAPES.map((s) => draw(s.over))
+    for (const [i, html] of drawn.entries()) {
+      expect(text(html).length, `${SHAPES[i]!.what}: 빈 카드다`).toBeGreaterThan(20)
+    }
+    expect(new Set(drawn).size, '서로 다른 모양이 같은 마크업을 낸다').toBe(SHAPES.length)
+  })
+
+  it('🔴 「실시간」이라는 낱말이 없다 · 사람 이름도 점수도 없다 (DESIGN_BRIEF §2-3 · P5)', () => {
+    for (const s of SHAPES) {
+      const t = text(draw(s.over))
+      expect(t, s.what).not.toContain('실시간')
+      expect(t, s.what).not.toMatch(/점수|순위|랭킹/)
+    }
+  })
+})
+
+describe('🔴 종류마다 갈리는 것이 표에서만 온다', () => {
+  it('`CONFLICT_SIDES` 의 키가 탐지 종류와 같고, A·B 문구가 서로 다르다', () => {
+    const detected = CONFLICT_KINDS.filter((k) => CONFLICT_KIND_RULES[k].detected)
+    expect(Object.keys(CONFLICT_SIDES).sort()).toEqual([...detected].sort())
+    const labels = detected.flatMap((k) => {
+      const sides = CONFLICT_SIDES[k as DetectedConflictKind]
+      return [sides.a, sides.b]
+    })
+    expect(new Set(labels).size, `A·B 문구가 겹친다 — ${labels.join(' / ')}`).toBe(labels.length)
+  })
+
+  it('선택 4개가 서로 다른 문구를 낸다 (`CHOICE_LABEL`)', () => {
+    const sides = CONFLICT_SIDES.doc_vs_code
+    const made = CONFLICT_CHOICES.map((c) => CHOICE_LABEL[c](sides))
+    expect(Object.keys(CHOICE_LABEL).sort()).toEqual([...CONFLICT_CHOICES].sort())
+    expect(new Set(made).size, made.join(' / ')).toBe(CONFLICT_CHOICES.length)
+  })
+
+  it('🔴 탐지 4종의 카드가 **서로 다른 버튼 문구**를 그린다 — 종류가 실제로 화면을 바꾼다', () => {
+    const rendered = (['contradiction', 'stale', 'duplicate', 'doc_vs_code'] as DetectedConflictKind[])
+      .map((k) => text(draw({ conflict: row(k) })))
+    for (const [i, t] of rendered.entries()) {
+      const kind = (['contradiction', 'stale', 'duplicate', 'doc_vs_code'] as DetectedConflictKind[])[i]!
+      expect(t, kind).toContain(CONFLICT_SIDES[kind].a)
+      expect(t, kind).toContain(CONFLICT_SIDES[kind].b)
+    }
+    expect(new Set(rendered).size).toBe(rendered.length)
+  })
+
+  it('🔴 `anchor` 3종이 서로 다른 본문을 그린다 (근거로 가는 길이 갈린다 · P7)', () => {
+    //  종류가 아니라 `anchor` 로 고른다 — 축마다 대표 한 종류.
+    const perAnchor = CONFLICT_ANCHORS.map((anchor) => {
+      const kind = CONFLICT_KINDS.find((k) => CONFLICT_KIND_RULES[k].anchor === anchor)
+      expect(kind, `${anchor} 를 쓰는 종류가 없다`).toBeDefined()
+      return {
+        anchor,
+        html: draw({
+          conflict: row(kind!),
+          a: item(),
+          b: item({ id: 'item_retry_code', source_refs: [CODE_REF] }),
+        }),
+      }
+    })
+
+    const items = perAnchor.find((p) => p.anchor === 'items')!.html
+    const document = perAnchor.find((p) => p.anchor === 'document')!.html
+    const none = perAnchor.find((p) => p.anchor === 'none')!.html
+
+    //  ① 항목을 가리키는 카드는 **항목 태그와 그 근거**를 그린다.
+    expect(text(items)).toContain('item_retry_policy')
+    expect(text(items)).toContain('paylab-api/src/payment/retry.ts')
+    //  ② 원문을 가리키는 카드는 **문서 구간**을 그린다 (항목 태그가 아니다).
+    expect(text(document)).toContain('120–480자')
+    expect(text(document)).not.toContain('item_retry_policy')
+    //  ③ 가리킬 것이 없는 카드는 **아무 근거도 지어내지 않는다.**
+    expect(text(none)).toContain('가리킬 문서도 항목도 없습니다')
+    expect(text(none)).not.toContain('item_retry_policy')
+    expect(text(none)).not.toContain('120–480자')
+  })
+
+  it('🔴 `byAi` 가 배지를 가른다 — 열린 질문에는 붙고 씨앗 질문에는 안 붙는다', () => {
+    //  ⚠ 둘 다 `detected: false` 다. `detected` 로 배지를 달면 이 시험이 빨개진다.
+    expect(CONFLICT_KIND_RULES.open_question.detected).toBe(false)
+    expect(CONFLICT_KIND_RULES.seed_question.detected).toBe(false)
+
+    const open = text(draw({ conflict: row('open_question'), a: null, b: null }))
+    const seed = text(draw({ conflict: row('seed_question'), a: null, b: null }))
+    expect(open).toContain('AI 제안')
+    expect(seed).not.toContain('AI 제안')
+  })
+
+  it('질문 카드에는 선택 버튼이 없고 답 칸이 있다 (`POST /questions` 가 받는 종류다)', () => {
+    for (const kind of CONFLICT_KINDS.filter((k) => !CONFLICT_KIND_RULES[k].detected)) {
+      const t = text(draw({ conflict: row(kind), a: null, b: null }))
+      expect(t, kind).toContain('답 저장하기')
+      expect(t, kind).not.toContain('둘 다 보류')
+    }
+    for (const kind of CONFLICT_KINDS.filter((k) => CONFLICT_KIND_RULES[k].detected)) {
+      const t = text(draw({ conflict: row(kind) }))
+      expect(t, kind).toContain('둘 다 보류')
+      expect(t, kind).not.toContain('답 저장하기')
+    }
+  })
+
+  it('탐지가 안 만드는 종류에는 심각도 칩이 없다 (재지 않은 값을 그리지 않는다)', () => {
+    expect(text(draw({ conflict: row('contradiction') }))).toContain('심각도 높음')
+    expect(text(draw({ conflict: row('seed_question'), a: null, b: null }))).not.toContain('심각도')
+  })
+})
+
+describe('🔴 없는 것을 지어내지 않는다', () => {
+  it('가리키는 항목을 못 찾으면 빈 칸이 아니라 「못 찾았다」를 그린다', () => {
+    const t = text(draw({ a: null, b: null }))
+    expect(t).toContain('이 항목을 목록에서 찾지 못했습니다')
+    //  ⚠ 그래도 **어느 항목이었는지**는 남긴다 — 그게 없으면 사람이 찾아갈 데가 없다 (P7).
+    expect(t).toContain('item_retry_policy')
+  })
+
+  it('🔴 답했는데 항목이 0개면 「만들어졌습니다」라고 말하지 않는다 (FINDINGS 66)', () => {
+    const none = text(draw({
+      conflict: row('open_question', { status: 'resolved', resolution: { choice: 'a', note: '그렇다.' } }),
+      a: null, b: null, created: [],
+    }))
+    expect(none).toContain('항목은 만들어지지 않았습니다')
+    expect(none).not.toContain('개가 만들어졌습니다')
+
+    const some = text(draw({
+      conflict: row('seed_question', { status: 'resolved', resolution: { choice: 'a', note: '그렇다.' } }),
+      a: null, b: null, created: ['item_seed_mission'],
+    }))
+    expect(some).toContain('초안 항목 1개가 만들어졌습니다')
+  })
+
+  it('아직 저장 안 한 질문 카드는 무엇이 생기는지 **약속하지 않는다**', () => {
+    //  ★ 답이 항목이 되는 질문과 기록으로만 남는 질문이 섞여 있고, 그 판정은 서버가 한다.
+    const t = text(draw({ conflict: row('seed_question'), a: null, b: null }))
+    expect(t).not.toContain('만들어집니다')
+    expect(t).not.toContain('만들어지지 않았습니다')
+  })
+
+  it('결정된 카드에는 버튼이 없고, 무엇을 골랐는지가 남는다', () => {
+    const html = draw({
+      conflict: row('stale', { status: 'resolved', resolution: { choice: 'b', note: '8/4 가 최신' } }),
+    })
+    expect(html).not.toContain('<button')
+    const t = text(html)
+    expect(t).toContain('B가 최신')
+    expect(t).toContain('8/4 가 최신')
+  })
+
+  it('🔴 한쪽뿐인 카드에 「A」를 붙이지 않는다 — 없는 짝을 찾게 만든다', () => {
+    //  열린 질문은 `needsB: false` 라 가리키는 원문이 하나다.
+    const one = text(draw({ conflict: row('open_question'), a: null, b: null }))
+    expect(one).toContain('근거')
+    expect(one).not.toMatch(/(^| )A( |$)/)
+    //  두 쪽이 있는 카드는 A·B 를 붙인다 — 그래야 버튼의 「A가 맞음」이 무엇인지 안다.
+    const two = text(draw())
+    expect(two).toMatch(/(^| )A( |$)/)
+    expect(two).toMatch(/(^| )B( |$)/)
+  })
+
+  it('🔴 owner 가 아니면 결정 버튼을 그리지 않는다 — 누르면 403 인 버튼을 두지 않는다', () => {
+    const html = draw({ canDecide: false })
+    expect(html).not.toContain('<button')
+    const t = text(html)
+    expect(t).toContain('이 결정은 팀 owner 가 합니다')
+    //  🔴 그래도 **근거는 그대로 보인다** — owner 에게 보여 주려면 봐야 한다 (P7).
+    expect(t).toContain('paylab-api/src/payment/retry.ts')
+  })
+
+  it('member 도 질문에는 답할 수 있다 (`POST /questions` 는 member 다)', () => {
+    const t = text(draw({ conflict: row('seed_question'), canDecide: false, a: null, b: null }))
+    expect(t).toContain('답 저장하기')
+    expect(t).not.toContain('이 결정은 팀 owner 가 합니다')
+  })
+
+  it('🔴 결정 문구에 조사를 붙이지 않는다 — 버튼 문구마다 받침이 다르다', () => {
+    //  ⚠ 「무시」+「으로」가 됐던 자리다. 넷 다 그려서 어색한 조사가 없는지 본다.
+    for (const choice of CONFLICT_CHOICES) {
+      const t = text(draw({
+        conflict: row('contradiction', { status: 'resolved', resolution: { choice } }),
+      }))
+      expect(t, choice).not.toMatch(/」(으로|로|을|를|이|가) /)
+    }
+  })
+})
+
+describe('🔴 상한을 화면이 손으로 적지 않는다', () => {
+  it('답 칸은 `SEED_ANSWER_MAX`, 메모 칸은 `RESOLUTION_NOTE_MAX` 를 읽는다', () => {
+    expect(draw({ conflict: row('seed_question'), a: null, b: null }))
+      .toContain(`maxLength="${SEED_ANSWER_MAX}"`)
+    expect(draw()).toContain(`maxLength="${RESOLUTION_NOTE_MAX}"`)
+  })
+})

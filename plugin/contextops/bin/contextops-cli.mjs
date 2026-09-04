@@ -19259,6 +19259,7 @@ var CONFLICT_KIND_RULES = {
     detected: true,
     anchor: "items",
     needsB: true,
+    byAi: true,
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uC591\uB9BD\uD560 \uC218 \uC5C6\uB2E4 \u2014 \uB458 \uB2E4 \uC9C0\uD0A4\uBA74 \uBAA8\uC21C\uC774 \uB418\uB294 \uB450 \uD56D\uBAA9\uC774\uB2E4."
   },
@@ -19266,6 +19267,7 @@ var CONFLICT_KIND_RULES = {
     detected: true,
     anchor: "items",
     needsB: true,
+    byAi: true,
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uD55C\uCABD\uC758 \uB0A0\uC9DC\xB7\uBC84\uC804\uC774 \uB2E4\uB978 \uCABD\uC5D0 \uC758\uD574 \uBB34\uD6A8\uAC00 \uB410\uB2E4. **\uC5B4\uB290 \uCABD\uC774 \uB9DE\uB294\uC9C0\uB294 \uD310\uB2E8\uD558\uC9C0 \uB9C8\uB77C.**"
   },
@@ -19273,6 +19275,7 @@ var CONFLICT_KIND_RULES = {
     detected: true,
     anchor: "items",
     needsB: true,
+    byAi: true,
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uAC19\uC740 \uAC1C\uB150\uC744 \uB450 \uD56D\uBAA9\uC774 \uAC01\uAC01 \uC801\uC5C8\uB2E4."
   },
@@ -19280,6 +19283,7 @@ var CONFLICT_KIND_RULES = {
     detected: true,
     anchor: "items",
     needsB: true,
+    byAi: true,
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uBB38\uC11C\uC5D0\uC11C \uC628 \uD56D\uBAA9(origin=doc)\uACFC \uCF54\uB4DC\uC5D0\uC11C \uC628 \uD56D\uBAA9(origin=code)\uC774 \uC11C\uB85C \uB2E4\uB978 \uB9D0\uC744 \uD55C\uB2E4."
   },
@@ -19290,6 +19294,7 @@ var CONFLICT_KIND_RULES = {
     detected: false,
     anchor: "document",
     needsB: false,
+    byAi: true,
     madeBy: "\xA77.1 \uBB38\uC11C \uAD6C\uC870\uD654\uC758 `open_questions`",
     hint: ""
   },
@@ -19299,6 +19304,7 @@ var CONFLICT_KIND_RULES = {
     detected: false,
     anchor: "none",
     needsB: false,
+    byAi: false,
     madeBy: "\uD504\uB85C\uC81D\uD2B8\uB97C \uB9CC\uB4E4 \uB54C \uC2EC\uB294 \uC528\uC557 \uC9C8\uBB38 (`lib/api/seed-questions.ts`)",
     hint: ""
   }
@@ -19376,9 +19382,10 @@ var ConflictQuery = ListQuery.extend({
   status: external_exports.enum(CONFLICT_STATUSES).optional(),
   kind: external_exports.enum(CONFLICT_KINDS).optional()
 }).strict();
+var RESOLUTION_NOTE_MAX = 500;
 var ResolveConflict = external_exports.object({
   choice: external_exports.enum(CONFLICT_CHOICES),
-  note: external_exports.string().max(500).optional()
+  note: external_exports.string().max(RESOLUTION_NOTE_MAX).optional()
 }).strict();
 var AnswerQuestions = external_exports.object({
   answers: external_exports.array(external_exports.object({

@@ -17,6 +17,8 @@ import { usePathname } from 'next/navigation'
 const TABS: { href: (base: string) => string; label: string; match: RegExp }[] = [
   //  ⚠ 차례가 일의 차례다 — 문서를 넣는 화면이 먼저고, 그 결과를 보는 화면이 뒤다.
   { href: (base) => `${base}/import`, label: '가져오기', match: /\/import$/ },
+  //  ⚠ 정리가 Context 앞이다 — 결정을 끝낸 것만 발행으로 간다 (SPEC §9 화면 4 → 5).
+  { href: (base) => `${base}/review`, label: '정리', match: /\/review$/ },
   { href: (base) => `${base}/context`, label: 'Context', match: /\/context$/ },
   //  ⚠ Pack Explorer 는 버전 하나를 가리켜야 열린다. 목록에서는 「최신」으로 보낸다 —
   //    `latest` 는 semver 가 아니라 화면이 versions 를 읽어 고르는 자리다.

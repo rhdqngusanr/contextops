@@ -1,6 +1,7 @@
 import {
-  AI_JOB_STATUSES, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, SOURCE_DOCUMENT_KINDS,
-  SYNC_STATUSES, type AiJobStatus, type Confidence, type ItemStatus, type ItemType,
+  AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
+  ITEM_TYPES, SOURCE_DOCUMENT_KINDS, SYNC_STATUSES, type AiJobStatus, type Confidence,
+  type ConflictKind, type ConflictSeverity, type ItemStatus, type ItemType,
   type SourceDocumentKind, type SyncStatus,
 } from '@contextops/schema'
 
@@ -11,7 +12,7 @@ import {
 //     ★ 왜 — 색각 이상뿐 아니라 발표 영상·인쇄된 심사 자료에서 색이 뭉갠다.
 //     그래서 아래 표의 행에는 색(`tone`)만 있는 칸이 없다.
 //
-//  🔴 **표가 여섯이고, 여섯 다 스키마의 enum 을 키로 잡는다** (`Record<ItemType, …>`).
+//  🔴 **표가 여덟이고, 여덟 다 스키마의 enum 을 키로 잡는다** (`Record<ItemType, …>`).
 //     ★ 왜 이 모양인가 — 화면에 `switch (type)` 을 흩으면 타입이 늘 때 화면을 고쳐야
 //       하고, 반드시 한 곳을 빠뜨린다. 여기서는 enum 에 값을 더하면 **타입 검사가
 //       막고**, `test/web-tables.test.ts` 가 「표의 키가 enum 과 다르다」로 다시 막는다.
@@ -73,6 +74,37 @@ export const AI_JOB_STATUS_CHIP: Record<AiJobStatus, ChipSpec> = {
   failed: { icon: '✕', label: '정리 실패', tone: 'bad' },
 }
 
+/**
+ * 충돌 종류 6종 (SPEC §7.2 · DESIGN_BRIEF §4 화면 4 「필터 칩」).
+ * **화면 4 의 거르개가 이 표를 읽어서 그린다** — 칩을 손으로 적지 않는다.
+ *
+ * ⚠ DESIGN_BRIEF 는 다섯(충돌/오래됨/중복/문서↔코드/열린 질문)만 적지만 계약은
+ *   **여섯**이다 — 씨앗 질문이 뒤에 생겼다 (FINDINGS 67 ③). 다섯만 그리면 여섯째는
+ *   **아무도 못 거르는 종류**가 되고, 그게 이 저장소가 매 바퀴 찾는 「정의만 있고
+ *   아무 일도 안 하는 것」이다.
+ * ⚠ 「이 종류를 누가 만들었나」는 여기 없다 — `CONFLICT_KIND_RULES[kind].byAi` 가
+ *   정본이다. 라벨 옆에 손으로 적으면 두 곳이 갈린다.
+ */
+export const CONFLICT_KIND_CHIP: Record<ConflictKind, ChipSpec> = {
+  contradiction: { icon: '⚡', label: '충돌', tone: 'bad' },
+  stale: { icon: '⌛', label: '오래됨', tone: 'warn' },
+  duplicate: { icon: '⧉', label: '중복', tone: 'neutral' },
+  doc_vs_code: { icon: '⇄', label: '문서↔코드', tone: 'warn' },
+  open_question: { icon: '?', label: '열린 질문', tone: 'neutral' },
+  seed_question: { icon: '✎', label: '씨앗 질문', tone: 'neutral' },
+}
+
+/**
+ * 충돌 심각도 3단계 (SPEC §7.2 `CONFLICT_SEVERITIES`).
+ * ⚠ 라벨에 「심각도」를 붙이는 이유 — 같은 화면에 `CONFIDENCE_CHIP`(high/medium/low)이
+ *   같이 뜬다. 낱말이 같으면 두 칩이 한 종류로 보인다.
+ */
+export const CONFLICT_SEVERITY_CHIP: Record<ConflictSeverity, ChipSpec> = {
+  high: { icon: '▲', label: '심각도 높음', tone: 'bad' },
+  medium: { icon: '◆', label: '심각도 보통', tone: 'warn' },
+  low: { icon: '▽', label: '심각도 낮음', tone: 'neutral' },
+}
+
 /** 항목 타입 10종의 표 아이콘 (SPEC §3 · DESIGN_BRIEF §4 화면 5 「타입 아이콘」). */
 export const ITEM_TYPE_ICON: Record<ItemType, string> = {
   mission: '◆',
@@ -113,6 +145,8 @@ export const CHIP_TABLES = {
   item_status: { keys: ITEM_STATUSES, table: ITEM_STATUS_CHIP },
   confidence: { keys: CONFIDENCE_LEVELS, table: CONFIDENCE_CHIP },
   ai_job_status: { keys: AI_JOB_STATUSES, table: AI_JOB_STATUS_CHIP },
+  conflict_kind: { keys: CONFLICT_KINDS, table: CONFLICT_KIND_CHIP },
+  conflict_severity: { keys: CONFLICT_SEVERITIES, table: CONFLICT_SEVERITY_CHIP },
 } as const
 
 export const ITEM_TYPE_KEYS = ITEM_TYPES
@@ -146,6 +180,14 @@ export function ConfidenceChip({ confidence }: { confidence: Confidence }) {
 
 export function AiJobStatusChip({ status }: { status: AiJobStatus }) {
   return <Chip spec={AI_JOB_STATUS_CHIP[status]} />
+}
+
+export function ConflictKindChip({ kind }: { kind: ConflictKind }) {
+  return <Chip spec={CONFLICT_KIND_CHIP[kind]} title={kind} />
+}
+
+export function ConflictSeverityChip({ severity }: { severity: ConflictSeverity }) {
+  return <Chip spec={CONFLICT_SEVERITY_CHIP[severity]} />
 }
 
 export function TypeIcon({ type }: { type: ItemType }) {

@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
-  AI_JOB_STATUSES, CONFIDENCE_LEVELS, ERROR_CODES, ITEM_STATUSES, ITEM_TYPES,
-  SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES, type ErrorCode, type SourceRef,
+  AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ERROR_CODES,
+  ITEM_STATUSES, ITEM_TYPES, SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES,
+  type ErrorCode, type SourceRef,
 } from '@contextops/schema'
 
 import { ERROR_HINT, hintFor } from '../src/lib/web/api'
@@ -12,8 +13,8 @@ import { SEMVER_BUMPS, SEMVER_RULE, nextSemver } from '../src/lib/web/semver'
 import { toSlug } from '../src/lib/web/slug'
 import { readCallbackHash } from '../src/lib/web/auth'
 import {
-  AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, ITEM_STATUS_CHIP, ITEM_TYPE_ICON,
-  SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
+  AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
+  ITEM_STATUS_CHIP, ITEM_TYPE_ICON, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
 } from '../src/components/chips'
 import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 
@@ -62,8 +63,27 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
       (k) => `${AI_JOB_STATUS_CHIP[k].icon}${AI_JOB_STATUS_CHIP[k].label}`)
   })
 
+  it('충돌 종류 6종 (SPEC §7.2 · DESIGN_BRIEF §4 화면 4 필터 칩)', () => {
+    assertLiveTable('CONFLICT_KIND_CHIP', CONFLICT_KINDS, CONFLICT_KIND_CHIP,
+      (k) => `${CONFLICT_KIND_CHIP[k].icon}${CONFLICT_KIND_CHIP[k].label}`)
+  })
+
+  it('🔴 충돌 심각도 3단계가 confidence 3단계와 **다르게 보인다** (같은 화면에 같이 뜬다)', () => {
+    assertLiveTable('CONFLICT_SEVERITY_CHIP', CONFLICT_SEVERITIES, CONFLICT_SEVERITY_CHIP,
+      (k) => `${CONFLICT_SEVERITY_CHIP[k].icon}${CONFLICT_SEVERITY_CHIP[k].label}`)
+    //  ⚠ 두 표의 키가 같은 낱말(high/medium/low)이라, 라벨까지 같으면 화면 4 에서
+    //    「confidence high」와 「심각도 high」가 한 종류로 보인다.
+    for (const k of CONFLICT_SEVERITIES) {
+      expect(CONFLICT_SEVERITY_CHIP[k].label, `${k}: confidence 칩과 라벨이 같다`)
+        .not.toBe(CONFIDENCE_CHIP[k].label)
+    }
+  })
+
   it('🔴 상태를 색만으로 구분하지 않는다 — 아이콘과 라벨이 항상 있다 (DESIGN_BRIEF §3)', () => {
-    for (const table of [SYNC_CHIP, ITEM_STATUS_CHIP, CONFIDENCE_CHIP, AI_JOB_STATUS_CHIP]) {
+    for (const table of [
+      SYNC_CHIP, ITEM_STATUS_CHIP, CONFIDENCE_CHIP, AI_JOB_STATUS_CHIP,
+      CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
+    ]) {
       for (const [key, spec] of Object.entries(table) as [string, { icon: string; label: string }][]) {
         expect(spec.icon.length, `${key}: 아이콘이 없다`).toBeGreaterThan(0)
         expect(spec.label.length, `${key}: 라벨이 없다`).toBeGreaterThan(0)

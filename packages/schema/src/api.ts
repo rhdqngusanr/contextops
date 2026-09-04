@@ -220,6 +220,18 @@ export interface ConflictKindRule {
   readonly anchor: ConflictAnchor
   /** 어긋나는 **두 쪽**이 있는 종류인가. `true` 면 b 쪽 칸이 **있어야** 한다. */
   readonly needsB: boolean
+  /**
+   * 🔴 **이 종류를 AI 가 만들었나.** 화면이 `AI 제안` 배지를 다는 기준이고,
+   * 화면 4 의 「AI 가 찾은 결정이 필요한 것 N건」이 세는 기준이다 (§9 화면 4).
+   *
+   * ★ 왜 `detected` 로 갈음할 수 없나 — `open_question` 은 §7.2 **탐지**가 낸 것이
+   *   아니라 §7.1 구조화가 문서를 읽다 남긴 것이라 `detected: false` 지만
+   *   **AI 가 만든 것이다.** `detected` 로 배지를 달면 그 열린 질문만 배지를 잃고,
+   *   화면에서 사람이 적은 질문처럼 보인다.
+   * ⚠ 사람이 정한 것에 이 배지를 붙이지 마라 — 신뢰 경계가 흐려진다
+   *   (DESIGN_BRIEF §3 「AiBadge」).
+   */
+  readonly byAi: boolean
   /** 이 종류를 만드는 자리 한 줄. `detected` 가 `false` 인 줄이 특히 중요하다. */
   readonly madeBy: string
   /**
@@ -247,32 +259,33 @@ export interface ConflictKindRule {
  */
 export const CONFLICT_KIND_RULES = {
   contradiction: {
-    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
     hint: '양립할 수 없다 — 둘 다 지키면 모순이 되는 두 항목이다.',
   },
   stale: {
-    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
     hint: '한쪽의 날짜·버전이 다른 쪽에 의해 무효가 됐다. **어느 쪽이 맞는지는 판단하지 마라.**',
   },
   duplicate: {
-    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
     hint: '같은 개념을 두 항목이 각각 적었다.',
   },
   doc_vs_code: {
-    detected: true, anchor: 'items', needsB: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
     hint: '문서에서 온 항목(origin=doc)과 코드에서 온 항목(origin=code)이 서로 다른 말을 한다.',
   },
   //  ⚠ 이 종류만 `detected: false` 이고 이 종류만 `anchor: 'document'` 다. §7.1 이
   //     문서를 읽다 「판단이 필요하다」고 남긴 질문이고, 두 항목이 어긋난 것이 아니라
   //     **한쪽도 아직 없는** 것이다 — 가리킬 항목이 없으니 원문 구간을 가리킨다.
   open_question: {
-    detected: false, anchor: 'document', needsB: false, madeBy: '§7.1 문서 구조화의 `open_questions`',
+    detected: false, anchor: 'document', needsB: false, byAi: true,
+    madeBy: '§7.1 문서 구조화의 `open_questions`',
     hint: '',
   },
   //  ⚠ 이 종류만 `anchor: 'none'` 이다. 프로젝트를 만드는 순간 심기 때문에 가리킬
   //     문서도 항목도 없다 — 답변이 곧 원문이고, 그 답변은 `resolution.note` 에 남는다.
   seed_question: {
-    detected: false, anchor: 'none', needsB: false,
+    detected: false, anchor: 'none', needsB: false, byAi: false,
     madeBy: '프로젝트를 만들 때 심는 씨앗 질문 (`lib/api/seed-questions.ts`)',
     hint: '',
   },
@@ -437,10 +450,16 @@ export const ConflictQuery = ListQuery.extend({
   kind: z.enum(CONFLICT_KINDS).optional(),
 }).strict()
 
+/**
+ * 결정 메모의 상한. **화면 4 의 메모 칸이 이 값을 읽는다** — 숫자가 두 곳에 있으면
+ * 화면은 600자를 받고 서버는 400 을 내는 자리가 생긴다.
+ */
+export const RESOLUTION_NOTE_MAX = 500
+
 /** `/conflicts/{id}/resolve` (SPEC §5) */
 export const ResolveConflict = z.object({
   choice: z.enum(CONFLICT_CHOICES),
-  note: z.string().max(500).optional(),
+  note: z.string().max(RESOLUTION_NOTE_MAX).optional(),
 }).strict()
 
 /**

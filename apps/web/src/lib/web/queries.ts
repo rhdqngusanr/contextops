@@ -1,5 +1,6 @@
 import type {
-  AiJobStatus, ConflictKind, ConflictStatus, ContextItem, Manifest, SourceDocumentKind, TeamRole,
+  AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItem,
+  Manifest, SourceDocumentKind, SourceRef, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, post } from './api'
@@ -229,17 +230,41 @@ export function structureCounts(result: unknown): {
 // ---------------------------------------------------------------------
 
 /**
- * 질문 카드 한 장. **충돌 행과 같은 모양**이고 (`lib/api/conflict.ts` 의 `toConflict`)
- * 화면이 쓰는 칸만 적는다.
+ * 🔴 **충돌 카드 한 장 — `toConflict()` 가 내는 칸 그대로다** (`lib/api/conflict.ts`).
+ * 충돌을 돌려주는 라우트가 셋이고 (`/conflicts` · `/questions` · `:resolve`) 셋 다
+ * 이 모양을 낸다.
+ *
+ * ⚠ **어느 칸이 비어 있는가는 `kind` 가 정한다** — `CONFLICT_KIND_RULES[kind].anchor`
+ *   가 `items` 면 `a_item_id`/`b_item_id` 가 차고, `document` 면 `a_ref`/`b_ref` 가 차고,
+ *   `none` 이면 넷 다 빈다. 화면은 그 표를 **읽어서** 무엇을 그릴지 고른다 —
+ *   여기서 한쪽으로 접으면 근거로 가는 길을 잃는다 (P7 · `components/conflict-card.tsx`).
+ * ⚠ `a_item_id` 는 uuid 가 아니라 **`item_<slug>`** 다 — `ContextItem.id` 와 같은 값이라
+ *   항목 목록과 그대로 이어 붙는다 (`db/schema.ts` 의 복합 FK 가 그 이름을 잠근다).
+ */
+export type ConflictCard = {
+  id: string
+  project_id: string
+  kind: ConflictKind
+  a_item_id: string | null
+  b_item_id: string | null
+  a_ref: SourceRef | null
+  b_ref: SourceRef | null
+  question: string
+  /** §7.2 가 매긴 심각도. **탐지가 만들지 않는 종류는 `null`** 이다 (DB CHECK). */
+  severity: ConflictSeverity | null
+  status: ConflictStatus
+  resolution: { choice: ConflictChoice; note?: string } | null
+  resolved_at: string | null
+}
+
+/**
+ * 질문 카드 한 장 — **위와 같은 행**에서 화면 3 이 쓰는 칸만 좁힌 것이다.
+ * ⚠ 손으로 다시 적지 마라. 두 벌이 되면 한쪽만 서버 응답을 따라가고, 갈린 쪽이
+ *   조용히 `undefined` 를 그린다.
  * ⚠ `kind` 를 지우지 마라 — 씨앗 질문(`seed_question`)과 §7.1 이 문서를 읽다 남긴
  *   질문(`open_question`)은 **온 데가 다르고**, 화면 4 가 그 둘에 다른 배지를 단다.
  */
-export type QuestionRow = {
-  id: string
-  kind: ConflictKind
-  question: string
-  status: ConflictStatus
-}
+export type QuestionRow = Pick<ConflictCard, 'id' | 'kind' | 'question' | 'status'>
 
 export function fetchQuestions(
   projectId: string,
@@ -263,4 +288,41 @@ export function answerQuestions(
   answers: { question_id: string; answer: string }[],
 ): Promise<{ resolved: string[]; created_item_ids: string[] }> {
   return post(`/projects/${projectId}/questions`, { answers })
+}
+
+// ---------------------------------------------------------------------
+//  화면 4 — 정리 (SPEC §5 conflicts · §9 화면 4)
+// ---------------------------------------------------------------------
+
+/**
+ * 결정을 기다리는 충돌·질문 전부. **한 번에 다 읽는다** — 종류별 거르기는 화면이 손에
+ * 든 것에서 한다.
+ *
+ * ★ 왜 `?kind=` 로 서버를 다시 두드리지 않나 — 화면 머리가 「AI 가 찾은 것 N건」과
+ *   「사람이 미리 물어 둔 질문 M장」을 **같이** 말한다. 걸러서 받으면 그 수가 걸러진
+ *   뒤의 수가 되어, 칩을 누를 때마다 머리의 숫자가 바뀐다.
+ */
+export function fetchConflicts(
+  projectId: string,
+  query: { status?: ConflictStatus; kind?: ConflictKind; limit?: number } = {},
+): Promise<{ conflicts: ConflictCard[]; limit: number; offset: number }> {
+  const q = new URLSearchParams()
+  if (query.status) q.set('status', query.status)
+  if (query.kind) q.set('kind', query.kind)
+  if (query.limit !== undefined) q.set('limit', String(query.limit))
+  const tail = q.toString()
+  return apiJson(`/projects/${projectId}/conflicts${tail ? `?${tail}` : ''}`)
+}
+
+/**
+ * 충돌 한 장을 결정한다 (owner 만 · SPEC §5).
+ * ⚠ 경로가 `:resolve` 가 아니라 `/resolve` 다 — 콜론은 Windows 파일 이름에 못 쓴다.
+ * ⚠ 응답은 **갱신된 행 그 자체**다. 화면은 그것을 손에 든 목록에 갈아 끼운다 —
+ *   목록에서 지우면 사람은 자기가 무엇을 골랐는지 확인할 자리를 잃는다.
+ */
+export function resolveConflict(
+  conflictId: string,
+  body: { choice: ConflictChoice; note?: string },
+): Promise<ConflictCard> {
+  return post(`/conflicts/${conflictId}/resolve`, body)
 }
