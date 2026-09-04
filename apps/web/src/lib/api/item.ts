@@ -1,5 +1,8 @@
 import { and, eq } from 'drizzle-orm'
-import { ITEM_DATA, type ContextItem, type ItemType, type Scope, type SourceRef } from '@contextops/schema'
+import {
+  ITEM_DATA, SOURCE_REFS_MAX,
+  type ContextItem, type ItemType, type Scope, type SourceRef,
+} from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../db/schema'
 
@@ -91,4 +94,29 @@ export function toContextItem(row: ItemJoinRow): ContextItem {
 /** 타입별 `data` 를 그 타입의 표로 다시 판다 (전부 `.strict()` — P1 allowlist). */
 export function parseItemData(type: ItemType, data: unknown): unknown {
   return ITEM_DATA[type].parse(data)
+}
+
+/**
+ * 🔴 **개정에 근거를 한 칸 더 붙인다. 자리가 없으면 `undefined` — 몰래 버리지 않는다.**
+ *
+ * ★ 왜 한 자리에 모으나 — 서버가 근거를 **더 붙이는** 자리가 둘이다: 발행이
+ *   `{kind:'proposal'}` 을 붙이고 (`lib/api/publish.ts` · FINDINGS 68), 충돌 정리가
+ *   `{kind:'manual'}` 을 붙인다 (`conflicts/{id}/resolve` · FINDINGS 71). 각자
+ *   `refs.length >= SOURCE_REFS_MAX` 를 적으면 한쪽만 고쳐지고, 안 고쳐진 쪽은
+ *   **조용히 근거를 하나 버린다** — 그 항목의 역추적이 한 칸 짧아지는 것을 아무도
+ *   못 본다. 그게 P7 이 제일 싫어하는 모양이다.
+ * ★ 새 붙이는 자리가 생기면 여기를 부르고, 자리가 없을 때 무엇을 답할지만 정해라
+ *   (발행은 그 항목을 실패로 돌리고, 충돌 정리는 400 이다). **버리는 갈래는 없다.**
+ *
+ * @param same 이미 같은 근거가 있는가를 재는 함수. 있으면 그대로 돌려준다 —
+ *             같은 근거가 둘이면 Pack 줄의 태그만 길어지고 뜻은 안 는다.
+ */
+export function appendSourceRef(
+  refs: SourceRef[],
+  ref: SourceRef,
+  same: (r: SourceRef) => boolean,
+): SourceRef[] | undefined {
+  if (refs.some(same)) return refs
+  if (refs.length >= SOURCE_REFS_MAX) return undefined
+  return [...refs, ref]
 }

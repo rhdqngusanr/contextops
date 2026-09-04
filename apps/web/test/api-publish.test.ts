@@ -6,7 +6,7 @@ import { Manifest, SOURCE_REFS_MAX, SYNC_STATUSES } from '@contextops/schema'
 import { parseTraceTag } from '@contextops/compiler'
 
 import type { Db } from '../src/db/client'
-import { contextItems, packFiles } from '../src/db/schema'
+import { conflicts, contextItems, packFiles } from '../src/db/schema'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
@@ -17,6 +17,7 @@ import { GET as listProposals, POST as createProposal } from '../src/app/api/v1/
 import { POST as submitProposal } from '../src/app/api/v1/proposals/[id]/submit/route'
 import { POST as approveProposal } from '../src/app/api/v1/proposals/[id]/approve/route'
 import { POST as rejectProposal } from '../src/app/api/v1/proposals/[id]/reject/route'
+import { POST as resolveConflict } from '../src/app/api/v1/conflicts/[id]/resolve/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { GET as listVersions } from '../src/app/api/v1/projects/[id]/versions/route'
 import { GET as latestManifest } from '../src/app/api/v1/projects/[id]/packs/latest/manifest/route'
@@ -27,6 +28,7 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
 import { POST as confirmProgress } from '../src/app/api/v1/progress/[id]/confirm/route'
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
+import { conflictRow } from '../src/lib/api/conflict'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from './helpers/db'
 import { batchBody, draft } from './helpers/fixtures'
 
@@ -173,6 +175,44 @@ describe('🔴 손으로 넣은 항목이 Pack 으로 나온다 (PLAN P1 셋째 
   //  ⚠ 「내용이 안 바뀐 발행」을 막는 검사는 여기 없다. `snapshot_hash` 가 semver 를
   //    품어서 번호만 올리면 언제나 다른 해시가 나오기 때문이다 (FINDINGS 27).
   //    **없는 것을 있는 척하는 시험을 쓰지 마라** — 그게 게이트를 거짓말로 만든다.
+})
+
+describe('🔴 충돌을 결정하면 진 항목이 다음 Pack 에서 빠진다 (FINDINGS 71)', () => {
+  it('「A가 맞음」으로 정한 뒤 발행하면 B 항목의 줄이 Pack 어디에도 없다', async () => {
+    //  ★ 왜 여기서 재나 — 「상태가 deprecated 로 바뀌었다」는 **결과가 아니다.** 사람이
+    //    보는 결과는 「그 규칙이 팀에 배포되는 파일에서 사라졌다」다. 그 사이에는
+    //    snapshot 의 `status = 'active'` 필터가 있고, 그게 끊기면 결정은 아무 일도 안 한다.
+    const { owner, projectId } = await seeded()
+
+    //  §7.2(AI)가 만들 충돌을 시험이 직접 넣는다 — 키가 없다. 어느 칸을 채우는지는
+    //  `conflictRow()` 가 `CONFLICT_KIND_RULES` 를 보고 정한다 (손으로 고르지 않는다).
+    const [row] = await db.insert(conflicts).values(conflictRow({
+      projectId,
+      kind: 'contradiction',
+      aItemId: 'item_mission_one',
+      bItemId: 'item_policy_one',
+      question: '재시도는 3회인가 5회인가?',
+      severity: 'high',
+    })).returning({ id: conflicts.id })
+    const id = row!.id
+
+    const resolved = await resolveConflict(
+      req('POST', `/api/v1/conflicts/${id}/resolve`, { auth: owner, body: { choice: 'a' } }),
+      params({ id }),
+    )
+    expect(resolved.status).toBe(200)
+
+    const version = await dataOf(await publishFirst(owner, projectId))
+    const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
+    const everything = files.map((f) => f.content).join('\n')
+
+    //  이긴 쪽과, 이 결정과 상관없는 항목은 그대로 있다.
+    expect(everything).toContain('ctx:item_mission_one')
+    expect(everything).toContain('ctx:item_policy_dom')
+    //  🔴 진 쪽은 **어느 파일에도** 없다. `source_map` 도 그 항목을 안 가리킨다.
+    expect(everything).not.toContain('ctx:item_policy_one')
+    expect(files.flatMap((f) => f.sourceMap.map((m) => m.item_id))).not.toContain('item_policy_one')
+  })
 })
 
 describe('🔴 base_version_id 가 낡으면 409 STALE_BASE (완료 기준 ②)', () => {

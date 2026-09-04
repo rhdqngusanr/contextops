@@ -7,7 +7,7 @@ import type { Db } from '../../db/client'
 import { contextItemRevisions, contextItems, contextVersions, packFiles, projects, proposals } from '../../db/schema'
 import type { Actor } from './auth'
 import { fail } from './error'
-import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItem } from './item'
+import { appendSourceRef, CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItem } from './item'
 
 // =====================================================================
 //  🔴 발행 트랜잭션 — 정본은 docs/SPEC.md §2.1. 여덟 단계가 **이 파일 하나**에 있다.
@@ -320,9 +320,11 @@ async function applyProposalItem(
  *   그 항목의 역추적이 조용히 한 칸 짧아지고, 그건 P7 이 제일 싫어하는 모양이다.
  */
 function withProposalRef(refs: SourceRef[], proposalId: string): SourceRef[] | undefined {
-  if (refs.some((r) => r.kind === 'proposal' && r.proposal_id === proposalId)) return refs
-  if (refs.length >= SOURCE_REFS_MAX) return undefined
-  return [...refs, { kind: 'proposal', proposal_id: proposalId }]
+  return appendSourceRef(
+    refs,
+    { kind: 'proposal', proposal_id: proposalId },
+    (r) => r.kind === 'proposal' && r.proposal_id === proposalId,
+  )
 }
 
 /**
