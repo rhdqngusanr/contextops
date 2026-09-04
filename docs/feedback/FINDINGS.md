@@ -29,6 +29,79 @@
 
 ## 다음에 고칠 것
 
+### 92. `tsc` 가 `apps/web/scripts/` 를 **한 번도 안 본다** — 관통을 만드는 코드가 검사 밖이다   [구멍]
+- **증상**: `apps/web/tsconfig.json` 의 `include` 가 `["*.ts", "src", "test", …]` 다.
+  `"*.ts"` 는 **맨 위 한 층**이라 `scripts/` 는 안 들어온다. 그래서 `ci.ps1` 의
+  `typecheck` 층이 초록이어도 `seed.ts`·`walkthrough-publish.ts`·`dev-server.ts`·
+  `dump-*.ts` 는 **타입을 한 번도 안 본 코드**다. 이 파일들이 관통을 만든다 —
+  「제품이 진짜로 도는가」를 증명하는 자리가 검사에서 빠져 있다.
+- **근거**: 이번 바퀴에 직접 쟀다.
+  `cd apps/web; npx tsc --noEmit --listFiles | grep -c "scripts/"` → **0**.
+  `include` 에 `"scripts"` 한 줄을 넣고 돌려 본 결과는 **에러 3개뿐이고 전부 미사용 변수**다:
+  `dump-resolve-effect.ts(74,10) 'loser'` · `walkthrough-publish.ts(19,58) 'sessionJwt'` ·
+  `walkthrough-publish.ts(128,15) 'db'` (TS6133). **타입 에러는 0개다** — 지금 켜도
+  거의 안 아프다는 뜻이고, 그래서 더더욱 꺼져 있을 이유가 없다.
+- **정본**: `docs/SPEC.md` §12(테스트 매트릭스) · `tsconfig.base.json`(`noUnusedLocals` 정본)
+- **고칠 방향**: `apps/web/tsconfig.json` 의 `include` 에 `"scripts"` 를 더하고 위 셋을 지운다.
+  ⚠ `next build` 가 `scripts/` 를 들여다보게 되는지 확인해라 — `include` 는 `tsc` 와
+  next 가 같이 읽는다. 아프면 `tsconfig.scripts.json` 을 따로 두고 `ci.ps1` 의
+  `typecheck` 층이 **두 프로젝트를 다 돌게** 하는 것이 다음 갈래다.
+  ⚠ 다른 패키지(`packages/*` · `plugin`)의 `include` 도 같이 봐라 — 같은 모양이면
+  거기도 스크립트가 빠져 있다.
+- **상태**: 대기
+
+### 93. 데모 Pack 이 **근거 4종 중 둘 · scope 3종 중 둘**만 보여 준다   [격차]
+- **증상**: **89 와 같은 모양의 고장이고, 89 는 표 하나(`enforcement`)만 고쳤다.**
+  표는 살아 있다(아래 93-B 가 ②단계까지 쟀다). 그런데 **심사자가 읽는 종이**에는:
+  ① `SourceRef` 4종 중 **`doc` 14개 · `proposal` 1개**뿐 — `repo`(코드가 근거)와
+     `manual`(사람이 정리한 근거)은 데모에 한 번도 안 나온다.
+     제일 아픈 것은 `repo` 다. 「이 규칙이 코드 어디에 걸려 있나」가 제품의 말인데
+     그 말이 종이에 없다.
+  ② `scope.kind` 3종 중 **`project`·`domain`** 뿐 — `path` 가 없어서
+     `.claude/rules/scoped-*.md` 라는 **Pack 파일 갈래 하나가 데모에 통째로 없다.**
+- **근거**: 이번 바퀴 눈 판정. `.ci/walkthrough-pack/` 네 파일의 태그를 셌다 —
+  `grep -oh "src:[^ ]*" … | tr ',' '\n' | sed 's/:.*//' | sort | uniq -c` → `14 doc` · `1 proposal`.
+  `ls .ci/walkthrough-pack/.claude/rules/` → `domain-refund.md` · `workflow.md` 둘뿐.
+  ⚠ `conf:` 는 여기 안 적는다 — **91-B 가 이미 보고 「고칠 것이 아니다」로 닫았다**
+  (씨앗은 사람이 손으로 옮긴 것이라 `high` 가 사실이고, `medium`·`low` 는 AI 구조화의 값이다).
+- **정본**: `docs/SPEC.md` §10.1(paylab 픽스처) · §10.5(발표 2:40) ·
+  `packages/schema/src/common.ts`(`SOURCE_REF_KINDS` · `SCOPE_KINDS`)
+- **고칠 방향**: **둘 다 문서·저장소에 진짜 근거가 있다 — 지어낼 필요가 없다.**
+  - `path` scope: goals.md §3.5 「웹훅은 서명 검증 후에만 처리한다」가 `src/webhook/` 에
+    걸리는 규칙이다 (§7 아키텍처 그림이 그 경로를 적어 둔다). `scope: {kind:'path', value:'src/webhook'}`
+    로 항목 하나를 더하면 `scoped-*.md` 가 데모에 선다.
+  - `repo` 근거: `fixtures/paylab-api` 가 실제로 있고 `src/payment/retry.ts` 에
+    `MAX_RETRY=3` 고정 간격 코드가 있다 (SPEC §10.1). **`item_policy_retry` 의 근거로
+    코드 한 칸을 더하는 것**이 서사에 맞는다 — 「문서는 5회 백오프인데 코드는 3회 고정」이
+    이 데모의 충돌 서사 자체다. 근거가 둘이면 태그가 `doc:…,repo:…` 로 나온다.
+  - `manual` 근거: 충돌을 **정리**하면 붙는다 (`conflicts/{id}/resolve` 가 넣는다).
+    관통은 지금 씨앗 → 발행으로 **바로 간다** — 발표 타임라인(§10.5)의 「1:10 충돌 카드 →
+    2:00 정리·발행」에서 **가운데 한 칸을 건너뛴다.** 이게 셋 중 제일 큰 일이다.
+  ⚠ **게이트를 같이 올려라.** 89 가 `enforcement` 하나만 세게 만들었다
+  (`PACK_ENFORCEMENT_MIN`). **표마다 따로 세는 상수를 늘리지 말고**, 「데모가 이 표의 몇
+  갈래를 보여 주나」를 **표 하나로** 모아라 — 안 그러면 표가 늘 때마다 관통에 검사 한 벌씩
+  복사하게 된다 (`CLAUDE.md` 「확장은 표에 한 줄」).
+- **상태**: 대기
+
+### 93-B. 2-B 이번 라운드 — `SourceRef` 4종 · `scope.kind` 3종 다 살아 있다   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인 — 둘 다 **②단계(값을 바꾸면 결과가 달라지나)까지** 통과한다:
+  ① **`SourceRef` 4종.** 소비처가 셋이고 셋 다 종류별로 **다른 것을 낸다**:
+     `compiler/src/tag.ts:26`(`SRC_TAG` — 태그 문자열) ·
+     `apps/web/src/components/evidence.tsx:25`(`SRC_LABEL` — 화면 글자) ·
+     `schema/src/common.ts:160`(`SOURCE_REF` — 종류마다 다른 `.strict()` 스키마).
+     `compiler/test/liveness.test.ts:92` 가 「4종이 서로 다른 태그를 낸다」를 지문으로 잰다.
+     쓰는 자리도 넷 다 있다 — `publish.ts:349`(proposal) · `resolve/route.ts:126`(manual) ·
+     `walkthrough-payload.ts:133`(repository_path) · 씨앗(source_document).
+  ② **`scope.kind` 3종.** `compiler/src/partition.ts:68`(`byScope`)이 셋을 **서로 다른
+     Pack 파일**로 보낸다 (`CLAUDE.md` / `domain-{slug}.md` / `scoped-{slug}.md`) 하고
+     `sort.ts:17` 이 정렬에도 쓴다. `liveness.test.ts:81` 이 세 파일 경로를 그대로 잰다.
+  ⚠ **살아 있는 것과 데모가 보여 주는 것은 다른 질문이다** — 뒤의 것이 **93** 이다.
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: sync 상태 5종(**69** — `manual` 을 찍는 코드가 0곳) ·
+  `ItemType` 10종 · `enforcement` 4종
+- **상태**: [기록]
+
 ### 90. 픽스처의 **근거 범위가 원문을 안 가리킨다** — 역추적을 따라가면 그 문장이 없다   [구멍]
 - **증상**: `seed.ts` 의 `fromDoc()` 이 **모든** 항목에 같은 근거를 붙인다 —
   `start_char: 0, end_char: 400`, `heading_path: ['paylab 결제 서비스']`.
@@ -51,7 +124,24 @@
   ⚠ **게이트를 같이 올려라.** 관통은 지금 「태그가 붙어 있나」(`untagged === 0`)까지만 세고
   **「그 태그를 따라가면 그 문장이 있나」는 아무도 안 센다.** 발표 2:40 이 「Pack Explorer
   역추적」이다 (SPEC §10.5) — 심사자가 한 번만 따라가 보면 걸린다.
-- **상태**: 대기
+- **상태**: ✅ `800372f` — **일곱 줄을 한 번에 고쳤다.** `fromDoc()` 이 이제
+  **문장을 받아 위치를 잰다** — `문서.indexOf(quote)` 로 `start_char` 를 계산하고,
+  `heading_path` 도 그 위치의 제목 사슬로 계산한다 (손으로 적은 `['paylab 결제 서비스']`
+  일곱 개가 사라졌다). 못 찾거나 **두 번 이상** 나오면 던진다 — 어느 쪽을 뜻했는지
+  우리가 모르면 심사자가 따라갔을 때 우리 자리가 아닐 수 있다.
+  `item_road_m1` 은 근거 문서를 `goals.md` §4 로 옮기고 **제목·경로·완료 기준도
+  그 문단이 말하는 것으로** 맞췄다 — 근거만 옮기고 글자를 두면 태그는 맞는 자리를
+  가리키는데 읽어 보면 딴 소리가 적혀 있다.
+  **관통이 들고 있던 둘째 `fromDoc()` 사본도 지웠다** — 제안 초안(`item_goal_settlement`)
+  도 씨앗과 같은 문으로 만든다. 근거를 손으로 적는 자리가 둘이면 한 곳만 고쳐진다.
+  **게이트를 올렸다** — 관통이 태그의 `doc:<uuid>#start-end` 를 **원문 파일에서
+  잘라 보고** 그 안에 그 문장이 있는지를 센다 (`followEvidence()` · 근거 14개 · 항목 8개).
+  기대 문장은 씨앗이 내는 `SeedResult.evidence` 를 **읽기만** 한다 — 검사 쪽에
+  다시 적으면 픽스처를 고친 사람이 검사 쪽 문장을 고쳐서 초록을 만든다.
+  `start_char: 0, end_char: 400` 을 되돌려 넣어 **실제로 빨개지는 것을 봤다** —
+  12곳 FAIL · `item_mission_paylab` 하나만 통과(0-400 이 넓어서 우연히 들어왔다).
+  📎 근거: `docs/evidence/2026-09-04-evidence-follow/follow.md` — 여덟 줄의 태그를
+  전부 따라가 원문을 잘라 뒀다 (`.ci/` 밖이다).
 
 ### 89. 데모 Pack 이 `ENFORCEMENT_LABEL` **넷 중 하나만** 보여 준다   [격차]
 - **증상**: 관통이 낸 Pack 세 파일에 있는 정책 줄이 전부 `강제: 리뷰에서 본다` 다.
