@@ -1,6 +1,6 @@
 import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
-import { compile, PROGRESS_REPORT } from '../src'
+import { CompileError, compile, PROGRESS_REPORT } from '../src'
 import { DOCS, type DocId } from '../templates'
 import { ANCHOR, makeInput, makeItem } from './fixtures'
 
@@ -55,5 +55,60 @@ describe('진행 보고 문단 (SPEC §4.3)', () => {
     expect(same).toHaveLength(1)
     expect(same[0]?.text).toContain('ctx:item_t_workflow')
     for (const line of PROGRESS_REPORT) expect(same[0]?.text).toContain(line)
+  })
+})
+
+// =====================================================================
+//  🔴 **always 문서의 그림자 — 「빈 Pack」이 빈 것으로 안 보인다** (FINDINGS 80)
+//
+//  ★ 왜 이 파일인가 — 위의 시험이 잠근 것(「항목이 0개여도 workflow.md 는 나간다」)이
+//    바로 `EMPTY_SNAPSHOT` 가드를 죽인 원인이다. 둘을 다른 파일에 두면 한쪽을 고치는
+//    사람이 다른 쪽을 안 읽는다.
+//
+//  ⚠ 재는 것은 「던진다」가 아니라 **「무엇이 있으면 지나고 없으면 막히는가」**다 —
+//    항목 하나만 뺐다 넣었다 하며 결과가 갈리는지 본다 (loop/PROMPT.md ④2-B ②단계).
+// =====================================================================
+
+describe('🔴 팀의 항목이 한 줄도 없는 Pack 은 나가지 않는다 (EMPTY_SNAPSHOT)', () => {
+  it('snapshot 이 비면 막힌다 — always 문서가 파일 수를 채워도', () => {
+    //  ⚠ 예전 조건(`files.length === 0`)은 여기서 **절대 참이 되지 않았다.**
+    expect(compile(makeInput([ANCHOR])).files.length).toBeGreaterThan(0)
+    expect(() => compile(makeInput([]))).toThrow(CompileError)
+    try {
+      compile(makeInput([]))
+      expect.unreachable('빈 snapshot 이 컴파일됐다')
+    } catch (err) {
+      expect((err as CompileError).code).toBe('EMPTY_SNAPSHOT')
+    }
+  })
+
+  it('🔴 항목이 있어도 **전부 제외되면** 똑같이 막힌다 (초안만 있는 프로젝트)', () => {
+    //  ★ 이게 「항목 수를 세면 놓치는」 경우다. 승인 전 항목은 status 로 빠지고,
+    //    open_question 은 타입으로 빠진다 — 둘 다 Pack 에 아무것도 안 남긴다.
+    for (const items of [
+      [makeItem('mission', { status: 'draft' })],
+      [makeItem('policy', { status: 'review' }), makeItem('goal', { status: 'deprecated' })],
+      [makeItem('open_question')],
+    ]) {
+      expect(() => compile(makeInput(items)), JSON.stringify(items.map((i) => [i.type, i.status])))
+        .toThrow(/항목에서 온 줄이 하나도 없다/)
+    }
+  })
+
+  it('항목 하나가 **살아나면 지난다** — 같은 입력에서 status 만 뒤집는다', () => {
+    const draft = makeItem('mission', { status: 'draft' })
+    expect(() => compile(makeInput([draft]))).toThrow(CompileError)
+
+    const active = makeItem('mission', { status: 'active' })
+    const result = compile(makeInput([active]))
+    expect(result.manifest.files.some((f) => f.source_item_ids.length > 0)).toBe(true)
+  })
+
+  it('그래도 workflow.md 혼자서는 Pack 을 채우지 못한다 — 근거가 비어 있어서다 (P7)', () => {
+    const result = compile(makeInput([ANCHOR]))
+    const workflow = result.manifest.files.find((f) => f.path === '.claude/rules/workflow.md')
+    expect(workflow?.source_item_ids).toEqual([])
+    //  즉 「파일이 있다」는 「팀의 것이 있다」가 아니다. 가드가 재는 값이 이것이다.
+    expect(result.manifest.files.filter((f) => f.source_item_ids.length > 0).length).toBeGreaterThan(0)
   })
 })

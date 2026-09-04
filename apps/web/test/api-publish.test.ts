@@ -6,7 +6,7 @@ import { Manifest, SOURCE_REFS_MAX, SYNC_STATUSES } from '@contextops/schema'
 import { parseTraceTag } from '@contextops/compiler'
 
 import type { Db } from '../src/db/client'
-import { conflicts, contextItems, packFiles } from '../src/db/schema'
+import { conflicts, contextItems, contextVersions, packFiles, projects } from '../src/db/schema'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
@@ -66,8 +66,11 @@ const ROADMAP_DATA = {
 //    slug 는 유일해서 고정값이면 둘째가 400 이 된다 — 부를 때마다 번호를 올린다.
 let seedNo = 0
 
-/** owner · 팀 · 프로젝트 · 레포 · 항목 4개(전부 active)까지 **라우트를 거쳐** 만든다. */
-async function seeded() {
+/**
+ * owner · 팀 · 프로젝트 · 레포 · 항목 4개까지 **라우트를 거쳐** 만든다.
+ * `approve:false` 면 항목을 `draft` 로 둔다 — 사람이 답만 하고 승인을 안 한 상태다.
+ */
+async function seeded(opts: { approve?: boolean } = {}) {
   const n = ++seedNo
   const owner = sessionJwt(`pub-owner-${n}`)
   const team = await dataOf(await createTeam(
@@ -98,7 +101,9 @@ async function seeded() {
   }), params({ id: projectId }))
 
   //  🔴 초안은 발행에 안 들어간다 (snapshot 은 active 만). owner 가 공식으로 올린다.
-  const rows = await db.select({ id: contextItems.publicId }).from(contextItems).where(eq(contextItems.projectId, projectId))
+  const rows = opts.approve === false
+    ? []
+    : await db.select({ id: contextItems.publicId }).from(contextItems).where(eq(contextItems.projectId, projectId))
   for (const row of rows) {
     await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${row.id}`, {
       auth: owner, body: { revision: 1, changes: { status: 'active' } },
@@ -252,6 +257,59 @@ describe('🔴 base_version_id 가 낡으면 409 STALE_BASE (완료 기준 ②)'
       auth: token, body: { semver: '1.0.0', base_version_id: null },
     }), params({ id: projectId }))
     expect(res.status).toBe(403)
+  })
+})
+
+describe('🔴 승인된 항목이 0건이면 발행이 막힌다 (FINDINGS 80)', () => {
+  //  ★ 왜 「400 이 난다」만 재면 모자라는가 — 사람이 잃는 것은 응답이 아니라
+  //    **규칙 한 줄 없는 v1.0.0 이 공식이 되는 것**이다. 막는 자리가 라우트 한 곳이
+  //    아닐 수 있어서, 끝나고 난 **DB 상태**로 재다.
+
+  it('초안만 있는 프로젝트는 400 VALIDATION_FAILED 다 — 500 이 아니다', async () => {
+    const { owner, projectId } = await seeded({ approve: false })
+    const res = await publishFirst(owner, projectId)
+
+    expect(res.status).toBe(400)
+    const err = await errorOf(res)
+    expect(err.code).toBe('VALIDATION_FAILED')
+    //  ⚠ 사람 잘못을 5xx 로 내면 화면은 「다시 해 보세요」밖에 못 고른다.
+    expect((err.details as { code?: string }).code).toBe('EMPTY_SNAPSHOT')
+    //  문구가 **무엇을 하라는지**를 말한다 — 화면은 이 문장을 그대로 띄운다.
+    expect(err.message).toContain('승인')
+  })
+
+  it('🔴 그 버전은 **공식이 되지 않는다** — 버전도 Pack 도 남지 않는다', async () => {
+    const { owner, projectId } = await seeded({ approve: false })
+    expect((await publishFirst(owner, projectId)).status).toBe(400)
+
+    expect(await db.select().from(contextVersions).where(eq(contextVersions.projectId, projectId))).toHaveLength(0)
+    expect(await db.select().from(packFiles)).toHaveLength(0)
+    const [row] = await db.select({ official: projects.officialVersionId }).from(projects).where(eq(projects.id, projectId))
+    expect(row?.official).toBeNull()
+
+    //  기기가 받아갈 것도 없다 — 공식 버전이 안 옮겨서 목록이 비어 있다.
+    const list = await dataOf(await listVersions(
+      req('GET', `/api/v1/projects/${projectId}/versions`, { auth: owner }), params({ id: projectId }),
+    ))
+    expect(list.versions).toEqual([])
+    expect(list.official_version_id).toBeNull()
+  })
+
+  it('하나만 승인해도 지난다 — 같은 입력에서 status 하나를 뒤집는다', async () => {
+    const { owner, projectId } = await seeded({ approve: false })
+    expect((await publishFirst(owner, projectId)).status).toBe(400)
+
+    const [row] = await db.select({ id: contextItems.publicId }).from(contextItems)
+      .where(eq(contextItems.projectId, projectId)).orderBy(contextItems.publicId)
+    await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${row!.id}`, {
+      auth: owner, body: { revision: 1, changes: { status: 'active' } },
+    }), params({ id: projectId, itemId: row!.id }))
+
+    const res = await publishFirst(owner, projectId)
+    expect(res.status).toBe(201)
+    const version = await dataOf(res)
+    const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
+    expect(files.map((f) => f.content).join('\n')).toContain(`ctx:${row!.id}`)
   })
 })
 

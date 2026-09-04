@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from 'drizzle-orm'
-import { COMPILER_VERSION, CompileError, TEMPLATE_VERSION, compile, type Snapshot } from '@contextops/compiler'
+import { COMPILER_VERSION, CompileError, TEMPLATE_VERSION, compile, type CompileErrorCode, type Snapshot } from '@contextops/compiler'
 import { parseContextItemDraft, SOURCE_REFS_MAX } from '@contextops/schema'
-import type { ContextItem, ContextItemDraft, Proposal, PublishVersion, SourceRef } from '@contextops/schema'
+import type { ContextItem, ContextItemDraft, ErrorCode, Proposal, PublishVersion, SourceRef } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
 import { contextItemRevisions, contextItems, contextVersions, packFiles, projects, proposals } from '../../db/schema'
@@ -34,6 +34,27 @@ export type PublishedVersion = {
 
 /** 제안 하나가 실패했을 때 에러 details 로 나가는 모양 (SPEC §2.1 8단계). */
 type ItemFailure = { proposal_id: string; item_id: string | undefined; reason: string }
+
+/**
+ * 🔴 **컴파일 실패 중 「사람 잘못」인 것의 정본 표.** 나머지는 전부 500 이다.
+ *
+ * ★ 왜 표인가 — 「승인된 항목이 0개다」는 서버가 터진 게 아니라 **사람이 아직
+ *   승인을 안 한 것**이다. 그걸 500 으로 내면 화면은 「다시 해 보세요」밖에 못 고르고,
+ *   운영자는 없는 버그를 찾는다. 판정 자체는 컴파일러 하나가 한다 (`EMPTY_SNAPSHOT`) —
+ *   여기서 항목 수를 다시 세면 「무엇이 빈 Pack 인가」가 두 곳이 되고 조용히 갈라진다.
+ *   ⚠ 라우트가 세면 「항목은 있는데 전부 제외된」 경우를 놓친다. 컴파일러는 안 놓친다.
+ * ★ 여기 한 줄을 더하는 절차: ① `packages/compiler` 의 `CompileErrorCode` 에 값 추가
+ *   ② **이 표에 한 줄** — ①만 하면 여기서 타입 검사가 막힌다. 서버 잘못이면 `null`.
+ */
+const COMPILE_ERROR_FAULT: Record<CompileErrorCode, { code: ErrorCode; message: string } | null> = {
+  //  DB 의 항목이 지금의 계약과 안 맞는다 — 사람이 고칠 수 있는 것이 아니다.
+  INVALID_ITEM: null,
+  INVALID_INPUT: null,
+  EMPTY_SNAPSHOT: {
+    code: 'VALIDATION_FAILED',
+    message: '승인된 항목이 하나도 없습니다 — Context 에서 초안을 승인한 뒤에 발행하세요',
+  },
+}
 
 export async function publishVersion(args: {
   db: Db
@@ -128,6 +149,9 @@ export async function publishVersion(args: {
       })
     } catch (err) {
       if (err instanceof CompileError) {
+        //  사람 잘못인 종류는 4xx 로 내고, 나머지는 500 `COMPILE_FAILED` 다.
+        const human = COMPILE_ERROR_FAULT[err.code]
+        if (human) fail(human.code, human.message, { code: err.code })
         fail('COMPILE_FAILED', err.message, { code: err.code, item_id: err.item_id, issues: err.issues })
       }
       throw err

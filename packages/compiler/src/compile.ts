@@ -53,8 +53,21 @@ export function compile(input: CompileInput): CompileResult {
     .map((doc) => ({ ...doc, sha256: sha256(doc.text), size: byteLength(doc.text) }))
     .sort((a, b) => compareCodepoints(a.path, b.path))
 
-  if (files.length === 0) {
-    throw new CompileError('EMPTY_SNAPSHOT', 'Pack 에 나갈 항목이 하나도 없다 (전부 제외됐거나 snapshot 이 비었다)')
+  //  🔴 **「빈 Pack」은 파일 수가 아니라 근거 수로 잰다.**
+  //
+  //  ★ 왜 파일 수가 아닌가 — `always` 문서(§4.3)를 `collect` 가 **먼저** 만들어서
+  //    `files.length` 는 **0 이 될 수 없다.** 그래서 이 가드는 있는 채로 한 번도 걸리지
+  //    않았고, 승인된 항목이 0개인 snapshot 이 「제품이 넣는 고정 텍스트」 한 장짜리
+  //    Pack 으로 발행됐다 — 사람은 규칙 한 줄 없는 v1.0.0 을 손에 쥔다
+  //    (docs/feedback/FINDINGS.md 80).
+  //  ⚠ **입력의 항목 수를 세지 마라.** 항목이 있어도 전부 제외되면(초안·폐기·
+  //    open_question) 결과는 똑같이 빈 Pack 이다. 재야 하는 것은 입력이 아니라
+  //    **나온 Pack 에 팀의 것이 한 줄이라도 있는가**이고, 그 답은 `source_item_ids` 다 (P7).
+  if (files.every((f) => f.source_item_ids.length === 0)) {
+    throw new CompileError(
+      'EMPTY_SNAPSHOT',
+      'Pack 에 항목에서 온 줄이 하나도 없다 (전부 제외됐거나 snapshot 이 비었다)',
+    )
   }
 
   const manifestFiles = files.map((f) => ({

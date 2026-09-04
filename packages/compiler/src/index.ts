@@ -7,7 +7,7 @@
 // =====================================================================
 export { compile, type CompileResult, type PackFile } from './compile'
 export { parseCompileInput, type CompileInput, type Snapshot } from './input'
-export { CompileError, type CompileIssue } from './errors'
+export { CompileError, type CompileErrorCode, type CompileIssue } from './errors'
 export { type SourceMapEntry, type Excluded } from './assemble'
 export { CLAUDE_MD_MAX_CHARS, RULES_MAX_CHARS } from './limits'
 export { manifestHash, normalizeText, sha256, snapshotHash } from './hash'

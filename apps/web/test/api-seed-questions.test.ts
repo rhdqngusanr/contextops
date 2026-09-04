@@ -215,15 +215,31 @@ describe('🔴 문서를 하나도 안 올려도 질문이 있다', () => {
 // ---------------------------------------------------------------------
 
 describe('🔴 문서 없이 질문만으로 v1.0 을 발행한다 (PLAN P3 둘째 행)', () => {
-  /** 열 장에 전부 답한다. 답은 질문마다 달라야 Pack 에서 서로를 구별할 수 있다. */
-  async function answerAll(projectId: string): Promise<string[]> {
+  /**
+   * 열 장에 전부 답한다. 답은 질문마다 달라야 Pack 에서 서로를 구별할 수 있다.
+   * ⚠ 항목 id 를 응답 순서로 짐작하지 않는다 — 질문 문장이 표로 가는 열쇠다 (`seedQuestionOf`).
+   */
+  async function answerAll(projectId: string): Promise<{ itemId: string; answer: string }[]> {
     const rows = await openQuestions(projectId)
     const answers = rows.map((r, i) => ({ question_id: r.id, answer: `답 ${i + 1} 번입니다.` }))
     const res = await dataOf(await answerQuestions(
       req('POST', `/api/v1/projects/${projectId}/questions`, { auth: owner, body: { answers } }),
       params({ id: projectId }),
     ))
-    return res.created_item_ids as string[]
+    const made = rows.map((r, i) => ({
+      itemId: `item_seed_${seedQuestionOf(r.question)!.id}`,
+      answer: `답 ${i + 1} 번입니다.`,
+    }))
+    expect([...(res.created_item_ids as string[])].sort()).toEqual(made.map((m) => m.itemId).sort())
+    return made
+  }
+
+  /** 화면 5 가 누르는 그 문이다 (`PATCH /projects/{id}/context-items/{itemId}`). */
+  async function approve(projectId: string, itemId: string) {
+    const res = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
+      auth: owner, body: { revision: 1, changes: { status: 'active' } },
+    }), params({ id: projectId, itemId }))
+    expect(res.status, itemId).toBe(200)
   }
 
   async function publishFirst(projectId: string) {
@@ -232,35 +248,45 @@ describe('🔴 문서 없이 질문만으로 v1.0 을 발행한다 (PLAN P3 둘�
     }), params({ id: projectId }))
   }
 
-  it('🔴 승인하기 **전에는** 내 답이 Pack 에 하나도 없다', async () => {
+  it('🔴 하나도 승인하지 않으면 **발행이 막힌다** (FINDINGS 80)', async () => {
     const projectId = await seedProject()
     expect(await answerAll(projectId)).toHaveLength(SEED_QUESTIONS.length)
 
+    //  ⚠ 예전에는 여기가 201 이었다 — 항목이 0건이어도 §4.3 의 `always` 문서가 나가서
+    //     Pack 이 「비지 않았기」 때문이다. 그래서 사람은 v1.0.0 을 손에 쥐고도 자기 답이
+    //     한 줄도 없는 Pack 을 받았다. 이제 컴파일러가 **근거 수**로 재고 막는다.
     const res = await publishFirst(projectId)
-    //  ⚠ 발행 자체는 막히지 않는다 — 항목이 0건이어도 §4.3 의 `always` 문서가 나가서
-    //     Pack 이 비지 않기 때문이다. **그래서 사람은 v1.0.0 을 손에 쥐고도 자기 답이
-    //     한 줄도 없는 Pack 을 받는다** (docs/feedback/FINDINGS.md 80).
-    //     여기서 재는 것은 「발행이 되나」가 아니라 **「승인 안 한 답이 새 나가나」**다.
+    expect(res.status).toBe(400)
+    expect((await errorOf(res)).code).toBe('VALIDATION_FAILED')
+    //  🔴 그 빈 버전은 **공식이 되지 않는다** — 기기가 받아갈 것이 없다.
+    expect(await db.select().from(packFiles)).toHaveLength(0)
+  })
+
+  it('🔴 승인한 것만 나간다 — 나머지 아홉 장은 Pack 에 한 줄도 없다', async () => {
+    const projectId = await seedProject()
+    const [mine, ...rest] = await answerAll(projectId)
+    await approve(projectId, mine!.itemId)
+
+    const res = await publishFirst(projectId)
     expect(res.status).toBe(201)
     const version = await dataOf(res)
     const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
     const all = files.map((f) => f.content).join('\n')
+
+    expect(all).toContain(mine!.answer)
+    expect(all).toContain(`ctx:${mine!.itemId}`)
     //  🔴 초안은 한 줄도 안 나간다 — 이게 「승인 없이 공식이 되지 않는다」의 증거다.
-    expect(all).not.toContain('답 1 번입니다.')
-    expect(all).not.toContain('ctx:item_seed_')
+    for (const other of rest) {
+      expect(all, `${other.itemId} 가 승인 없이 나갔다`).not.toContain(other.answer)
+      expect(all, `${other.itemId} 가 승인 없이 나갔다`).not.toContain(`ctx:${other.itemId}`)
+    }
   })
 
   it('🔴 열 장에 답하고 → 승인하고 → 발행하면 **내 답이 Pack 에 있다**', async () => {
     const projectId = await seedProject()
     const created = await answerAll(projectId)
 
-    //  화면 5 가 누르는 그 문이다 (`PATCH /projects/{id}/context-items/{itemId}`).
-    for (const itemId of created) {
-      const res = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
-        auth: owner, body: { revision: 1, changes: { status: 'active' } },
-      }), params({ id: projectId, itemId }))
-      expect(res.status, itemId).toBe(200)
-    }
+    for (const { itemId } of created) await approve(projectId, itemId)
 
     const res = await publishFirst(projectId)
     expect(res.status).toBe(201)
