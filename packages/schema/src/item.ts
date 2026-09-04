@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
   CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, ItemId,
-  MilestoneId, Question, RepoPath, Scope, SourceRef, type ItemType,
+  MilestoneId, Question, RepoPath, Scope, SourceRef, SOURCE_REFS_MAX, type ItemType,
 } from './common'
 import { nonEmpty } from './table'
 
@@ -21,7 +21,7 @@ const ItemBase = z.object({
   status: z.enum(ITEM_STATUSES),
   scope: Scope,
   priority: z.int().min(0).max(100).default(50),
-  source_refs: z.array(SourceRef).min(1).max(20),
+  source_refs: z.array(SourceRef).min(1).max(SOURCE_REFS_MAX),
   tags: z.array(z.string().min(1).max(40)).max(20).default([]),
   owner_id: z.uuid().optional(),
   valid_from: CalendarDate.optional(),

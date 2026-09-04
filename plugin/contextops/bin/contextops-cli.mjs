@@ -19028,6 +19028,7 @@ var SOURCE_REF = {
   }).strict()
 };
 var SourceRef = external_exports.discriminatedUnion("kind", nonEmpty(SOURCE_REF_KINDS.map((k) => SOURCE_REF[k])));
+var SOURCE_REFS_MAX = 20;
 
 // ../../packages/schema/src/item.ts
 var ItemBase = external_exports.object({
@@ -19038,7 +19039,7 @@ var ItemBase = external_exports.object({
   status: external_exports.enum(ITEM_STATUSES),
   scope: Scope,
   priority: external_exports.int().min(0).max(100).default(50),
-  source_refs: external_exports.array(SourceRef).min(1).max(20),
+  source_refs: external_exports.array(SourceRef).min(1).max(SOURCE_REFS_MAX),
   tags: external_exports.array(external_exports.string().min(1).max(40)).max(20).default([]),
   owner_id: external_exports.uuid().optional(),
   valid_from: CalendarDate.optional(),
@@ -19367,7 +19368,7 @@ var ContextItemUpdate = external_exports.object({
     valid_from: CalendarDate.nullable().optional(),
     valid_until: CalendarDate.nullable().optional(),
     confidence: external_exports.enum(CONFIDENCE_LEVELS).optional(),
-    source_refs: external_exports.array(SourceRef).min(1).max(20).optional(),
+    source_refs: external_exports.array(SourceRef).min(1).max(SOURCE_REFS_MAX).optional(),
     data: external_exports.unknown().optional()
   }).strict()
 }).strict();

@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull } from 'drizzle-orm'
 import { COMPILER_VERSION, CompileError, TEMPLATE_VERSION, compile, type Snapshot } from '@contextops/compiler'
-import { parseContextItemDraft } from '@contextops/schema'
-import type { ContextItem, ContextItemDraft, Proposal, PublishVersion } from '@contextops/schema'
+import { parseContextItemDraft, SOURCE_REFS_MAX } from '@contextops/schema'
+import type { ContextItem, ContextItemDraft, Proposal, PublishVersion, SourceRef } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
 import { contextItemRevisions, contextItems, contextVersions, packFiles, projects, proposals } from '../../db/schema'
@@ -82,7 +82,9 @@ export async function publishVersion(args: {
     const failures: ItemFailure[] = []
     for (const proposal of approved) {
       for (const item of proposal.items) {
-        const problem = await applyProposalItem(tx, { projectId, item, actorId: actor.userId, now })
+        const problem = await applyProposalItem(tx, {
+          projectId, item, proposalId: proposal.id, actorId: actor.userId, now,
+        })
         if (problem) failures.push({ proposal_id: proposal.id, item_id: problem.itemId, reason: problem.reason })
       }
     }
@@ -205,20 +207,32 @@ export async function publishVersion(args: {
  */
 async function applyProposalItem(
   tx: Db,
-  args: { projectId: string; item: Proposal['items'][number]; actorId: string; now: Date },
+  args: { projectId: string; item: Proposal['items'][number]; proposalId: string; actorId: string; now: Date },
 ): Promise<{ itemId: string | undefined; reason: string } | undefined> {
-  const { projectId, item, actorId, now } = args
+  const { projectId, item, proposalId, actorId, now } = args
 
   //  ⚠ jsonb 에서 읽은 초안을 **다시 판다.** 「DB 에서 왔으니 믿는다」로 두면 계약이
   //    바뀐 뒤에 저장된 옛 제안이 조용히 이상한 항목이 된다 — 컴파일은 실패해야지
   //    이상해지면 안 된다 (`packages/compiler/src/input.ts` 와 같은 이유).
   let draft: ContextItemDraft | undefined
+  let sourceRefs: SourceRef[] = []
   if (item.draft !== undefined) {
     try {
       draft = parseContextItemDraft(item.draft)
     } catch {
       return { itemId: item.target_item_id, reason: '저장된 초안이 지금의 계약과 맞지 않는다' }
     }
+    //  ⚠ 근거를 여기서 한 번만 만든다 — `add` 와 `update` 두 갈래에 따로 적으면
+    //    한쪽만 고쳐져서 「어떤 항목은 제안으로 역추적되고 어떤 항목은 안 되는」
+    //    조용한 반쪽 사슬이 생긴다.
+    const withProposal = withProposalRef(draft.source_refs, proposalId)
+    if (!withProposal) {
+      return {
+        itemId: item.target_item_id ?? draft.id,
+        reason: `근거가 ${SOURCE_REFS_MAX}개라 어느 제안이 만들었는지를 붙일 자리가 없다 — 근거를 하나 줄여라`,
+      }
+    }
+    sourceRefs = withProposal
   }
 
   if (item.operation === 'add') {
@@ -244,7 +258,7 @@ async function applyProposalItem(
       })
       .returning({ id: contextItems.id })
     if (!created) return { itemId: draft.id, reason: '항목 행을 만들지 못했다' }
-    await insertRevision(tx, { itemId: created.id, revision: 1, draft, actorId })
+    await insertRevision(tx, { itemId: created.id, revision: 1, draft, sourceRefs, actorId })
     return undefined
   }
 
@@ -272,7 +286,7 @@ async function applyProposalItem(
   //  update — draft 가 있으면 새 개정을 쌓고, 없으면 「이 항목을 공식으로 올린다」만 한다.
   if (draft) {
     const next = target.revision + 1
-    await insertRevision(tx, { itemId: target.id, revision: next, draft, actorId })
+    await insertRevision(tx, { itemId: target.id, revision: next, draft, sourceRefs, actorId })
     await tx.update(contextItems)
       .set({
         status: 'active',
@@ -292,10 +306,34 @@ async function applyProposalItem(
   return undefined
 }
 
-/** 개정 행 하나. `origin` 은 `proposal` 로 고정이다 — 이 경로로 들어온 것은 전부 제안이다. */
+/**
+ * 🔴 **제안이 만든 개정에 「어느 제안인가」를 붙인다 (P7).**
+ *
+ * ★ 왜 필요한가 — 클라이언트가 보낸 `draft.source_refs` 는 원문(문서·저장소)만 가리키고,
+ *   `origin:'proposal'` 은 **개정 행에만** 있어서 Pack 줄에서는 안 보인다. Pack 줄의
+ *   `src:proposal:{id}` 가 있어야 「이 규칙은 어느 제안이 만들었나」로 되짚어 간다.
+ *   그게 없으면 사슬이 원문에서만 끊기지 않고 **승인 기록에서 끊긴다.**
+ *
+ * ⚠ 같은 제안 id 가 이미 있으면 더하지 않는다 — 한 제안이 같은 항목을 두 번 건드리면
+ *   근거가 중복되고 태그만 길어진다.
+ * ⚠ 자리가 없으면 `undefined` 다. **몰래 하나를 버리지 않는다** — 근거를 버리는 순간
+ *   그 항목의 역추적이 조용히 한 칸 짧아지고, 그건 P7 이 제일 싫어하는 모양이다.
+ */
+function withProposalRef(refs: SourceRef[], proposalId: string): SourceRef[] | undefined {
+  if (refs.some((r) => r.kind === 'proposal' && r.proposal_id === proposalId)) return refs
+  if (refs.length >= SOURCE_REFS_MAX) return undefined
+  return [...refs, { kind: 'proposal', proposal_id: proposalId }]
+}
+
+/**
+ * 개정 행 하나. `origin` 은 `proposal` 로 고정이다 — 이 경로로 들어온 것은 전부 제안이다.
+ *
+ * ⚠ `sourceRefs` 는 초안의 것이 **아니다** — 호출부가 `withProposalRef()` 로 제안 근거를
+ *   붙여서 넘긴다. 여기서 `draft.source_refs` 를 다시 읽으면 그 한 칸이 사라진다.
+ */
 async function insertRevision(
   tx: Db,
-  args: { itemId: string; revision: number; draft: ContextItemDraft; actorId: string },
+  args: { itemId: string; revision: number; draft: ContextItemDraft; sourceRefs: SourceRef[]; actorId: string },
 ): Promise<void> {
   const { draft } = args
   await tx.insert(contextItemRevisions).values({
@@ -307,7 +345,7 @@ async function insertRevision(
     validFrom: draft.valid_from ?? null,
     validUntil: draft.valid_until ?? null,
     data: draft.data,
-    sourceRefs: draft.source_refs,
+    sourceRefs: args.sourceRefs,
     confidence: draft.confidence,
     createdBy: args.actorId,
     origin: 'proposal',

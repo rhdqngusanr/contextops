@@ -144,8 +144,11 @@ export async function dataOf(res: Response): Promise<Record<string, unknown>> {
 }
 
 /** 실패 응답의 `error` 를 꺼낸다. */
-export async function errorOf(res: Response): Promise<{ code: string; message: string; request_id: string }> {
+export async function errorOf(
+  res: Response,
+): Promise<{ code: string; message: string; request_id: string; details?: unknown }> {
   const json = await bodyOf(res)
   if (!('error' in json)) throw new Error(`실패 봉투가 아니다: ${JSON.stringify(json)}`)
-  return json.error as { code: string; message: string; request_id: string }
+  //  ⚠ `details` 는 optional 이다 — 있는 에러만 싣는다 (SPEC §5). 재는 쪽이 모양을 안다.
+  return json.error as { code: string; message: string; request_id: string; details?: unknown }
 }

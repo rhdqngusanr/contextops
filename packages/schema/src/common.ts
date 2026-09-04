@@ -170,3 +170,13 @@ export const SOURCE_REF = {
 /** 표를 그대로 유니온으로 올린다 — 표와 유니온이 갈라질 자리를 만들지 않는다. */
 export const SourceRef = z.discriminatedUnion('kind', nonEmpty(SOURCE_REF_KINDS.map((k) => SOURCE_REF[k])))
 export type SourceRef = z.infer<(typeof SOURCE_REF)[SourceRefKind]>
+
+/**
+ * 🔴 항목 하나가 들 수 있는 근거의 최대 개수. **이 값은 여기 한 곳에만 산다.**
+ *
+ * ★ 왜 상수인가 — 발행 트랜잭션이 개정을 쌓을 때 `{kind:'proposal'}` 근거를
+ *   **한 칸 더 붙인다** (`apps/web/src/lib/api/publish.ts` · P7). 그 자리가 상한을
+ *   알아야 「자리가 없다」를 400 으로 답할 수 있는데, 숫자를 거기 또 적으면 한쪽만
+ *   고쳐지고 조용히 갈라진다 — 갈라진 결과는 컴파일 단계의 알아보기 힘든 실패다.
+ */
+export const SOURCE_REFS_MAX = 20

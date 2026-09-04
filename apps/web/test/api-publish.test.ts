@@ -2,7 +2,8 @@ import type { PGlite } from '@electric-sql/pglite'
 import { randomUUID } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { Manifest, SYNC_STATUSES } from '@contextops/schema'
+import { Manifest, SOURCE_REFS_MAX, SYNC_STATUSES } from '@contextops/schema'
+import { parseTraceTag } from '@contextops/compiler'
 
 import type { Db } from '../src/db/client'
 import { contextItems, packFiles } from '../src/db/schema'
@@ -299,6 +300,88 @@ describe('🔴 실패하면 전부 롤백된다 (완료 기준 ③)', () => {
     //  ★ 새 항목이 Pack 에 실제로 나왔나 — 「제안이 published 다」는 그 증거가 아니다.
     const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
     expect(files.some((f) => f.content.includes('ctx:item_added_one'))).toBe(true)
+  })
+
+  //  🔴 **P7 — 제안이 만든 줄은 그 제안으로 되짚어진다** (FINDINGS 68).
+  //    ⚠ 재는 것은 「개정 행에 근거가 붙었다」가 **아니다.** `origin:'proposal'` 은 이미
+  //      붙어 있었지만 Pack 줄에서는 안 보였다. 사람이 되짚는 자리는 Pack 태그 하나다.
+  it('제안으로 들어온 항목의 Pack 줄에 src:proposal 이 있다 (P7)', async () => {
+    const { owner, projectId } = await seeded()
+    const base = await dataOf(await publishFirst(owner, projectId))
+
+    const proposal = await dataOf(await createProposal(req('POST', `/api/v1/projects/${projectId}/proposals`, {
+      auth: owner,
+      body: {
+        title: '되짚을 수 있는 항목',
+        summary: '',
+        base_version_id: base.id,
+        items: [{
+          operation: 'add',
+          draft: draft('item_traced_one', 'constraint'),
+          evidence: [{ kind: 'manual', note: '팀 결정' }],
+          reason: '역추적을 잰다',
+        }],
+        relates_to: [],
+        client_request_id: randomUUID(),
+      },
+    }), params({ id: projectId })))
+    const proposalId = proposal.id as string
+
+    await submitProposal(req('POST', `/api/v1/proposals/${proposalId}/submit`, { auth: owner }), params({ id: proposalId }))
+    await approveProposal(req('POST', `/api/v1/proposals/${proposalId}/approve`, { auth: owner }), params({ id: proposalId }))
+
+    const version = await dataOf(await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
+      auth: owner, body: { semver: '1.1.0', base_version_id: base.id },
+    }), params({ id: projectId })))
+
+    const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
+    const lines = files.flatMap((f) => f.content.split('\n')).filter((l) => l.includes('ctx:item_traced_one'))
+    expect(lines.length).toBeGreaterThan(0)
+    for (const line of lines) {
+      const tag = parseTraceTag(line)
+      expect(tag?.src).toContain(`proposal:${proposalId}`)
+      //  ⚠ 원문 근거를 **밀어내지 않았다.** 제안 근거가 원문을 덮으면 사슬이 반대쪽에서 끊긴다.
+      expect(tag?.src.some((x) => x.startsWith('repo:'))).toBe(true)
+    }
+  })
+
+  //  ⚠ 근거가 상한까지 찬 초안은 **조용히 하나를 버리지 않고** 발행이 막힌다.
+  //    버리면 그 항목만 역추적이 한 칸 짧아지고 아무도 모른다.
+  it('근거가 상한까지 차 있으면 제안 근거를 붙일 자리가 없다고 400 이 난다', async () => {
+    const { owner, projectId } = await seeded()
+    const base = await dataOf(await publishFirst(owner, projectId))
+
+    const full = Array.from({ length: SOURCE_REFS_MAX }, (_, i) => ({
+      kind: 'repository_path', repo: 'paylab-api', path: `src/payment/f${i}.ts`,
+    }))
+    const proposal = await dataOf(await createProposal(req('POST', `/api/v1/projects/${projectId}/proposals`, {
+      auth: owner,
+      body: {
+        title: '근거가 꽉 찬 항목',
+        summary: '',
+        base_version_id: base.id,
+        items: [{
+          operation: 'add',
+          draft: draft('item_full_refs', 'constraint', { source_refs: full }),
+          evidence: [{ kind: 'manual', note: '팀 결정' }],
+          reason: '상한을 잰다',
+        }],
+        relates_to: [],
+        client_request_id: randomUUID(),
+      },
+    }), params({ id: projectId })))
+    const proposalId = proposal.id as string
+
+    await submitProposal(req('POST', `/api/v1/proposals/${proposalId}/submit`, { auth: owner }), params({ id: proposalId }))
+    await approveProposal(req('POST', `/api/v1/proposals/${proposalId}/approve`, { auth: owner }), params({ id: proposalId }))
+
+    const res = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
+      auth: owner, body: { semver: '1.1.0', base_version_id: base.id },
+    }), params({ id: projectId }))
+    expect(res.status).toBe(400)
+    const err = await errorOf(res)
+    const failures = (err.details as { failures: { reason: string }[] }).failures
+    expect(failures[0]?.reason).toContain('붙일 자리가 없다')
   })
 })
 

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
   CalendarDate, CONFIDENCE_LEVELS, ITEM_STATUSES, ITEM_TYPES, ItemId,
-  Question, RepoName, Scope, Semver, SourceRef,
+  Question, RepoName, Scope, Semver, SourceRef, SOURCE_REFS_MAX,
 } from './common'
 import { ContextItemDraft } from './item'
 import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
@@ -426,7 +426,7 @@ export const ContextItemUpdate = z.object({
     valid_from: CalendarDate.nullable().optional(),
     valid_until: CalendarDate.nullable().optional(),
     confidence: z.enum(CONFIDENCE_LEVELS).optional(),
-    source_refs: z.array(SourceRef).min(1).max(20).optional(),
+    source_refs: z.array(SourceRef).min(1).max(SOURCE_REFS_MAX).optional(),
     data: z.unknown().optional(),
   }).strict(),
 }).strict()
