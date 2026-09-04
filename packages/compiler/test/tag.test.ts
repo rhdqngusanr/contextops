@@ -80,11 +80,35 @@ describe('🔴 traceLines — 줄마다 어느 항목에서 왔나 (화면 7 이
         const t = (lines[i] as string).trim()
         //  ⚠ 자기 자신이 태그 줄인 경우는 빼고 본다 (`<!-- ctx:… rev:… -->` 는 칠해진다).
         if (parseTraceTag(lines[i] as string)) continue
-        if (t.length === 0 || t.startsWith('#') || (t.startsWith('<!--') && t.endsWith('-->'))) {
+        if (t.length === 0 || /^#{1,2} /.test(t) || (t.startsWith('<!--') && t.endsWith('-->'))) {
           expect(painted.has(i), `${file.path}:${i + 1} 「${t}」 가 칠해졌다`).toBe(false)
         }
       }
     }
+  })
+
+  //  🔴 **`###` 는 절 머리가 아니라 항목이 낸 줄이다.** 예전엔 `startsWith('#')` 로
+  //     한꺼번에 끊어서 `### payment — …`(architecture 의 제목 줄)이 **어느 항목에도
+  //     안 속한 줄**로 남았다 — 화면 7 에서 그 줄만 근거가 사라진다.
+  //  ⚠ 이 시험이 빨개지면 템플릿이 `###` 짜리 절 머리를 만들었다는 뜻이다.
+  //     그때는 `isBlockBoundary` 의 규칙부터 고쳐라 (둘이 갈리면 조용히 어긋난다).
+  //  ⚠ 케이스마다 나누지 마라 — `###` 을 한 줄도 안 내는 케이스가 있다
+  //    (`case-3-overflow`). 그러면 그 케이스는 「아무것도 안 재고 초록」이 된다.
+  it('`###` 줄은 반드시 어느 항목의 것으로 칠해진다', () => {
+    let seen = 0
+    for (const name of CASES) {
+      for (const file of compile(readInput(name)).files) {
+        const lines = file.text.split('\n')
+        const painted = traceLines(file.text)
+        for (let i = 0; i < lines.length; i++) {
+          if (!(lines[i] as string).startsWith('### ')) continue
+          seen++
+          expect(painted.get(i)?.itemId, `${name}/${file.path}:${i + 1} 「${lines[i]}」`).toBeTruthy()
+        }
+      }
+    }
+    //  ⚠ 「`###` 이 한 줄도 없어서 초록」을 막는다 — 그건 재지 않은 것이다.
+    expect(seen, '골든 어디에도 ### 줄이 없다 — 이 시험이 아무것도 안 쟀다').toBeGreaterThan(0)
   })
 
   it('여러 줄짜리 블록은 태그 줄 위까지 함께 칠해진다', () => {

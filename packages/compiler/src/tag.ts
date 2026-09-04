@@ -122,12 +122,21 @@ export function parseTraceTag(line: string): TraceTag | null {
 }
 
 /**
- * 절 머리(`## Goals`)·빈 줄·순수 주석 줄(`<!-- ctx:roadmap -->`)은 **항목의 몸이 아니다.**
- * 블록은 여기서 끊긴다.
+ * 절 머리(`# 아키텍처`·`## Goals`)·빈 줄·순수 주석 줄(`<!-- ctx:roadmap -->`)은
+ * **항목의 몸이 아니다.** 블록은 여기서 끊긴다.
+ *
+ * 🔴 **`###` 부터는 절 머리가 아니라 항목이 낸 줄이다.** 절 머리를 내는 자리는
+ *   `templates/index.ts` 하나뿐이고 거기 값은 전부 `#`·`##` 다 (`head` · `slot.heading`).
+ *   `###` 는 항목 렌더러만 낸다 — `architecture`/`adr_full` 의 `### {title}` 과
+ *   `domain` 의 `### 용어`·`### 불변식` (`sections.ts`).
+ *   예전엔 `startsWith('#')` 로 셋을 한꺼번에 끊어서, **항목이 낸 제목 줄이
+ *   「어느 항목에도 안 속한 줄」로 칠해졌다** — 화면 7 에서 그 줄만 근거가 사라진다.
+ * ⚠ 템플릿에 `###` 짜리 절 머리를 만들지 마라. 만들려면 이 규칙부터 고쳐라
+ *   (`test/tag.test.ts` 의 「`###` 줄은 반드시 칠해진다」가 잡는다).
  */
 function isBlockBoundary(line: string): boolean {
   const t = line.trim()
-  return t.length === 0 || t.startsWith('#') || (t.startsWith('<!--') && t.endsWith('-->'))
+  return t.length === 0 || /^#{1,2} /.test(t) || (t.startsWith('<!--') && t.endsWith('-->'))
 }
 
 /**

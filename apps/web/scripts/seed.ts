@@ -262,8 +262,18 @@ export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): 
  *   사람은 반드시 하나(경로·근거 문장)를 빠뜨린다.
  * ★ 구성요소를 하나 더하는 절차: **이 표에 한 줄.** 경로는 `src/{component}` 로
  *   자동이고, 그 폴더가 픽스처에 없으면 `fixtureDir()` 이 던진다.
- * ⚠ 넷째 칸은 goals.md §7 에서 **그대로 잘라 온 줄**이다. 요약해서 적지 마라 —
+ * ⚠ 넷째 칸(`quote`)은 goals.md §7 에서 **그대로 잘라 온 줄**이다. 요약해서 적지 마라 —
  *   `locate()` 가 원문에서 못 찾고 던진다 (P7 이 끊기는 자리를 씨앗에서 막는다).
+ *
+ * 🔴 **다섯째 칸(`title`)은 「구성요소 — 책임」을 다시 적는 자리가 아니다** (FINDINGS 99).
+ *    예전엔 제목을 ``${component} — ${responsibility}`` 로 **만들어** 썼다. 그러면
+ *    `architecture` 절이 내는 네 줄(`### {title}` · `- 구성요소:` · `- 책임:`)이
+ *    **같은 문장을 글자까지 똑같이 두 번** 적는다 — 종이의 절반이 메아리가 된다.
+ *    → 제목은 **사람이 목록에서 읽는 한 줄**(§7 그림에서 이 상자가 맡은 자리)로 둔다.
+ *    ⚠ 제목은 근거 원문일 필요가 없다 — P7 은 **줄의 태그**를 요구하지 제목의 출처를
+ *      요구하지 않는다. 그래도 §7 그림이 말하는 것 밖으로 나가지 마라 (FINDINGS 101).
+ *    ⚠ 제목에 `responsibility` 를 베껴 넣지 마라 — 관통의 「메아리 0」 검사가 잡는다
+ *      (`scripts/pack-echo.ts`).
  *
  * 🔴 **줄 순서가 곧 종이의 순서다** (FINDINGS 98). 이 표는 goals.md §7 그림 순서
  *    (payment → psp → webhook → refund → ledger) 그대로이고, 그 순서가 그 문단의 뜻이다
@@ -277,16 +287,23 @@ export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): 
  */
 export const ARCHITECTURE = [
   ['item_arch_payment', 'payment', '승인·매입을 맡는다. PSP 를 직접 부르지 않고 psp 를 거친다',
-    '- `payment` 는 승인·매입을 맡는다. PSP 를 직접 부르지 않고 `psp` 를 거친다.'],
+    '- `payment` 는 승인·매입을 맡는다. PSP 를 직접 부르지 않고 `psp` 를 거친다.',
+    '결제가 들어오는 입구'],
   ['item_arch_psp', 'psp', '바깥으로 나가는 유일한 자리다. 재시도·타임아웃이 여기 산다',
-    '- `psp` 만이 바깥으로 나간다. 재시도·타임아웃이 사는 자리다.'],
+    '- `psp` 만이 바깥으로 나간다. 재시도·타임아웃이 사는 자리다.',
+    '밖으로 나가는 문'],
   ['item_arch_webhook', 'webhook', 'PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다',
-    '- `webhook` 은 PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다.'],
+    '- `webhook` 은 PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다.',
+    '밖에서 돌아오는 문'],
   ['item_arch_refund', 'refund', '환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다',
-    '- `refund` 는 환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다.'],
+    '- `refund` 는 환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다.',
+    '돈을 되돌리는 길'],
   ['item_arch_ledger', 'ledger', 'append only 다. 여기서 계산이 틀리면 정산이 틀린다',
-    '- `ledger` 는 append only. 여기서 계산이 틀리면 정산이 틀린다.'],
-] as const satisfies readonly (readonly [id: string, component: string, responsibility: string, quote: string])[]
+    '- `ledger` 는 append only. 여기서 계산이 틀리면 정산이 틀린다.',
+    '돈이 남는 기록'],
+] as const satisfies readonly (readonly [
+  id: string, component: string, responsibility: string, quote: string, title: string,
+])[]
 
 /**
  * 표의 **첫 줄**이 받는 `priority`. 아래로 한 줄에 1씩 내려간다.
@@ -310,7 +327,11 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
       }),
     fromDoc('item_goal_success_rate', 'goal', goals,
       '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-06-30 |', {
-        title: '결제 승인 성공률 99.5%',
+        //  ⚠ 제목을 `outcome` 과 **같게 적지 마라** (FINDINGS 100). goal 절은
+        //    `- **{title}** — {data.outcome}` 를 내므로, 둘이 같으면 한 줄 안에서
+        //    같은 문장이 두 번 나온다. 제목은 **목록에서 읽는 이름**이고
+        //    `outcome` 이 **표에서 온 목표 문장**이다.
+        title: '장애 구간에도 승인이 선다',
         body: 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
         data: { outcome: '결제 승인 성공률 99.5%', metric: '주간 승인 성공률', deadline: '2026-06-30' },
       }),
@@ -367,7 +388,10 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
       + '  - PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\n'
       + '  - 모든 외부 호출에 타임아웃이 걸려 있다\n'
       + '  - 재시도 횟수와 간격이 설정값으로 빠져 있다 (배포 없이 바꾼다)', {
-        title: 'M1 — 재시도·타임아웃 정리',
+        //  ⚠ 제목에 `M1` 을 다시 적지 마라 (FINDINGS 100). roadmap 절은
+        //    `- **{data.milestone_id} {title}**` 를 내므로 `PL-M1 M1 — …` 이 된다.
+        //    마일스톤 번호를 말하는 자리는 `milestone_id` 하나다.
+        title: '재시도·타임아웃 정리',
         body: '',
         data: {
           milestone_id: 'PL-M1',
@@ -414,8 +438,12 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
     //  ⚠ 다섯 줄 전부 원문 그대로다 (P7). `responsibility` 는 그 줄이 말하는 것을 옮긴 것이고
     //    경로는 §7 그림의 대괄호 이름과 같다 — `item_road_m1`·`item_policy_webhook_sig` 가
     //    쓰는 경로(`src/payment`·`src/psp`·`src/webhook`)와 같은 낱말이라야 서로 이어진다.
-    ...ARCHITECTURE.map(([id, component, responsibility, quote], i) => fromDoc(id, 'architecture', goals, quote, {
-      title: `${component} — ${responsibility}`.slice(0, 120),
+    //  ⚠ 제목을 여기서 **만들지** 마라 — 표의 칸을 그대로 읽는다 (FINDINGS 99).
+    //    `${component} — ${responsibility}` 로 만들던 때는 `### {title}` 과 `- 책임:` 이
+    //    같은 문장을 두 번 적었다. 길이 자르기(`slice`)도 없앴다 — 120자를 넘기면
+    //    스키마가 **던지는** 것이 맞다. 조용히 잘리면 종이에 잘린 문장이 남는다.
+    ...ARCHITECTURE.map(([id, component, responsibility, quote, title], i) => fromDoc(id, 'architecture', goals, quote, {
+      title,
       body: '',
       //  🔴 순서는 표의 줄 번호에서 온다 (FINDINGS 98) — 위 주석을 봐라.
       priority: ARCHITECTURE_TOP_PRIORITY - i,

@@ -6,6 +6,7 @@ import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
 import { parseTraceTag, PROGRESS_REPORT, srcKindOf, type TraceTag } from '@contextops/compiler'
 
 import { measureCoverage } from './pack-coverage'
+import { findEchoes } from './pack-echo'
 import { openStage } from '../../../tools/walkthrough-stage'
 
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
@@ -267,7 +268,8 @@ async function main(): Promise<void> {
     //    그거였고, 관통 자신이 그 고장을 하나 더 들고 있었다.
     const settlement = fromDoc('item_goal_settlement', 'goal', seed.goals,
       '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |', {
-        title: '정산 오차 0원',
+        //  ⚠ 제목을 `outcome` 과 같게 적지 마라 (FINDINGS 100) — 아래 「메아리 0」이 잡는다.
+        title: '원장과 어긋난 돈이 없다',
         body: '일 배치 후 원장 대사 차액으로 잰다.',
         data: { outcome: '정산 오차 0원', metric: '일 배치 후 원장 대사 차액', deadline: '2026-06-30' },
       })
@@ -342,6 +344,18 @@ async function main(): Promise<void> {
       check(`Pack 이 ${c.axis} 를 ${c.shown.length}갈래로 보여 준다 (표는 ${c.total} · 최소 ${c.min})`,
         c.ok, c.missing.length === 0 ? c.shown.join(' · ') : `없는 갈래: ${c.missing.join(' · ')}`)
     }
+
+    //  🔴 **종이가 같은 말을 두 번 하지 않는다** (FINDINGS 99·100).
+    //  ★ 왜 관통이 세나 — 이건 템플릿의 잘못이 아니라 **씨앗이 제목을 데이터와 같게
+    //    준** 것이고, 그건 컴파일러 시험이 볼 수 없는 자리다 (골든 입력은 딴 파일이다).
+    //    심사자가 읽는 종이는 이 Pack 이고, 여기서만 잴 수 있다.
+    //  ⚠ 기준도 절 목록도 여기 적지 않는다 — `pack-echo.ts` 하나가 정본이다.
+    //    절이 늘어도 이 파일에 검사를 한 벌 더 복사할 일이 없어야 한다.
+    const echoFiles = new Map([...packByPath, ['v1.1.0/CLAUDE.md', claude2Text]])
+    const echoes = findEchoes(echoFiles)
+    check(`🔴 같은 문장을 두 번 적는 항목이 없다 — 파일 ${echoFiles.size}개 (FINDINGS 99·100)`,
+      echoes.length === 0,
+      echoes.map((e) => `${e.path} · ${e.itemId}: 「${e.fragment}」`).join(' · '))
 
     mkdirSync(join(outDir, 'v1.1.0'), { recursive: true })
     writeFileSync(join(outDir, 'v1.1.0', 'CLAUDE.md'), claude2Text, 'utf8')
