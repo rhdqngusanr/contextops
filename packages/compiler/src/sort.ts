@@ -9,7 +9,11 @@ import { compareCodepoints } from './text'
 //    항목을 셔플했을 때 다른 Pack 이 나온다. 그래서 마지막 열쇠는 항목 ID(유일값)다.
 // =====================================================================
 
-/** 좁은 규칙이 뒤에 온다 — 전역 → 도메인 → 경로. */
+/**
+ * 좁은 규칙이 뒤에 온다 — 전역 → 도메인 → 경로 (SPEC §4.1 3단계 `project<domain<path`).
+ * ⚠ 이 표를 고치면 산출물의 줄 순서가 바뀐다. 잠그는 자리는 `test/liveness.test.ts` 의
+ *   「scope.kind 3종 · 정렬 (SCOPE_ORDER)」 — ①표가 순서를 정하는가 ②방향이 SPEC 그대로인가.
+ */
 export const SCOPE_ORDER = { project: 0, domain: 1, path: 2 } as const satisfies Record<ScopeKind, number>
 
 export function compareItems(a: ContextItem, b: ContextItem): number {

@@ -1,6 +1,7 @@
-import { PACK_TARGETS, SOURCE_REF_KINDS, SourceRef, type ItemType } from '@contextops/schema'
+import { PACK_TARGETS, SCOPE_KINDS, SOURCE_REF_KINDS, SourceRef, type ContextItem, type ItemType, type ScopeKind } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 import { compile } from '../src'
+import { SCOPE_ORDER } from '../src/sort'
 import { srcKindOf, srcTag } from '../src/tag'
 import { ALL_TYPES, ANCHOR, makeInput, makeItem } from './fixtures'
 
@@ -79,7 +80,7 @@ describe('enforcement 4종', () => {
   })
 })
 
-describe('scope.kind 3종', () => {
+describe('scope.kind 3종 · 배치 (SCOPE_DOC)', () => {
   it('3종이 서로 다른 파일로 간다', () => {
     const paths = (['project', 'domain', 'path'] as const).map((kind) => {
       const scope = kind === 'project' ? { kind } : { kind, value: 'payment' }
@@ -87,6 +88,75 @@ describe('scope.kind 3종', () => {
       return result.files.find((f) => f.text.includes('item_t_policy'))?.path
     })
     expect(paths).toEqual(['CLAUDE.md', '.claude/rules/domain-payment.md', '.claude/rules/scoped-payment.md'])
+  })
+})
+
+describe('scope.kind 3종 · 정렬 (SCOPE_ORDER)', () => {
+  //  🔴 위 describe 는 **배치**(`SCOPE_DOC` — 어느 파일로 가나)를 잰다. 이건 **정렬**
+  //     (`SCOPE_ORDER` — 같은 절 안에서 누가 먼저 서나)이다. 두 표가 「scope.kind 3종」이라는
+  //     한 이름으로 묶여 보여서 정렬 쪽은 한 번도 안 잠겨 있었다 — `SCOPE_ORDER` 를 정반대로
+  //     뒤집어도 컴파일러 시험 147개가 전부 초록이었다 (FINDINGS 103). 산출물은 실제로 갈리는데.
+  //
+  //  ★ 왜 `roadmap` 으로 재나 — `policy`·`constraint` 는 `byScope()` 가 scope 별로 **다른 파일**
+  //    로 보내서 셋이 한 절에 서지 못한다. `roadmap` 은 `PARTITION` 이 scope 를 안 보고 전부
+  //    `place('claude','roadmap')` 으로 보내므로, priority 를 같게 두면 **순서를 정하는 것이
+  //    `SCOPE_ORDER` 뿐**이다.
+  const SAME_PRIORITY = 50
+
+  /** 기대 순서는 표에서 **읽어서** 만든다 — 손으로 적으면 표를 고친 사람이 시험도 같이 고쳐 초록을 만든다. */
+  const EXPECTED: readonly ScopeKind[] = [...SCOPE_KINDS].sort((a, b) => SCOPE_ORDER[a] - SCOPE_ORDER[b])
+
+  //  ⚠ 제목·ID 는 기대 순서와 **반대로** 매긴다. `compareItems` 에서 scope 비교가 빠지거나
+  //    뒤집히면 다음 열쇠(제목 → ID)가 정반대 순서를 내므로 이 시험이 반드시 빨개진다.
+  const rankOf = (kind: ScopeKind): number => EXPECTED.length - 1 - EXPECTED.indexOf(kind)
+  const idOf = (kind: ScopeKind): string => `item_r_${rankOf(kind)}_${kind}`
+
+  function roadmapIn(kind: ScopeKind): ContextItem {
+    return makeItem('roadmap', {
+      id: idOf(kind),
+      title: `${rankOf(kind)} 번 마일스톤`,
+      scope: kind === 'project' ? { kind } : { kind, value: 'payment' },
+      priority: SAME_PRIORITY,
+      data: { milestone_id: `M${rankOf(kind) + 1}`, paths: ['src/pay'], done_when: ['문서와 코드가 같다'], dependencies: [] },
+    })
+  }
+
+  /** 입력 순서를 뒤집어 넣어도 결과가 같아야 한다 (P4) — 그래서 두 배열로 잰다. */
+  function orderInClaudeMd(items: readonly ContextItem[]): ScopeKind[] {
+    const result = compile(makeInput([ANCHOR, ...items]))
+    const text = result.files.find((f) => f.path === 'CLAUDE.md')?.text ?? ''
+    return [...SCOPE_KINDS]
+      .map((kind) => ({ kind, at: text.indexOf(idOf(kind)) }))
+      .map((seen) => {
+        expect(seen.at, `${seen.kind} 항목이 CLAUDE.md 에 없다`).toBeGreaterThanOrEqual(0)
+        return seen
+      })
+      .sort((a, b) => a.at - b.at)
+      .map((seen) => seen.kind)
+  }
+
+  //  🔴 표를 **통째로 뒤집는 것**은 아래 두 시험이 못 잡는다 — 기대 순서를 표에서 읽어
+  //     만들기 때문에 표가 뒤집히면 기대도 같이 뒤집힌다. 그래서 **방향**은 정본이 적은
+  //     문장으로 따로 잠근다: SPEC §4.1 3단계 「scope(project<domain<path)」 =
+  //     `sort.ts` 머리의 「좁은 규칙이 뒤에 온다」.
+  //  ⚠ 이건 산출물을 손으로 베낀 기대값이 아니라 **정본의 주장**이다 — 이 줄을 고치려면
+  //    SPEC §4.1 을 같이 고쳐야 한다.
+  it('좁은 규칙이 뒤에 온다 — SPEC §4.1 의 project < domain < path', () => {
+    expect(SCOPE_ORDER.project).toBeLessThan(SCOPE_ORDER.domain)
+    expect(SCOPE_ORDER.domain).toBeLessThan(SCOPE_ORDER.path)
+  })
+
+  it('priority 가 같으면 SCOPE_ORDER 가 CLAUDE.md 안의 순서를 정한다', () => {
+    const items = SCOPE_KINDS.map(roadmapIn)
+    expect(orderInClaudeMd(items)).toEqual([...EXPECTED])
+    expect(orderInClaudeMd([...items].reverse())).toEqual([...EXPECTED])
+  })
+
+  it('그 순서는 제목·ID 순이 아니다 (SCOPE_ORDER 를 빼면 갈린다)', () => {
+    //  이 시험이 초록인 동안에만 위 시험이 `SCOPE_ORDER` 를 재고 있다 — 둘이 같아지면
+    //  위 시험은 표를 지워도 통과한다.
+    const byTitle = [...SCOPE_KINDS].sort((a, b) => rankOf(a) - rankOf(b))
+    expect(byTitle).not.toEqual([...EXPECTED])
   })
 })
 
