@@ -48,7 +48,26 @@
   `typecheck` 층이 **두 프로젝트를 다 돌게** 하는 것이 다음 갈래다.
   ⚠ 다른 패키지(`packages/*` · `plugin`)의 `include` 도 같이 봐라 — 같은 모양이면
   거기도 스크립트가 빠져 있다.
-- **상태**: 대기
+- **상태**: ✅ `95c525e` — **폴더 이름을 세는 것을 그만뒀다.** `include` 를 네 곳 다
+  글로브(`["**/*.ts", "**/*.tsx"]`)로 바꿨다. 「`scripts` 한 줄을 더한다」로 끝내면
+  **다음 폴더에서 똑같이 빠진다** — 잊을 자리 자체를 없앴다. 빼는 것은 `exclude` 에
+  적는다(빼는 것은 눈에 보이고, 빠뜨리는 것은 안 보인다).
+  측정: `tsc --listFilesOnly | grep -c apps/web/scripts/` → **0 에서 10**.
+  **게이트를 세웠다** — `tools/tsconfig-coverage.mjs` 가 저장소의 모든 TS 소스가
+  어떤 tsconfig 에는 들어 있는지 세고, `pnpm typecheck` 이 tsc 보다 **먼저** 부른다
+  (그래서 `tools/ci.ps1` 과 `.github/workflows/ci.yml` 이 둘 다 자동으로 받는다 —
+  검사 명령의 정본은 루트 `package.json` 하나다).
+  include/exclude 규칙을 다시 구현하지 않고 **`tsc --listFilesOnly` 에게 묻는다**;
+  프로젝트 목록도 적지 않고 `tsconfig.json` 을 **찾는다**(목록을 손으로 들면
+  새 패키지가 조용히 검사 밖에 선다 — 이 게이트가 막으려는 고장 그 자체다).
+  🔴 **빨개지는 것을 두 번 봤다**: ① include 를 옛 모양으로 되돌리니 빠진 파일 10개를
+  이름으로 전부 짚었다 ② 면제 목록의 경로를 없는 것으로 바꾸니 「죽은 면제를 지워라」로
+  FAIL 했다. 면제는 `fixtures/` 하나이고 이유가 옆에 적혀 있다.
+  미사용 변수 3개(TS6133)도 지웠다. 덮임 = 프로젝트 5개 · TS 소스 **208개 전부**.
+  ⚠ **다른 패키지에는 빠진 폴더가 없었다** — `schema`·`plugin` 은 이미 `"scripts"` 가
+  있었고 `compiler` 는 그 폴더가 없다. 그래도 같은 글로브로 맞췄다(다음 폴더를 위해).
+  `next build` 는 `include` 를 tsc 와 같이 읽는데 **아프지 않았고**(19초 OK)
+  tsconfig 를 다시 쓰지도 않았다 — `next-env.d.ts`·`.next/types` 두 줄을 남겨 둔 덕이다.
 
 ### 93. 데모 Pack 이 **근거 4종 중 둘 · scope 3종 중 둘**만 보여 준다   [격차]
 - **증상**: **89 와 같은 모양의 고장이고, 89 는 표 하나(`enforcement`)만 고쳤다.**
@@ -100,6 +119,63 @@
 - **정본**: `loop/PROMPT.md` ④2-B
 - **다음 라운드의 후보**: sync 상태 5종(**69** — `manual` 을 찍는 코드가 0곳) ·
   `ItemType` 10종 · `enforcement` 4종
+- **상태**: [기록]
+
+### 94. 데모 Pack 이 `ItemType` **10종 중 다섯**만 보여 준다 — 그리고 빠진 셋은 픽스처 문서에 이미 적혀 있다   [격차]
+- **증상**: **89·93 과 같은 모양의 셋째 표다.** 표는 살아 있다(아래 94-B 가 ②단계까지 쟀다).
+  그런데 심사자가 읽는 종이에 서는 타입은 **다섯**뿐이다 —
+  `mission` · `goal` · `roadmap` · `policy`(3개) · `constraint`.
+  **안 나오는 다섯**: `architecture` · `domain` · `adr` · `workflow` · `open_question`.
+  🔴 제일 아픈 것은 **셋(`architecture`·`domain`·`open_question`)의 원문이
+  픽스처 문서에 **이미 있는데 아무도 안 읽는다**는 것이다. 지어낼 필요가 없다 —
+  씨앗이 goals.md 의 §5·§6·§7 을 그냥 건너뛴다.
+  ⚠ **`.claude/rules/domain-refund.md` 를 「`domain` 타입이 나온 증거」로 읽지 마라.**
+  그 파일은 `scope.kind='domain'` 이 만든 것이고 ItemType `domain` 과 **다른 축**이다.
+  이름이 같아서 세다가 틀리기 쉽다.
+  ⚠ `.claude/rules/workflow.md` 도 마찬가지다 — 그 파일은 **템플릿이 늘 찍는 진행 보고
+  안내문**이고 `workflow` 타입 항목이 만든 것이 아니다 (열어 보면 `ctx:` 태그가 한 줄도 없다).
+- **근거**: 이번 바퀴 눈 판정. `.ci/walkthrough-pack/` 다섯 파일 전체에서 태그를 세고
+  씨앗과 대조했다 — `grep -nE "fromDoc\('[a-z_]+', '[a-z_]+'" apps/web/scripts/seed.ts`
+  → 7줄 · `policy` 3 · `mission`/`goal`/`constraint`/`roadmap` 각 1 = **5종**.
+  `cat .ci/walkthrough-pack/.claude/rules/workflow.md` → `ctx:` 태그 0개(템플릿 문구).
+  빠진 셋의 원문 자리도 직접 찾았다 (`fixtures/paylab-docs/goals.md`):
+  **§5 「아직 정하지 못한 것」**(115–122줄 · 미결 4건 — `open_question` 그 자체다) ·
+  **§6 「용어」**(128–136줄 · PSP·승인·매입·종결·원장 5개 — `domain` 이다) ·
+  **§7 「아키텍처 한 장」**(138–150줄 · payment→psp→PSP · webhook · ledger · refund —
+  `architecture` 이고, 93 이 쓰려는 `path` scope 의 근거와 **같은 문단**이다).
+  `adr` 과 `workflow` 는 픽스처에 원문이 **없다** — 이 둘은 문서를 먼저 늘려야 한다(89 의 규칙).
+- **정본**: `docs/SPEC.md` §10.1(paylab 픽스처) · §4.1(partition) ·
+  `packages/schema/src/common.ts`(`ITEM_TYPES`) · `packages/schema/src/item.ts`(`ITEM_DATA`)
+- **고칠 방향**: 🔴 **93 과 같은 게이트다. 세는 상수를 셋째로 늘리지 마라.**
+  89 가 `PACK_ENFORCEMENT_MIN` 을 만들었고 93 이 `SourceRef`·`scope.kind` 를 더한다.
+  여기까지 오면 축이 넷이다 — 「데모가 이 표의 몇 갈래를 보여 주나」를 **표 하나**
+  (`Record<축이름, {값들, 최소치, 왜}>`)로 모으고 관통이 그 표를 **읽기만** 하게 해라.
+  안 그러면 표가 늘 때마다 관통에 검사 한 벌씩 복사된다 (`CLAUDE.md` 「확장은 표에 한 줄」).
+  ⚠ **최소치를 10종 전부로 잡지 마라.** `adr`·`workflow` 는 원문이 없고, 원문 없이
+  채우면 P7 이 깨진다. 표의 각 줄에 **「지금 몇 갈래이고 왜 그 수인가」**를 적어라 —
+  89 가 `permission`·`none` 을 비워 둔 이유를 상수 옆에 적은 것과 같은 모양이다.
+- **상태**: 대기
+
+### 94-B. 2-B 이번 라운드 — `ItemType` 10종은 살아 있다 · sync 상태 5종은 **69 그대로**   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인.
+  ① **`ItemType` 10종 — ②단계까지 통과한다.** 소비처가 갈래마다 다른 것을 낸다:
+     `schema/src/item.ts:139`(`ITEM_DATA` — 타입마다 다른 `.strict()` data 스키마 ·
+     `satisfies Record<ItemType, …>` 라 한 줄만 빠져도 타입 검사가 막는다) ·
+     `compiler/src/partition.ts`(어느 Pack 파일로 갈 것인가) · `compiler/src/sections.ts`.
+     `compiler/test/liveness.test.ts:33` 이 **10종을 하나씩 넣어 산출물 지문이 서로
+     전부 다른지**를 잰다(`allDistinct`) — 「두 타입이 같은 줄을 내면 하나는 죽은 것」.
+     더하는 절차 5단계도 `ITEM_DATA` 표 옆 주석에 적혀 있다.
+     ⚠ **살아 있는 것과 데모가 보여 주는 것은 다른 질문이다** — 뒤의 것이 **94** 다.
+  ② **sync 상태 5종 — 69 에서 달라진 것이 없다.** 다시 쟀다:
+     `grep -rn "'manual'" plugin/contextops/src` → **0건**(여전히 아무도 안 찍는다) ·
+     찍는 자리는 `cli/managed.ts:145·163·168·171·174`(`unknown`·`modified`·`applied`×2·
+     `outdated`) · 서버는 `lib/api/sync.ts:16` 의 `NO_REPORT_STATUS='unknown'` 하나.
+     🔴 **새 항목을 만들지 않는다 — 69 가 이미 그 자리에 있다.** 69 는 고장이 아니라
+     **제품 결정 대기**다(「Pack zip 을 내려받는 길을 만드나」). 같은 것을 또 캐지 마라.
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: 에러 코드 9종 · `ITEM_STATUSES` 4종 · `PACK_TARGETS` 3종
+  (`enforcement` 4종은 88-B, `SourceRef`·`scope.kind` 는 93-B, `confidence` 는 91-B 가 닫았다)
 - **상태**: [기록]
 
 ### 90. 픽스처의 **근거 범위가 원문을 안 가리킨다** — 역추적을 따라가면 그 문장이 없다   [구멍]
