@@ -20,7 +20,7 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
 import { closeDb, dataOf, errorOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
-import { fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
+import { ARCHITECTURE, fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
 
 // =====================================================================
 //  관통 2단계 — 픽스처 문서 → 항목 → 발행 → Pack 파일 (SPEC §2.1 · §5)
@@ -135,6 +135,25 @@ function followEvidence(tags: TraceTag[], expected: EvidenceExpectation[]): {
   return { followed, seen, broken }
 }
 
+/**
+ * 🔴 **표에서 온 항목이 표에 적힌 순서 그대로 종이에 서는가** (FINDINGS 98).
+ *
+ * ★ 왜 이걸 재나 — 아키텍처 다섯 줄의 순서는 goals.md §7 그림의 **돈이 흐르는 순서**이고
+ *   그 순서가 그 문단의 뜻이다. 다섯이 전부 같은 `priority` 면 정렬이 제목 코드포인트
+ *   순으로 떨어져 `ledger` 가 맨 앞에 서고, 종이에서는 화살표가 알파벳 목록이 된다.
+ * ⚠ 기대 순서를 여기 적지 마라 — 씨앗의 `ARCHITECTURE` 표를 **읽기만** 한다.
+ *   두 곳에 적으면 표에 줄을 더한 사람이 검사 쪽 목록을 고쳐서 초록을 만든다.
+ * ⚠ 파일 이름도 적지 않는다 — Manifest 에서 「이 항목들이 실린 파일」을 찾는다.
+ *   아키텍처 항목은 두 파일로 간다 (`CLAUDE.md` Quick Map · `architecture.md`).
+ */
+function orderOf(text: string, want: readonly string[]): string[] {
+  return text.split('\n')
+    .map(parseTraceTag)
+    .filter((t): t is TraceTag => t !== null)
+    .map((t) => t.itemId)
+    .filter((id) => want.includes(id))
+}
+
 async function main(): Promise<void> {
   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
   const { pg } = await freshDb()
@@ -186,6 +205,8 @@ async function main(): Promise<void> {
     let untagged = 0
     /** 받은 Pack 본문 전부. **사람이 읽는 종이**를 재는 검사들이 이걸 읽는다. */
     const packTexts: string[] = []
+    /** 경로 → 본문. 「어느 파일이 이렇게 나왔나」를 재는 검사가 이걸 읽는다. */
+    const packByPath = new Map<string, string>()
     for (const f of manifest.files) {
       const res = await packFile(
         req('GET', `/api/v1/projects/${projectId}/packs/1.0.0/files/${f.path}`, { auth: owner }),
@@ -193,6 +214,7 @@ async function main(): Promise<void> {
       )
       const text = await res.text()
       packTexts.push(text)
+      packByPath.set(f.path, text)
       if (sha256(text) !== f.sha256) hashMismatch++
       //  🔴 P7 — 근거 없는 파일이 없다. 태그가 하나도 없는 파일은 역추적이 끊긴 것이다.
       //     예외는 계약에 **이름으로** 적힌 제품 고정 텍스트뿐이다 (SPEC §4.3).
@@ -220,6 +242,18 @@ async function main(): Promise<void> {
       manifest.files.some((f) => f.path === workflowPath))
     check('그 파일이 진행 보고 문단을 전부 담는다', PROGRESS_REPORT.every((line) => workflowText.includes(line)),
       `${PROGRESS_REPORT.length}줄`)
+
+    //  🔴 **아키텍처 다섯 줄이 goals.md §7 그림 순서대로 선다** (FINDINGS 98).
+    //  ⚠ 기대 순서도 파일 이름도 여기 적지 않는다 — 씨앗의 표와 Manifest 를 읽는다.
+    const archIds = ARCHITECTURE.map(([id]) => id) as readonly string[]
+    const archFiles = manifest.files.filter((f) => f.source_item_ids.some((id) => archIds.includes(id)))
+    const misordered = archFiles
+      .map((f) => ({ path: f.path, got: orderOf(packByPath.get(f.path) ?? '', archIds) }))
+      .filter((r) => r.got.join(',') !== archIds.join(','))
+      .map((r) => `${r.path}: ${r.got.join(' → ')}`)
+    check(`🔴 아키텍처 항목이 씨앗 표 순서(§7 그림)대로 종이에 선다 — 파일 ${archFiles.length}개`,
+      archFiles.length > 0 && misordered.length === 0,
+      misordered.length > 0 ? misordered.join(' · ') : archIds.join(' → '))
 
     // ── ⑦ 낡은 기준으로 발행하면 409 ───────────────────────────────────
     const stale = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {

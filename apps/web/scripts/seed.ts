@@ -264,8 +264,18 @@ export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): 
  *   자동이고, 그 폴더가 픽스처에 없으면 `fixtureDir()` 이 던진다.
  * ⚠ 넷째 칸은 goals.md §7 에서 **그대로 잘라 온 줄**이다. 요약해서 적지 마라 —
  *   `locate()` 가 원문에서 못 찾고 던진다 (P7 이 끊기는 자리를 씨앗에서 막는다).
+ *
+ * 🔴 **줄 순서가 곧 종이의 순서다** (FINDINGS 98). 이 표는 goals.md §7 그림 순서
+ *    (payment → psp → webhook → refund → ledger) 그대로이고, 그 순서가 그 문단의 뜻이다
+ *    (「`payment` 는 PSP 를 직접 부르지 않고 `psp` 를 거친다」). 다섯이 전부 같은
+ *    `priority` 면 컴파일러가 제목 코드포인트 순으로 떨어뜨려 **ledger 가 맨 앞**에 서고,
+ *    종이에서는 돈이 흐르는 화살표가 알파벳 목록이 된다.
+ *    → 그래서 `priority` 를 **줄 번호에서 뽑는다**(`ARCHITECTURE_TOP - i`). 손으로 칸을
+ *      채우면 여섯째 줄을 더한 사람이 그 칸만 빠뜨리고, 그러면 그 줄만 조용히 뒤로 간다.
+ *    ⚠ 순서를 컴파일러에서 고치려 하지 마라 — 정렬은 P4 의 심장이고 지금 맞다
+ *      (`compiler/src/sort.ts`). 순서를 말하는 자리는 `priority` 하나다.
  */
-const ARCHITECTURE = [
+export const ARCHITECTURE = [
   ['item_arch_payment', 'payment', '승인·매입을 맡는다. PSP 를 직접 부르지 않고 psp 를 거친다',
     '- `payment` 는 승인·매입을 맡는다. PSP 를 직접 부르지 않고 `psp` 를 거친다.'],
   ['item_arch_psp', 'psp', '바깥으로 나가는 유일한 자리다. 재시도·타임아웃이 여기 산다',
@@ -277,6 +287,18 @@ const ARCHITECTURE = [
   ['item_arch_ledger', 'ledger', 'append only 다. 여기서 계산이 틀리면 정산이 틀린다',
     '- `ledger` 는 append only. 여기서 계산이 틀리면 정산이 틀린다.'],
 ] as const satisfies readonly (readonly [id: string, component: string, responsibility: string, quote: string])[]
+
+/**
+ * 표의 **첫 줄**이 받는 `priority`. 아래로 한 줄에 1씩 내려간다.
+ *
+ * ★ 왜 다른 항목(기본 `60`)보다 높아도 되나 — `priority` 는 **같은 타입 안에서만**
+ *   견줘진다: 절(section)은 타입별로 갈려 있고(`compiler/src/partition.ts`),
+ *   150개 상한의 절삭도 「type별 priority 상위」다 (SPEC §7.3). 그래서 이 값이
+ *   policy·goal 을 제치는 일은 없다 — 다섯 아키텍처 줄끼리의 순서만 정한다.
+ * ⚠ 표가 여섯 줄이 되면 여섯째는 `65` 다. 바닥이 아니라 **꼭대기**를 고정한 이유는,
+ *   줄을 더했을 때 이미 있는 줄의 값이 안 움직여야 하기 때문이다.
+ */
+const ARCHITECTURE_TOP_PRIORITY = 70
 
 export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft[] {
   return [
@@ -392,9 +414,11 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
     //  ⚠ 다섯 줄 전부 원문 그대로다 (P7). `responsibility` 는 그 줄이 말하는 것을 옮긴 것이고
     //    경로는 §7 그림의 대괄호 이름과 같다 — `item_road_m1`·`item_policy_webhook_sig` 가
     //    쓰는 경로(`src/payment`·`src/psp`·`src/webhook`)와 같은 낱말이라야 서로 이어진다.
-    ...ARCHITECTURE.map(([id, component, responsibility, quote]) => fromDoc(id, 'architecture', goals, quote, {
+    ...ARCHITECTURE.map(([id, component, responsibility, quote], i) => fromDoc(id, 'architecture', goals, quote, {
       title: `${component} — ${responsibility}`.slice(0, 120),
       body: '',
+      //  🔴 순서는 표의 줄 번호에서 온다 (FINDINGS 98) — 위 주석을 봐라.
+      priority: ARCHITECTURE_TOP_PRIORITY - i,
       data: { component, responsibility, paths: [fixtureDir(retry.repo, `src/${component}`)] },
     })),
     //  🔴 **`domain` 타입은 이 항목 하나뿐이다** (FINDINGS 94).

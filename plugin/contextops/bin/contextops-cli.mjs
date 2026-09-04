@@ -19038,6 +19038,14 @@ var ItemBase = external_exports.object({
   body: external_exports.string().max(2e3),
   status: external_exports.enum(ITEM_STATUSES),
   scope: Scope,
+  //  🔴 **`priority` 는 「먼저」다 — 그리고 같은 타입 안에서만 견줘진다** (FINDINGS 98).
+  //     읽는 곳이 둘이고 둘 다 타입 안에서만 본다:
+  //     ① Pack 의 **읽는 순서** — 절(section)은 타입별로 갈려 있고 그 안에서 priority
+  //        내림차순이다 (SPEC §4.1 3단계 · `compiler/src/sort.ts`)
+  //     ② 못 다 실을 때 **남는 순서** — 「150개 상한, 초과 시 **type별** priority 상위」
+  //        (SPEC §7.3 · `apps/web/src/lib/ai/conflict.ts`)
+  //  ⚠ 그래서 이 값을 「중요도」가 아니라 「그 타입 안에서 몇 번째로 읽히나」로 써도 된다.
+  //    아키텍처 다섯 줄이 §7 그림 순서로 서는 것이 그 예다 (`apps/web/scripts/seed.ts`).
   priority: external_exports.int().min(0).max(100).default(50),
   source_refs: external_exports.array(SourceRef).min(1).max(SOURCE_REFS_MAX),
   tags: external_exports.array(external_exports.string().min(1).max(40)).max(20).default([]),

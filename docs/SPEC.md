@@ -272,6 +272,7 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 | 동일 내용 | `AGENTS.md` (CLAUDE.md 본문 + rules 인라인 요약), `.cursor/rules/contextops.mdc` |
 
 3. **sort** — 섹션 순서 고정(mission→goal→roadmap→policy→constraint→quickmap) → priority desc → scope(project<domain<path) → title(ko/en locale-independent, codepoint) → id.
+   - `priority` 는 **「먼저」**이고 **같은 타입 안에서만** 견줘진다 — 절은 타입별로 갈려 있고(§4.1 2단계), 절삭도 「type별 priority 상위」다(§7.3). 그래서 「중요도」가 아니라 **「그 타입 안에서 몇 번째로 읽히나」**로 써도 된다 (예: architecture 다섯 줄이 §7 그림의 흐름 순서로 선다).
 4. **render** — 템플릿 문자열 치환만. Markdown escape: `|`, 선행 `#`, `<!--`. 항목마다 역추적 태그 한 줄:
    `<!-- ctx:item_bs_m2 rev:6 src:doc:sdv_…#1840-1961,repo:parking-api:src/billing/fee.ts:14 -->`
 5. **budget** — CLAUDE.md 12,000자 초과 시 policy/constraint를 `.claude/rules/policies.md`로 이동(경고 기록), rules 파일 30,000자 초과 시 domain 분할.
