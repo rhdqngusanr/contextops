@@ -182,6 +182,40 @@ describe('🔴 종류마다 갈리는 것이 표에서만 온다', () => {
     expect(new Set(labels).size, `A·B 문구가 겹친다 — ${labels.join(' / ')}`).toBe(labels.length)
   })
 
+  //  🔴 **버튼이 표에 없는 일을 약속하지 않는다** (FINDINGS 76).
+  //
+  //  ★ 왜 낱말 목록인가 — 29바퀴에 버튼 밑에 결과 줄을 붙였더니 중복 카드에서
+  //    `A로 합침 | B 항목 → 「폐기」` 가 한 줄에 나란히 섰다. 서버는 **합치지 않는다** —
+  //    진 쪽을 폐기할 뿐이고 이긴 쪽으로는 본문도 근거도 안 옮겨 온다. 사람은 B 에만
+  //    있던 문장이 남는다고 믿고 누르는데 되돌릴 문이 없다.
+  //  ★ 왜 표를 같이 재나 — 이 금지는 **표가 폐기만 하는 동안**만 옳다. 진 쪽
+  //    `source_refs` 를 이긴 쪽에 이어 붙이는 갈래가 생기면 「합침」은 참말이 된다.
+  //    그때 첫 `expect` 가 먼저 빨개져서 **여기로 데려온다** — 문구를 다시 정하는 자리다.
+  const MERGE_WORDS = ['합침', '합치', '병합', '통합']
+
+  it('🔴 표가 「진 쪽 폐기」뿐인 동안 버튼이 「합친다」고 말하지 않는다 (FINDINGS 76)', () => {
+    const merges = CONFLICT_CHOICES.filter((c) => {
+      const rule = RESOLUTION_ITEM_OUTCOME[c]
+      return rule !== null && rule.status !== 'deprecated'
+    })
+    expect(
+      merges,
+      '표가 넓어졌다 — `MERGE_WORDS` 금지와 `CONFLICT_SIDES` 문구를 다시 정해라',
+    ).toEqual([])
+
+    for (const kind of Object.keys(CONFLICT_SIDES) as DetectedConflictKind[]) {
+      const sides = CONFLICT_SIDES[kind]
+      for (const label of [sides.a, sides.b]) {
+        for (const word of MERGE_WORDS) {
+          expect(
+            label,
+            `${kind}: 「${label}」 — 서버는 진 쪽을 폐기할 뿐 합치지 않는다`,
+          ).not.toContain(word)
+        }
+      }
+    }
+  })
+
   it('선택 4개가 서로 다른 문구를 낸다 (`CHOICE_LABEL`)', () => {
     const sides = CONFLICT_SIDES.doc_vs_code
     const made = CONFLICT_CHOICES.map((c) => CHOICE_LABEL[c](sides))

@@ -54,7 +54,13 @@ export const CONFLICT_SIDES: Record<DetectedConflictKind, { a: string; b: string
   //  ⚠ 「맞음」이 아니라 「최신」이다 — 오래됨은 옳고 그름이 아니라 **시점**의 문제다
   //    (`CONFLICT_KIND_RULES.stale.hint`: 「어느 쪽이 맞는지는 판단하지 마라」).
   stale: { a: 'A가 최신', b: 'B가 최신' },
-  duplicate: { a: 'A로 합침', b: 'B로 합침' },
+  //  ⚠ 「합침」이 아니라 **「만 남김」**이다 — 서버가 하는 일은 진 쪽을 `deprecated` 로
+  //    보내는 것뿐이고 (`RESOLUTION_ITEM_OUTCOME`), 이긴 쪽으로 **아무것도 옮겨 오지
+  //    않는다.** 「A로 합침」이라고 물으면 사람은 B 에만 있던 문장이 A 에 남는다고 믿고
+  //    누른다 — 그리고 되돌릴 문이 없다 (`:resolve` 가 이미 처리된 충돌을 400 으로 막는다).
+  //    표가 정말로 합치게 되면(진 쪽 `source_refs` 를 이긴 쪽에 이어 붙이면) 그때
+  //    문구를 되돌려라 — `test/web-conflict-card.test.ts` 가 그 자리를 잡아 준다 (FINDINGS 76).
+  duplicate: { a: 'A만 남김', b: 'B만 남김' },
   //  DESIGN_BRIEF §4 화면 4 「문서↔코드 카드」의 문장 그대로다.
   doc_vs_code: { a: '문서가 맞음 (코드 수정 필요)', b: '코드가 맞음 (문서 갱신)' },
 }
