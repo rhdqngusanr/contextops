@@ -1,7 +1,7 @@
-import { CONFLICT_KIND_RULES } from '@contextops/schema'
 import type {
-  ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ItemStatus, SourceRef,
+  ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, SourceRef,
 } from '@contextops/schema'
+import { CONFLICT_KIND_RULES } from '@contextops/schema'
 
 import { conflicts } from '../../db/schema'
 
@@ -27,61 +27,14 @@ export const RESOLUTION_OUTCOME: Record<ConflictChoice, ConflictStatus> = {
   dismiss: 'dismissed',
 }
 
-/**
- * 🔴 **선택 4개 → 가리켜진 항목에 무엇을 하나의 정본 표** (SPEC §5 「→ 항목 상태 갱신」).
- *
- * ★ 왜 옆에 표가 하나 더 있나 — 위 표는 「선택 → **충돌**의 다음 상태」고 이 표는
- *   「선택 → **진 쪽 항목**의 다음 상태」다. 둘은 같이 안 움직인다: `both` 와 `dismiss`
- *   는 둘 다 충돌을 닫지만 항목은 하나도 안 건드린다. 한 표에 접으면 그 차이를 적을
- *   자리가 없어서 라우트에 `if (choice === 'both')` 가 다시 생긴다.
- *
- * ★ 새 선택을 더하는 절차 — 넷이고 앞의 둘은 기계가 막아 준다:
- *   ① `CONFLICT_CHOICES` **끝에** 값 추가 (중간에 끼우지 마라 — `resolution.choice` 로 저장된다)
- *   ② `RESOLUTION_OUTCOME` 에 한 줄 ③ **이 표에 한 줄**  ← ①만 하면 여기서 타입 검사가 막는다
- *   ④ `test/api-routes.test.ts` 의 「선택이 항목을 바꾼다」가 그 줄을 요구한다
- *   라우트는 고칠 것이 없다 — 이 표를 읽기만 한다.
- *
- * ⚠ **`both` 와 `dismiss` 는 `null` 이다.** 보류(둘 다 남긴다)와 무시는 **결정이 아니다** —
- *   여기서 아무 항목이나 폐기하면 사람은 「아직 안 정했다」를 눌러 놓고 항목을 잃는다.
- * ⚠ 진 쪽만 옮긴다. **이긴 쪽은 안 건드린다** — 이미 `active` 인 항목을 `review` 로
- *   되돌리면 다음 발행에서 Pack 밖으로 나간다. 「A가 맞다」의 뜻과 정반대다.
+/*
+ *  ⚠ `RESOLUTION_ITEM_OUTCOME`(선택 → 진 쪽 항목의 다음 상태)과 `itemOutcomeOf()` 는
+ *     **`packages/schema` 로 올라갔다.** 화면 4 가 같은 표를 읽어 「이 버튼을 누르면
+ *     무엇이 일어나나」를 말하게 됐고 (FINDINGS 74), 화면이 `lib/api/*` 를 import 하면
+ *     의존 방향이 깨진다 (`schema ← compiler ← web/plugin`). 사용자가 둘이 된 표는
+ *     정본으로 올린다 — 위 `RESOLUTION_OUTCOME`(선택 → **충돌** 상태)은 서버만 쓰므로
+ *     여기 남는다.
  */
-export const RESOLUTION_ITEM_OUTCOME: Record<
-  ConflictChoice,
-  { readonly loser: 'a' | 'b'; readonly status: ItemStatus } | null
-> = {
-  a: { loser: 'b', status: 'deprecated' },
-  b: { loser: 'a', status: 'deprecated' },
-  both: null,
-  dismiss: null,
-}
-
-/**
- * 🔴 **「이 결정이 어느 항목을 어떤 상태로 옮기나」를 답하는 유일한 문.**
- *
- * ★ 왜 함수인가 — 답은 표 하나가 아니라 **둘**이 정한다: 무엇이 지는가는
- *   `RESOLUTION_ITEM_OUTCOME`(선택), 가리키는 것이 항목이기는 한가는
- *   `CONFLICT_KIND_RULES`(종류)다. 라우트에서 둘을 이으면 종류나 선택이 늘 때
- *   그 조립을 다시 찾아야 한다.
- *
- * ⚠ `anchor` 가 `items` 가 아닌 종류(원문 구간·아무것도 없음)는 바꿀 항목이 **없다.**
- *   `a_ref` 에서 항목을 추측하지 마라 — `SourceRef` 는 원문까지 가는 사슬이지
- *   항목을 가리키는 이름이 아니다. 추측하면 **엉뚱한 항목을 폐기한다.**
- */
-export function itemOutcomeOf(input: {
-  kind: ConflictKind
-  aItemId: string | null
-  bItemId: string | null
-  choice: ConflictChoice
-}): { publicId: string; status: ItemStatus } | undefined {
-  const outcome = RESOLUTION_ITEM_OUTCOME[input.choice]
-  if (!outcome) return undefined
-  if (CONFLICT_KIND_RULES[input.kind].anchor !== 'items') return undefined
-  const publicId = outcome.loser === 'a' ? input.aItemId : input.bItemId
-  //  한쪽뿐인 종류(`needsB: false`)는 질 쪽이 비어 있다. 빈 칸을 채우지 않는다.
-  if (publicId === null) return undefined
-  return { publicId, status: outcome.status }
-}
 
 /**
  * 폐기된 항목의 개정에 남는 근거 한 줄 (`{kind:'manual', note}` · P7).

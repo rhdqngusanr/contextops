@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import {
-  CONFLICT_CHOICES, CONFLICT_KIND_RULES, RESOLUTION_NOTE_MAX,
+  CONFLICT_CHOICES, CONFLICT_KIND_RULES, itemOutcomeOf, RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
   type ConflictAnchor, type ConflictChoice, type ContextItem, type DetectedConflictKind,
 } from '@contextops/schema'
 
 import { SEED_ANSWER_MAX } from '../lib/api/seed-questions'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
 import {
-  AiBadge, ConfidenceChip, ConflictKindChip, ConflictSeverityChip, CtxTag, ItemStatusChip, TypeIcon,
+  AiBadge, ConfidenceChip, ConflictKindChip, ConflictSeverityChip, CtxTag, ITEM_STATUS_CHIP,
+  ItemStatusChip, TypeIcon,
 } from './chips'
 import { EvidenceLink, EvidenceList } from './evidence'
 import { ErrorState } from './states'
@@ -68,6 +69,38 @@ export const CHOICE_LABEL: Record<ConflictChoice, (sides: { a: string; b: string
   //  ⚠ 「둘 다 맞음」이 아니다 — 결정을 미루는 문이고, 그래서 상태가 `resolved` 다.
   both: () => '둘 다 보류',
   dismiss: () => '무시',
+}
+
+/**
+ * 🔴 **이 선택을 누르면 항목에 무엇이 일어나나** — 한 줄 (FINDINGS 74).
+ *
+ * ★ 왜 문구를 카드에서 손으로 적지 않나 — 답은 `RESOLUTION_ITEM_OUTCOME`(선택 → 진 쪽)과
+ *   `CONFLICT_KIND_RULES`(가리키는 것이 항목이기는 한가)가 정하고, 그 둘을 잇는 문이
+ *   `itemOutcomeOf()` 다 (`packages/schema`). 「B 항목이 폐기됩니다」를 여기 적어 두면
+ *   표가 바뀌어도 화면은 옛말을 계속 한다 — **화면이 거짓말을 하는 자리**가 된다.
+ *
+ * ⚠ 세 갈래를 하나로 접지 마라. 「이 선택은 원래 항목을 안 건드린다」(`both`·`dismiss`)와
+ *   「건드릴 항목이 이 행에 안 적혀 있다」는 **다른 말**이다. 뒤쪽을 앞쪽처럼 그리면
+ *   사람은 반쪽짜리 행을 정상으로 읽는다.
+ * ⚠ 상태 이름 뒤에 조사를 붙이지 않는다 — 「초안」·「검토 중」처럼 받침이 갈린다
+ *   (`Decided` 의 「」 판단과 같다). 그래서 화살표로 적는다.
+ * ⚠ 결정 **전**에도 **후**에도 같은 문장이다 — 시제를 타지 않아야 두 자리에서 같은
+ *   함수를 쓸 수 있고, 그래야 「누르기 전에 약속한 것」과 「누른 뒤에 말하는 것」이
+ *   어긋날 수 없다.
+ */
+export function choiceItemEffect(conflict: ConflictRow, choice: ConflictChoice): string {
+  const rule = RESOLUTION_ITEM_OUTCOME[choice]
+  if (rule === null) return '항목은 그대로'
+  const outcome = itemOutcomeOf({
+    kind: conflict.kind,
+    aItemId: conflict.a_item_id,
+    bItemId: conflict.b_item_id,
+    choice,
+  })
+  if (outcome === undefined) return '바꿀 항목이 적혀 있지 않음'
+  //  본문에 붙인 이름과 **같은 이름**으로 부른다 — 여기만 「B」면 사람은 위에서 B 를 찾는다.
+  const label = sideLabel(conflict.b_item_id !== null, rule.loser)
+  return `${label} 항목 → 「${ITEM_STATUS_CHIP[outcome.status].label}」`
 }
 
 /** 카드가 그리는 것 전부. 상태는 화면(`review/page.tsx`)이 들고 여기는 **읽기만** 한다. */
@@ -247,6 +280,13 @@ function RefSide({ label, refValue }: { label: string; refValue: NonNullable<Con
 function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHandlers }) {
   //  ⚠ `detected` 인 종류만 여기 온다 — 그 좁힘의 근거는 `DetectedConflictKind` 표다.
   const sides = CONFLICT_SIDES[state.conflict.kind as DetectedConflictKind]
+  //  이 카드의 선택 중 **정말로 항목을 폐기하는 것**이 하나라도 있나. 표에서 센다.
+  const retires = CONFLICT_CHOICES.some((choice) => itemOutcomeOf({
+    kind: state.conflict.kind,
+    aItemId: state.conflict.a_item_id,
+    bItemId: state.conflict.b_item_id,
+    choice,
+  })?.status === 'deprecated')
 
   return (
     <div className="col-tight">
@@ -260,20 +300,33 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
           onChange={(e) => on.onDraft(e.target.value)}
         />
       </label>
-      <div className="row wrap">
+      <div className="row items-start wrap">
         {CONFLICT_CHOICES.map((choice) => (
-          <button
-            key={choice}
-            type="button"
-            className="btn btn-sm"
-            disabled={state.busy}
-            onClick={() => on.onChoose(choice)}
-          >
-            {CHOICE_LABEL[choice](sides)}
-          </button>
+          <div key={choice} className="col-tight">
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={state.busy}
+              onClick={() => on.onChoose(choice)}
+            >
+              {CHOICE_LABEL[choice](sides)}
+            </button>
+            {/* 🔴 버튼 밑에 **그 버튼이 항목에 하는 일**을 적는다 (FINDINGS 74).
+                27바퀴가 세운 「저장 전에는 약속하지 않는다」와 부딪히지 않는다 — 그건
+                *안 일어날 일을 약속하지 마라*는 뜻이고, 이건 표가 **일어난다고 정한 일**이다. */}
+            <span className="meta">{choiceItemEffect(state.conflict, choice)}</span>
+          </div>
         ))}
         {state.busy ? <span className="meta">저장하는 중입니다…</span> : null}
       </div>
+      {/* ⚠ 실제로 폐기되는 선택이 있을 때만 경고한다 — 아무것도 안 없어지는 카드에
+          이 줄을 붙이면 사람은 누르지 않아도 될 것을 무서워한다. */}
+      {retires ? (
+        <p className="meta ink-warn">
+          ⚠ 「{ITEM_STATUS_CHIP.deprecated.label}」 항목은 다음 Pack 에 들어가지 않습니다.
+          결정은 이 화면에서 되돌릴 수 없습니다.
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -343,6 +396,10 @@ function Decided({ state }: { state: ConflictCardState }) {
           ? `정했습니다 — 「${CHOICE_LABEL[choice](CONFLICT_SIDES[conflict.kind as DetectedConflictKind])}」`
           : '답을 저장했습니다.'}
       </p>
+      {/* 🔴 **무엇이 일어났는지**를 같이 낸다 (FINDINGS 74). 누르기 전에 보여 준
+          것과 **같은 함수**라 둘이 어긋날 수 없다. 「정했습니다」만 남기면 사람은 자기가
+          방금 항목 하나를 Pack 밖으로 보낸 것을 모른다. */}
+      {rule.detected && choice ? <p className="meta">{choiceItemEffect(conflict, choice)}</p> : null}
       {/* 답변 문장이 곧 결정의 근거다 — 라우트가 그것을 `resolution.note` 에 남긴다. */}
       {note ? <p className="meta">{note}</p> : null}
       {/* ⚠ `null`(질문이 아니거나 아직 안 저장)과 `[]`(저장했는데 안 생겼다)를 가른다. */}

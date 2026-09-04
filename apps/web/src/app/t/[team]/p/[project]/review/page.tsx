@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react'
 import {
-  CONFLICT_KIND_RULES, CONFLICT_SEVERITY_RANK,
+  CONFLICT_KIND_RULES, CONFLICT_SEVERITY_RANK, itemOutcomeOf,
   type ConflictChoice, type ConflictKind, type ContextItem,
 } from '@contextops/schema'
 
@@ -113,6 +113,16 @@ function ReviewView({
       const note = (drafts[row.id] ?? '').trim()
       const updated = await resolveConflict(row.id, note.length > 0 ? { choice, note } : { choice })
       replace(updated)
+      //  🔴 결정이 **항목을 옮겼으면** 항목 목록을 다시 읽는다. 안 읽으면 카드가
+      //     「B 항목 → 「폐기」」라고 말하면서 바로 그 옆에 「적용 중」 칩을 그대로 그린다 —
+      //     한 카드가 서로 다른 두 말을 한다.
+      //  ⚠ 무엇이 옮겨졌나를 여기서 세지 않는다. 표가 답한다 (`itemOutcomeOf`) —
+      //     `both`·`dismiss` 는 아무것도 안 옮기므로 다시 읽지 않는다.
+      if (itemOutcomeOf({
+        kind: row.kind, aItemId: row.a_item_id, bItemId: row.b_item_id, choice,
+      })) {
+        items.reload()
+      }
     })
   }
 

@@ -3,12 +3,13 @@ import { and, asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, QUESTION_CONFLICT_KINDS,
-  SOURCE_REFS_MAX, type ConflictChoice, type ConflictKind, type SourceRef,
+  RESOLUTION_ITEM_OUTCOME, SOURCE_REFS_MAX,
+  type ConflictChoice, type ConflictKind, type SourceRef,
 } from '@contextops/schema'
 
 import { conflicts, contextItemRevisions, contextItems, repos, sourceDocumentVersions, sourceDocuments } from '../src/db/schema'
 import type { Db } from '../src/db/client'
-import { RESOLUTION_ITEM_OUTCOME, RESOLUTION_OUTCOME } from '../src/lib/api/conflict'
+import { RESOLUTION_OUTCOME } from '../src/lib/api/conflict'
 import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import { GET as listTeams, POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'

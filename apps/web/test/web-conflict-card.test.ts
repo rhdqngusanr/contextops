@@ -2,12 +2,13 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
-  CONFLICT_ANCHORS, CONFLICT_CHOICES, CONFLICT_KINDS, CONFLICT_KIND_RULES, RESOLUTION_NOTE_MAX,
+  CONFLICT_ANCHORS, CONFLICT_CHOICES, CONFLICT_KINDS, CONFLICT_KIND_RULES,
+  RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
   type ConflictKind, type ContextItem, type DetectedConflictKind, type SourceRef,
 } from '@contextops/schema'
 
 import {
-  CHOICE_LABEL, CONFLICT_SIDES, ConflictCard,
+  CHOICE_LABEL, CONFLICT_SIDES, ConflictCard, choiceItemEffect,
   type ConflictCardHandlers, type ConflictCardState,
 } from '../src/components/conflict-card'
 import { SEED_ANSWER_MAX } from '../src/lib/api/seed-questions'
@@ -334,6 +335,66 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
       }))
       expect(t, choice).not.toMatch(/」(으로|로|을|를|이|가) /)
     }
+  })
+})
+
+describe('🔴 결정이 항목에 무엇을 하는지 카드가 말한다 (FINDINGS 74)', () => {
+  it('선택 4개마다 **그 버튼이 항목에 하는 일**이 버튼 밑에 있다', () => {
+    const t = text(draw())
+    //  ⚠ 표에서 뽑은 기대값과 카드가 같은 말을 하는지 본다 — 카드가 손으로 적은
+    //     문구를 갖고 있으면 표를 고쳤을 때 여기서 갈린다.
+    for (const choice of CONFLICT_CHOICES) {
+      expect(t, choice).toContain(choiceItemEffect(base().conflict, choice))
+    }
+    //  🔴 그리고 **지금 표가 무엇인지**를 글자로 못 박는다. 표를 고치면 이 줄이
+    //     빨개지고, 고치는 사람은 화면 문구가 같이 바뀌는 것을 눈으로 본다.
+    expect(t, 'a 를 고르면 B 가 진다').toContain('B 항목 → 「폐기」')
+    expect(t, 'b 를 고르면 A 가 진다').toContain('A 항목 → 「폐기」')
+    expect(t, 'both·dismiss 는 항목을 안 건드린다').toContain('항목은 그대로')
+  })
+
+  it('🔴 표의 네 줄이 **서로 다른 결과**를 낸다 — 값을 바꾸면 화면이 갈린다', () => {
+    const made = CONFLICT_CHOICES.map((c) => choiceItemEffect(base().conflict, c))
+    //  a·b 는 서로 다른 쪽을 폐기하고, `null` 인 둘은 같은 말을 한다 (그게 뜻이다).
+    const moving = CONFLICT_CHOICES.filter((c) => RESOLUTION_ITEM_OUTCOME[c] !== null)
+    const still = CONFLICT_CHOICES.filter((c) => RESOLUTION_ITEM_OUTCOME[c] === null)
+    expect(new Set(moving.map((c) => choiceItemEffect(base().conflict, c))).size).toBe(moving.length)
+    expect(new Set(still.map((c) => choiceItemEffect(base().conflict, c))).size).toBe(1)
+    expect(new Set(made).size, made.join(' / ')).toBe(moving.length + 1)
+  })
+
+  it('🔴 폐기가 일어나는 카드에서만 「되돌릴 수 없다」를 말한다', () => {
+    //  ⚠ 지금은 사실이다 — `:resolve` 가 「이미 처리된 충돌」을 400 으로 막는다.
+    expect(text(draw())).toContain('되돌릴 수 없습니다')
+    expect(text(draw())).toContain('다음 Pack 에 들어가지 않습니다')
+    //  가리키는 항목이 행에 안 적혀 있으면 아무것도 안 없어진다 — 겁주지 않는다.
+    const empty = text(draw({ conflict: row('contradiction', { a_item_id: null, b_item_id: null }) }))
+    expect(empty).not.toContain('되돌릴 수 없습니다')
+    expect(empty).toContain('바꿀 항목이 적혀 있지 않음')
+    expect(empty).not.toContain('→ 「폐기」')
+  })
+
+  it('질문 카드는 여전히 무엇이 생기는지 **약속하지 않는다** (27바퀴 게이트)', () => {
+    for (const kind of CONFLICT_KINDS.filter((k) => !CONFLICT_KIND_RULES[k].detected)) {
+      const t = text(draw({ conflict: row(kind), a: null, b: null }))
+      expect(t, kind).not.toContain('폐기')
+      expect(t, kind).not.toContain('되돌릴 수 없습니다')
+    }
+  })
+
+  it('🔴 결정된 카드가 **무엇이 일어났는지**를 남긴다 — 누르기 전과 같은 문장이다', () => {
+    const decided = text(draw({
+      conflict: row('contradiction', { status: 'resolved', resolution: { choice: 'a' } }),
+    }))
+    expect(decided).toContain('B 항목 → 「폐기」')
+    //  ⚠ 결정된 카드에는 「되돌릴 수 없습니다」를 다시 말하지 않는다 — 버튼이 이미 없다.
+    expect(decided).not.toContain('되돌릴 수 없습니다')
+
+    const dismissed = text(draw({
+      conflict: row('contradiction', { status: 'dismissed', resolution: { choice: 'dismiss' } }),
+    }))
+    expect(dismissed).toContain('항목은 그대로')
+    expect(dismissed).not.toContain('→ 「폐기」')
   })
 })
 

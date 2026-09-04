@@ -1,12 +1,10 @@
 import { and, eq, isNull } from 'drizzle-orm'
-import { ResolveConflict, SOURCE_REFS_MAX } from '@contextops/schema'
+import { itemOutcomeOf, ResolveConflict, SOURCE_REFS_MAX } from '@contextops/schema'
 import type { ItemStatus } from '@contextops/schema'
 
 import type { Db } from '../../../../../../db/client'
 import { conflicts, contextItemRevisions, contextItems } from '../../../../../../db/schema'
-import {
-  CONFLICT_COLUMNS, itemOutcomeOf, RESOLUTION_OUTCOME, resolutionNote, toConflict,
-} from '../../../../../../lib/api/conflict'
+import { CONFLICT_COLUMNS, RESOLUTION_OUTCOME, resolutionNote, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { appendSourceRef, CURRENT_REVISION_JOIN, ITEM_COLUMNS } from '../../../../../../lib/api/item'
