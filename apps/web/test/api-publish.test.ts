@@ -12,7 +12,7 @@ import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/rou
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
-import { PATCH as updateItem } from '../src/app/api/v1/context-items/[id]/route'
+import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
 import { GET as listProposals, POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
 import { POST as submitProposal } from '../src/app/api/v1/proposals/[id]/submit/route'
 import { POST as approveProposal } from '../src/app/api/v1/proposals/[id]/approve/route'
@@ -98,11 +98,11 @@ async function seeded() {
   }), params({ id: projectId }))
 
   //  🔴 초안은 발행에 안 들어간다 (snapshot 은 active 만). owner 가 공식으로 올린다.
-  const rows = await db.select({ id: contextItems.id }).from(contextItems).where(eq(contextItems.projectId, projectId))
+  const rows = await db.select({ id: contextItems.publicId }).from(contextItems).where(eq(contextItems.projectId, projectId))
   for (const row of rows) {
-    await updateItem(req('PATCH', `/api/v1/context-items/${row.id}`, {
+    await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${row.id}`, {
       auth: owner, body: { revision: 1, changes: { status: 'active' } },
-    }), params({ id: row.id }))
+    }), params({ id: projectId, itemId: row.id }))
   }
 
   return { owner, teamId, projectId }

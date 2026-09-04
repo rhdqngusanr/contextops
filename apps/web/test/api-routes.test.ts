@@ -18,7 +18,7 @@ import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/rout
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { GET as listItems } from '../src/app/api/v1/projects/[id]/context-items/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
-import { PATCH as updateItem } from '../src/app/api/v1/context-items/[id]/route'
+import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
 import { GET as listConflicts } from '../src/app/api/v1/projects/[id]/conflicts/route'
 import { POST as resolveConflict } from '../src/app/api/v1/conflicts/[id]/resolve/route'
 import { GET as listQuestions, POST as answerQuestions } from '../src/app/api/v1/projects/[id]/questions/route'
@@ -313,22 +313,22 @@ describe('context-items 부분 갱신 — 낙관적 잠금 (SPEC §5)', () => {
     await batchDraft(req('POST', `/api/v1/projects/${projectId}/context-items/batch-draft`, {
       auth: owner, body: batchBody([draft('item_edit')]),
     }), params({ id: projectId }))
-    const [row] = await db.select({ id: contextItems.id }).from(contextItems)
-    return { owner, projectId, itemUuid: row!.id }
+    const [row] = await db.select({ id: contextItems.id, publicId: contextItems.publicId }).from(contextItems)
+    return { owner, projectId, itemUuid: row!.id, itemId: row!.publicId }
   }
 
   it('revision 이 낡으면 409 REVISION_CONFLICT · 맞으면 200 이고 revision 이 오른다', async () => {
-    const { owner, itemUuid } = await seedItem()
+    const { owner, projectId, itemId } = await seedItem()
 
-    const stale = await updateItem(req('PATCH', `/api/v1/context-items/${itemUuid}`, {
+    const stale = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
       auth: owner, body: { revision: 99, changes: { title: '새 제목' } },
-    }), params({ id: itemUuid }))
+    }), params({ id: projectId, itemId }))
     expect(stale.status).toBe(409)
     expect((await errorOf(stale)).code).toBe('REVISION_CONFLICT')
 
-    const okRes = await updateItem(req('PATCH', `/api/v1/context-items/${itemUuid}`, {
+    const okRes = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
       auth: owner, body: { revision: 1, changes: { title: '새 제목', status: 'active' } },
-    }), params({ id: itemUuid }))
+    }), params({ id: projectId, itemId }))
     expect(okRes.status).toBe(200)
     const updated = await dataOf(okRes)
     expect(updated.title).toBe('새 제목')
@@ -336,17 +336,17 @@ describe('context-items 부분 갱신 — 낙관적 잠금 (SPEC §5)', () => {
     expect(updated.revision).toBe(2)
 
     //  같은 요청을 그대로 다시 보내면 이제는 낡았다 — 잠금이 실제로 잠근다.
-    const replay = await updateItem(req('PATCH', `/api/v1/context-items/${itemUuid}`, {
+    const replay = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
       auth: owner, body: { revision: 1, changes: { title: '또 다른 제목' } },
-    }), params({ id: itemUuid }))
+    }), params({ id: projectId, itemId }))
     expect(replay.status).toBe(409)
   })
 
   it('옛 개정이 남는다 — 덮어쓰지 않는다 (P4 의 재현성)', async () => {
-    const { owner, itemUuid } = await seedItem()
-    await updateItem(req('PATCH', `/api/v1/context-items/${itemUuid}`, {
+    const { owner, projectId, itemId, itemUuid } = await seedItem()
+    await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
       auth: owner, body: { revision: 1, changes: { title: '고친 제목' } },
-    }), params({ id: itemUuid }))
+    }), params({ id: projectId, itemId }))
     const revisions = await db
       .select({ revision: contextItemRevisions.revision, title: contextItemRevisions.title })
       .from(contextItemRevisions)
@@ -359,10 +359,10 @@ describe('context-items 부분 갱신 — 낙관적 잠금 (SPEC §5)', () => {
   })
 
   it('타입에 맞지 않는 data 는 400 이다', async () => {
-    const { owner, itemUuid } = await seedItem()
-    const res = await updateItem(req('PATCH', `/api/v1/context-items/${itemUuid}`, {
+    const { owner, projectId, itemId } = await seedItem()
+    const res = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
       auth: owner, body: { revision: 1, changes: { data: { statement: '이건 policy 가 아니다' } } },
-    }), params({ id: itemUuid }))
+    }), params({ id: projectId, itemId }))
     expect(res.status).toBe(400)
   })
 })

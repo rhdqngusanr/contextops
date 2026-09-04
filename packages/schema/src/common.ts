@@ -23,6 +23,24 @@ export const ItemType = z.enum(ITEM_TYPES)
 export const ITEM_STATUSES = ['draft', 'review', 'active', 'deprecated'] as const
 export type ItemStatus = (typeof ITEM_STATUSES)[number]
 
+/**
+ * 🔴 **status 4종의 정본 표. `active` 만 Pack 에 나간다** (SPEC §4.1).
+ * 값은 「왜 빠지나」를 사람이 읽는 말로 적은 것이고, `null` 이 「나간다」다.
+ *
+ * ★ 왜 표인가 — 「승인 안 된 초안이 팀 규칙으로 배포됐다」가 이 제품에서 제일 나쁜
+ *   고장이다. 조건을 `if (status !== 'active')` 로 흩뿌리면 한 곳만 빠져도 샌다.
+ * ★ 왜 계약 패키지에 있나 — 읽는 쪽이 **둘**이다: 컴파일러의 partition(무엇을 뺄지)과
+ *   화면 5 의 상태 버튼(누르면 다음 Pack 이 어떻게 되는지). 컴파일러에 두면 화면이
+ *   그 문장을 **베껴 적게** 되고, 베낀 문장은 표가 바뀔 때 같이 안 바뀐다.
+ *   ⚠ 화면은 컴파일러를 import 할 수 없다 — 그 패키지는 `node:crypto` 를 재수출한다.
+ */
+export const ITEM_STATUS_EXCLUDE_REASON = {
+  active: null,
+  draft: '초안(draft)이다 — 승인 전에는 Pack 에 나가지 않는다',
+  review: '검토 중(review)이다 — 승인 전에는 Pack 에 나가지 않는다',
+  deprecated: '폐기(deprecated)됐다 — 이력은 웹에 남고 Pack 에서는 빠진다',
+} as const satisfies Record<ItemStatus, string | null>
+
 /** 근거의 확실성 3단계 (SPEC §3). */
 export const CONFIDENCE_LEVELS = ['high', 'medium', 'low'] as const
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number]

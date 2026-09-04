@@ -9,7 +9,7 @@ import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/rou
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
-import { PATCH as updateItem } from '../src/app/api/v1/context-items/[id]/route'
+import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
 import { getDb } from '../src/db/client'
 import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
 
@@ -158,11 +158,14 @@ export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
 
   //  ⚠ 초안은 `draft` 로 들어온다. `active` 가 아니면 snapshot 에 안 들어가서
   //    **Pack 에 한 줄도 안 나온다** (SPEC §4.1 · docs/STATUS.md 의 같은 판단).
-  const itemRows = await getDb().select({ id: contextItems.id }).from(contextItems).where(eq(contextItems.projectId, projectId))
+  const itemRows = await getDb()
+    .select({ id: contextItems.id, publicId: contextItems.publicId })
+    .from(contextItems)
+    .where(eq(contextItems.projectId, projectId))
   for (const row of itemRows) {
-    await updateItem(req('PATCH', `/api/v1/context-items/${row.id}`, {
+    await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${row.publicId}`, {
       auth: owner, body: { revision: 1, changes: { status: 'active' } },
-    }), params({ id: row.id }))
+    }), params({ id: projectId, itemId: row.publicId }))
   }
 
   return {

@@ -1,0 +1,29 @@
+화면 5 드로어 — 상태 바꾸기 (마크업에서 글자만 뽑은 것)
+
+지금 상태: draft
+  상태 바꾸기 | 승인 | 적용 중 · 다음 Pack 에 나갑니다 | 검토 요청 | 검토 중 · 다음 Pack 에서 빠집니다 | 버리기 | 폐기 · 다음 Pack 에서 빠집니다
+
+지금 상태: review
+  상태 바꾸기 | 승인 | 적용 중 · 다음 Pack 에 나갑니다 | 초안으로 되돌리기 | 다음 Pack 에서 빠집니다
+
+지금 상태: active
+  상태 바꾸기 | 폐기 | 다음 Pack 에서 빠집니다
+
+지금 상태: deprecated
+  상태 바꾸기 | 되살리기 | 적용 중 · 다음 Pack 에 나갑니다
+
+저장 중 · 실패
+  상태 바꾸기 | 승인 | 적용 중 · 다음 Pack 에 나갑니다 | 검토 요청 | 검토 중 · 다음 Pack 에서 빠집니다 | 버리기 | 폐기 · 다음 Pack 에서 빠집니다 | 저장하는 중입니다…
+  상태 바꾸기 | 폐기 | 다음 Pack 에서 빠집니다 | ⚠ 항목이 그 사이 바뀌었다 — 다시 읽고 보내라
+
+표가 정하는 것 — 어디로 갈 수 있나 · 그러면 Pack 이 어떻게 되나
+  draft       승인→active · 검토 요청→review · 버리기→deprecated
+  review      승인→active · 초안으로 되돌리기→draft
+  active      폐기→deprecated
+  deprecated  되살리기→active
+
+Pack 정본 (`ITEM_STATUS_EXCLUDE_REASON` · 컴파일러가 읽는 그 표)
+  draft       초안(draft)이다 — 승인 전에는 Pack 에 나가지 않는다
+  review      검토 중(review)이다 — 승인 전에는 Pack 에 나가지 않는다
+  active      (나간다)
+  deprecated  폐기(deprecated)됐다 — 이력은 웹에 남고 Pack 에서는 빠진다

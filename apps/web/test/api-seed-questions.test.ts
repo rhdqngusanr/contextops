@@ -3,13 +3,15 @@ import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CONFLICT_KIND_RULES } from '@contextops/schema'
 
-import { conflicts, contextItemRevisions, contextItems } from '../src/db/schema'
+import { conflicts, contextItemRevisions, contextItems, packFiles } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { SEED_ANSWER_MAX, SEED_QUESTIONS, seedDraft, seedQuestionOf } from '../src/lib/api/seed-questions'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { GET as listQuestions, POST as answerQuestions } from '../src/app/api/v1/projects/[id]/questions/route'
 import { GET as listItems } from '../src/app/api/v1/projects/[id]/context-items/route'
+import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
+import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from './helpers/db'
 
 // =====================================================================
@@ -200,5 +202,79 @@ describe('🔴 문서를 하나도 안 올려도 질문이 있다', () => {
     const [rev] = await db.select().from(contextItemRevisions)
     expect(rev!.origin).toBe('manual')
     expect(rev!.confidence).toBe('high')
+  })
+})
+
+// ---------------------------------------------------------------------
+//  🔴 PLAN P3 둘째 행의 **완료 기준** — 「문서 없이 질문만으로 v1.0 발행 가능」
+//
+//  ★ 왜 여기서 재나 — 이 문장은 스물 몇 바퀴 동안 **한 번도 재지 않은 채로** 있었다.
+//    답이 항목이 되는 데까지는 왔는데(FINDINGS 67), 그 초안을 `active` 로 올릴 문이
+//    화면에도 없었고 그래서 「끝까지 가 봤다」고 말할 근거가 없었다 (FINDINGS 79).
+//  ⚠ 라우트로만 잰다 — 화면은 `test/web-item-status.test.ts` 가 따로 그려서 읽는다.
+// ---------------------------------------------------------------------
+
+describe('🔴 문서 없이 질문만으로 v1.0 을 발행한다 (PLAN P3 둘째 행)', () => {
+  /** 열 장에 전부 답한다. 답은 질문마다 달라야 Pack 에서 서로를 구별할 수 있다. */
+  async function answerAll(projectId: string): Promise<string[]> {
+    const rows = await openQuestions(projectId)
+    const answers = rows.map((r, i) => ({ question_id: r.id, answer: `답 ${i + 1} 번입니다.` }))
+    const res = await dataOf(await answerQuestions(
+      req('POST', `/api/v1/projects/${projectId}/questions`, { auth: owner, body: { answers } }),
+      params({ id: projectId }),
+    ))
+    return res.created_item_ids as string[]
+  }
+
+  async function publishFirst(projectId: string) {
+    return publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
+      auth: owner, body: { semver: '1.0.0', base_version_id: null, change_summary: '질문만으로' },
+    }), params({ id: projectId }))
+  }
+
+  it('🔴 승인하기 **전에는** 내 답이 Pack 에 하나도 없다', async () => {
+    const projectId = await seedProject()
+    expect(await answerAll(projectId)).toHaveLength(SEED_QUESTIONS.length)
+
+    const res = await publishFirst(projectId)
+    //  ⚠ 발행 자체는 막히지 않는다 — 항목이 0건이어도 §4.3 의 `always` 문서가 나가서
+    //     Pack 이 비지 않기 때문이다. **그래서 사람은 v1.0.0 을 손에 쥐고도 자기 답이
+    //     한 줄도 없는 Pack 을 받는다** (docs/feedback/FINDINGS.md 80).
+    //     여기서 재는 것은 「발행이 되나」가 아니라 **「승인 안 한 답이 새 나가나」**다.
+    expect(res.status).toBe(201)
+    const version = await dataOf(res)
+    const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
+    const all = files.map((f) => f.content).join('\n')
+    //  🔴 초안은 한 줄도 안 나간다 — 이게 「승인 없이 공식이 되지 않는다」의 증거다.
+    expect(all).not.toContain('답 1 번입니다.')
+    expect(all).not.toContain('ctx:item_seed_')
+  })
+
+  it('🔴 열 장에 답하고 → 승인하고 → 발행하면 **내 답이 Pack 에 있다**', async () => {
+    const projectId = await seedProject()
+    const created = await answerAll(projectId)
+
+    //  화면 5 가 누르는 그 문이다 (`PATCH /projects/{id}/context-items/{itemId}`).
+    for (const itemId of created) {
+      const res = await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${itemId}`, {
+        auth: owner, body: { revision: 1, changes: { status: 'active' } },
+      }), params({ id: projectId, itemId }))
+      expect(res.status, itemId).toBe(200)
+    }
+
+    const res = await publishFirst(projectId)
+    expect(res.status).toBe(201)
+    const version = await dataOf(res)
+
+    const files = await db.select().from(packFiles).where(eq(packFiles.versionId, version.id as string))
+    const claude = files.find((f) => f.path === 'CLAUDE.md')
+    expect(claude, 'CLAUDE.md 가 없다').toBeDefined()
+
+    //  🔴 **문서를 하나도 안 올렸다.** 그런데 Pack 에 내가 쓴 문장이 그대로 있다.
+    for (let i = 0; i < SEED_QUESTIONS.length; i += 1) {
+      expect(claude!.content, `답 ${i + 1} 이 Pack 에 없다`).toContain(`답 ${i + 1} 번입니다.`)
+    }
+    //  P7 — 그 줄이 항목 id 로 역추적된다.
+    expect(claude!.content).toContain('ctx:item_seed_mission')
   })
 })

@@ -1,9 +1,9 @@
 import type {
   AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
-  Manifest, SourceDocumentKind, SourceRef, TeamRole,
+  ItemStatus, Manifest, SourceDocumentKind, SourceRef, TeamRole,
 } from '@contextops/schema'
 
-import { apiJson, apiText, post } from './api'
+import { apiJson, apiText, patch, post } from './api'
 
 // =====================================================================
 //  화면이 부르는 엔드포인트의 **목록이자 타입** (SPEC §5)
@@ -87,6 +87,25 @@ export function fetchItems(
   for (const [k, v] of Object.entries(filter)) if (v) q.set(k, v)
   const tail = q.toString()
   return apiJson(`/projects/${projectId}/context-items${tail ? `?${tail}` : ''}`)
+}
+
+/**
+ * 🔴 **항목 하나의 상태를 바꾸는 유일한 문** (화면 5 드로어 · owner 만).
+ *
+ * ★ 왜 `item.id` 로 부르나 — 그게 `public_id` 이고, 라우트가 받는 이름도 그것이다
+ *   (`PATCH /projects/{id}/context-items/{itemId}` · SPEC §5). 화면은 uuid 를 못 본다.
+ * ⚠ `revision` 을 같이 보낸다 — 그 사이 남이 고쳤으면 409 `REVISION_CONFLICT` 다.
+ *   보낸 값이 화면이 **손에 들고 있던** 개정이어야 잠금이 잠금 노릇을 한다.
+ */
+export function updateItemStatus(
+  projectId: string,
+  item: { id: string; revision: number },
+  status: ItemStatus,
+): Promise<ContextItemView> {
+  return patch(`/projects/${projectId}/context-items/${item.id}`, {
+    revision: item.revision,
+    changes: { status },
+  })
 }
 
 export function fetchVersions(projectId: string): Promise<{

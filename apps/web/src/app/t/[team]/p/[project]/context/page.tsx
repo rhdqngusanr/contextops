@@ -7,13 +7,15 @@ import {
 
 import { ApiClientError, messageOf } from '../../../../../../lib/web/api'
 import {
-  fetchItems, fetchVersions, publishVersion, type ProjectRef, type VersionRow,
+  fetchItems, fetchVersions, publishVersion, updateItemStatus,
+  type ProjectRef, type VersionRow,
 } from '../../../../../../lib/web/queries'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver, type SemverBump } from '../../../../../../lib/web/semver'
 import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
 import { EvidenceList } from '../../../../../../components/evidence'
+import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
 import { VersionHistory } from '../../../../../../components/versions'
@@ -37,18 +39,25 @@ export default function ContextPage({ params }: { params: Promise<{ team: string
   const { team, project } = use(params)
   return (
     <ProjectGate team={team} project={project}>
-      {({ project: p }) => <ContextView base={`/t/${team}/p/${project}`} project={p} />}
+      {({ team: t, project: p }) => (
+        //  🔴 상태를 바꾸는 문은 owner 만이다 (`PATCH …/context-items/{itemId}`).
+        //     화면이 그것을 알아야 member 에게 누를 때마다 403 을 내는 버튼을 안 그린다.
+        <ContextView base={`/t/${team}/p/${project}`} project={p} canEdit={t.role === 'owner'} />
+      )}
     </ProjectGate>
   )
 }
 
 type Filter = { type?: ItemType; status?: ItemStatus; scope?: string }
 
-function ContextView({ base, project }: { base: string; project: ProjectRef }) {
+function ContextView({ base, project, canEdit }: { base: string; project: ProjectRef; canEdit: boolean }) {
   const [filter, setFilter] = useState<Filter>({})
   const [selected, setSelected] = useState<ContextItemView | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  //  상태를 바꾸는 중인 목적지와 실패 문구. 드로어 하나만 열리므로 항목별로 나눌 필요가 없다.
+  const [statusBusy, setStatusBusy] = useState<ItemStatus | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   const items = useAsync(() => fetchItems(project.id, filter), [project.id, filter.type, filter.status, filter.scope])
   const versions = useAsync(() => fetchVersions(project.id), [project.id])
@@ -56,6 +65,29 @@ function ContextView({ base, project }: { base: string; project: ProjectRef }) {
   const official = versions.result.state === 'ready'
     ? versions.result.data.versions.find((v) => v.is_official) ?? null
     : null
+
+  /**
+   * 🔴 초안을 승인하는(그리고 되돌리는) 유일한 자리 (FINDINGS 79).
+   * ⚠ 성공하면 **표를 다시 읽는다** — 상태 거르개가 걸려 있으면 이 행은 목록에서
+   *   빠져야 하고, 「항목 N개」도 같이 움직인다. 안 읽으면 화면 4 가 배운 고장을
+   *   그대로 되풀이한다 (카드가 서로 다른 두 말을 한다).
+   */
+  function changeStatus(item: ContextItemView, to: ItemStatus): void {
+    setStatusBusy(to)
+    setStatusError(null)
+    updateItemStatus(project.id, item, to).then(
+      (updated) => {
+        setStatusBusy(null)
+        setSelected(updated)
+        items.reload()
+      },
+      (error: unknown) => {
+        setStatusBusy(null)
+        //  ⚠ 문구를 지어내지 않는다 — 서버가 낸 코드를 표가 사람 말로 바꾼다.
+        setStatusError(messageOf(error))
+      },
+    )
+  }
 
   function afterPublish(message: string) {
     setPublishing(false)
@@ -110,7 +142,16 @@ function ContextView({ base, project }: { base: string; project: ProjectRef }) {
           ) : null}
         </section>
 
-        {selected ? <ItemDrawer item={selected} onClose={() => setSelected(null)} /> : null}
+        {selected ? (
+          <ItemDrawer
+            item={selected}
+            canEdit={canEdit}
+            busy={statusBusy}
+            error={statusError}
+            onStatusChange={(to) => changeStatus(selected, to)}
+            onClose={() => { setSelected(null); setStatusError(null) }}
+          />
+        ) : null}
       </div>
 
       <section className="card">
@@ -242,7 +283,21 @@ function ItemTable({
 //  드로어 — 근거가 **본문 옆에** 있다 (DESIGN_BRIEF §2-1)
 // ---------------------------------------------------------------------
 
-function ItemDrawer({ item, onClose }: { item: ContextItemView; onClose: () => void }) {
+function ItemDrawer({
+  item,
+  canEdit,
+  busy,
+  error,
+  onStatusChange,
+  onClose,
+}: {
+  item: ContextItemView
+  canEdit: boolean
+  busy: ItemStatus | null
+  error: string | null
+  onStatusChange: (to: ItemStatus) => void
+  onClose: () => void
+}) {
   return (
     <aside className="card pad col drawer">
       <div className="row-between">
@@ -274,6 +329,18 @@ function ItemDrawer({ item, onClose }: { item: ContextItemView; onClose: () => v
           {item.tags.map((t) => <span key={t} className="ctx-tag">{t}</span>)}
         </div>
       ) : null}
+
+      {/* 🔴 owner 가 아니면 문을 그리지 않는다 — 누를 때마다 403 인 버튼을 두지 않는다.
+          ⚠ 그래도 「무엇이 있어야 바뀌나」는 말해 준다. 아무 말 없이 비면 사람은
+             화면이 덜 만들어진 줄 안다. */}
+      {canEdit ? (
+        <ItemStatusActions
+          state={{ status: item.status, busy, error }}
+          onChange={onStatusChange}
+        />
+      ) : (
+        <span className="meta">상태를 바꾸는 것은 팀 owner 만 할 수 있습니다.</span>
+      )}
     </aside>
   )
 }

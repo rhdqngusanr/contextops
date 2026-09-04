@@ -6,7 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import { conflicts, contextItemRevisions, contextItems, packFiles } from '../src/db/schema'
 import { conflictRow } from '../src/lib/api/conflict'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
-import { PATCH as updateItem } from '../src/app/api/v1/context-items/[id]/route'
+import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
 import { POST as resolveConflict } from '../src/app/api/v1/conflicts/[id]/resolve/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
@@ -75,9 +75,9 @@ try {
     .select({ id: contextItems.id })
     .from(contextItems)
     .where(and(eq(contextItems.projectId, projectId), eq(contextItems.publicId, 'item_policy_retry_code')))
-  await updateItem(req('PATCH', `/api/v1/context-items/${loser!.id}`, {
+  await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/item_policy_retry_code`, {
     auth: owner, body: { revision: 1, changes: { status: 'active' } },
-  }), params({ id: loser!.id }))
+  }), params({ id: projectId, itemId: 'item_policy_retry_code' }))
 
   const [row] = await db.insert(conflicts).values(conflictRow({
     projectId,

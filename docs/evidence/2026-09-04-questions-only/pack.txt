@@ -1,0 +1,79 @@
+{"kind":"request","request_id":"fa024173-4cd0-4a92-80d7-822c9ddf1a8f","route":"POST /teams","method":"POST","status":201,"latency_ms":9,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff"}
+{"kind":"request","request_id":"06b25680-ad10-4418-842a-85339cb9566a","route":"POST /teams/{id}/projects","method":"POST","status":201,"latency_ms":6,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"6a204208-072b-4dd6-bb91-076375a7b875","route":"GET /projects/{id}/questions","method":"GET","status":200,"latency_ms":4,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"d5db4328-d8fc-4832-8bcd-ad7ce72d25f6","route":"POST /projects/{id}/questions","method":"POST","status":200,"latency_ms":24,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"3f0fd2d9-9d8d-4572-b56c-7e57261e6246","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":7,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"903f8b45-d9f0-4326-be7a-510060237a77","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"5b81e3e9-f464-4852-a0b2-a58c6d047e53","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":4,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"944b8c7c-bf16-458d-8b76-017e77149ae2","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"1d4be0a6-73e4-4fd0-85c4-0b02e4c366af","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":4,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"3149a6ce-21b5-450f-a8e8-77199e55288d","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"e3548e88-693d-4108-9ebd-ea99678dba20","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"9c1ac5d9-146e-4929-820b-0742e3aee4bc","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":4,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"125e006e-1841-440b-a10a-dba8ecf83fc8","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":4,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"1eca1bca-2fc1-4a17-a91a-68f15e9ef2d9","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+{"kind":"request","request_id":"55f44859-177d-4a75-a3a6-bd183f57c523","route":"POST /projects/{id}/versions/publish","method":"POST","status":201,"latency_ms":12,"user_id":"064ad47d-8f1a-4396-890e-ecfc3bee7eff","project_id":"3a905afc-f39d-415a-b3de-8ce28ee92b16"}
+문서 0건 · 질문 10장에 답해서 만든 v1.0.0 (PLAN P3 둘째 행의 완료 기준)
+
+① 답한 질문 열 장 → 만들어진 초안 항목
+   1. 이 프로젝트가 만드는 것은 무엇인가요?
+      → PSP 장애가 가맹점 결제로 번지지 않게 하는 결제 게이트웨이를 만듭니다.
+   2. 이번 분기에 반드시 끝내야 하는 것은 무엇인가요?
+      → 재시도 정책을 하나로 통일하고 정산 대사를 자동화합니다.
+   3. 이번 분기 목표가 끝났다고 무엇을 보고 판단하나요?
+      → 고정 간격 재시도 호출이 0건이고, 일 배치 후 원장 대사 차액이 0원이면 끝난 것입니다.
+   4. 지금 팀을 묶고 있는 제약은 무엇인가요? (기한·인원·예산)
+      → 2026년 6월 30일까지, 백엔드 두 명으로 해야 합니다.
+   5. 이미 쓰기로 정해진 기술·서비스는 무엇인가요?
+      → NestJS · PostgreSQL · Redis 를 씁니다. 새 언어는 도입하지 않습니다.
+   6. 이번 분기에 손대지 않기로 한 것은 무엇인가요?
+      → 프론트엔드 리뉴얼과 신규 PSP 연동은 이번 분기에 손대지 않습니다.
+   7. 절대 하면 안 되는 것은 무엇인가요?
+      → 카드 원본 정보를 저장하면 안 됩니다 — 토큰만 받습니다.
+   8. 배포 전에 반드시 지나야 하는 관문은 무엇인가요?
+      → 배포 전에 결제 회귀 테스트와 스테이징 대사 결과 확인을 지나야 합니다.
+   9. 코드 리뷰에서 늘 지적되는 것은 무엇인가요?
+      → 에러를 삼키고 null 을 돌려주는 코드가 리뷰에서 늘 지적됩니다.
+  10. 새로 온 사람이 가장 자주 틀리는 것은 무엇인가요?
+      → 새로 온 사람은 금액을 float 으로 다루다가 틀립니다 — 정수 minor unit 입니다.
+
+② 만들어진 초안: 10개 — item_seed_mission, item_seed_goal_quarter, item_seed_goal_done, item_seed_constraint_now, item_seed_constraint_stack, item_seed_constraint_out, item_seed_policy_never, item_seed_policy_release, item_seed_policy_review, item_seed_policy_newcomer
+③ 전부 [승인] 을 눌렀다 (draft → active)
+④ 발행: v1.0.0 · 파일 2개 · snapshot 0d3cbcc5995e
+
+===== .claude/rules/workflow.md =====
+# 작업 절차
+<!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. snapshot:0d3cbcc5 -->
+
+## ContextOps 진행 보고 (필수)
+작업을 마칠 때 이번 변경이 Roadmap 의 어느 마일스톤 done_when 에 해당하는지 판단하고 아래를 실행한다. 코드 본문은 전송되지 않는다.
+- 해당 있음: `node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" progress --milestone <ID> --criterion "<done_when 문장>" --evidence <path:start-end> [--evidence ...] --summary "<한 줄>"`
+- 해당 없음: `... progress --milestone none --summary "<한 줄>"`
+- 팀 정책·아키텍처·용어에 영향을 주는 변경이면 사용자에게 `/contextops:propose` 실행을 권한다. 직접 실행하지 않는다.
+
+
+===== CLAUDE.md =====
+# API — Team Context v1.0.0
+<!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. snapshot:0d3cbcc5 -->
+
+## Mission
+PSP 장애가 가맹점 결제로 번지지 않게 하는 결제 게이트웨이를 만듭니다. <!-- ctx:item_seed_mission rev:2 conf:high src:manual:이 프로젝트가 만드는 것은 무엇인가요? -->
+
+## Goals
+- **완료 판정 기준** — 고정 간격 재시도 호출이 0건이고, 일 배치 후 원장 대사 차액이 0원이면 끝난 것입니다. <!-- ctx:item_seed_goal_done rev:2 conf:high src:manual:이번 분기 목표가 끝났다고 무엇을 보고 판단하나요? -->
+- **이번 분기 목표** — 재시도 정책을 하나로 통일하고 정산 대사를 자동화합니다. <!-- ctx:item_seed_goal_quarter rev:2 conf:high src:manual:이번 분기에 반드시 끝내야 하는 것은 무엇인가요? -->
+
+## Policies (must follow)
+- [should] 에러를 삼키고 null 을 돌려주는 코드가 리뷰에서 늘 지적됩니다. · 강제: 리뷰에서 본다 <!-- ctx:item_seed_policy_review rev:2 conf:high src:manual:코드 리뷰에서 늘 지적되는 것은 무엇인가요? -->
+- [must] 배포 전에 결제 회귀 테스트와 스테이징 대사 결과 확인을 지나야 합니다. · 강제: 리뷰에서 본다 <!-- ctx:item_seed_policy_release rev:2 conf:high src:manual:배포 전에 반드시 지나야 하는 관문은 무엇인가요? -->
+- [should] 새로 온 사람은 금액을 float 으로 다루다가 틀립니다 — 정수 minor unit 입니다. · 강제: 리뷰에서 본다 <!-- ctx:item_seed_policy_newcomer rev:2 conf:high src:manual:새로 온 사람이 가장 자주 틀리는 것은 무엇인가요? -->
+- [must] 카드 원본 정보를 저장하면 안 됩니다 — 토큰만 받습니다. · 강제: 리뷰에서 본다 <!-- ctx:item_seed_policy_never rev:2 conf:high src:manual:절대 하면 안 되는 것은 무엇인가요? -->
+
+## Constraints
+- NestJS · PostgreSQL · Redis 를 씁니다. 새 언어는 도입하지 않습니다. <!-- ctx:item_seed_constraint_stack rev:2 conf:high src:manual:이미 쓰기로 정해진 기술·서비스는 무엇인가요? -->
+- 프론트엔드 리뉴얼과 신규 PSP 연동은 이번 분기에 손대지 않습니다. <!-- ctx:item_seed_constraint_out rev:2 conf:high src:manual:이번 분기에 손대지 않기로 한 것은 무엇인가요? -->
+- 2026년 6월 30일까지, 백엔드 두 명으로 해야 합니다. <!-- ctx:item_seed_constraint_now rev:2 conf:high src:manual:지금 팀을 묶고 있는 제약은 무엇인가요? (기한·인원·예산) -->
+
+> 상세 규칙은 .claude/rules/ 를 따른다.
+
+

@@ -1,4 +1,4 @@
-import type { ContextItem, ItemStatus, ItemType } from '@contextops/schema'
+import { ITEM_STATUS_EXCLUDE_REASON, type ContextItem, type ItemType } from '@contextops/schema'
 import type { DocId, SectionKey } from '../templates'
 import { slugify } from './text'
 
@@ -95,20 +95,14 @@ export const PARTITION = {
 } as const satisfies Record<ItemType, (item: ContextItem) => Placement[]>
 
 /**
- * 🔴 **status 4종의 정본 표.** `active` 만 Pack 에 나간다.
- * ★ 왜 표인가 — 「승인 안 된 초안이 팀 규칙으로 배포됐다」가 이 제품에서 제일 나쁜 고장이다.
- *   조건을 `if (status !== 'active')` 로 흩뿌리면 한 곳만 빠져도 샌다.
+ * 🔴 **status 4종의 정본 표는 `packages/schema` 에 있다** (`ITEM_STATUS_EXCLUDE_REASON`).
+ * ⚠ 여기로 되돌리지 마라 — 읽는 쪽이 둘이다(컴파일러 · 화면 5 의 상태 버튼).
+ *   화면은 이 패키지를 import 할 수 없다 (`node:crypto` 재수출).
  */
-export const EXCLUDE_BY_STATUS = {
-  active: null,
-  draft: '초안(draft)이다 — 승인 전에는 Pack 에 나가지 않는다',
-  review: '검토 중(review)이다 — 승인 전에는 Pack 에 나가지 않는다',
-  deprecated: '폐기(deprecated)됐다 — 이력은 웹에 남고 Pack 에서는 빠진다',
-} as const satisfies Record<ItemStatus, string | null>
 
 /** 항목 하나의 배치를 정한다. status 가 먼저다 — 폐기된 항목은 타입을 볼 것도 없다. */
 export function placeItem(item: ContextItem): Placement[] {
-  const byStatus = EXCLUDE_BY_STATUS[item.status]
+  const byStatus = ITEM_STATUS_EXCLUDE_REASON[item.status]
   if (byStatus !== null) return [{ kind: 'exclude', reason: byStatus }]
   return PARTITION[item.type](item)
 }
