@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useState, type FormEvent } from 'react'
-import { SOURCE_DOCUMENT_KINDS, type ItemType, type SourceDocumentKind } from '@contextops/schema'
+import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/schema'
 
 import { hintFor, messageOf } from '../../../../../../lib/web/api'
 import {
@@ -10,10 +10,13 @@ import {
   type AiJobSummary, type ProjectRef, type QuestionRow,
 } from '../../../../../../lib/web/queries'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
-import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL, TypeIcon } from '../../../../../../components/chips'
+import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL } from '../../../../../../components/chips'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { QuestionStack, type QuestionStackState } from '../../../../../../components/question-stack'
+import {
+  StructureCandidates, type StructureCandidate,
+} from '../../../../../../components/structure-candidates'
 import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
@@ -318,13 +321,8 @@ function Succeeded({ base, projectId, jobId }: { base: string; projectId: string
 }
 
 /**
- * 🔴 **고른 후보만 항목이 된다** (SPEC §7.1 마지막 줄 · `POST /jobs/{jobId}/items`).
- *
- * ★ 왜 기본이 「전부 선택」인가 — 사람이 문서를 올린 뜻은 「이걸 규칙으로 만들어 달라」다.
- *   기본이 빈 선택이면 열 개를 하나씩 눌러야 하고, 그 화면은 안 쓰인다.
- *   **빼는 것이 고르는 것보다 싸야 한다.**
- * ⚠ 만든 항목은 `draft` 다 — 여기서 받아들였다고 Pack 에 나가지 않는다. 그 다음 문은
- *   화면 5 의 승인이다 (FINDINGS 79). 캡션이 그 사실을 **먼저** 말한다.
+ * 화면 3 이 후보 카드에 들려 주는 **상태와 손잡이**. 그리는 것은
+ * `components/structure-candidates.tsx` 다 (거기 주석이 그 카드의 정본이다).
  */
 function Candidates({
   base,
@@ -335,27 +333,13 @@ function Candidates({
   base: string
   projectId: string
   jobId: string
-  candidates: { id: string; type: ItemType; title: string }[]
+  candidates: StructureCandidate[]
 }) {
+  //  ★ 기본은 **전부 선택**이다 — 왜인지는 카드 쪽 주석에 있다.
   const [picked, setPicked] = useState<Set<string>>(() => new Set(candidates.map((c) => c.id)))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [made, setMade] = useState<number | null>(null)
-
-  if (candidates.length === 0) {
-    //  ⚠ 「0개를 찾았다」와 「못 읽었다」는 위에서 이미 갈렸다. 여기는 진짜 0개다.
-    return <p className="meta">받아들일 항목 후보가 없습니다. 질문 카드부터 답해 보세요.</p>
-  }
-
-  if (made !== null) {
-    return (
-      <div className="col-tight">
-        <p className="ink-ok">✓ 항목 {made}개를 Context 에 만들었습니다.</p>
-        <span className="meta">아직 초안입니다 — 화면 5 에서 승인해야 다음 Pack 에 나갑니다.</span>
-        <a className="btn btn-sm" href={`${base}/context`}>Context 보기</a>
-      </div>
-    )
-  }
 
   const toggle = (id: string) => {
     setPicked((prev) => {
@@ -381,28 +365,11 @@ function Candidates({
   }
 
   return (
-    <div className="col-tight">
-      <div className="col-tight">
-        {candidates.map((c) => (
-          <label key={c.id} className="row items-start">
-            <input
-              type="checkbox"
-              checked={picked.has(c.id)}
-              onChange={() => toggle(c.id)}
-              disabled={saving}
-            />
-            {/* 아이콘만으로 타입을 말하지 않는다 — 이름을 같이 낸다 (DESIGN_BRIEF §3). */}
-            <TypeIcon type={c.type} />
-            <span className="grow">{c.title}</span>
-            <span className="meta mono">{c.type}</span>
-          </label>
-        ))}
-      </div>
-      {error !== null ? <p className="ink-bad">{error}</p> : null}
-      <button className="btn btn-sm" onClick={accept} disabled={saving || picked.size === 0}>
-        {saving ? '만드는 중…' : `고른 ${picked.size}개를 항목으로 만들기`}
-      </button>
-      <span className="meta">초안으로 들어갑니다 — 승인은 Context 화면에서 합니다.</span>
-    </div>
+    <StructureCandidates
+      state={{ candidates, picked, saving, error, made }}
+      base={base}
+      onToggle={toggle}
+      onAccept={accept}
+    />
   )
 }
