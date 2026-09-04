@@ -1,7 +1,7 @@
-import { ITEM_TYPES } from '@contextops/schema'
+import { ITEM_TYPES, SourceRef } from '@contextops/schema'
 import type {
   AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
-  ItemStatus, ItemType, Manifest, SourceDocumentKind, SourceRef, TeamRole,
+  ItemStatus, ItemType, Manifest, SourceDocumentKind, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, patch, post } from './api'
@@ -246,27 +246,67 @@ export function structureCounts(result: unknown): {
 }
 
 /**
- * 🔴 **§7.1 이 낸 항목 후보를 사람이 읽을 만큼만 꺼낸다** (FINDINGS 84).
+ * 화면 3 의 **후보 고르기 카드**가 받는 한 줄 (그리는 것은
+ * `components/structure-candidates.tsx`).
  *
- * ★ 왜 `ContextItemDraft` 를 통째로 내보내지 않나 — 화면이 고르는 데 필요한 것은
- *   `id`·`type`·`title` 셋이다. 초안 전체를 화면 상태로 들고 있으면 다음 사람이
+ * ★ 왜 여기에 사나 — 이 파일이 「화면이 서버에 대해 아는 전부」다. 카드가 자기 모양을
+ *   따로 적으면 `structureCandidates()` 가 칸을 하나 뺐을 때 **아무 데서도 안 걸린다**
+ *   (`ConflictCard`·`QuestionRow`·`VersionRow` 가 여기 있는 것과 같은 이유다).
+ */
+export type StructureCandidate = {
+  readonly id: string
+  readonly type: ItemType
+  readonly title: string
+  /** §7.1 이 쓴 초안 본문. **빈 문자열일 수 있다** — `ItemBase.body` 에는 하한이 없다. */
+  readonly body: string
+  /** 첫 근거. 모양이 어긋나면 `null` 이고, 그때 카드는 「⚠ 근거 없음」이라고 말한다. */
+  readonly evidence: SourceRef | null
+}
+
+/**
+ * 🔴 **§7.1 이 낸 항목 후보를 사람이 읽을 만큼만 꺼낸다** (FINDINGS 84·86).
+ *
+ * ★ 왜 `ContextItemDraft` 를 통째로 내보내지 않나 — 화면이 필요한 것은 **고르는 데
+ *   드는 것**과 **그 판단의 근거**뿐이다. 초안 전체를 화면 상태로 들고 있으면 다음 사람이
  *   그것을 **고쳐서 되보내는** 문을 만들게 되고, 그때 그 항목의 근거는 여전히 원문
  *   구간을 가리킨다 — 원문에 없는 문장이 원문을 근거로 배포된다 (P7).
- *   고치는 문은 항목이 된 **뒤**의 부분 갱신이다.
+ *   고치는 문은 항목이 된 **뒤**의 부분 갱신이다. 그래서 여기 나가는 `body`·`evidence` 는
+ *   **읽기 전용**이다 — 되보내는 자리가 없다 (`acceptJobItems` 는 id 만 싣는다).
+ * 🔴 **근거가 같이 나가는 것이 86 의 답이다** — 전에는 `id`·`type`·`title` 셋만
+ *   냈고, 사람은 「재시도 정책 · policy」 다섯 글자만 보고 체크를 남겼다.
+ *   「근거 없는 숫자·판정은 화면에 없다」(DESIGN_BRIEF §2-1)와 정반대였다.
+ *   근거는 이미 데이터에 있었다 — `structureDocument()` 가 chunk offset 을 문서
+ *   offset 으로 바꿔 `source_refs` 를 채워 둔다. **화면이 안 꺼냈을 뿐이다.**
+ * ⚠ 첫 근거 하나만 낸다. 항목 하나가 들 수 있는 근거는 `SOURCE_REFS_MAX`(20)이지만
+ *   §7.1 이 만드는 후보의 근거는 **언제나 한 칸**이다 (`structure.ts` 의 `source_refs`).
+ *   목록을 통째로 내면 화면이 안 오는 경우를 그리게 된다.
  * ⚠ 모양이 다른 것은 **버리지 않고 건너뛴다** — 하나가 어긋났다고 나머지를 못 고르면
- *   그 문서는 통째로 막힌다.
+ *   그 문서는 통째로 막힌다. 근거만 어긋난 줄은 **줄째로 버리지 않고** `evidence:null`
+ *   로 남긴다 — 카드가 「⚠ 근거 없음」이라고 말한다 (`EvidenceList`).
  */
-export function structureCandidates(result: unknown): { id: string; type: ItemType; title: string }[] {
+export function structureCandidates(result: unknown): StructureCandidate[] {
   if (typeof result !== 'object' || result === null) return []
   const items = (result as { items?: unknown }).items
   if (!Array.isArray(items)) return []
-  const out: { id: string; type: ItemType; title: string }[] = []
+  const out: StructureCandidate[] = []
   for (const raw of items) {
     if (typeof raw !== 'object' || raw === null) continue
-    const { id, type, title } = raw as { id?: unknown; type?: unknown; title?: unknown }
+    const { id, type, title, body, source_refs } = raw as {
+      id?: unknown; type?: unknown; title?: unknown; body?: unknown; source_refs?: unknown
+    }
     if (typeof id !== 'string' || typeof title !== 'string') continue
     if (typeof type !== 'string' || !(ITEM_TYPES as readonly string[]).includes(type)) continue
-    out.push({ id, type: type as ItemType, title })
+    //  ⚠ 근거는 **스키마로 판다.** 손으로 칸을 세면 `kind` 마다 다른 모양을 놓치고,
+    //     그러면 `EvidenceLink` 가 `undefined` 를 글자로 그린다.
+    const first = Array.isArray(source_refs) ? source_refs[0] : undefined
+    const parsed = first === undefined ? undefined : SourceRef.safeParse(first)
+    out.push({
+      id,
+      type: type as ItemType,
+      title,
+      body: typeof body === 'string' ? body : '',
+      evidence: parsed?.success === true ? parsed.data : null,
+    })
   }
   return out
 }

@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 //    ⛔ 제품 코드에 이 짓을 하지 마라. 여기는 눈으로 읽으려고 도는 스크립트다.
 ;(globalThis as { React?: unknown }).React = React
 const { StructureCandidates } = await import('../src/components/structure-candidates')
-type Candidate = { id: string; type: string; title: string }
+type Candidate = { id: string; type: string; title: string; body: string; evidence: unknown }
 
 // =====================================================================
 //  화면 3 의 **후보 고르기 카드** 모양을 글자로 뽑는다 (loop/PROMPT.md ④2 · ⑦3층)
@@ -30,13 +30,43 @@ function text(html: string): string {
     .trim()
 }
 
+//  근거 한 칸 — §7.1 이 chunk offset 을 문서 offset 으로 바꿔 채워 두는 그 모양이다.
+const ref = (heading: string[], start: number, end: number) => ({
+  kind: 'source_document',
+  document_version_id: '9f1c0b7e-2f3a-4c5d-8e91-6a7b8c9d0e1f',
+  start_char: start,
+  end_char: end,
+  heading_path: heading,
+})
+
 //  §7.1 이 paylab 문서 하나에서 낼 법한 후보 다섯. 타입이 섞여야 아이콘 줄이 읽히는지 보인다.
+//  ⚠ 마지막 줄은 **근거가 없는** 경우다 — 「⚠ 근거 없음」이 읽히는지 보려고 섞었다.
 const CANDIDATES = [
-  { id: 'item_doc_mission', type: 'mission', title: 'PSP 장애가 결제로 번지지 않게 한다' },
-  { id: 'item_doc_retry', type: 'policy', title: '재시도 정책' },
-  { id: 'item_doc_card', type: 'constraint', title: '카드 원본 정보를 저장하지 않는다' },
-  { id: 'item_doc_m1', type: 'roadmap', title: 'M1 — 재시도 정책 통일' },
-  { id: 'item_doc_ledger', type: 'architecture', title: '원장은 append-only 다' },
+  {
+    id: 'item_doc_mission', type: 'mission', title: 'PSP 장애가 결제로 번지지 않게 한다',
+    body: '한 PSP 가 죽어도 결제 전체가 멈추지 않는다.',
+    evidence: ref(['목표'], 0, 180),
+  },
+  {
+    id: 'item_doc_retry', type: 'policy', title: '재시도 정책',
+    body: 'PSP 호출은 지수 백오프로 최대 3회까지만 재시도하고, 그 뒤에는 사람이 볼 큐로 넘긴다. 같은 idempotency key 로 두 번 청구되지 않아야 한다.',
+    evidence: ref(['결제', '재시도'], 1240, 1520),
+  },
+  {
+    id: 'item_doc_card', type: 'constraint', title: '카드 원본 정보를 저장하지 않는다',
+    body: 'PAN·CVC 는 로그·DB·큐 어디에도 남기지 않는다.',
+    evidence: ref(['보안'], 2100, 2260),
+  },
+  {
+    id: 'item_doc_m1', type: 'roadmap', title: 'M1 — 재시도 정책 통일',
+    body: '세 서비스의 재시도 규칙을 하나로 모은다.\n완료 기준은 아래 세 줄이다.',
+    evidence: ref(['로드맵', 'M1'], 3010, 3390),
+  },
+  {
+    id: 'item_doc_ledger', type: 'architecture', title: '원장은 append-only 다',
+    body: '',
+    evidence: null,
+  },
 ] as unknown as Candidate[]
 
 const ALL = new Set(CANDIDATES.map((c) => c.id))

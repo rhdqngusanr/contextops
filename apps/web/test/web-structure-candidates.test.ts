@@ -1,13 +1,14 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { ITEM_TYPES } from '@contextops/schema'
+import { ITEM_TYPES, type SourceRef } from '@contextops/schema'
 
 import { ITEM_TYPE_ICON } from '../src/components/chips'
+import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 import {
-  StructureCandidates, type StructureCandidate, type StructureCandidatesState,
+  bodyPreview, CANDIDATE_BODY_CHARS, StructureCandidates, type StructureCandidatesState,
 } from '../src/components/structure-candidates'
-import { structureCandidates } from '../src/lib/web/queries'
+import { structureCandidates, type StructureCandidate } from '../src/lib/web/queries'
 
 // =====================================================================
 //  🔴 **AI 결과 카드가 사람의 선택 버튼으로 끝난다** (DESIGN_BRIEF §2-4 · FINDINGS 84)
@@ -21,11 +22,28 @@ import { structureCandidates } from '../src/lib/web/queries'
 //    ② 고른 수가 버튼에 따라오고, 0개면 버튼이 잠긴다
 //    🔴 ③ 만든 뒤 문구가 **「승인」이 아니라 「초안」**이라고 말한다 — 여기서 「발행됐다」로
 //       읽히면 사람은 Context 화면의 승인을 건너뛰고 자기 규칙이 안 나간 Pack 을 받는다
+//    🔴 ④ **한 줄에 근거가 붙는다** (FINDINGS 86 · DESIGN_BRIEF §2-1) — 제목·타입 셋만
+//       있으면 사람은 「재시도 정책 · policy」 다섯 글자만 보고 체크를 남기고, 그 항목은
+//       다음 Pack 에 나갈 초안이 된다. 「근거 없는 숫자·판정은 화면에 없다」
 // =====================================================================
 
+const REF: SourceRef = {
+  kind: 'source_document',
+  document_version_id: '11111111-1111-4111-8111-111111111111',
+  start_char: 120,
+  end_char: 260,
+  heading_path: ['결제', '재시도'],
+}
+
 const CANDIDATES: StructureCandidate[] = [
-  { id: 'item_doc_retry', type: 'policy', title: '재시도 정책' },
-  { id: 'item_doc_card', type: 'constraint', title: '카드 원본 금지' },
+  {
+    id: 'item_doc_retry', type: 'policy', title: '재시도 정책',
+    body: 'PSP 호출은 최대 3회까지만 재시도한다.', evidence: REF,
+  },
+  {
+    id: 'item_doc_card', type: 'constraint', title: '카드 원본 금지',
+    body: '카드 원본 정보를 저장하지 않는다.', evidence: REF,
+  },
 ]
 
 function render(over: Partial<StructureCandidatesState> = {}): string {
@@ -52,18 +70,98 @@ describe('🔴 후보를 꺼내는 함수는 모양이 다른 것을 만들지 �
   it('표에 없는 타입·모양이 어긋난 줄은 **건너뛴다** — 하나 때문에 문서가 막히지 않는다', () => {
     const out = structureCandidates({
       items: [
-        { id: 'item_ok_one', type: 'policy', title: '괜찮은 줄' },
+        { id: 'item_ok_one', type: 'policy', title: '괜찮은 줄', body: '본문', source_refs: [REF] },
         { id: 'item_bad_type', type: 'not_a_type', title: '표에 없는 타입' },
         { id: 'item_no_title', type: 'policy' },
         null,
       ],
     })
-    expect(out).toEqual([{ id: 'item_ok_one', type: 'policy', title: '괜찮은 줄' }])
+    expect(out).toEqual([
+      { id: 'item_ok_one', type: 'policy', title: '괜찮은 줄', body: '본문', evidence: REF },
+    ])
   })
 
   it('ItemType 10종이 전부 지나간다 — 한 종류가 조용히 빠지면 그 항목은 못 고른다', () => {
     const items = ITEM_TYPES.map((type, i) => ({ id: `item_t_${i}`, type, title: type }))
     expect(structureCandidates({ items }).map((c) => c.type)).toEqual([...ITEM_TYPES])
+  })
+})
+
+// =====================================================================
+//  🔴 FINDINGS 86 — **근거가 후보 옆에 있다**
+//
+//  ★ 근거는 이미 데이터에 있었다 — `structureDocument()` 가 chunk offset 을 문서
+//    offset 으로 바꿔 `source_refs` 를 채워 둔다. **화면이 안 꺼냈을 뿐이다.**
+//    그래서 재는 것은 두 단계다: ① 꺼내는가 ② 그 값이 화면 글자를 **바꾸는가**.
+// =====================================================================
+
+describe('🔴 후보에는 근거가 같이 나온다', () => {
+  it('첫 근거를 **스키마로 파서** 낸다 — 손으로 칸을 세면 kind 마다 다른 모양을 놓친다', () => {
+    const out = structureCandidates({
+      items: [{ id: 'item_a', type: 'policy', title: '제목', body: '본문', source_refs: [REF] }],
+    })
+    expect(out[0]?.evidence).toEqual(REF)
+  })
+
+  it('근거가 없거나 모양이 어긋나면 줄을 **버리지 않고** `evidence:null` 로 둔다', () => {
+    const items = [
+      { id: 'item_none', type: 'policy', title: '근거 없음', body: '본문' },
+      { id: 'item_bad', type: 'policy', title: '어긋난 근거', body: '본문', source_refs: [{ kind: 'nope' }] },
+    ]
+    expect(structureCandidates({ items }).map((c) => [c.id, c.evidence])).toEqual([
+      ['item_none', null], ['item_bad', null],
+    ])
+  })
+
+  it('본문이 문자열이 아니면 빈 문자열이다 — `undefined` 를 글자로 그리지 않는다', () => {
+    const items = [{ id: 'item_a', type: 'policy', title: '제목', body: 42 }]
+    expect(structureCandidates({ items })[0]?.body).toBe('')
+  })
+
+  it('🔴 근거가 카드 글자로 나온다 — `EvidenceLink` 와 **같은 표**를 쓴다', () => {
+    const html = render()
+    expect(html).toContain(SRC_LABEL.source_document(REF))
+    expect(html).toContain(SRC_ICON.source_document)
+  })
+
+  it('🔴 근거 없는 후보는 그렇다고 말한다 — 빈 칸을 두면 근거가 있는 것처럼 읽힌다', () => {
+    const html = render({
+      candidates: [{ ...CANDIDATES[0]!, evidence: null }],
+      picked: new Set([CANDIDATES[0]!.id]),
+    })
+    expect(html).toContain('근거 없음')
+  })
+
+  it('🔴 근거 값이 바뀌면 화면 글자가 바뀐다 (2-B ②단계)', () => {
+    const other = { ...REF, start_char: 900, end_char: 950, heading_path: ['환불'] }
+    const html = render({ candidates: [{ ...CANDIDATES[0]!, evidence: other }] })
+    expect(html).toContain(SRC_LABEL.source_document(other))
+    expect(html).not.toContain(SRC_LABEL.source_document(REF))
+  })
+
+  it('본문 한 줄이 제목 밑에 나온다 — 다섯 글자만 보고 고르지 않게', () => {
+    expect(render()).toContain('PSP 호출은 최대 3회까지만 재시도한다.')
+  })
+})
+
+describe('🔴 본문 미리보기는 잘렸다는 것을 말한다', () => {
+  it('빈 본문은 줄을 안 만든다 — 빈 칸을 두면 본문이 있는데 못 읽은 것처럼 읽힌다', () => {
+    expect(bodyPreview('')).toBeNull()
+    expect(bodyPreview('   \n  ')).toBeNull()
+  })
+
+  it('짧은 한 줄은 그대로 나온다 — 멀쩡한 문장에 `…` 를 붙이지 않는다', () => {
+    expect(bodyPreview('짧다')).toBe('짧다')
+  })
+
+  it(`${CANDIDATE_BODY_CHARS}자를 넘으면 자르고 … 를 붙인다`, () => {
+    const long = 'ㄱ'.repeat(CANDIDATE_BODY_CHARS + 10)
+    const out = bodyPreview(long)
+    expect(out).toBe(`${'ㄱ'.repeat(CANDIDATE_BODY_CHARS)}…`)
+  })
+
+  it('줄이 더 있으면 첫 줄 뒤에 … 를 붙인다 — 뒤가 더 있다는 것을 말한다', () => {
+    expect(bodyPreview('첫 줄\n둘째 줄')).toBe('첫 줄…')
   })
 })
 

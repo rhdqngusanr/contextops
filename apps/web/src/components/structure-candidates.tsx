@@ -1,8 +1,8 @@
 'use client'
 
-import type { ItemType } from '@contextops/schema'
-
+import type { StructureCandidate } from '../lib/web/queries'
 import { TypeIcon } from './chips'
+import { EvidenceList } from './evidence'
 
 // =====================================================================
 //  🔴 §7.1 이 낸 항목 후보를 사람이 고르는 카드 — 화면 3 (SPEC §7.1 · FINDINGS 84)
@@ -21,11 +21,27 @@ import { TypeIcon } from './chips'
 //    「저장 중」·「실패」·「만든 뒤」를 뽑아 볼 수 없다.
 // =====================================================================
 
-/** 화면이 고르는 데 필요한 것 셋. 초안 전체를 들고 있지 않는다 (P7 — queries.ts 주석). */
-export interface StructureCandidate {
-  readonly id: string
-  readonly type: ItemType
-  readonly title: string
+//  ⚠ 한 줄의 모양(`StructureCandidate`)은 `lib/web/queries.ts` 가 갖는다 — 꺼내는 함수와
+//    그리는 카드가 각자 적으면 칸이 빠져도 아무 데서도 안 걸린다. 여기서는 다시 내보낸다.
+export type { StructureCandidate }
+
+/**
+ * 🔴 **본문 미리보기의 길이.** 이 값은 여기 한 곳에만 산다.
+ *
+ * ★ 왜 자르나 — 후보가 열 줄이면 본문을 통째로 그린 카드는 스크롤이 되고, 그러면
+ *   「고르기」가 「읽기」가 된다. 자른 자리에는 `…` 를 붙여 **잘렸다는 것을 말한다** —
+ *   말없이 자르면 사람은 그게 문장의 끝인 줄 안다.
+ */
+export const CANDIDATE_BODY_CHARS = 120
+
+/** 본문 첫 줄만, 길면 잘라서. 빈 본문은 `null` 이고 그 줄은 아예 안 그린다. */
+export function bodyPreview(body: string): string | null {
+  const lines = body.split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
+  const first = lines[0]
+  if (first === undefined) return null
+  if (first.length > CANDIDATE_BODY_CHARS) return `${first.slice(0, CANDIDATE_BODY_CHARS)}…`
+  //  뒤에 줄이 더 있으면 그것도 `…` 로 말한다 — 말없이 자르면 그게 문장의 끝인 줄 안다.
+  return lines.length > 1 ? `${first}…` : first
 }
 
 export interface StructureCandidatesState {
@@ -80,20 +96,31 @@ export function StructureCandidates({
     <div className="col-tight">
       <span className="label">항목으로 만들 것 고르기</span>
       <div className="col-tight">
-        {state.candidates.map((c) => (
-          <label key={c.id} className="row items-start">
-            <input
-              type="checkbox"
-              checked={state.picked.has(c.id)}
-              onChange={() => onToggle(c.id)}
-              disabled={state.saving}
-            />
-            {/* 아이콘만으로 타입을 말하지 않는다 — 이름을 같이 낸다 (DESIGN_BRIEF §3). */}
-            <TypeIcon type={c.type} />
-            <span className="grow">{c.title}</span>
-            <span className="meta mono">{c.type}</span>
-          </label>
-        ))}
+        {state.candidates.map((c) => {
+          const preview = bodyPreview(c.body)
+          return (
+            <label key={c.id} className="row items-start">
+              <input
+                type="checkbox"
+                checked={state.picked.has(c.id)}
+                onChange={() => onToggle(c.id)}
+                disabled={state.saving}
+              />
+              {/* 아이콘만으로 타입을 말하지 않는다 — 이름을 같이 낸다 (DESIGN_BRIEF §3). */}
+              <TypeIcon type={c.type} />
+              {/* ⚠ `div` 다 — `EvidenceList` 가 `div` 를 내므로 `span` 안에 두면 잘못된 중첩이다. */}
+              <div className="grow col-tight">
+                <span className="row items-start">
+                  <span className="grow">{c.title}</span>
+                  <span className="meta mono">{c.type}</span>
+                </span>
+                {/* 🔴 무엇이 될 문장인지 · 어디서 온 문장인지 (DESIGN_BRIEF §2-1 · FINDINGS 86). */}
+                {preview === null ? null : <span className="meta ink-4">{preview}</span>}
+                <EvidenceList refs={c.evidence === null ? [] : [c.evidence]} />
+              </div>
+            </label>
+          )
+        })}
       </div>
       <div className="row items-start wrap">
         <button
