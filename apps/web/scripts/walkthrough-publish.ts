@@ -6,6 +6,7 @@ import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
 import { parseTraceTag, PROGRESS_REPORT, srcKindOf, type TraceTag } from '@contextops/compiler'
 
 import { measureCoverage } from './pack-coverage'
+import { openStage } from '../../../tools/walkthrough-stage'
 
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
@@ -42,11 +43,9 @@ import { fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const outDir = join(root, '.ci', 'walkthrough-pack')
 
-const checks: { name: string; ok: boolean; detail: string }[] = []
-function check(name: string, ok: boolean, detail = ''): void {
-  checks.push({ name, ok, detail })
-  console.log(`  ${ok ? 'OK  ' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
-}
+//  잰 것을 쌓고 산출물을 쓰는 문은 하나다 — `tools/walkthrough-stage.ts` (FINDINGS 96).
+const stage = openStage('publish')
+const { check } = stage
 
 function sha256(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex')
@@ -365,9 +364,10 @@ async function main(): Promise<void> {
       a?.milestone === 'PL-M1' && !JSON.stringify(a).includes('user_id'))
 
     // ── 요약 ──────────────────────────────────────────────────────────
-    const failed = checks.filter((c) => !c.ok)
-    writeFileSync(join(root, '.ci', 'walkthrough-publish.json'), JSON.stringify({
-      checks,
+    console.log('')
+    console.log(`  Pack 을 남겼다: .ci/walkthrough-pack/ (${manifest.files.length}개 + v1.1.0/CLAUDE.md)`)
+    console.log('  ⚠ 통과는 「안 막혔다」지 「좋다」가 아니다 — 저 CLAUDE.md 를 사람이 읽어라.')
+    process.exitCode = stage.finish({
       //  눈 판정의 재료다 — 「어느 갈래가 종이에 없나」를 다음 바퀴가 파일에서 읽는다.
       coverage,
       versions: [
@@ -375,15 +375,7 @@ async function main(): Promise<void> {
         { semver: '1.1.0', manifest_hash: v2.manifest_hash, files: v2.file_count },
       ],
       pack_dir: '.ci/walkthrough-pack',
-    }, null, 2), 'utf8')
-
-    console.log('')
-    console.log(`  Pack 을 남겼다: .ci/walkthrough-pack/ (${manifest.files.length}개 + v1.1.0/CLAUDE.md)`)
-    console.log('  ⚠ 통과는 「안 막혔다」지 「좋다」가 아니다 — 저 CLAUDE.md 를 사람이 읽어라.')
-    if (failed.length > 0) {
-      console.error(`\n  관통이 ${failed.length}곳에서 막혔다: ${failed.map((f) => f.name).join(' · ')}`)
-      process.exitCode = 1
-    }
+    })
   } finally {
     await closeDb(pg)
   }

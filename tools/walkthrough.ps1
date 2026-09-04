@@ -32,7 +32,10 @@ New-Item -ItemType Directory -Force -Path $shots | Out-Null
 #  prereq : 이 파일/폴더가 있어야 이 단계가 켜진다
 #  cmd    : 그때 돌릴 명령. 없으면 만들어라 — 관통은 이 순서로 돈다
 #  count_json / count_log : **이 단계가 검사 몇 개를 돌았나**를 어디서 읽나
-#       count_json — `.ci/<이름>.json` 의 `checks` 배열 길이 (publish · payload · sync)
+#       count_json — `$true` 면 `.ci/walkthrough-<단계이름>.json` 의 `checks` 길이
+#            (publish · payload · sync). 🔴 **파일 이름을 여기에 적지 마라** —
+#            그 이름을 짓는 곳은 `tools/walkthrough-stage.ts` 의 `openStage()` 하나다.
+#            예전엔 스크립트와 이 표 **두 곳**에 손으로 적혀 있었다 (FINDINGS 96).
 #       count_log  — 그 단계 로그에서 정규식의 **첫 캡처 그룹** (fixture · vitest · scan)
 #
 #    🔴 왜 이 칸이 생겼나 — 예전엔 단계가 내는 것이 `note = "3초"` 뿐이었다.
@@ -69,7 +72,7 @@ $stages = @(
        what = "픽스처 문서 → 항목 → 발행 → Pack 파일 (SPEC §2.1)"
        prereq = "apps\web\scripts\walkthrough-publish.ts"
        cmd = "pnpm --filter web exec tsx scripts/walkthrough-publish.ts"
-       count_json = "walkthrough-publish.json" },
+       count_json = $true },
 
     @{ name = "scan"
        what = "배포되는 번들이 레포를 훑고 산출물에 코드 본문 0건 (SPEC §8.3 · P1)"
@@ -83,7 +86,7 @@ $stages = @(
        what = "업로드 payload 에 코드 본문 0건 (P1 · 심사 첫 질문)"
        prereq = "apps\web\scripts\walkthrough-payload.ts"
        cmd = "pnpm --filter web exec tsx scripts/walkthrough-payload.ts"
-       count_json = "walkthrough-payload.json" },
+       count_json = $true },
 
     @{ name = "sync"
        what = "플러그인이 Pack 을 받아 적용하고 applied 로 보고한다 · hash 불일치에서 멈춘다 (SPEC §8.5 · P6)"
@@ -96,7 +99,7 @@ $stages = @(
        #    관통이 아니라 preflight 다. 스크립트가 **임시 저장소와 진짜 소켓**으로 잰다.
        prereq = "plugin\contextops\scripts\walkthrough-sync.ts"
        cmd = "pnpm --filter @contextops/plugin exec tsx scripts/walkthrough-sync.ts"
-       count_json = "walkthrough-sync.json" },
+       count_json = $true },
 
     @{ name = "shots"
        what = "화면 캡처 — 눈 판정 재료 (.ci/shots/)"
@@ -112,11 +115,20 @@ $stages = @(
 #  ★ 못 읽으면 `$null` 을 돌려준다 — 부르는 쪽이 그걸 **FAIL** 로 만든다.
 #    0 을 돌려주면 「검사가 0개였다」와 「셀 줄 몰랐다」가 같아 보인다. 그건 이 항목의
 #    고장(초를 개수로 읽었다)과 같은 종류의 침묵이다.
+function Get-StageArtifact($stage) {
+    #  단계 이름이 곧 파일 이름이다 — `tools/walkthrough-stage.ts` 의 openStage() 와 같은 규칙.
+    return Join-Path $ciDir "walkthrough-$($stage.name).json"
+}
+
 function Measure-Checks($stage, [string] $log) {
     if ($stage.count_json) {
-        $art = Join-Path $ciDir $stage.count_json
+        $art = Get-StageArtifact $stage
         if (-not (Test-Path $art)) { return $null }
         try { $j = (Get-Content $art -Raw -Encoding UTF8) | ConvertFrom-Json } catch { return $null }
+        #  🔴 도장을 본다 — 산출물이 **이 단계의 것**이라고 스스로 말해야 한다.
+        #     손으로 만든 산출물은 이 칸이 없어서 여기서 걸린다. 그게 정본
+        #     (`tools/walkthrough-stage.ts`)을 지키는 게이트다 (FINDINGS 96).
+        if ($j.stage -ne $stage.name) { return $null }
         if ($null -eq $j.checks) { return $null }
         return @($j.checks).Count
     }
@@ -161,7 +173,7 @@ foreach ($s in $stages) {
     #    옛 검사 수를 자기 것처럼 보고한다 — 이 항목이 고치는 거짓말과 같은 모양이다.
     #    (로그는 리다이렉트가 매번 덮어쓴다)
     if ($s.count_json) {
-        $art = Join-Path $ciDir $s.count_json
+        $art = Get-StageArtifact $s
         if (Test-Path $art) { Remove-Item $art -Force }
     }
     $t0  = Get-Date
@@ -175,7 +187,7 @@ foreach ($s in $stages) {
         if ($null -eq $n) {
             #  🔴 게이트 — 단계가 지났는데 **몇 개를 쟀는지 말을 못 한다.**
             #     초록으로 넘기면 그 단계는 「검사 0개로 통과」가 되고 아무도 모른다.
-            $why = "검사 수를 못 셌다 — 이 단계의 count_json/count_log 를 표에 적어라 (FINDINGS 95)"
+            $why = "검사 수를 못 셌다 — 이 단계의 count_json/count_log 를 표에 적고, " + "산출물은 tools/walkthrough-stage.ts 의 openStage() 로 써라 (FINDINGS 95 · 96)"
             $null = $results.Add([pscustomobject]@{ name = $s.name; state = "FAIL"; sec = $sec; checks = $null; note = $why; what = $s.what })
             Write-Host ("  {0,-10} FAIL  {1}" -f $s.name, $why) -ForegroundColor Red
             $failed++

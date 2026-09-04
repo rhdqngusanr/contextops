@@ -6,6 +6,8 @@ import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Manifest, SyncReport } from '@contextops/schema'
 
+import { openStage } from '../../../tools/walkthrough-stage'
+
 // =====================================================================
 //  관통 한 단계 — **배포되는 번들**이 발행된 Pack 을 받아 적용하고
 //  `applied` 로 보고한다 (docs/SPEC.md §8.5)
@@ -26,16 +28,13 @@ const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = join(packageRoot, '..', '..')
 const packDir = join(repoRoot, '.ci', 'walkthrough-pack')
 const cliPath = join(packageRoot, 'bin', 'contextops-cli.mjs')
-const outPath = join(repoRoot, '.ci', 'walkthrough-sync.json')
 
 const TOKEN = 'ctx_walkthroughtoken0123456789'
 const REQUEST_ID = '00000000-0000-4000-8000-000000000000'
 
-const checks: { name: string; ok: boolean; detail: string }[] = []
-function check(name: string, ok: boolean, detail = ''): void {
-  checks.push({ name, ok, detail })
-  process.stdout.write(`  ${ok ? 'OK  ' : 'FAIL'} ${name}${detail === '' ? '' : ` — ${detail}`}\n`)
-}
+//  잰 것을 쌓고 산출물을 쓰는 문은 하나다 — `tools/walkthrough-stage.ts` (FINDINGS 96).
+const stage = openStage('sync')
+const { check } = stage
 
 // ── 앞 단계가 남긴 Pack ──────────────────────────────────────────────
 const manifest = Manifest.parse(JSON.parse(readFileSync(join(packDir, 'manifest.json'), 'utf8')))
@@ -277,14 +276,10 @@ async function main(): Promise<void> {
     for (const path of temps) rmSync(path, { recursive: true, force: true })
   }
 
-  const failed = checks.filter((c) => !c.ok)
-  writeJson(outPath, {
-    at: new Date().toISOString(),
+  const code = stage.finish({
     pack: { version: manifest.context_version, files: manifest.files.length, manifest_hash: manifest.manifest_hash },
-    checks,
   })
-  process.stdout.write(`\n  검사 ${checks.length}개 · 실패 ${failed.length}개 → .ci/walkthrough-sync.json\n`)
-  if (failed.length > 0) process.exit(1)
+  if (code !== 0) process.exit(code)
 }
 
 await main()

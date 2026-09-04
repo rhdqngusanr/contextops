@@ -8,6 +8,8 @@ import {
   ContextItemsBatchDraft, ProgressEvent, Proposal, ScanResult,
 } from '@contextops/schema'
 
+import { openStage } from '../../../tools/walkthrough-stage'
+
 // =====================================================================
 //  관통 한 단계 — 🔴 **업로드 payload 에 코드 본문이 0건인가** (P1 · 심사 첫 질문)
 //    tools/walkthrough.ps1 의 `payload` 단계가 이 파일을 부른다.
@@ -32,18 +34,15 @@ const webRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = join(webRoot, '..', '..')
 const fixture = join(repoRoot, 'fixtures', 'paylab-api')
 const cliPath = join(repoRoot, 'plugin', 'contextops', 'bin', 'contextops-cli.mjs')
-const outPath = join(repoRoot, '.ci', 'walkthrough-payload.json')
 
 const TOKEN = 'ctx_walkthroughpayloadtoken0123456789'
 const PROJECT = '11111111-2222-4333-8444-555555555555'
 const VERSION = '22222222-3333-4444-8555-666666666666'
 const REQUEST_ID = '00000000-0000-4000-8000-000000000000'
 
-const checks: { name: string; ok: boolean; detail: string }[] = []
-function check(name: string, ok: boolean, detail = ''): void {
-  checks.push({ name, ok, detail })
-  process.stdout.write(`  ${ok ? 'OK  ' : 'FAIL'} ${name}${detail === '' ? '' : ` — ${detail}`}\n`)
-}
+//  잰 것을 쌓고 산출물을 쓰는 문은 하나다 — `tools/walkthrough-stage.ts` (FINDINGS 96).
+const stage = openStage('payload')
+const { check } = stage
 
 // ── 나간 요청을 전부 모으는 서버 ────────────────────────────────────
 type Sent = { path: string; body: string }
@@ -249,10 +248,6 @@ server.listen(0, '127.0.0.1', () => {
       rmSync(repo, { recursive: true, force: true })
       rmSync(home, { recursive: true, force: true })
 
-      const failed = checks.filter((c) => !c.ok)
-      mkdirSync(dirname(outPath), { recursive: true })
-      writeFileSync(outPath, `${JSON.stringify({ checks, failed: failed.length }, null, 2)}\n`, 'utf8')
-      process.stdout.write(`\n  검사 ${checks.length}개 · 실패 ${failed.length}개 → .ci/walkthrough-payload.json\n`)
-      process.exit(failed.length === 0 ? 0 : 1)
+      process.exit(stage.finish())
     })
 })
