@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
-import { ENFORCEMENT_LABEL, PROGRESS_REPORT } from '@contextops/compiler'
+import { ENFORCEMENT_LABEL, parseTraceTag, PROGRESS_REPORT } from '@contextops/compiler'
 
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
@@ -17,7 +17,7 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from '../test/helpers/db'
-import { seedPaylab } from './seed'
+import { fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
 
 // =====================================================================
 //  관통 2단계 — 픽스처 문서 → 항목 → 발행 → Pack 파일 (SPEC §2.1 · §5)
@@ -64,33 +64,63 @@ function isProductText(path: string): boolean {
   return (PRODUCT_TEXT_PACK_FILES as readonly string[]).includes(path)
 }
 
-/** 픽스처 문서 하나를 그대로 올린다 (P1 — 문서 본문은 사용자가 의도적으로 올린다). */
+/** 픽스처 문서 하나를 그대로 읽는다 — 근거를 **따라가는** 쪽이 원문을 여기서 본다. */
 function fixtureDoc(name: string): string {
   return readFileSync(join(root, 'fixtures', 'paylab-docs', name), 'utf8')
 }
 
+/** 태그 조각 `doc:<uuid>#<start>-<end>` 하나. 나머지 3종(repo·proposal·manual)은 문서가 아니다. */
+const DOC_SRC_RE = /^doc:([0-9a-fA-F-]{36})#(\d+)-(\d+)$/
+
 /**
- * 문서에서 온 항목 초안. **근거가 문서의 문자 범위**라 P7 이 원문까지 이어진다.
- * ⚠ 문장을 서버가 지어내지 않는다 — 구조화는 §7.1(P3)의 일이고, 여기서는 사람이 적은
- *   것과 같은 자리에 손으로 넣는다. 그게 지금 진짜로 도는 경로다.
+ * 🔴 **역추적을 실제로 따라간다** (P7 · FINDINGS 90).
+ *
+ * Pack 의 태그에서 `doc:<uuid>#start-end` 를 꺼내 **원문 파일을 그 범위로 잘라 보고**,
+ * 그 안에 항목이 주장하는 문장이 있는지 센다. 문서가 다르면(uuid) 거기서도 걸린다.
+ *
+ * ★ 왜 「태그가 붙어 있나」(`untagged === 0`)로 부족한가 — 일곱 항목이 전부 `#0-400` 을
+ *   달고 있었고 그중 여섯은 그 범위 안에 그 문장이 **없었다.** 태그 수만 세면 초록이다.
+ *   발표 2:40 이 「Pack Explorer 역추적」이다 (SPEC §10.5) — 심사자가 한 번만 따라가 보면
+ *   종이가 가리킨 자리에 그 문장이 없다.
+ *
+ * ⚠ 기대 문장을 여기 적지 마라 — 씨앗이 낸 `SeedResult.evidence` 를 **읽기만** 한다.
+ *   두 곳에 적으면 픽스처를 고친 사람이 검사 쪽 문장을 고쳐서 초록을 만든다.
  */
-function fromDoc(id: string, type: string, versionId: string, extra: Record<string, unknown>) {
-  return {
-    id,
-    type,
-    scope: { kind: 'project' },
-    priority: 60,
-    confidence: 'high',
-    tags: ['paylab'],
-    source_refs: [{
-      kind: 'source_document',
-      document_version_id: versionId,
-      start_char: 0,
-      end_char: 400,
-      heading_path: ['paylab 결제 서비스'],
-    }],
-    ...extra,
+function followEvidence(packTexts: string[], expected: EvidenceExpectation[]): {
+  followed: number; items: Set<string>; broken: string[]
+} {
+  const want = new Map(expected.map((e) => [e.itemId, e]))
+  const broken: string[] = []
+  const items = new Set<string>()
+  let followed = 0
+
+  for (const text of packTexts) {
+    for (const line of text.split('\n')) {
+      const tag = parseTraceTag(line)
+      if (!tag) continue
+      const e = want.get(tag.itemId)
+      if (!e) {
+        broken.push(`${tag.itemId}: Pack 에 있는데 기대 문장이 없다`)
+        continue
+      }
+      for (const src of tag.src) {
+        const m = DOC_SRC_RE.exec(src)
+        //  문서 근거가 아닌 조각(`proposal:` 등)은 여기서 잴 것이 없다 — 건너뛴다.
+        if (!m?.[1] || !m[2] || !m[3]) continue
+        followed++
+        items.add(tag.itemId)
+        if (m[1] !== e.documentVersionId) {
+          broken.push(`${tag.itemId}: 태그가 딴 문서를 가리킨다 (${e.docName} 이어야 한다)`)
+          continue
+        }
+        const cut = fixtureDoc(e.docName).slice(Number(m[2]), Number(m[3]))
+        if (!cut.includes(e.quote)) {
+          broken.push(`${tag.itemId}: ${e.docName}#${m[2]}-${m[3]} 안에 그 문장이 없다`)
+        }
+      }
+    }
   }
+  return { followed, items, broken }
 }
 
 async function main(): Promise<void> {
@@ -104,7 +134,7 @@ async function main(): Promise<void> {
     const seed = await seedPaylab('walkthrough-owner')
     const { owner, projectId } = seed
 
-    check('픽스처 문서 2개가 들어갔다', seed.goalsVersion.length > 0 && seed.roadmapVersion.length > 0)
+    check('픽스처 문서 2개가 들어갔다', seed.goals.versionId.length > 0 && seed.roadmap.versionId.length > 0)
     //  ⚠ 개수를 여기 적지 마라 — 씨앗이 낸 `drafted` 와 견준다. 픽스처에 한 줄을 더한
     //    사람이 이 파일까지 고치게 만들면, 그 사람은 검사 쪽 숫자를 고쳐서 초록을 만든다.
     check(`초안 ${seed.drafted}개가 전부 받아들여졌다`, seed.accepted === seed.drafted && seed.rejected.length === 0,
@@ -193,6 +223,15 @@ async function main(): Promise<void> {
     check('낡은 base 는 409 STALE_BASE 다', stale.status === 409 && (await errorOf(stale)).code === 'STALE_BASE')
 
     // ── ⑧ 제안 → 승인 → 둘째 발행 ─────────────────────────────────────
+    //  ⚠ 이 초안도 씨앗과 **같은 문**(`fromDoc`)으로 만든다. 근거를 손으로 적는 자리를
+    //    여기 다시 만들면 그 자리만 조용히 `0-400` 으로 남는다 — FINDINGS 90 이 정확히
+    //    그거였고, 관통 자신이 그 고장을 하나 더 들고 있었다.
+    const settlement = fromDoc('item_goal_settlement', 'goal', seed.goals,
+      '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |', {
+        title: '정산 오차 0원',
+        body: '일 배치 후 원장 대사 차액으로 잰다.',
+        data: { outcome: '정산 오차 0원', metric: '일 배치 후 원장 대사 차액', deadline: '2026-06-30' },
+      })
     const proposal = await dataOf(await createProposal(req('POST', `/api/v1/projects/${projectId}/proposals`, {
       auth: owner,
       body: {
@@ -201,12 +240,9 @@ async function main(): Promise<void> {
         base_version_id: v1.id,
         items: [{
           operation: 'add',
-          draft: fromDoc('item_goal_settlement', 'goal', seed.goalsVersion, {
-            title: '정산 오차 0원',
-            body: '일 배치 후 원장 대사 차액으로 잰다.',
-            data: { outcome: '정산 오차 0원', metric: '일 배치 후 원장 대사 차액', deadline: '2026-06-30' },
-          }),
-          evidence: [{ kind: 'source_document', document_version_id: seed.goalsVersion, start_char: 0, end_char: 200, heading_path: ['2. 올해의 목표'] }],
+          draft: settlement.draft,
+          //  제안의 근거는 초안의 근거와 **같은 것**이다. 따로 적으면 둘이 갈라진다.
+          evidence: settlement.draft.source_refs,
           reason: '문서에는 있는데 항목에 없었다',
         }],
         relates_to: ['PL-M1'],
@@ -231,6 +267,19 @@ async function main(): Promise<void> {
     const claude2Text = await claude2.text()
     check('제안이 만든 항목이 실제로 Pack 에 나온다', claude2Text.includes('ctx:item_goal_settlement'))
     check('발행마다 manifest_hash 가 달라진다', v1.manifest_hash !== v2.manifest_hash)
+
+    //  🔴 **P7 을 끝까지 따라간다** (FINDINGS 90). 위의 `untagged === 0` 은 「태그가
+    //     붙어 있나」까지다. 여기서는 그 태그의 `#start-end` 를 **원문에서 잘라 보고**
+    //     항목이 주장하는 문장이 그 안에 있는지 센다.
+    packTexts.push(claude2Text)
+    const expected = [...seed.evidence, settlement.evidence]
+    const followed = followEvidence(packTexts, expected)
+    check(`🔴 P7 — 태그를 따라가면 원문에 그 문장이 있다 (근거 ${followed.followed}개)`,
+      followed.broken.length === 0, followed.broken.join(' · '))
+    //  ⚠ 위 검사는 **본 것만** 센다 — 항목이 Pack 에서 통째로 빠지면 셀 것이 없어서 초록이다.
+    //    그래서 「기대한 항목이 전부 종이에 있었나」를 따로 센다.
+    const missing = expected.filter((e) => !followed.items.has(e.itemId)).map((e) => e.itemId)
+    check(`기대한 항목 ${expected.length}개가 전부 Pack 에서 역추적됐다`, missing.length === 0, missing.join(' · '))
 
     mkdirSync(join(outDir, 'v1.1.0'), { recursive: true })
     writeFileSync(join(outDir, 'v1.1.0', 'CLAUDE.md'), claude2Text, 'utf8')
@@ -265,9 +314,11 @@ async function main(): Promise<void> {
       body: {
         milestone_id: 'PL-M1',
         status: 'criterion_done',
-        criterion: '재시도가 지수 백오프로 통일된다',
+        //  ⚠ 씨앗의 `item_road_m1.done_when[0]` 과 **글자가 같아야** 그 기준이 채워진다.
+        //    그 글자는 goals.md §4 M1 에서 왔다 (FINDINGS 90 으로 근거 문서를 옮겼다).
+        criterion: 'PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다',
         evidence: [{ path: 'src/payment/retry.ts', start_line: 14, end_line: 31 }],
-        summary: '고정 간격 호출을 백오프로 바꿨다',
+        summary: '고정 간격 호출을 공용 백오프 모듈로 모았다',
         context_version: '1.1.0',
         source: 'agent',
         client_event_id: randomUUID(),
