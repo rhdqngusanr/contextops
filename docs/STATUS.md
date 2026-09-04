@@ -5,13 +5,50 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-04 · 루프 27바퀴 · `706e334`_
+_마지막 갱신: 2026-09-04 · 루프 28바퀴 · `6d535f1`_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴는 결정이 일어나는 화면을 만들었다 — 화면 4(정리)** (`706e334`).
+**이번 바퀴는 결정을 진짜로 만들었다 — 정리한 충돌이 Pack 을 바꾼다** (`a201a51`).
+27바퀴가 만든 화면 4 는 「A가 맞음」을 눌러도 `conflicts` 행만 바꿨다. 사람은 결정해
+놓고 Context 화면에서도 다음 Pack 에서도 **아무 변화를 못 봤다** (FINDINGS 71).
+라우트 주석이 「`a_item_id` 가 생기면 그때」라고 적어 두었는데 그 칸은 `0003` 에서
+이미 생겨 있었다.
+
+🔴 **표를 하나 더 뒀지 접지 않았다.** `RESOLUTION_OUTCOME`(선택 → **충돌** 상태) 옆에
+`RESOLUTION_ITEM_OUTCOME`(선택 → **진 쪽 항목**의 다음 상태)이다. 둘은 같이 안 움직인다 —
+`both`·`dismiss` 는 충돌을 닫지만 항목은 하나도 안 건드린다. 한 표에 접으면 그 차이를
+적을 자리가 없어서 라우트에 `if (choice === 'both')` 가 다시 생긴다.
+그 표와 `CONFLICT_KIND_RULES`(anchor)를 잇는 문이 **`itemOutcomeOf()` 하나**다 —
+라우트에는 `choice ===` 도 `kind ===` 도 없다.
+
+🔴 **잰 것은 「상태가 deprecated 가 됐다」가 아니라 「그 줄이 Pack 어느 파일에도 없다」다.**
+사이에 `status = 'active'` 필터가 있고 그게 끊기면 결정은 아무 일도 안 한다.
+`choice` 를 `both` 로 뒤집어 **그 시험이 실제로 빨개지는 것**을 확인했다 (헛돌지 않는다).
+
+🔴 **눈으로 읽었다 — `scripts/dump-resolve-effect.ts` 로 paylab 픽스처를 관통시켰다**
+(`docs/evidence/2026-09-04-resolve-effect/pack-before-after.txt`). 관통 시나리오는
+§7.2 를 안 지나서(키가 없다) 이 고침이 산출물에 닿는 자리가 시험뿐이었다. 읽은 것:
+**결정 전 CLAUDE.md 에 모순되는 `must` 두 줄이 나란히 있었다** — 「지수 백오프 5회」와
+「고정 간격 3회」를 팀에게 동시에 시키고 있었다. 결정 후엔 진 줄만 사라지고 로드맵의
+`done_when` 도 이긴 규칙도 그대로다.
+
+**폐기는 개정을 하나 쌓는다.** 상태만 덮으면 「누가 언제 왜 폐기했나」가 어디에도 안
+남는다. 개정에 `created_by` 와 `{kind:'manual', note:'충돌 정리 — {충돌id} · 선택 a'}` 가
+붙어서 그 충돌 행의 질문·선택·사람·시각으로 간다 (P7).
+⚠ **사람이 적은 `resolution.note` 를 이어 붙이지 않았다** — 길이가 제멋대로라 200자
+상한에서 **잘린다.** 잘린 근거는 근거가 없는 것과 같다. 충돌 id 하나면 전부 거기 있다.
+
+**`appendSourceRef()` 를 `lib/api/item.ts` 로 올렸다.** 서버가 근거를 **더 붙이는**
+자리가 둘이 됐다 (발행의 `proposal` · 정리의 `manual`). 각자 `>= SOURCE_REFS_MAX` 를
+적으면 안 고쳐진 쪽이 **조용히 근거를 하나 버린다.** 자리가 없으면 `undefined` 고,
+부르는 쪽이 무엇을 답할지만 정한다 — **버리는 갈래는 없다.**
+
+---
+
+**지난 바퀴는 결정이 일어나는 화면을 만들었다 — 화면 4(정리)** (`706e334`).
 화면 3 이 넣은 것과 §7.2 가 찾은 것을 **사람이 고르는 자리**가 없어서, 68 이 만든
 `src:proposal:` 도 67 ③ 이 심은 씨앗 질문 10장도 사람이 볼 데가 시험과 증거 파일뿐이었다.
 이제 `…/review` 가 그것을 카드로 그리고, `POST :resolve`(탐지 카드)와
@@ -136,6 +173,8 @@ DESIGN_BRIEF 의 예시 넷 중 둘은 **타입을 바꿔 담았다** — 「마
 ✅ **화면 3 의 세 길 중 둘이 됐다** (**67 ③** · `9f481a0`+`a24120e`). 남은 하나는 zip.
    🔴 **그래도 P3 둘째 행은 안 닫힌다** — 「질문만으로 **v1.0 발행**」까지 재려면
    초안을 골라 발행해 봐야 하고 **화면 4 가 없다.** 지금 온 데까지는 「초안 항목이 생긴다」다.
+✅ **결정이 Pack 을 바꾼다** (**71** · `a201a51` · 28바퀴). 정리한 충돌의 진 항목이
+   `deprecated` 로 가고 **다음 Pack 에서 그 줄이 사라진다.** 잰 것은 상태가 아니라 Pack 이다.
 ✅ **화면 4(정리)가 생겼다** (`706e334` · 27바퀴). 지난 바퀴가 여기 적어 둔 경고
    (「`GET /conflicts` 는 씨앗 질문도 같이 낸다 — 세는 자리에서 `kind` 로 갈라라」)는
    **`byAi` 축으로 풀었다.** 머리가 두 수를 따로 낸다.
@@ -150,54 +189,68 @@ DESIGN_BRIEF 의 예시 넷 중 둘은 **타입을 바꿔 담았다** — 「마
 | `packages/schema` (계약 전부 · 로컬 파일 **8종** · 테스트 **113**) | Supabase 프로젝트 (🙋 사람) · Vercel |
 | `packages/compiler` (파이프라인 7단계 · 테스트 **136** · 태그 읽기) | **zip 업로드** (FINDINGS 26+**67 ①** — 화면 3 의 마지막 길 · §11 상한이 먼저다) |
 | 🔴 **씨앗 질문 10장** — `lib/api/seed-questions.ts` · `seed_question` 종류 · 시험 **11** | **실패·멈춘 job 을 되살리는 문** (FINDINGS 59+64) |
-| `apps/web` — 라우트 **30개** · 테스트 **307** | sync 상태 `manual` 을 찍는 코드 (FINDINGS **69**) |
+| `apps/web` — 라우트 **30개** · 테스트 **313** | sync 상태 `manual` 을 찍는 코드 (FINDINGS **69**) |
 | 🔴 **예산 가드** — `lib/ai/{features,budget,client,model}.ts` · `ai_usage` 표 · 시험 18 | ~~§7.5 「픽스처 결과」~~ — **안 만들기로 정했다** (66 ✅ · P7 이 끊긴다 · §7.4 전용) |
 | 🔴 **문서 구조화** — `lib/ai/{structure,prompt}.ts` · `AiStructureOutput` · 시험 24 | **문서 종류를 읽는 코드** (FINDINGS 65 — `kind` 6종을 이제 고를 수는 있는데 골라도 안 바뀐다) · **토큰 발급 화면** (FINDINGS 36) |
 | 🔴 **충돌 탐지** — `lib/ai/conflict.ts` · `CONFLICT_KIND_RULES` 표 · 시험 24 | `ask`·`demo` 를 부르는 자리 (기능 표의 나머지 둘 · §7.3·§7.4) |
 | 🔴 **`conflicts` 표가 §7.2 를 담는다** — CHECK 5개 · 복합 FK · 마이그레이션 `0003` | 질문 → 만들어진 항목의 **근거 사슬** (FINDINGS 56) |
 | 🔴 **job 자리** — `ai_jobs` 표(`progress`·`stalled` 판정) · `AI_JOB_RUNNERS` · 라우트 **4개** | `origin='doc'` 을 찍는 코드 (FINDINGS 31 — 없으면 `doc_vs_code` 가 영원히 0건) |
 | 🔴 **화면 3 (가져오기)** — `…/import` · `usePolling` · `job-progress.tsx`(15) · **`question-stack.tsx`(15)** | Anthropic API 키 (🙋 사람) · 실데이터 픽스처(`brain`) 판단 (🙋 사람) |
-| 🔴 **화면 4 (정리)** — `…/review` · **`conflict-card.tsx`(18 · 열다섯 모양)** · `ANCHOR_BODY` 3줄 · `CONFLICT_SIDES` 4줄 | **결정이 항목을 바꾸는 코드** (FINDINGS **71** — 지금은 `conflicts` 행만 바뀐다) |
+| 🔴 **화면 4 (정리)** — `…/review` · **`conflict-card.tsx`(18 · 열다섯 모양)** · `ANCHOR_BODY` 3줄 · `CONFLICT_SIDES` 4줄 | **화면이 「A가 맞음 → B 폐기」를 안 알린다** (FINDINGS **74** — 서버는 이제 진짜로 폐기한다) |
 | 웹 화면 **7개** (`/login` `/auth/callback` `/t/new` `…/import` **`…/review`** `…/context` `…/packs`) | **브라우저 캡처** (이 환경에 없다 — 「눈 판정 대기」) |
 | 🔴 **`plugin/contextops` — CLI 8/8 · Skill 3 · 훅 2 · 테스트 174** | ~~`{kind:'proposal'}` 근거를 붙이는 코드~~ — **생겼다** (**68** ✅ `e0148d0`) |
+| 🔴 **결정 → 항목**: `RESOLUTION_ITEM_OUTCOME` · `itemOutcomeOf()` · `appendSourceRef()` | `origin='doc'` 을 찍는 코드 (**31** — §7.1 러너는 개정을 안 만든다 · **75** 확인) |
 | **`apps/web/scripts/dev-server.ts`** — 화면·API 를 눈으로 볼 수 있는 씨앗 서버 | |
 
-검사 층: `principles OK 9 · typecheck 15초·멤버 4 · test 88초·멤버 4 · build 18초 ·
-walkthrough 101초` → **GREEN**. 관통 **7단계**
+검사 층: `principles OK 9 · typecheck 6초·멤버 4 · test 59초·멤버 4 · build 18초 ·
+walkthrough 63초` → **GREEN**. 관통 **7단계**
 (fixture·compile·api·publish·scan·payload·sync). 남은 SKIP 하나(`shots`)의 prereq 는
 `apps/web/e2e`. ⚠ 관통은 §7.1·§7.2 를 **지나지 않는다** — 키가 없다.
-시험 합계 **730** (schema 113 · compiler 136 · plugin 174 · web **307**).
-🔴 **DB 는 안 바뀌었다 — `0006` 그대로다.** 이번 바퀴는 `ConflictKindRule` 에 축
-(`byAi`)을 더했는데 그 축에서 나오는 CHECK 이 없어서 (제약은 `anchor`·`needsB`·
-`detected` 에서만 생성된다) 마이그레이션이 필요 없었다. 표 18개 · 인덱스 8개.
+그래서 이번 고침은 `scripts/dump-resolve-effect.ts` 가 대신 관통했다 (근거 파일 참조).
+시험 합계 **736** (schema 113 · compiler 136 · plugin 174 · web **313**).
+🔴 **DB 는 안 바뀌었다 — `0006` 그대로다.** 이번 바퀴는 표(`RESOLUTION_ITEM_OUTCOME`)와
+라우트만 건드렸고 새 컬럼도 새 enum 값도 없다. 표 18개 · 인덱스 8개.
 
 ## 다음 바퀴가 할 일
 
-🔴 **FINDINGS 대장의 「대기」가 셋이다 — `71` · `72` · `69`. 맨 위는 71 이다.**
+🔴 **FINDINGS 대장의 「대기」가 셋이다 — `74` · `72` · `69`. 맨 위는 74 다.**
+(**71** 은 이번 바퀴에 닫혔다 · `a201a51`.)
 
-**71 — 충돌을 결정해도 항목이 안 바뀐다** (구멍). 이번 바퀴에 만든 화면 4 가 그것을
-처음 보이게 했다: 「A가 맞음」을 눌러도 `conflicts` 행의 `status`·`resolution` 만 바뀌고
-**가리켜진 두 항목은 그대로**다. 사람은 결정해 놓고 Context 화면에서 아무 변화도 못 본다.
-🔴 **그 라우트의 주석이 스스로 기다리던 조건이 이미 충족됐다** — 「`a_item_id` 가 생기면
-그때」라고 적었는데 그 칸은 `0003` 에서 생겼고 `conflictRow()` 가 채운다.
+**74 — 화면 4 가 「A가 맞음」의 결과를 안 알린다** (격차). 🔴 **이번 바퀴에 버튼의 뜻이
+바뀌었다.** 어제까지 「A가 맞음」은 아무것도 안 지웠고, 오늘부터는 B 항목을 폐기해서
+**다음 Pack 에서 사라지게 한다.** 화면은 그 말을 한 마디도 안 하고, 되돌리는 문도 없다
+(`:resolve` 가 「이미 처리된 충돌」을 400 으로 막는다 — 27바퀴가 정한 것).
 
-**시작하기 전에 아는 것 (71):**
+**시작하기 전에 아는 것 (74):**
 
-- 🔴 **선택 → 항목에 무엇을 하나를 표로 두어라.** 자리는 `lib/api/conflict.ts` 의
-  `RESOLUTION_OUTCOME`(선택 → 충돌 상태) **바로 옆**이다. 라우트에
-  `if (choice === 'a')` 를 적으면 선택이 늘 때 그 `if` 를 찾아야 한다.
-- ⚠ **`both`·`dismiss` 는 항목을 안 건드린다.** 보류와 무시는 결정이 아니다.
-- ⚠ **항목 상태를 바꾸면 개정이 하나 생긴다.** 그 개정의 `source_refs` 에
-  `{kind:'manual', note:…}` 가 붙어야 「누가 왜 폐기했나」가 남는다 (P7 · 68 과 같은 자리).
-  ⛔ **`draft.source_refs` 를 다시 읽는 코드를 쓰지 마라** — 발행이 `withProposalRef()`
-  로 붙인 칸이 조용히 사라진다.
-- ⚠ **트랜잭션 하나여야 한다.** 충돌만 닫히고 항목이 안 바뀌면 **다시 누를 문이 없다** —
-  라우트가 「이미 처리된 충돌」을 400 으로 막는다.
-- ⚠ 잠글 것은 「상태가 바뀌었다」가 아니라 **「그 항목이 다음 Pack 에서 빠진다」**다
-  (`active` 만 Pack 에 들어간다).
+- ⚠ **27바퀴 게이트와 부딪히지 않게 조심해라** — 「저장 **전에는** 무엇이 생기는지
+  약속하지 않는다」는 *안 일어날 일을 약속하지 마라*는 뜻이다. 지금은 **일어난다.**
+  약속이 아니라 **사실**을 적는 것이고, 그 사실은 표에서 온다.
+- 🔴 **문구를 카드에 손으로 적지 마라.** `RESOLUTION_ITEM_OUTCOME`(`lib/api/conflict.ts`)이
+  이미 「어느 쪽이 어디로 가나」를 들고 있다. 그 표를 읽어 그리면 선택이 늘어도 따라온다.
+- ⚠ **그 표는 지금 서버 쪽에 있다.** 화면이 `lib/api/*` 를 import 하면 의존 방향이
+  깨진다 (`schema ← compiler ← web`). **둘째 사용자가 생긴 것**이므로 `packages/schema`
+  로 올리는 것이 그 표의 자리다 — 올리면 `pnpm --filter @contextops/plugin build` 가
+  필요하다 (`test/bundle.test.ts`).
+- ⚠ **모양을 뽑아 읽는 자리는 `scripts/dump-conflict-card.tsx`** 다. 시험을 쓴 뒤에
+  **마크업을 직접 읽어라** — 지난 세 바퀴에 고친 여덟 개가 전부 글자를 읽어서 나왔다.
 
 **그 다음 후보**: **72**(화면 4 의 안 그린 세 칸 — ③ `updated_at` 이 제일 싸고 화면 5 도
-같은 값을 기다린다) · **67 ①**(zip · SPEC §11 상한이 먼저다 · 26 과 한 묶음).
+같은 값을 기다린다 · `ITEM_COLUMNS` 에 한 줄이다) · **67 ①**(zip · SPEC §11 상한이 먼저다).
+
+**결정 → 항목을 고칠 때 아는 것 (71 이 남긴 것):**
+
+- 🔴 **표 둘을 접지 마라.** `RESOLUTION_OUTCOME`(선택 → 충돌 상태)과
+  `RESOLUTION_ITEM_OUTCOME`(선택 → 진 쪽 항목 상태)은 같이 안 움직인다.
+  둘을 잇는 문은 `itemOutcomeOf()` 하나다 — 라우트에 조립을 다시 만들지 마라.
+- ⚠ **`anchor` 가 `items` 가 아니면 바꿀 항목이 없다.** `a_ref` 에서 항목을 추측하면
+  엉뚱한 항목을 폐기한다 (`SourceRef` 는 원문까지 가는 사슬이지 항목 이름이 아니다).
+- ⚠ **이긴 쪽은 안 건드린다.** 이미 `active` 인 항목을 `review` 로 되돌리면 다음
+  발행에서 Pack 밖으로 나간다 — 「A가 맞다」의 뜻과 정반대다.
+- ⚠ **근거를 더 붙이는 자리는 `appendSourceRef()` 하나다** (`lib/api/item.ts`).
+  자리가 없으면 `undefined` 고, 부르는 쪽이 무엇을 답할지만 정한다. **버리는 갈래는 없다.**
+- ⚠ **바뀔 것이 없으면 개정을 쌓지 마라.** 이미 `deprecated` 인 항목에 개정을 쌓으면
+  `revision` 만 올라서 남이 들고 있던 낙관적 잠금이 이유 없이 409 가 된다.
 
 **화면 4 를 고칠 때 아는 것:**
 
@@ -246,6 +299,48 @@ walkthrough 101초` → **GREEN**. 관통 **7단계**
 (**67 ①** 과 같은 자리다).
 
 ## 잰 것
+
+**28바퀴 · 결정이 Pack 을 바꾼다** (`a201a51` + 근거 `6d535f1`)
+
+| | 값 |
+|---|---|
+| `tools/ci.ps1` 전 층 | GREEN — principles **OK 9** / typecheck 6초 / test 59초 / build 18초 / walkthrough 63초 **7단계** |
+| 새 시험 | **+6** — web 307 → **313** (`api-routes` +5 · `api-publish` +1). 합계 **736** |
+| 새 파일 | `scripts/dump-resolve-effect.ts` · `docs/evidence/2026-09-04-resolve-effect/pack-before-after.txt` |
+| 표에 한 줄로 늘어난 것 | **`RESOLUTION_ITEM_OUTCOME`(4)** — 새 선택을 더하는 절차 넷을 그 표 옆 주석에 적었다. 잇는 문은 `itemOutcomeOf()` 하나 |
+| 정본으로 올린 것 | **`appendSourceRef()`** (`lib/api/item.ts`) — 근거를 더 붙이는 자리가 둘이 됐다(`proposal`·`manual`). `withProposalRef()` 가 이제 이것을 부른다 |
+| DB | **안 바뀌었다.** `0006` 그대로 — 새 컬럼도 새 enum 값도 없다 |
+| 🔴 갈리는 것을 봤나 | **봤다.** 선택 4개가 **세 가지 결과**를 낸다 (`a`→B 폐기 · `b`→A 폐기 · `both`·`dismiss`→아무것도 안 함). 답을 손으로 안 적고 **표에서 읽어 대조**한다 — 표를 고치면 시험이 따라온다. `anchor` 가 `items` 가 아닌 종류는 항목이 0개 |
+| 🔴 헛도는 시험이 아닌가 | **확인했다.** Pack 시험의 `choice` 를 `a`→`both` 로 뒤집으니 `ctx:item_policy_one` 이 그대로 남아 **빨개졌다.** 되돌렸다 |
+| 🔴 눈으로 읽었나 | **읽었다.** `docs/evidence/2026-09-04-resolve-effect/pack-before-after.txt` — **결정 전 CLAUDE.md 에 모순되는 `must` 두 줄이 나란히** 있었다(「지수 백오프 5회」+「고정 간격 3회」). 결정 후엔 진 줄만 사라지고 로드맵 `done_when` 과 이긴 규칙은 그대로. 진 항목: `status=deprecated · origin=manual · created_by 있음 · 근거 둘`(원래 `repository_path` 를 **안 밀어냈다**) |
+| 게이트로 올린 것 | 선택마다 **다른 쪽**이 진다(표에서 읽어 대조) · 이긴 쪽은 `status`·`revision` 이 그대로다 · 폐기 개정에 `manual` 근거가 붙고 원문 근거를 안 밀어낸다 · 본문이 안 바뀐다(P4) · `anchor` 가 `items` 가 아니면 항목이 0개 · 근거 20개면 **400 이고 충돌도 안 닫힌다**(트랜잭션 하나) · **진 줄이 Pack 어느 파일에도 없다**(`source_map` 도) |
+| 닫은 FINDINGS | **71** ✅ |
+| 새 FINDINGS | **74**(화면이 「A가 맞음 → B 폐기」를 안 알린다 · 격차) · **75**(2-B 라운드 기록) |
+| 2-B 확인 (죽은 정의 찾기) | **`AI_JOB_STATUS` 4종 살아 있다** — 넷 다 찍는 자리가 있고(`queued`=default · 나머지 `lib/ai/job.ts:276·309·324`) `AI_JOB_STATUS_RULES` 가 **DB CHECK 넷을 생성**해 값마다 채워야 하는 칸이 다르다 · 🔴 **`origin` 4종 — `doc` 이 여전히 0곳** (**31** 그대로. `manual` 3·`code` 1·`proposal` 1). **§7.1 러너는 개정을 아예 안 만든다** — 31 이 지목한 자리가 코드에 아직 없다. 그런데 `lib/ai/conflict.ts:99` 는 프롬프트에 `origin=` 을 이미 싣는다 → `doc_vs_code` 는 영원히 0건 · 🔴 **`SourceDocumentKind` 6종 — `65` 그대로**, 저장·선택·칩 색은 갈리는데 **어떤 판정도 안 읽는다**(`prompt.ts`·`structure.ts` 에 `kind` 0건 — 2단계 실패). 다음 라운드 후보: sync 상태 5종(**69**) · `ConflictStatus` 3종 · `ChipSpec` 표 8개 · `PRODUCT_TEXT_PACK_FILES` |
+
+**🔴 결정 — 「선택 → 항목」을 `RESOLUTION_OUTCOME` 에 접지 않고 표를 하나 더 뒀다**
+
+접으면 한 줄이 두 가지를 말해야 한다: `both` 는 충돌을 **닫지만** 항목은 **안 건드린다.**
+`ConflictStatus` 를 항목 상태로도 쓰는 순간 그 차이를 적을 자리가 없어지고, 라우트에
+`if (choice === 'both')` 가 되살아난다. 표 둘 + 잇는 문 하나(`itemOutcomeOf()`)면
+선택이 늘 때 고칠 자리가 **표 한 줄**이고, 종류가 늘 때는 **고칠 자리가 없다**
+(`CONFLICT_KIND_RULES` 를 읽기만 한다).
+
+**🔴 결정 — 진 쪽만 옮긴다. 이긴 쪽은 안 건드린다**
+
+SPEC §5 는 「→ 항목 상태 갱신」이라고만 적고 FINDINGS 71 은 「이긴 쪽이 `review` 로
+오지도 않는다」를 증상으로 적었다. **이긴 쪽을 건드리지 않기로 했다** — 이미 `active`
+인 항목을 `review` 로 되돌리면 **다음 발행에서 Pack 밖으로 나간다.** 「A가 맞다」를
+누른 사람이 A를 잃는다. 결정의 뜻과 정반대다.
+
+**⚠ 사람이 적은 `note` 를 근거에 이어 붙이지 않기로 했다**
+
+`{kind:'manual', note}` 는 200자 상한이고 `resolution.note` 는 길이가 제멋대로다.
+이어 붙이면 **잘린다** — 잘린 근거는 근거가 없는 것과 같다. 충돌 id 하나만 실으면
+그 행에 질문·선택·사람·시각이 전부 그대로 있다. 조사(助詞)도 안 쓴다 (id 끝 글자가
+매번 달라서 「을/를」이 갈린다 — 27바퀴와 같은 판단).
+
+---
 
 **27바퀴 · 화면 4(정리) — 결정이 일어나는 자리** (`706e334`)
 

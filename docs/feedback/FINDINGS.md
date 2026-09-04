@@ -29,6 +29,47 @@
 
 ## 다음에 고칠 것
 
+### 74. 화면 4 는 「A가 맞음」이 **B를 폐기한다**는 걸 안 알린다   [격차]
+- **증상**: 71 을 고치면서 버튼의 뜻이 바뀌었다 — 어제까지 「A가 맞음」은 `conflicts`
+  행만 바꿨고 **아무것도 안 지웠다.** 이제 누르면 B 항목이 `deprecated` 로 가고
+  **다음 Pack 에서 사라진다.** 화면은 그 말을 한 마디도 안 한다. 되돌리는 문도 없다
+  (`:resolve` 가 「이미 처리된 충돌」을 400 으로 막는다 — 27바퀴가 정한 것).
+- **근거**: 이번 바퀴 직접 확인 — `components/conflict-card.tsx` 의 `CONFLICT_SIDES` 는
+  버튼 문구 넷뿐이고 결과를 적는 칸이 없다 · 결정 뒤 문장은
+  `정했습니다 — 「A가 맞음」` 하나다 · 실제로 일어나는 일은
+  `docs/evidence/2026-09-04-resolve-effect/pack-before-after.txt` 에 있다
+- **정본**: `docs/DESIGN_BRIEF.md` §4 화면 4 · `docs/SPEC.md` §5
+- **고칠 방향**: ⚠ **27바퀴 게이트와 부딪히지 않게 조심해라** — 「저장 **전에는**
+  무엇이 생기는지 약속하지 않는다」는 *안 일어날 일을 약속하지 마라*는 뜻이고,
+  지금은 **일어난다.** 약속이 아니라 **사실**을 적는 것이다.
+  🔴 문구를 카드에 손으로 적지 마라 — `RESOLUTION_ITEM_OUTCOME`(`lib/api/conflict.ts`)이
+  이미 「어느 쪽이 어디로 가나」를 들고 있다. 그 표를 읽어서 그리면 선택이 늘어도 따라온다.
+  ⚠ 표가 서버 쪽에 있다 — 화면이 `lib/api/*` 를 import 하면 의존 방향이 깨진다.
+  둘째 사용자가 생긴 것이므로 **`packages/schema` 로 올리는 것**이 맞는 자리다.
+- **상태**: 대기
+
+### 75. 2-B 이번 라운드 — `AI_JOB_STATUS` 는 살아 있다 · `origin`·`SourceDocumentKind` 는 **31·65 그대로**   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인 —
+  ① **`AI_JOB_STATUS` 4종 — 살아 있다.** 넷 다 찍는 자리가 있다 (`queued` 는
+     `aiJobs.status` 의 default · 나머지 셋은 `lib/ai/job.ts:276·309·324`) 그리고
+     `AI_JOB_STATUS_RULES` 가 **DB CHECK 넷을 생성**해서 값마다 채워야 하는 칸이
+     다르다 (`started`·`finished`·`result`·`error`). 2단계 통과 — 값을 바꾸면 INSERT 가 갈린다.
+  ② **`origin` 4종 — `doc` 이 여전히 0곳** (FINDINGS **31** 그대로).
+     `grep -rn "origin: '"` → `manual` **3** (PATCH · 질문 답변 · **이번에 는 충돌 정리**) ·
+     `code` 1 · `proposal` 1 · **`doc` 0**. 🔴 §7.1 구조화 러너(`lib/ai/structure.ts`)는
+     **개정을 만들지 않는다** — `contextItemRevisions` 를 안 쓴다. 그래서 31 의
+     「§7.1 이 항목을 만들 때 `doc` 을 찍는다」는 자리가 **아직 코드에 없다.**
+     ⚠ `lib/ai/conflict.ts:99` 는 프롬프트 머리에 `origin=` 을 실어 보낸다 —
+     즉 **모델에게는 이미 묻고 있는데 답이 될 값이 데이터에 없다.** `doc_vs_code` 는 0건이다.
+  ③ **`SourceDocumentKind` 6종 — `65` 그대로.** 저장되고 화면에서 고를 수 있고
+     칩 색이 갈리지만, **어떤 판정도 이 값을 안 읽는다** (`lib/ai/prompt.ts`·
+     `structure.ts` 에 `kind` 0건). 2단계 실패 — 값을 바꿔도 결과가 안 달라진다.
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: sync 상태 5종(**69**) · `ConflictStatus` 3종 ·
+  `ChipSpec` 표 8개가 전부 그려지나 · `PRODUCT_TEXT_PACK_FILES`
+- **상태**: ✅ 이번 바퀴에 확인함 (`a201a51` 바퀴)
+
 ### 71. 충돌을 **결정해도 항목이 안 바뀐다** — 화면 4 가 그 구멍을 처음 보이게 했다   [구멍]
 - **증상**: 화면 4 에서 「A가 맞음」을 눌러도 `conflicts` 행의 `status`·`resolution` 만
   바뀐다. **가리켜진 두 항목은 그대로**다 — 진 쪽이 `deprecated` 로 가지도, 이긴 쪽이
@@ -51,7 +92,13 @@
   `{kind:'manual', note:…}` 가 붙어야 「누가 왜 폐기했나」가 남는다 (P7 · 68 과 같은 자리).
   ⚠ 트랜잭션 하나여야 한다. 충돌만 닫히고 항목이 안 바뀌면 다시 누를 문이 없다
   (라우트가 「이미 처리된 충돌」을 400 으로 막는다).
-- **상태**: 대기
+- **상태**: ✅ `a201a51` — 표는 `RESOLUTION_ITEM_OUTCOME` + `itemOutcomeOf()`
+  (`lib/api/conflict.ts`). 진 항목에 개정이 하나 쌓이고 `{kind:'manual'}` 근거에
+  충돌 id 가 들어간다. 잠근 것은 「상태가 바뀌었다」가 아니라 **「그 줄이 Pack 어느
+  파일에도 없다」**(`api-publish.test.ts`) — `choice` 를 `both` 로 뒤집어 그 시험이
+  빨개지는 것을 확인했다. 눈으로 읽은 것: `docs/evidence/2026-09-04-resolve-effect/`
+  (결정 **전** CLAUDE.md 에 모순되는 must 두 줄이 나란히 있었다).
+  ⚠ 남은 것 둘 → **74**(화면이 그 결과를 안 알린다) · **72**(안 그린 세 칸)
 
 ### 72. 화면 4 가 DESIGN_BRIEF 의 **세 칸을 아직 안 그린다**   [격차]
 - **증상**: 이번 바퀴에 만든 화면 4 는 DESIGN_BRIEF §4 화면 4 의 카드 셋 중 본체는
