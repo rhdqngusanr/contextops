@@ -43,6 +43,14 @@ const HISTORY = 'docs/history/cycles.md'
 //    관통을 다시 돌려 **새로 찾는 것**이다 (`loop/PROMPT.md` ④3).
 const NEXT_LINE = /^\*\*다음 바퀴의 일 — FINDINGS (\d+|없음)\*\*/gm
 
+//  🔴 **모양이 조금 다른 「다음 바퀴의 일」도 잡는다.**
+//    ★ 왜 (102 를 고치는 바퀴에 눈 판정으로 찾았다) — 지난 바퀴 기록 블록마다
+//      `**다음 바퀴의 일**: FINDINGS 97 …` 같은 줄이 **그때의 지목**으로 남아 있었다.
+//      `— FINDINGS` 가 아니라 `**:` 라서 위 정규식에는 안 걸리는데, **파일을 훑는
+//      사람 눈에는 똑같이 보인다.** 102 의 고장이 정확히 그 모양이었다.
+//      지나간 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」).
+const NEXT_LOOKALIKE = /^\*\*다음 바퀴의 일/
+
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8')
 
 const fails = []
@@ -59,6 +67,15 @@ statusLines.forEach((line, i) => {
   NEXT_LINE.lastIndex = 0
   const m = NEXT_LINE.exec(line)
   if (m) hits.push({ line: i + 1, value: m[1] })
+  else if (NEXT_LOOKALIKE.test(line)) {
+    fail(
+      `${STATUS}:${i + 1} 이 「다음 바퀴의 일」처럼 보이는데 모양이 다르다:\n` +
+        `      ${line.slice(0, 60)}…\n` +
+        `      정본 모양은 **다음 바퀴의 일 — FINDINGS <번호>** 하나뿐이다. ` +
+        `지나간 바퀴의 지목이면 다른 낱말로 적어라 (「그 바퀴가 다음으로 지목한 것」) — ` +
+        `같은 낱말이면 훑는 사람이 닫힌 항목을 집는다`,
+    )
+  }
 })
 
 if (hits.length === 0) {
