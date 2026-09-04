@@ -78,19 +78,36 @@ const REPO_SRC_RE = /^repo:([^:]+):([^:]+):(\d+)-(\d+)$/
  *   발표 2:40 이 「Pack Explorer 역추적」이다 (SPEC §10.5) — 심사자가 한 번만 따라가 보면
  *   종이가 가리킨 자리에 그 문장이 없다.
  *
+ * 🔴 **범위가 맞는 것과 낱말이 맞는 것은 다른 질문이다** (FINDINGS 101). 같은 범위 안에서
+ *    `data` 의 **인용 칸**(`지표:` · `- 용어:` · `- 완료 기준:`)까지 찾는다 — 범위는 그 줄을
+ *    정확히 덮는데 **옮겨 적은 낱말이 다르면** 심사자는 자기가 읽은 문장과 다른 문장을
+ *    종이에서 본다. 실제로 `지표:` 가 문서에 없는 낱말을 달고 있었다.
+ * ⚠ 어느 칸이 인용인지 여기서 고르지 마라 — 씨앗의 `QUOTED_DATA` 표가 정하고
+ *   `EvidenceExpectation.cells` 로 실려 온다.
+ *
  * ⚠ 기대 문장을 여기 적지 마라 — 씨앗이 낸 `SeedResult.evidence` 를 **읽기만** 한다.
  *   두 곳에 적으면 픽스처를 고친 사람이 검사 쪽 문장을 고쳐서 초록을 만든다.
  */
 function followEvidence(tags: TraceTag[], expected: EvidenceExpectation[]): {
-  followed: number; seen: Set<string>; broken: string[]
+  followed: number; seen: Set<string>; broken: string[]; cells: number; brokenCells: string[]
 } {
   //  ⚠ 한 항목이 근거를 **여럿** 들 수 있다 (문서 + 코드). 하나만 담으면 둘째 근거는
   //    아무도 안 따라가고, 그 근거는 조용히 검사 밖에 선다.
   const want = new Map<string, EvidenceExpectation[]>()
   for (const e of expected) want.set(e.itemId, [...(want.get(e.itemId) ?? []), e])
   const broken: string[] = []
+  const brokenCells: string[] = []
   const seen = new Set<string>()
   let followed = 0
+  let cells = 0
+
+  /** 잘라 낸 원문 안에 인용 칸이 **글자 그대로** 있나 (FINDINGS 101). */
+  function followCells(e: EvidenceExpectation, where: string, cut: string): void {
+    for (const cell of e.cells) {
+      cells++
+      if (!cut.includes(cell)) brokenCells.push(`${e.itemId}: ${where} 안에 「${cell}」 가 없다`)
+    }
+  }
 
   for (const tag of tags) {
     for (const src of tag.src) {
@@ -117,6 +134,7 @@ function followEvidence(tags: TraceTag[], expected: EvidenceExpectation[]): {
         }
         const cut = fixtureText(e.file).slice(Number(m[2]), Number(m[3]))
         if (!cut.includes(e.quote)) broken.push(`${tag.itemId}: ${e.file}#${m[2]}-${m[3]} 안에 그 문장이 없다`)
+        followCells(e, `${e.file}#${m[2]}-${m[3]}`, cut)
         continue
       }
 
@@ -131,9 +149,10 @@ function followEvidence(tags: TraceTag[], expected: EvidenceExpectation[]): {
       //  줄 번호는 1-기반·양끝 포함이다 (`srcTag` 가 그렇게 낸다).
       const cut = fixtureText(e.file).split('\n').slice(Number(m[3]) - 1, Number(m[4])).join('\n')
       if (!cut.includes(e.quote)) broken.push(`${tag.itemId}: ${e.file}:${m[3]}-${m[4]} 안에 그 줄이 없다`)
+      followCells(e, `${e.file}:${m[3]}-${m[4]}`, cut)
     }
   }
-  return { followed, seen, broken }
+  return { followed, seen, broken, cells, brokenCells }
 }
 
 /**
@@ -325,6 +344,13 @@ async function main(): Promise<void> {
       .filter((e) => !followed.seen.has(`${e.itemId}#${e.kind}`))
       .map((e) => `${e.itemId}(${e.kind})`)
     check(`기대한 근거 ${expected.length}개가 전부 Pack 에서 역추적됐다`, missing.length === 0, missing.join(' · '))
+    //  🔴 **종이의 값이 원문의 낱말 그대로인가** (FINDINGS 101). 위 검사는 「범위 안에 그
+    //     **문장**이 있나」까지다. 여기서는 같은 범위 안에서 종이에 실제로 찍히는
+    //     `data` 의 인용 칸(`지표:` · `- 용어:` · `- 완료 기준:`)을 찾는다.
+    //  ⚠ `> 0` 을 같이 재는 이유 — `QUOTED_DATA` 표가 통째로 비어도 「어긋난 칸 0개」는
+    //    초록이다. 셀 것이 없어서 초록인 것과 다 맞아서 초록인 것은 다르다.
+    check(`🔴 종이의 값이 원문의 낱말 그대로다 — 인용 칸 ${followed.cells}개 (FINDINGS 101)`,
+      followed.brokenCells.length === 0 && followed.cells > 0, followed.brokenCells.join(' · '))
 
     //  🔴 **데모가 표의 한두 갈래로 몰리지 않는다** (FINDINGS 89·93·94).
     //  ★ 왜 이게 따로 필요한가 — `compiler/test/liveness.test.ts` 는 「값마다 다른 줄이

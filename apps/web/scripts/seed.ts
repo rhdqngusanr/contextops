@@ -95,6 +95,18 @@ export type EvidenceExpectation = {
   file: string
   /** 근거 범위 안에 **반드시** 있어야 하는 원문 문장 */
   quote: string
+  /**
+   * 🔴 근거 범위 안에 **글자 그대로** 있어야 하는 `data` 칸의 값들 (FINDINGS 101).
+   *
+   * ★ 왜 `quote` 만으로 부족한가 — `quote` 는 「이 항목이 **어디서** 왔나」다.
+   *   종이에 실제로 찍히는 것은 `data` 의 칸들이고(`지표: …` · `- 용어:` · `- 완료 기준:`),
+   *   범위가 맞아도 **옮겨 적은 낱말이 다르면** 태그를 따라간 심사자는 자기가 읽은
+   *   문장과 종이의 문장이 다른 것을 본다. 실제로 `지표:` 가 그랬다 —
+   *   원문은 「PSP 장애 구간을 포함한 주간 성공률」인데 종이는 「주간 승인 성공률」이었고,
+   *   그 낱말은 픽스처 문서 어디에도 없었다.
+   * ⚠ 어느 칸이 여기 실리는지는 `QUOTED_DATA` 표가 정한다 — 여기서 고르지 마라.
+   */
+  cells: string[]
 } & (
   //  ⚠ 갈래 이름은 `SourceRefKind` 와 **같은 낱말**이다. 따라가는 쪽은 태그 조각에서
   //    `srcKindOf()` 로 종류를 얻어 이 갈래를 고른다 — 이름이 갈리면 못 고른다.
@@ -155,6 +167,68 @@ function headingPathAt(text: string, index: number): string[] {
 }
 
 /**
+ * 🔴 **원문에서 옮겨 온 `data` 칸** — 타입별로 어느 칸이 「인용」인가 (FINDINGS 101).
+ *
+ * ★ 왜 표인가 — `data` 의 칸은 두 갈래다.
+ *   **인용 칸**은 문서에 있던 값을 옮긴 것이고(목표 표의 세 칸 · 용어 표 · 완료 기준 목록),
+ *   **진술 칸**은 팀이 그 문단을 읽고 스스로 적은 문장이다(`rule`·`statement`·
+ *   `responsibility`·`invariants`) — 원문과 글자가 달라도 옳다.
+ *   ⚠ 이 둘을 안 가르면 검사가 둘 중 하나를 못 한다: 전부 인용이라고 하면 정상적인
+ *     진술이 빨개지고(늘 빨간 게이트는 다음 사람이 끈다), 아무것도 안 재면
+ *     「지표: 주간 승인 성공률」처럼 **문서에 없는 낱말**이 종이에 그대로 선다.
+ *
+ * ★ 새 ItemType 을 씨앗에 넣는 절차: **이 표에 한 줄.** 인용 칸이 없으면 `[]` 라고
+ *   적어라 — `fromDoc()` 이 줄 없는 타입을 만나면 **던진다.** 「아직 안 정했다」로
+ *   비워 두면 그 타입만 조용히 안 재진다.
+ * ⚠ 값은 문자열·문자열 배열·`{term,meaning}` 같은 객체 배열 다 된다 — 안의 문자열을
+ *   전부 훑는다. 칸이 `data` 에 아예 없으면 던진다 (표의 오타를 여기서 잡는다).
+ * ⚠ **이 값이 「인용」이라는 주장은 관통이 판정한다** — `walkthrough-publish.ts` 의
+ *   `followEvidence` 가 Pack 태그의 범위를 원문에서 잘라 이 칸들을 찾는다.
+ */
+const QUOTED_DATA: Record<string, readonly string[]> = {
+  //  §2 목표 표의 한 줄이 그대로 세 칸이 된다 — `| G1 | 목표 | 어떻게 재나 | 기한 |`.
+  goal: ['outcome', 'metric', 'deadline'],
+  //  §6 용어 표의 다섯 줄 — `term` 과 `meaning` 둘 다 표 안에 있다.
+  domain: ['glossary'],
+  //  §4 마일스톤의 「경로」와 「완료 기준」 목록. `milestone_id`(PL-M1)는 **우리가 붙인
+  //  이름**이라 원문에 없다 — 인용 칸이 아니다.
+  roadmap: ['paths', 'done_when'],
+  //  §7 그림의 대괄호 이름. `responsibility` 는 그 줄을 읽고 적은 진술이고,
+  //  `paths` 는 픽스처 레포에서 잰 것(`fixtureDir`)이라 문서에 없다.
+  architecture: ['component'],
+  //  아래 셋은 인용 칸이 없다 — 전부 팀이 스스로 적는 진술이고, `severity`·`enforcement`
+  //  는 스키마의 enum 이라 문서에 그 낱말이 있을 이유가 없다.
+  mission: [],
+  policy: [],
+  constraint: [],
+}
+
+/**
+ * `QUOTED_DATA` 가 인용이라고 말한 칸들의 문자열을 전부 모은다. 줄이 없으면 **던진다.**
+ */
+function quotedCells(id: string, type: string, extra: Record<string, unknown>): string[] {
+  const keys = QUOTED_DATA[type]
+  if (keys === undefined) {
+    throw new Error(`[seed] ${id}: QUOTED_DATA 표에 '${type}' 줄이 없다 — 인용 칸이 없으면 [] 라고 적어라`)
+  }
+  const data = (extra.data ?? {}) as Record<string, unknown>
+  return keys.flatMap((key) => {
+    if (!(key in data)) {
+      throw new Error(`[seed] ${id}: QUOTED_DATA 가 '${key}' 를 인용 칸이라 하는데 data 에 그 칸이 없다`)
+    }
+    return flatStrings(data[key])
+  })
+}
+
+/** 문자열·배열·객체 안의 문자열을 전부 편다 (`glossary` 의 `{term,meaning}` 까지). */
+function flatStrings(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(flatStrings)
+  if (value !== null && typeof value === 'object') return Object.values(value).flatMap(flatStrings)
+  return []
+}
+
+/**
  * 문서에서 온 항목 초안. **근거가 문서의 문자 범위**라 P7 이 원문까지 이어진다.
  *
  * 🔴 `quote` 는 **원문에 그대로 있는 문장**이다. 범위는 그 문장을 문서에서 찾아 잰다 —
@@ -185,7 +259,11 @@ export function fromDoc(
       }],
       ...extra,
     },
-    evidence: [{ kind: 'source_document', itemId: id, file: doc.file, documentVersionId: doc.versionId, quote }],
+    evidence: [{
+      kind: 'source_document', itemId: id, file: doc.file, documentVersionId: doc.versionId, quote,
+      //  🔴 「이 칸들도 근거 범위 안에 글자 그대로 있어야 한다」 (FINDINGS 101).
+      cells: quotedCells(id, type, extra),
+    }],
   }
 }
 
@@ -230,6 +308,9 @@ export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): 
     },
     evidence: [...entry.evidence, {
       kind: 'repository_path', itemId: id, file: `${code.repo}/${code.path}`, repo: code.repo, path: code.path, quote,
+      //  ⚠ 코드 근거에는 인용 칸이 없다 — `data` 는 문서에서 왔고, 이 근거가 말하는 것은
+      //    「그 규칙이 코드 어느 줄에서 깨지고 있나」다. 코드 본문은 서버로 안 간다 (P1).
+      cells: [],
     }],
   }
 }
@@ -333,7 +414,16 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
         //    `outcome` 이 **표에서 온 목표 문장**이다.
         title: '장애 구간에도 승인이 선다',
         body: 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
-        data: { outcome: '결제 승인 성공률 99.5%', metric: '주간 승인 성공률', deadline: '2026-06-30' },
+        //  🔴 세 칸은 표의 세 칸을 **그대로** 옮긴 것이다 (FINDINGS 101). `metric` 은
+        //     전에 「주간 승인 성공률」이라고 줄여 적었는데, 그 낱말은 픽스처 문서
+        //     어디에도 없었고 「PSP 장애 구간을 포함한」이라는 조건이 통째로 사라졌다.
+        //     태그를 따라간 심사자는 자기가 읽은 문장과 다른 문장을 종이에서 본다.
+        //  ⚠ 줄여 쓴 요약이 필요하면 그 자리는 `body` 다 — 이미 그 문장을 들고 있다.
+        data: {
+          outcome: '결제 승인 성공률 99.5%',
+          metric: 'PSP 장애 구간을 포함한 주간 성공률',
+          deadline: '2026-06-30',
+        },
       }),
     //  🔴 근거가 **둘**이다 — 문서(goals.md §3.1)와 **코드**(`src/payment/retry.ts`).
     //  ★ 왜 코드까지 다나 — SPEC §10.1 이 말하는 「의도된 어긋남」의 첫째가 바로 이것이다:
@@ -454,8 +544,13 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
     //    `domain-refund.md` 는 **scope** 축이 만든 파일이고, 이 항목이 만드는
     //    `domain-payment.md` 는 **ItemType** 축이 만든 파일이다. 두 축이 이름만 같다.
     //    (`partition.ts` 주석의 「`domain-payment` 와 `scoped-payment` 는 다른 문서다」)
-    //  ★ 근거는 goals.md §6 용어 표 다섯 줄이다 — glossary 와 invariant 둘 다 **그 표
-    //    안에 글자 그대로** 있다. 불변식을 지어내면 그 줄이 P7 을 못 넘는다.
+    //  ★ 근거는 goals.md §6 용어 표 다섯 줄이다. `glossary` 의 `term`·`meaning` 은
+    //    **그 표 안에 글자 그대로** 있고, 그래서 `QUOTED_DATA` 의 인용 칸이다.
+    //  ⚠ `invariants` 는 인용이 아니라 **진술**이다 (FINDINGS 101 에서 바로잡았다).
+    //    「원장은 append 만 한다 — 수정·삭제 없음」은 표의 `돈의 움직임을 한 줄씩
+    //    append 하는 표. 수정·삭제 없음` 을 **불변식 문장으로 다시 적은 것**이다.
+    //    뜻은 같지만 글자는 다르다 — 전에 이 주석이 「둘 다 글자 그대로」라고 말했다.
+    //    그래도 **표가 말하지 않는 불변식을 지어내지 마라** — 그건 P7 이 못 받는다.
     fromDoc('item_domain_payment', 'domain', goals,
       '| PSP | 카드사에 붙는 결제 대행사. 우리는 두 곳에 붙는다 |\n'
       + '| 승인(authorize) | 카드 한도를 잡는 것. 돈이 움직이지는 않는다 |\n'
