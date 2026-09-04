@@ -100,7 +100,38 @@
   (`PACK_ENFORCEMENT_MIN`). **표마다 따로 세는 상수를 늘리지 말고**, 「데모가 이 표의 몇
   갈래를 보여 주나」를 **표 하나로** 모아라 — 안 그러면 표가 늘 때마다 관통에 검사 한 벌씩
   복사하게 된다 (`CLAUDE.md` 「확장은 표에 한 줄」).
-- **상태**: 대기
+- **상태**: ✅ `ed30a89` — **두 축을 다 채웠고 셋 다 지어내지 않았다.**
+  근거 종류 **2 → 4** (`doc` 15 · `repo` 2 · `proposal` 1 · `manual` 2) ·
+  scope **2 → 3** · Pack 파일 **4 → 5** (`.claude/rules/scoped-src-webhook.md`).
+  ① `path` scope — goals.md §3.5 로 `item_policy_webhook_sig` 하나를 더했다
+     (경로 `src/webhook` 의 근거는 §7 아키텍처 그림).
+  ② `repo` 근거 — `item_policy_retry` 에 `src/payment/retry.ts:11-14` 를 한 칸 더했다.
+     태그가 `doc:…,repo:…` 로 나오고, **「문서는 5회 백오프 · 코드는 3회 고정」이 한 줄
+     안에서 눈에 보인다.** 🔴 줄 번호는 **적지 않고 잰다**(`withRepo`) — 손으로 적으면
+     90 을 코드 쪽에 그대로 다시 만든다. 코드 본문은 서버로 안 간다 (P1).
+  ③ `manual` 근거 — 🔴 **이 항목이 적은 「충돌 정리가 붙인다」는 틀렸다.**
+     `conflicts/{id}/resolve` 가 붙이는 `manual` 은 **진 항목**에 붙고 진 항목은
+     `deprecated` 라 Pack 에서 빠진다 (`ITEM_STATUS_EXCLUDE_REASON`). 그 길로는
+     이 갈래가 **영원히 종이에 안 선다.** 종이에 서는 길은 **씨앗 질문 답변**이다
+     (`questions` → `seedDraft` → `manual` 근거 · LLM 없음). 관통이 이제 그 한 칸을
+     밟는다 — 「문서가 없어도 답만 하면 항목이 된다」(화면 3 ③)가 관통에서 처음 돌았다.
+  **게이트를 표 하나로 모았다** — `apps/web/scripts/pack-coverage.ts` 의 `PACK_COVERAGE`
+  네 줄(enforcement · SourceRef · scope.kind · **ItemType**)이 정본이고 관통은 **읽기만**
+  한다. 89 가 만든 `PACK_ENFORCEMENT_MIN` 은 지웠다. 각 줄에 「지금 몇 갈래이고 왜 그
+  수인가」가 적혀 있고, `all` 은 정본 패키지 배열을 그대로 쓴다 (베끼면 표가 늘어도
+  초록으로 남는다). **94 는 이제 「그 표의 ItemType 줄 `min` 을 올리는 것」이다.**
+  표가 갈라질 자리 둘도 없앴다 — `SRC_TAG` 를 `{prefix, body}` 로 바꾸고 `srcKindOf()` 를
+  그 표에서 **뒤집어** 만들었다(왕복을 `liveness.test.ts` 가 잠근다) · `byScope` 의 if
+  사슬을 `SCOPE_DOC` 표로 바꾸고 `scopePackPath()` 를 내보냈다.
+  **관통이 코드 근거도 따라간다** — `repo:` 태그의 줄 범위를 픽스처 파일에서 잘라 보고
+  그 줄이 있는지 센다. 기대값은 (항목 × 근거 종류) 단위로 센다 — 항목 단위로 세면
+  한 항목의 **둘째 근거만** 빠지는 것이 안 보인다.
+  🔴 **빨개지는 것을 봤다**: 고장 셋을 되돌려 넣으니 넷이 FAIL 했다 —
+  path scope 제거 → 「적용 범위 2갈래(없는 갈래: path)」 · 질문 답변 제거 →
+  「근거 종류 3갈래(없는 갈래: manual)」+ 씨앗 질문 검사 · 줄 번호를 손으로 적기 →
+  「`retry.ts:1-2` 안에 그 줄이 없다」.
+  관통 publish 검사 **21 → 25**.
+  📎 눈 판정: `docs/evidence/2026-09-04-pack-coverage/coverage.md` (`.ci/` 밖 · 종이 사본 2개)
 
 ### 93-B. 2-B 이번 라운드 — `SourceRef` 4종 · `scope.kind` 3종 다 살아 있다   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
@@ -120,6 +151,29 @@
 - **다음 라운드의 후보**: sync 상태 5종(**69** — `manual` 을 찍는 코드가 0곳) ·
   `ItemType` 10종 · `enforcement` 4종
 - **상태**: [기록]
+
+### 95. 관통이 「검사 몇 개를 돌았나」를 **아무 데도 안 찍는다** — 세 바퀴가 초를 개수로 적었다   [구멍]
+- **증상**: `tools/ci.ps1` 의 walkthrough 층은 `"$($r.sec)초"` 를 찍고
+  `tools/walkthrough.ps1` 의 단계 `note` 도 **경과 초**다. 검사 개수를 내는 줄이 없다.
+  그래서 이 루프가 `STATUS.md` 에 적어 온 「관통 검사 N개」가 **전부 초**였다 —
+  38바퀴 「72개 → 73개」·39바퀴 「73개 → 75개」가 그것이고, 실제 publish 단계 검사는
+  그때 **20개 안팎**이었다. 숫자가 커서 그럴듯하게 읽히는 종류의 거짓말이다.
+- **근거**: 이번 바퀴에 직접 쟀다. `tools/ci.ps1:204` → `Add-Layer "walkthrough" "OK" "$($r.sec)초"` ·
+  `tools/walkthrough.ps1:113` → `note = "$($sec)초"`.
+  `.ci/walkthrough.json` 의 `stages[].note` 를 열어 보면 `'0초'·'2초'·'64초'…` 다
+  (칸 이름이 `note` 라 개수처럼 읽힌다). 반면 `.ci/walkthrough-publish.json` 의
+  `checks` 는 **25개**이고 이 바퀴 전에는 **21개**였다
+  (`git show HEAD~1:apps/web/scripts/walkthrough-publish.ts | grep -c "check("` → 21).
+- **정본**: `loop/PROMPT.md` ④8 (「한 일이 아니라 **잰 것**을 써라」) · `tools/walkthrough.ps1`
+- **고칠 방향**: 단계가 **자기 검사 수를 내게** 하고 관통이 그것을 합쳐 찍는다.
+  publish 단계는 이미 `.ci/walkthrough-publish.json` 에 `checks` 를 쓴다 —
+  다른 단계(vitest)는 그 출력에 `Tests N passed` 가 있다. **초와 개수를 같은 칸에 담지
+  마라** — 지금 고장이 정확히 그것이다 (`note` 한 칸에 초를 넣고 다음 사람이 개수로 읽었다).
+  ⚠ **숫자를 두 곳에 적지 마라.** 검사 수의 정본은 각 단계의 산출물이고 관통은 **읽기만**
+  한다 (89 가 `=== 6` 두 곳을 하나로 모은 것과 같은 이유).
+  ⚠ 지난 STATUS 의 틀린 숫자는 **고치지 마라** — 그때 무엇을 봤는지의 기록이다.
+  대신 이 항목이 「그 숫자는 초였다」를 남긴다.
+- **상태**: 대기
 
 ### 94. 데모 Pack 이 `ItemType` **10종 중 다섯**만 보여 준다 — 그리고 빠진 셋은 픽스처 문서에 이미 적혀 있다   [격차]
 - **증상**: **89·93 과 같은 모양의 셋째 표다.** 표는 살아 있다(아래 94-B 가 ②단계까지 쟀다).
@@ -176,6 +230,29 @@
 - **정본**: `loop/PROMPT.md` ④2-B
 - **다음 라운드의 후보**: 에러 코드 9종 · `ITEM_STATUSES` 4종 · `PACK_TARGETS` 3종
   (`enforcement` 4종은 88-B, `SourceRef`·`scope.kind` 는 93-B, `confidence` 는 91-B 가 닫았다)
+- **상태**: [기록]
+
+### 95-B. 2-B 이번 라운드 — `ITEM_STATUSES` 4종은 살아 있다 · `PACK_TARGETS` 3종은 **8 그대로**   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인.
+  ① **`ITEM_STATUSES` 4종 — ②단계까지 통과한다.** 소비처가 셋이고 갈래마다 다른 것을 낸다:
+     `schema/src/common.ts:37`(`ITEM_STATUS_EXCLUDE_REASON` — `active` 만 `null`) ·
+     `compiler/src/partition.ts:129`(그 표로 Pack 에서 뺀다) ·
+     `components/item-status-actions.tsx`(누르면 다음 Pack 이 어떻게 되는지).
+     `apps/web/test/web-item-status.test.ts:62` 가 **「네 상태가 서로 다른 화면을 낸다」**를
+     지문으로 재고(`new Set(drawn).size === 4`), `:57` 이 「네 상태에 전부 갈 수 있나」를 잰다.
+  ② **`PACK_TARGETS` 3종 — 나오는 것은 `claude` 하나다.** 값은 컴파일러 →
+     manifest → DB 까지 실려 가지만(`assemble.ts:155` · `publish.ts:189` ·
+     `db/schema.ts:473`) **그 값으로 갈리는 코드가 없다.**
+     🔴 **새 항목을 만들지 않는다 — FINDINGS 8 이 이미 그 자리에 있고 게이트도 서 있다.**
+     `compiler/test/liveness.test.ts` 가 `['claude']` 를 못 박고 주석에
+     「P5 행을 하면 여기가 빨개진다 — 그때 이 시험을 고치면서 FINDINGS 를 닫아라」라고
+     적혀 있다. 이건 **죽은 표가 아니라 아직 안 만든 기능**이다 (docs/PLAN.md P5).
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: `CONFLICT_KINDS` 6종 · `CONFLICT_CHOICES` 4종 ·
+  `SOURCE_DOCUMENT_KINDS` · `AI_JOB_STATUSES`
+  (에러 코드·`confidence` 는 91-B · `enforcement` 는 88-B · `SourceRef`·`scope.kind` 는
+  93-B · `ItemType`·sync 상태는 94-B 가 닫았다)
 - **상태**: [기록]
 
 ### 90. 픽스처의 **근거 범위가 원문을 안 가리킨다** — 역추적을 따라가면 그 문장이 없다   [구멍]
