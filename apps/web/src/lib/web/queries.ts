@@ -200,3 +200,26 @@ export function createDocument(
 ): Promise<{ id: string; current_version_id: string; job: { id: string; status: AiJobStatus } }> {
   return post(`/projects/${projectId}/documents`, body)
 }
+
+/**
+ * §7.1 이 낸 것에서 **셀 수 있는 것만** 꺼낸다 (`lib/ai/job.ts` 의 `structureJob.run`).
+ * ⚠ 모양이 다르면 `null` 이다 — 없는 칸을 0 으로 채우면 「0개를 찾았다」가 되어,
+ *   못 읽은 것과 아무것도 못 찾은 것이 화면에서 같아진다.
+ */
+export function structureCounts(result: unknown): {
+  items: number
+  questions: number
+  chunks: { used: number; total: number } | null
+} | null {
+  if (typeof result !== 'object' || result === null) return null
+  const r = result as { items?: unknown; open_question_ids?: unknown; chunks?: unknown }
+  if (!Array.isArray(r.items) || !Array.isArray(r.open_question_ids)) return null
+  const chunks = r.chunks as { used?: unknown; total?: unknown } | undefined
+  return {
+    items: r.items.length,
+    questions: r.open_question_ids.length,
+    chunks: typeof chunks?.used === 'number' && typeof chunks.total === 'number'
+      ? { used: chunks.used, total: chunks.total }
+      : null,
+  }
+}

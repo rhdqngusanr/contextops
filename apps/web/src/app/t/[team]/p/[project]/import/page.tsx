@@ -5,15 +5,14 @@ import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/sche
 
 import { hintFor } from '../../../../../../lib/web/api'
 import {
-  JOB_POLL_MS, createDocument, fetchJob, fetchJobs,
+  JOB_POLL_MS, createDocument, fetchJob, fetchJobs, structureCounts,
   type AiJobSummary, type ProjectRef,
 } from '../../../../../../lib/web/queries'
-import { sinceText } from '../../../../../../lib/web/time'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
-import { AiBadge, AiJobStatusChip, SOURCE_DOCUMENT_KIND_LABEL } from '../../../../../../components/chips'
+import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL } from '../../../../../../components/chips'
+import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
-import styles from './import.module.css'
 
 // =====================================================================
 //  화면 3 — 가져오기 (SPEC §9 화면 3 · DESIGN_BRIEF §4 「화면 3」)
@@ -196,93 +195,10 @@ function StructureCard({
       {result.state === 'ready' && !job ? (
         <EmptyState message="아직 올린 문서가 없습니다. 왼쪽에 문서를 붙여넣어 보세요." />
       ) : null}
-      {job ? <JobPanel base={base} projectId={projectId} job={job} /> : null}
+      {job ? (
+        <JobProgress job={job} done={<Succeeded base={base} projectId={projectId} jobId={job.id} />} />
+      ) : null}
     </section>
-  )
-}
-
-function JobPanel({ base, projectId, job }: { base: string; projectId: string; job: AiJobSummary }) {
-  return (
-    <>
-      <div className="row wrap">
-        <AiJobStatusChip status={job.status} />
-        {/* 🔴 「멈춤」은 상태가 아니라 **상태 위의 판정**이라 칩이 하나 더 붙는다.
-            서버가 이미 낸 값이다 — 화면이 초를 재지 않는다 (잣대는 서버 전용 표에 있고
-            브라우저의 시계는 서버와 어긋난다). */}
-        {job.stalled ? (
-          <span className="chip tone-warn"><span className="chip-icon" aria-hidden="true">⚠</span>멈춘 것 같음</span>
-        ) : null}
-      </div>
-
-      <Progress job={job} />
-
-      {/* 🔴 판정 옆에 **근거**를 같이 둔다 (DESIGN_BRIEF §2-1). 「멈췄다」만 있으면
-          사람은 그 말을 확인할 방법이 없다. 「실시간」이라고 쓰지 않는다 (§2-3). */}
-      <span className="meta mono" title={job.updated_at}>마지막 걸음 {sinceText(job.updated_at)}</span>
-
-      {job.stalled ? (
-        <p className="meta">
-          이 일이 한동안 움직이지 않았습니다. 문서를 다시 올려 주세요.
-        </p>
-      ) : null}
-
-      {job.status === 'failed' ? <Failed job={job} /> : null}
-      {job.status === 'succeeded' ? <Succeeded base={base} projectId={projectId} jobId={job.id} /> : null}
-    </>
-  )
-}
-
-/**
- * 🔴 `progress` 가 `null` 이면 **회전**, 있으면 **막대**다.
- * `null` 은 「0 걸음 갔다」가 아니라 「아직 총수를 모른다」이고, 그 둘을 같게 그리면
- * 「4조각 중 0」과 「몇 조각인지도 모름」이 화면에서 같아진다 (FINDINGS 62).
- * ⚠ 가운뎃말(`조각`·`묶음`)은 값에 실려 온 `unit` 을 **그대로** 쓴다 — 화면이 고르지 않는다.
- */
-function Progress({ job }: { job: AiJobSummary }) {
-  if (!job.progress) {
-    return (
-      <div className="col-tight">
-        <div className="skeleton" />
-        {/* ⚠ 「몇 조각」이라고 쓰지 않는다 — 걸음의 낱말(`unit`)은 진행률과 같이
-            오는 값이라, 진행률이 없는 지금은 **그 낱말도 모른다.** */}
-        <span className="meta">몇 걸음짜리 일인지 아직 모릅니다.</span>
-      </div>
-    )
-  }
-  const { done, total, unit } = job.progress
-  //  ⚠ `total` 이 0 인 job 은 없어야 하지만, 0 으로 나누면 화면이 `NaN%` 가 된다.
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0
-  return (
-    <div className="col-tight">
-      <div
-        className={styles.bar}
-        role="progressbar"
-        aria-valuenow={done}
-        aria-valuemin={0}
-        aria-valuemax={total}
-        aria-label={`${total}${unit} 중 ${done}`}
-      >
-        <div className={styles.fill} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="meta mono">{total}{unit} 중 {done} · {pct}%</span>
-    </div>
-  )
-}
-
-/**
- * 실패해도 **어디까지 갔는지는 남는다** — `progress` 는 수명 CHECK 밖이라 지워지지 않는다.
- * 「4조각 중 1조각에서 멈췄습니다」가 실패 화면이 사람에게 할 수 있는 유일한 참말이다.
- */
-function Failed({ job }: { job: AiJobSummary }) {
-  return (
-    <div className="col-tight">
-      <p className="ink-bad">✕ {hintFor(job.error_code)}</p>
-      {job.progress ? (
-        <span className="meta">
-          {job.progress.total}{job.progress.unit} 중 {job.progress.done}에서 멈췄습니다.
-        </span>
-      ) : null}
-    </div>
   )
 }
 
@@ -308,27 +224,4 @@ function Succeeded({ base, projectId, jobId }: { base: string; projectId: string
       <a className="btn btn-sm" href={`${base}/context`}>Context 보기</a>
     </div>
   )
-}
-
-/**
- * §7.1 이 낸 것에서 **셀 수 있는 것만** 꺼낸다 (`lib/ai/job.ts` 의 `structureJob.run`).
- * ⚠ 모양이 다르면 `null` 이다 — 없는 칸을 0 으로 채우면 「0개를 찾았다」가 되어,
- *   못 읽은 것과 아무것도 못 찾은 것이 화면에서 같아진다.
- */
-function structureCounts(result: unknown): {
-  items: number
-  questions: number
-  chunks: { used: number; total: number } | null
-} | null {
-  if (typeof result !== 'object' || result === null) return null
-  const r = result as { items?: unknown; open_question_ids?: unknown; chunks?: unknown }
-  if (!Array.isArray(r.items) || !Array.isArray(r.open_question_ids)) return null
-  const chunks = r.chunks as { used?: unknown; total?: unknown } | undefined
-  return {
-    items: r.items.length,
-    questions: r.open_question_ids.length,
-    chunks: typeof chunks?.used === 'number' && typeof chunks.total === 'number'
-      ? { used: chunks.used, total: chunks.total }
-      : null,
-  }
 }

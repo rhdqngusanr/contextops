@@ -1,0 +1,27 @@
+① 차례 기다림
+  글자: | ◷ | 차례 기다리는 중 | 몇 걸음짜리 일인지 아직 모릅니다. | 올린 지 방금 |
+  마크업: <div class="row wrap"><span class="chip tone-neutral"><span class="chip-icon" aria-hidden="true">◷</span>차례 기다리는 중</span></div><div class="col-tight"><div class="skeleton"></div><span class="meta">몇 걸음짜리 일인지 아직 모릅니다.</span></div><span class="meta mono" title="2026-09-04T11:59:57.000Z">올린 지 방금</span>
+
+② 도는 중 · 총수를 아직 모른다
+  글자: | ◐ | 정리하는 중 | 몇 걸음짜리 일인지 아직 모릅니다. | 마지막 걸음 방금 |
+  마크업: <div class="row wrap"><span class="chip tone-neutral"><span class="chip-icon" aria-hidden="true">◐</span>정리하는 중</span></div><div class="col-tight"><div class="skeleton"></div><span class="meta">몇 걸음짜리 일인지 아직 모릅니다.</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span>
+
+③ 도는 중 · 1/4 조각
+  글자: | ◐ | 정리하는 중 | 4조각 중 1 · 25% | 마지막 걸음 방금 |
+  마크업: <div class="row wrap"><span class="chip tone-neutral"><span class="chip-icon" aria-hidden="true">◐</span>정리하는 중</span></div><div class="col-tight"><div class="_bar_5e55f0" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="4" aria-label="4조각 중 1"><div class="_fill_5e55f0" style="width:25%"></div></div><span class="meta mono">4조각 중 1 · 25%</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span>
+
+④ 멈춤 (8분째 그대로)
+  글자: | ◐ | 정리하는 중 | ⚠ | 멈춘 것 같음 | 4조각 중 1 · 25% | 마지막 걸음 8분 전 | 이 일이 한동안 움직이지 않았습니다. 문서를 다시 올려 주세요. |
+  마크업: <div class="row wrap"><span class="chip tone-neutral"><span class="chip-icon" aria-hidden="true">◐</span>정리하는 중</span><span class="chip tone-warn"><span class="chip-icon" aria-hidden="true">⚠</span>멈춘 것 같음</span></div><div class="col-tight"><div class="_bar_5e55f0" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="4" aria-label="4조각 중 1"><div class="_fill_5e55f0" style="width:25%"></div></div><span class="meta mono">4조각 중 1 · 25%</span></div><span class="meta mono" title="2026-09-04T11:52:00.000Z">마지막 걸음 8분 전</span><p class="meta">이 일이 한동안 움직이지 않았습니다. 문서를 다시 올려 주세요.</p>
+
+⑤ 실패 · 예산 소진
+  글자: | ✕ | 정리 실패 | 마지막 걸음 방금 | 오늘의 AI 예산이 소진되었습니다. 샘플 결과를 표시합니다. | 4조각 중 1에서 멈췄습니다. |
+  마크업: <div class="row wrap"><span class="chip tone-bad"><span class="chip-icon" aria-hidden="true">✕</span>정리 실패</span></div><span class="meta mono" title="2026-09-04T11:59:55.000Z">마지막 걸음 방금</span><div class="col-tight"><p class="ink-bad">오늘의 AI 예산이 소진되었습니다. 샘플 결과를 표시합니다.</p><span class="meta">4조각 중 1에서 멈췄습니다.</span></div>
+
+⑥ 완료
+  글자: | ✓ | 정리 완료 | 4조각 중 4 · 100% | 마지막 걸음 방금 |
+  마크업: <div class="row wrap"><span class="chip tone-ok"><span class="chip-icon" aria-hidden="true">✓</span>정리 완료</span></div><div class="col-tight"><div class="_bar_5e55f0" role="progressbar" aria-valuenow="4" aria-valuemin="0" aria-valuemax="4" aria-label="4조각 중 4"><div class="_fill_5e55f0" style="width:100%"></div></div><span class="meta mono">4조각 중 4 · 100%</span></div><span class="meta mono" title="2026-09-04T11:59:55.000Z">마지막 걸음 방금</span>
+
+⑦ 충돌 탐지 job (같은 컴포넌트 · 낱말만 다르다)
+  글자: | ◐ | 정리하는 중 | 1묶음 중 0 · 0% | 마지막 걸음 방금 |
+  마크업: <div class="row wrap"><span class="chip tone-neutral"><span class="chip-icon" aria-hidden="true">◐</span>정리하는 중</span></div><div class="col-tight"><div class="_bar_5e55f0" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="1" aria-label="1묶음 중 0"><div class="_fill_5e55f0" style="width:0%"></div></div><span class="meta mono">1묶음 중 0 · 0%</span></div><span class="meta mono" title="2026-09-04T11:59:30.000Z">마지막 걸음 방금</span>
