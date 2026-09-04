@@ -53,6 +53,14 @@ try {
 const summary = result.summary
 process.stdout.write(`\n  파일 ${summary.file_count} · 언어 ${summary.languages.length} · env 키 ${summary.env_keys.length}\n`)
 
+//  ★ 관통(tools/walkthrough.ps1)이 「이 단계가 검사 몇 개를 돌았나」를 이 줄에서 읽는다.
+//    이 단계의 산출물은 CLI 가 쓰는 ScanResult 라 `checks` 배열을 담을 자리가 없다.
+//    ⚠ 수를 손으로 적지 마라 — 목록에 오른 파일마다 본문을 한 번씩 잰 것이 그대로 개수이고
+//      (거기에 env 값 한 번), 손으로 적으면 픽스처가 늘어도 이 수가 안 따라온다.
+process.stdout.write(
+  `  검사 ${result.files.length + 1}개 · 실패 ${leaked.length + envLeaked.length}개\n`,
+)
+
 if (leaked.length > 0 || envLeaked.length > 0) {
   process.stderr.write('\n🔴 P1 위반 — 산출물에 본문이 실렸다:\n')
   for (const line of [...leaked, ...envLeaked]) process.stderr.write(`   ${line}\n`)

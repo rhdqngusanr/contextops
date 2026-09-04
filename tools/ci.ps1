@@ -110,6 +110,17 @@ function Get-TestableMembers($members) {
     })
 }
 
+#  관통이 돈 **검사 수**를 그 산출물에서 읽는다. 못 읽으면 "?" 다 —
+#  ★ 왜 0 이 아니라 "?" 인가 — 0 은 「검사가 없었다」로 읽히고 "?" 는 「못 읽었다」로 읽힌다.
+#    그 둘을 같은 글자로 찍는 것이 이 자리에서 났던 고장(초를 개수로 읽었다)의 뿌리다.
+function Get-WalkthroughChecks() {
+    $f = Join-Path $ciDir "walkthrough.json"
+    if (-not (Test-Path $f)) { return "?" }
+    try { $j = (Get-Content $f -Raw -Encoding UTF8) | ConvertFrom-Json } catch { return "?" }
+    if ($null -eq $j.checks) { return "?" }
+    return $j.checks
+}
+
 Write-Host ""
 Write-Host "=== ContextOps CI ===" -ForegroundColor Cyan
 
@@ -201,7 +212,10 @@ elseif ($red -gt 0)     { Add-Layer "walkthrough" "SKIP" "앞 층이 빨갛다" 
 else {
     $r = Invoke-Layer "walkthrough" ("powershell -NoProfile -ExecutionPolicy Bypass -File `"{0}`"" -f $wt)
     #  exit 2 = 「아직 관통할 게 없다」. 실패가 아니다 (P0 단계).
-    if     ($r.code -eq 0) { Add-Layer "walkthrough" "OK"   "$($r.sec)초" }
+    #  ⚠ 여기 note 가 초 하나뿐이었을 때 이 루프가 그 초를 **검사 개수로 읽어**
+    #    STATUS 에 「관통 검사 75개」라고 적었다 (FINDINGS 95). 개수는 관통이 낸
+    #    산출물에서 **읽기만** 한다 — 여기서 세지 않는다. 그리고 둘 다 이름을 붙여 찍는다.
+    if     ($r.code -eq 0) { Add-Layer "walkthrough" "OK"   ("검사 {0}개 · {1}초" -f (Get-WalkthroughChecks), $r.sec) }
     elseif ($r.code -eq 2) { Add-Layer "walkthrough" "SKIP" (Get-LastLines $r.log 1) }
     else                   { Add-Layer "walkthrough" "FAIL" (Get-LastLines $r.log) }
 }
