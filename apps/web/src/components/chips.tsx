@@ -127,8 +127,10 @@ export const ITEM_TYPE_ICON: Record<ItemType, string> = {
  *   (`wiki` 가 더 있다 — zip 으로 올린 위키 문서의 자리다). 화면이 다섯만 그리면
  *   여섯째 값은 **아무도 고를 수 없는 값**이 되고, 그게 이 저장소가 매 바퀴 찾는
  *   「정의만 있고 아무 일도 안 하는 것」이다. 그래서 표 전체를 그린다.
- * 🔴 **고른 값이 아직 아무것도 바꾸지 않는다** — 저장되고 되돌아올 뿐 §7.1 프롬프트가
- *   그 값을 모른다 (FINDINGS 65). 라벨을 붙였다고 살아난 것이 아니다.
+ * 🔴 **고른 값은 §7.1 프롬프트를 바꾼다** (FINDINGS 82 · `lib/ai/structure.ts` 의
+ *   `SOURCE_DOCUMENT_KIND_BRIEF`). 여기 있는 것은 **사람이 고를 때 읽는 낱말**이고
+ *   모델이 읽는 한 줄은 그 표다 — 둘은 일부러 따로다. 이 낱말을 다듬는다고 구조화
+ *   결과가 바뀌면 안 된다.
  */
 export const SOURCE_DOCUMENT_KIND_LABEL: Record<SourceDocumentKind, string> = {
   goal: '목표',

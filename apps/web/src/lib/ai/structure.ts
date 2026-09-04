@@ -6,6 +6,7 @@ import {
   type AiSourceSpan,
   type ContextItemDraft,
   type ItemType,
+  type SourceDocumentKind,
   type SourceRef,
 } from '@contextops/schema'
 
@@ -65,6 +66,36 @@ const MAX_REPORTED_ISSUES = 5
 const CHUNK_MAX_OUTPUT_TOKENS = 8_000
 
 const TOOL_NAME = 'record_context_items'
+
+// ---------------------------------------------------------------------
+//  문서 종류 6종이 프롬프트에서 하는 일 (SPEC §7.1 · FINDINGS 82)
+// ---------------------------------------------------------------------
+
+/**
+ * 🔴 **사람이 화면 3 에서 고른 `kind` 가 모델이 읽는 한 줄이 되는 자리다.**
+ * 이 표가 없으면 「정책」으로 올리든 「회의록」으로 올리든 프롬프트가 한 글자도 다르지
+ * 않다 — 고르는 칸만 있고 고른 값이 아무것도 안 바꾸는 상태였다 (FINDINGS 82).
+ *
+ * ★ 왜 화면 라벨(`components/chips.tsx` 의 `SOURCE_DOCUMENT_KIND_LABEL`)과 **따로** 두나
+ *   저쪽은 사람이 고를 때 읽는 낱말이고 이쪽은 모델에게 주는 안내다. 한 글자를 두 곳에
+ *   쓰면 화면 문구를 다듬는 바퀴가 §7.1 의 결과를 조용히 바꾼다 — 프롬프트는 화면이
+ *   아니라 여기서만 바뀌어야 한다.
+ * ⚠ 여기 적는 것은 **문서가 무엇인가**까지다. 「없으면 지어내라」로 읽힐 문장을 넣지
+ *   마라 — 공통 금지(`AI_SYSTEM_COMMON`)와 싸우면 환각이 그 틈으로 들어온다.
+ *
+ * // 새 SourceDocumentKind 하나: ①`packages/schema` 의 `SOURCE_DOCUMENT_KINDS`
+ * //   ②`db/schema.ts` 의 pgEnum(마이그레이션이 붙는다) ③화면 라벨
+ * //   `SOURCE_DOCUMENT_KIND_LABEL` ④**이 표** ⑤`ai-structure.test.ts` 의
+ * //   「여섯 종류가 서로 다른 프롬프트를 만든다」— ④를 빠뜨리면 타입이 막는다
+ */
+export const SOURCE_DOCUMENT_KIND_BRIEF: Record<SourceDocumentKind, string> = {
+  goal: '팀이 무엇을 왜 하는지 적은 **목표 문서**다. 목표·미션이 주로 들어 있다.',
+  policy: '팀이 지켜야 할 것을 적은 **정책 문서**다. 규칙과 그 강제 수단이 주로 들어 있다.',
+  roadmap: '언제 무엇을 하는지 적은 **로드맵**이다. 마일스톤과 기한이 주로 들어 있다.',
+  adr: '무엇을 왜 그렇게 정했는지 적은 **결정 기록(ADR)** 이다. 선택지와 그 근거가 주로 들어 있다.',
+  notes: '회의나 논의를 적은 **메모**다. 아직 정해지지 않은 이야기가 섞여 있으니, 확정처럼 읽지 말고 애매하면 open_question 으로 낸다.',
+  wiki: '팀이 오래 쌓아 온 **위키 문서**다. 여러 주제가 한 문서에 섞여 있을 수 있다.',
+}
 
 // ---------------------------------------------------------------------
 //  chunk — 순수 함수다. LLM 도 시각도 난수도 없다
@@ -197,8 +228,10 @@ const SYSTEM = [
   '- 문서가 무엇을 뜻하는지 판단이 필요하면 항목 대신 open_questions 에 질문으로 남긴다.',
 ].join('\n')
 
-function toolRequest(chunk: DocChunk, totalChunks: number, complaint?: string): ToolCallRequest {
+function toolRequest(chunk: DocChunk, totalChunks: number, kind: SourceDocumentKind, complaint?: string): ToolCallRequest {
   const head = [
+    //  🔴 사람이 고른 문서 종류가 모델에게 전달되는 유일한 자리다 (FINDINGS 82).
+    `이 문서는 ${SOURCE_DOCUMENT_KIND_BRIEF[kind]}`,
     `문서를 ${totalChunks}조각으로 나눈 것 중 ${chunk.index + 1}번째다.`,
     chunk.headingPath.length > 0
       ? `이 조각이 속한 제목: ${chunk.headingPath.join(' > ')}`
@@ -292,14 +325,19 @@ interface ChunkCall extends ChunkYield {
  * chunk 하나: 부르고 → Zod 로 다시 판다 → 어긋나면 **오류 위치를 넣어 1회 재시도** →
  * 재실패면 `AI_OUTPUT_INVALID` (SPEC §7 공통 규약).
  */
-async function structureChunk(chunk: DocChunk, totalChunks: number, documentVersionId: string): Promise<ChunkCall> {
+async function structureChunk(
+  chunk: DocChunk,
+  totalChunks: number,
+  kind: SourceDocumentKind,
+  documentVersionId: string,
+): Promise<ChunkCall> {
   let inputTokens = 0
   let outputTokens = 0
   let model = currentModel()
   let complaint: string | undefined
 
   for (let attempt = 0; attempt <= STRUCTURE_RETRIES; attempt++) {
-    const call = await callClaude(toolRequest(chunk, totalChunks, complaint))
+    const call = await callClaude(toolRequest(chunk, totalChunks, kind, complaint))
     //  ⚠ 실패한 시도의 토큰도 더한다. 안 더하면 재시도가 장부 밖에서 예산을 태운다.
     inputTokens += call.inputTokens
     outputTokens += call.outputTokens
@@ -362,6 +400,12 @@ export interface StructureInput {
   readonly projectId: string
   /** 근거가 가리킬 문서 버전. **모델이 아니라 서버가 아는 값이다** (P7). */
   readonly documentVersionId: string
+  /**
+   * 사람이 올릴 때 고른 문서 종류. **없어도 되는 값으로 두지 않는다** — 기본값을 주면
+   * 부르는 자리가 넘기는 것을 잊어도 조용히 돌고, 그게 이 값이 죽어 있던 이유다
+   * (FINDINGS 82). 무엇이 되는지는 `SOURCE_DOCUMENT_KIND_BRIEF` 표가 정한다.
+   */
+  readonly kind: SourceDocumentKind
   readonly content: string
   /** 빈도 제한의 열쇠가 아니다 (`structure` 는 project 범위다) — 장부의 행위자다. */
   readonly actor?: string
@@ -426,7 +470,7 @@ export async function structureDocument(input: StructureInput): Promise<Structur
       let done = 0
       await input.onProgress?.(done, used.length)
       for (const chunk of used) {
-        const call = await structureChunk(chunk, used.length, input.documentVersionId)
+        const call = await structureChunk(chunk, used.length, input.kind, input.documentVersionId)
         items.push(...call.items)
         questions.push(...call.questions)
         inputTokens += call.inputTokens

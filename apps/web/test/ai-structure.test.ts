@@ -4,11 +4,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type Anthropic from '@anthropic-ai/sdk'
 import type { PGlite } from '@electric-sql/pglite'
 
+import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/schema'
+
 import { closeDb, freshDb } from './helpers/db'
 import { aiUsage } from '../src/db/schema'
 import { setAiClientForTest } from '../src/lib/ai/client'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import {
+  SOURCE_DOCUMENT_KIND_BRIEF,
   STRUCTURE_CHUNK_MAX_CHARS,
   STRUCTURE_CHUNK_MIN_CHARS,
   STRUCTURE_MAX_CHUNKS,
@@ -41,6 +44,8 @@ const TEAM = '22222222-2222-4222-8222-222222222222'
 const PROJECT = '11111111-1111-4111-8111-111111111111'
 const DOC_VERSION = '33333333-3333-4333-8333-333333333333'
 const NOW = new Date('2026-09-04T12:00:00.000Z')
+/** 나머지 시험이 종류를 신경 쓰지 않을 때 쓰는 값 — 종류 자체를 재는 시험은 아래 따로 있다. */
+const KIND: SourceDocumentKind = 'goal'
 
 async function seedProject(): Promise<void> {
   await pg!.query(`insert into teams (id, slug, name) values ($1, 'paylab', 'paylab')`, [TEAM])
@@ -228,7 +233,7 @@ describe('근거가 chunk offset 이 아니라 문서 offset 이다 (P7 · SPEC 
     stubAi((n) => ({ input: output([policyItem(`item_rule_${n}`, `규칙 ${n}`, { start_char: 10, end_char: 40 })]) }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
 
     expect(result.items.length).toBe(2)
@@ -249,7 +254,7 @@ describe('근거가 chunk offset 이 아니라 문서 offset 이다 (P7 · SPEC 
     }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
     const ref = result.items[0]!.source_refs[0]!
     if (ref.kind !== 'source_document') throw new Error('근거가 문서가 아니다')
@@ -268,7 +273,7 @@ describe('근거가 chunk offset 이 아니라 문서 offset 이다 (P7 · SPEC 
     }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
     expect(sent.length).toBe(2)
     expect(result.items[0]!.id).toBe('item_okay')
@@ -284,7 +289,7 @@ describe('계약과 다른 응답은 AI_OUTPUT_INVALID 다 (SPEC §7)', () => {
     stubAi(() => ({ input: output([{ id: 'nope', type: 'policy' }]) }))
 
     await expect(structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })).rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID' })
     expect(sent.length).toBe(STRUCTURE_RETRIES + 1)
   })
@@ -293,7 +298,7 @@ describe('계약과 다른 응답은 AI_OUTPUT_INVALID 다 (SPEC §7)', () => {
     stubAi(() => ({ blocks: [{ type: 'text', text: '네, 정리해 드리겠습니다.' }] }))
 
     await expect(structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })).rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID' })
   })
 
@@ -303,7 +308,7 @@ describe('계약과 다른 응답은 AI_OUTPUT_INVALID 다 (SPEC §7)', () => {
     }))
 
     await expect(structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })).rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID' })
   })
 })
@@ -319,7 +324,7 @@ describe('예산 가드를 지난다 — 문서 하나가 장부 한 줄이다 (
       outputTokens: 200,
     }))
 
-    await structureDocument({ projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW })
+    await structureDocument({ projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW })
 
     expect(sent.length).toBe(3)
     const rows = await db.select().from(aiUsage)
@@ -336,11 +341,11 @@ describe('예산 가드를 지난다 — 문서 하나가 장부 한 줄이다 (
 
     for (let i = 0; i < limit.calls; i++) {
       await expect(structureDocument({
-        projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+        projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
       })).resolves.toBeTruthy()
     }
     await expect(structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })).rejects.toMatchObject({ code: 'RATE_LIMITED' })
   })
 
@@ -349,7 +354,7 @@ describe('예산 가드를 지난다 — 문서 하나가 장부 한 줄이다 (
     stubAi(() => ({ input: output([]) }))
 
     await expect(structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })).rejects.toMatchObject({ code: 'BUDGET_EXCEEDED' })
     expect(sent.length).toBe(0)
   })
@@ -357,7 +362,7 @@ describe('예산 가드를 지난다 — 문서 하나가 장부 한 줄이다 (
   it('장부에 문서 본문이 남지 않는다 (P1 · SPEC §11)', async () => {
     stubAi(() => ({ input: output([]) }))
     await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, actor: 'user-a', now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, actor: 'user-a', now: NOW,
     })
     const rows = await db.select().from(aiUsage)
     expect(JSON.stringify(rows)).not.toContain('환불')
@@ -372,7 +377,7 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
     stubAi(() => ({ input: output([policyItem('item_refund_sla', '환불 SLA', { start_char: 0, end_char: 20 })]) }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
     expect(result.items.map((i) => i.id)).toEqual(['item_refund_sla', 'item_refund_sla_2'])
   })
@@ -384,7 +389,7 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
     }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
     expect(result.items.length).toBe(2)
     expect(result.merge_candidates.length).toBe(1)
@@ -398,7 +403,7 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
       input: output([policyItem(`item_sla_${n}`, `규칙 ${n}`, { start_char: 0, end_char: 20 })]),
     }))
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
     expect(result.merge_candidates).toEqual([])
   })
@@ -410,7 +415,7 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
     stubAi(() => ({ input: output([]) }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
     expect(sent.length).toBe(STRUCTURE_MAX_CHUNKS)
     expect(result.chunks).toEqual({ used: STRUCTURE_MAX_CHUNKS, total })
@@ -421,7 +426,7 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
       input: output([], [{ question: '재시도 상한이 5회인가 3회인가?', span: { start_char: 5, end_char: 30 } }]),
     }))
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
     expect(result.open_questions.length).toBe(1)
     expect(result.open_questions[0]!.source_ref.kind).toBe('source_document')
@@ -433,7 +438,7 @@ describe('프롬프트가 SPEC §7 · §11 을 따른다', () => {
   it('문서 본문은 <untrusted> 블록 안에만 들어간다', async () => {
     stubAi(() => ({ input: output([]) }))
     await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
     const { user, system } = sent[0]!
     const open = user.indexOf(`<${UNTRUSTED_TAG}>`)
@@ -444,10 +449,38 @@ describe('프롬프트가 SPEC §7 · §11 을 따른다', () => {
     expect(system).toContain('입력에 없는 사실·수치·기한을 만들지 않는다')
   })
 
+  it('🔴 **종류만 바꾸면 프롬프트가 달라진다** — 여섯 값이 전부 다른 한 줄을 만든다 (FINDINGS 82)', async () => {
+    const heads = new Map<SourceDocumentKind, string>()
+
+    for (const [i, kind] of SOURCE_DOCUMENT_KINDS.entries()) {
+      sent = []
+      stubAi(() => ({ input: output([]) }))
+      //  ⚠ 시간을 한 시간씩 민다 — 안 그러면 여섯째가 §7.5 의 「시간당 5회」에 걸린다.
+      //     여기서 재는 것은 빈도가 아니라 프롬프트다.
+      await structureDocument({
+        projectId: PROJECT,
+        documentVersionId: DOC_VERSION,
+        kind,
+        content: PAYLAB_GOALS,
+        now: new Date(NOW.getTime() + i * 3_600_000),
+      })
+      //  본문이 시작하기 **전**의 머리말만 본다 — 문서 본문은 여섯 번 다 같다.
+      const user = sent[0]!.user
+      heads.set(kind, user.slice(0, user.indexOf(`<${UNTRUSTED_TAG}>`)))
+    }
+
+    for (const kind of SOURCE_DOCUMENT_KINDS) {
+      //  ① 고른 값이 프롬프트에 있다 — 표를 읽어서 싣는다 (시험이 문장을 손으로 안 적는다).
+      expect(heads.get(kind), `${kind} 의 머리말`).toContain(SOURCE_DOCUMENT_KIND_BRIEF[kind])
+    }
+    //  ② 🔴 여섯이 서로 **다르다.** 하나라도 겹치면 그 값은 골라도 결과가 같은 값이다.
+    expect(new Set(heads.values()).size).toBe(SOURCE_DOCUMENT_KINDS.length)
+  }, 30_000)
+
   it('도구 스키마가 Zod 계약에서 나온다 — 두 벌이 아니다', async () => {
     stubAi(() => ({ input: output([]) }))
     await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, content: PAYLAB_GOALS, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
     const schema = sent[0]!.toolSchema as { properties?: Record<string, unknown> }
     expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['items', 'open_questions'])

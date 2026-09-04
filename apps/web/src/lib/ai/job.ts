@@ -130,7 +130,13 @@ const structureJob: AiJobRunner<z.infer<typeof StructureJobInput>> = {
     //  🔴 **그 프로젝트의 문서인지 여기서 확인한다.** 안 하면 job 의 input 하나로
     //     남의 팀 문서를 읽게 된다 — 근거가 남의 원문을 가리키는 자리다 (P7).
     const [version] = await db
-      .select({ id: sourceDocumentVersions.id, content: sourceDocumentVersions.content })
+      //  ⚠ `kind` 는 버전이 아니라 **문서**의 칸이라 join 한 쪽에서 가져온다 —
+      //     같은 문서의 개정이 서로 다른 종류가 되지 않는다.
+      .select({
+        id: sourceDocumentVersions.id,
+        content: sourceDocumentVersions.content,
+        kind: sourceDocuments.kind,
+      })
       .from(sourceDocumentVersions)
       .innerJoin(sourceDocuments, eq(sourceDocuments.id, sourceDocumentVersions.documentId))
       .where(and(
@@ -143,6 +149,9 @@ const structureJob: AiJobRunner<z.infer<typeof StructureJobInput>> = {
     const out = await structureDocument({
       projectId: job.projectId,
       documentVersionId: version.id,
+      //  🔴 사람이 올릴 때 고른 종류가 §7.1 프롬프트로 가는 길이다 (FINDINGS 82).
+      //     여기서 안 넘기면 「정책」으로 올린 문서와 「메모」로 올린 문서가 똑같이 읽힌다.
+      kind: version.kind,
       content: version.content,
       //  🔴 chunk 마다 행을 남긴다 — 그래서 polling 이 status 한 글자 말고 볼 것이 생긴다.
       onProgress: report,

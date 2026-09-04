@@ -6,6 +6,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, type AiJobStatus,
+  type SourceDocumentKind,
 } from '@contextops/schema'
 
 import { AI_JOB_STATUS_RULES, aiJobs, conflicts } from '../src/db/schema'
@@ -24,7 +25,7 @@ import {
   toAiJob,
   type AiJobProgress,
 } from '../src/lib/ai/job'
-import { chunkByHeading } from '../src/lib/ai/structure'
+import { SOURCE_DOCUMENT_KIND_BRIEF, chunkByHeading } from '../src/lib/ai/structure'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
@@ -113,10 +114,15 @@ async function seed() {
 }
 
 /** 문서 하나를 라우트로 올리고, 그 응답이 낸 job 을 돌려준다. */
-async function uploadDoc(owner: string, projectId: string, content = PAYLAB_GOALS) {
+async function uploadDoc(
+  owner: string,
+  projectId: string,
+  content = PAYLAB_GOALS,
+  kind: SourceDocumentKind = 'goal',
+) {
   const data = await dataOf(await createDocument(
     req('POST', `/api/v1/projects/${projectId}/documents`, {
-      auth: owner, body: { title: '목표', kind: 'goal', content },
+      auth: owner, body: { title: '목표', kind, content },
     }),
     params({ id: projectId }),
   ))
@@ -413,6 +419,32 @@ describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
 
     expect(await runJob(job.id)).toBe('failed')
     expect((await jobRow(job.id)).errorCode).toBe('INTERNAL')
+  })
+
+  it('🔴 사람이 올릴 때 고른 **문서 종류**가 §7.1 프롬프트까지 간다 (FINDINGS 82)', async () => {
+    const { owner, projectId } = await seed()
+    //  화면 3 이 「메모」로 올린 문서다 — 그 값은 `source_documents.kind` 에만 있다.
+    const { job } = await uploadDoc(owner, projectId, PAYLAB_GOALS, 'notes')
+
+    const seen: string[] = []
+    setAiClientForTest({
+      messages: {
+        create: async (r: { messages: { content: string }[]; tools: { name: string }[] }) => {
+          seen.push(r.messages[0]!.content)
+          return {
+            content: [{ type: 'tool_use', name: r.tools[0]!.name, input: { items: [], open_questions: [] } }],
+            usage: { input_tokens: 100, output_tokens: 50 },
+          }
+        },
+      },
+    } as unknown as Anthropic)
+
+    expect(await runJob(job.id)).toBe('succeeded')
+
+    //  🔴 러너가 DB 에서 `kind` 를 읽어 넘겼다 — 이 한 줄이 없으면 무엇으로 올리든 같다.
+    expect(seen[0]).toContain(SOURCE_DOCUMENT_KIND_BRIEF.notes)
+    //  올릴 때 안 고른 종류의 문장은 없다 — 기본값이 조용히 실리지 않는다.
+    expect(seen[0]).not.toContain(SOURCE_DOCUMENT_KIND_BRIEF.goal)
   })
 
   it('🔴 남의 프로젝트 문서를 가리키는 job 은 `NOT_FOUND` 로 죽는다 (P7)', async () => {
