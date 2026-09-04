@@ -77,8 +77,18 @@ import { AI_FEATURES, AI_JOB_FEATURES } from '../lib/ai/features'
 
 /** 팀 참여 상태 2종 (SPEC §2). 초대는 아직 화면이 없어 API 계약에 안 나온다. */
 export const TEAM_MEMBER_STATUSES = ['active', 'invited'] as const
-/** 항목 개정이 어디서 왔나 4종 (SPEC §2). 서버가 매기는 값이라 payload 에 자리가 없다. */
+/**
+ * 항목 개정이 어디서 왔나 4종 (SPEC §2). 서버가 매기는 값이라 payload 에 자리가 없다.
+ *
+ * 🔴 **넷 다 찍는 자리가 있다 — 그 자리는 라우트가 아니라 `insertDrafts()` 의 인자다**
+ *   (`lib/api/item.ts`): `doc` = 구조화 후보를 사람이 받아들인 문(§7.1) ·
+ *   `code` = scan 이 올린 초안(`batch-draft`) · `manual` = 씨앗 질문 답변과 부분 갱신 ·
+ *   `proposal` = 발행 트랜잭션. ★ 값을 하나 더하면 **넣는 자리를 같이 만들어라** —
+ *   찍는 곳이 0곳인 값은 그 값을 읽는 판정(§7.2 의 `doc_vs_code`)을 영원히 0건으로
+ *   만든다 (FINDINGS 31·84).
+ */
 export const REVISION_ORIGINS = ['doc', 'code', 'manual', 'proposal'] as const
+export type RevisionOrigin = (typeof REVISION_ORIGINS)[number]
 /** Proposal 수명 5종 (SPEC §2 · §5). `published` 는 발행 트랜잭션이 마지막에 찍는다 (§2.1 7단계). */
 export const PROPOSAL_STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'published'] as const
 

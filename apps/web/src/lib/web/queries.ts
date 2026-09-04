@@ -1,6 +1,7 @@
+import { ITEM_TYPES } from '@contextops/schema'
 import type {
   AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
-  ItemStatus, Manifest, SourceDocumentKind, SourceRef, TeamRole,
+  ItemStatus, ItemType, Manifest, SourceDocumentKind, SourceRef, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, patch, post } from './api'
@@ -242,6 +243,47 @@ export function structureCounts(result: unknown): {
       ? { used: chunks.used, total: chunks.total }
       : null,
   }
+}
+
+/**
+ * 🔴 **§7.1 이 낸 항목 후보를 사람이 읽을 만큼만 꺼낸다** (FINDINGS 84).
+ *
+ * ★ 왜 `ContextItemDraft` 를 통째로 내보내지 않나 — 화면이 고르는 데 필요한 것은
+ *   `id`·`type`·`title` 셋이다. 초안 전체를 화면 상태로 들고 있으면 다음 사람이
+ *   그것을 **고쳐서 되보내는** 문을 만들게 되고, 그때 그 항목의 근거는 여전히 원문
+ *   구간을 가리킨다 — 원문에 없는 문장이 원문을 근거로 배포된다 (P7).
+ *   고치는 문은 항목이 된 **뒤**의 부분 갱신이다.
+ * ⚠ 모양이 다른 것은 **버리지 않고 건너뛴다** — 하나가 어긋났다고 나머지를 못 고르면
+ *   그 문서는 통째로 막힌다.
+ */
+export function structureCandidates(result: unknown): { id: string; type: ItemType; title: string }[] {
+  if (typeof result !== 'object' || result === null) return []
+  const items = (result as { items?: unknown }).items
+  if (!Array.isArray(items)) return []
+  const out: { id: string; type: ItemType; title: string }[] = []
+  for (const raw of items) {
+    if (typeof raw !== 'object' || raw === null) continue
+    const { id, type, title } = raw as { id?: unknown; type?: unknown; title?: unknown }
+    if (typeof id !== 'string' || typeof title !== 'string') continue
+    if (typeof type !== 'string' || !(ITEM_TYPES as readonly string[]).includes(type)) continue
+    out.push({ id, type: type as ItemType, title })
+  }
+  return out
+}
+
+/**
+ * 🔴 **고른 후보만 항목이 된다** (`POST /projects/{id}/jobs/{jobId}/items` · SPEC §7.1).
+ * ⚠ 보내는 것은 **id 뿐**이다 — 본문을 실으면 화면이 모델 출력을 고쳐 되보내는 문이 된다.
+ */
+export function acceptJobItems(
+  projectId: string,
+  jobId: string,
+  itemIds: readonly string[],
+): Promise<{
+  accepted: { index: number; id: string }[]
+  rejected: { index: number; issues: { path: string; message: string }[] }[]
+}> {
+  return post(`/projects/${projectId}/jobs/${jobId}/items`, { item_ids: itemIds })
 }
 
 // ---------------------------------------------------------------------

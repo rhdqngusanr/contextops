@@ -29,6 +29,68 @@
 
 ## 다음에 고칠 것
 
+### 84. 문서를 구조화한 **「항목 후보 N개」가 항목이 되는 문이 없다** — 화면은 「찾았습니다」라고 말하고 Context 는 비어 있다   [고장]
+- **증상**: 화면 3 에 문서를 붙여넣고 [구조화하기] 를 누르면 §7.1 이 돌고, 끝나면
+  **「✓ 항목 후보 6개 · 질문 2개를 찾았습니다.」** 와 **[Context 보기]** 버튼이 뜬다.
+  그 버튼을 누르면 **Context 가 비어 있다.** 질문 2개만 충돌 행이 됐고, 항목 후보 6개는
+  `ai_jobs.result` JSON 안에만 있다 — 꺼낼 문이 서버에도 화면에도 **하나도 없다.**
+  문서를 올리는 길로 들어온 사람은 **발행까지 갈 수 없다.** 「문서를 올리면 팀 규칙이
+  된다」가 제품의 첫 문장인데 그 길이 중간에 끊겨 있다.
+- **근거**: 이번 바퀴 직접 확인 —
+  ① 만드는 자리 — `lib/ai/job.ts:174` 의 `structureJob.run` 이 `items` 를 `result` 에만
+     담는다 (주석도 「항목 초안은 **행으로 만들지 않는다**」라고 적혀 있다).
+  ② 🔴 **꺼내는 자리가 0곳이다.** `grep -rn "structureCounts" apps/web/src` →
+     `import/page.tsx:289` 하나뿐이고, 그건 **개수만 센다**
+     (`lib/web/queries.ts:229` — `items.length`). 후보 자체를 읽는 코드가 없다.
+  ③ 🔴 **라우트도 없다.** `find apps/web/src/app/api -name route.ts` 29개 중
+     초안을 항목으로 만드는 문은 `context-items/batch-draft`(scan 전용 ·
+     `repo`+`scan_summary` 필수 · `origin:'code'` 고정) 와 `questions`(씨앗 질문 전용)
+     둘뿐이다. **문서에서 온 후보가 지나갈 문이 아니다.**
+  ④ 화면이 유도까지 한다 — `import/page.tsx:297~299` 가 「찾았습니다」 바로 밑에
+     `[Context 보기]` 를 놓는다. 거기엔 그 6개가 없다.
+- **정본**: `docs/SPEC.md` §7.1 마지막 줄(「사람이 화면 4 에서 고르기 전에
+  `context_items` 에 넣지 않는다」) · §5 — ⚠ **SPEC 은 「사람이 고른다」고만 적고
+  고르는 문을 §5 표에 안 적었다.** 코드가 SPEC 을 어긴 게 아니라 **둘 다 비어 있다**
+  (82 와 같은 모양이다).
+- **⚠ 31 이 이것의 뒷면이다**: 문서에서 온 항목이 없으니 `origin:'doc'` 을 찍는 자리도
+  0곳이고, 그래서 `doc_vs_code` 충돌이 실데이터로 절대 안 난다. **이 문을 만들면
+  31 도 같이 닫힌다.**
+- **고칠 방향**: **문을 만든다.** SPEC §7.1 이 「사람이 고른다」이므로 job 결과에서
+  **고른 것만** 항목이 되는 라우트 하나다. 자리는 job 아래가 맞다 —
+  후보는 job 의 산출물이고, 남의 job 을 못 읽게 하는 조건이 이미 그 경로에 있다.
+  ⚠ **`batch-draft` 를 넓히지 마라** — `repo`·`scan_summary` 는 문서에는 없는 칸이고,
+  `origin` 이 `code` 로 고정돼 있다. 대신 **넣는 코드는 한 자리로 모아라** —
+  지금 초안을 행으로 만드는 코드가 `batch-draft`·`questions` 두 곳에 베껴져 있다.
+- **상태**: 대기
+
+### 85-B. 2-B 이번 라운드 — `PROPOSAL_OPERATIONS`·`CONFLICT_SEVERITIES` 는 살아 있다 · `PROGRESS_SOURCES` 3종은 **아무도 안 읽는다**   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인 —
+  ① **`PROPOSAL_OPERATIONS` 3종 — 살아 있다.** 소비처가 둘이고 둘 다 값을 **쓴다**:
+     계약 쪽은 `packages/schema/src/upload.ts:102` 의 `refine` 이 `add` 에는 `draft` 를,
+     `update`·`deprecate` 에는 `target_item_id` 를 **요구**해서 셋이 서로 다른 body 가
+     되고, 발행 쪽은 `lib/api/publish.ts:262·290·303` 이 세 갈래로 갈린다.
+  ② **`CONFLICT_SEVERITIES` 3종 — 살아 있다.** `CONFLICT_SEVERITY_RANK` 를
+     `review/page.tsx:207`(카드 정렬)과 `lib/ai/conflict.ts:230`(§7.2 출력 정렬)이 읽고,
+     값이 바뀌면 **순서가 갈린다**. 화면은 `CONFLICT_SEVERITY_CHIP` 으로 따로 그린다.
+  ③ 🔴 **`PROGRESS_SOURCES` 3종 — 만들기는 하는데 읽는 자리가 0곳이다.**
+     만드는 쪽은 둘 다 산다 — CLI 기본값이 `agent`(`cli/progress.ts:98`), 훅이
+     `hook`(`scripts/stop.mjs:166`), 사람이 `--source manual`. DB 에도 들어간다
+     (`progress_source` pgEnum). **그런데 값을 보고 갈리는 코드가 하나도 없다**:
+     `PROGRESS_EFFECT`(마일스톤 상태)는 `status` 축만 읽고, `roadmap/route.ts:47~53` 은
+     `source` 를 **select 조차 안 한다.** 나가는 자리는 `PROGRESS_EVENT_COLUMNS:23` 의
+     POST 응답 한 곳이고 **그 값을 그리는 화면이 없다.**
+     ⚠ 82(`SourceDocumentKind`)와 **같은 모양**이다 — 「저장되고 응답에 실리지만
+     아무도 안 읽는다」. 다만 82 는 사람이 **고르는 칸**이라 거짓말이었고, 이쪽은
+     기계가 자동으로 찍는 값이라 사람을 속이지는 않는다. 그래서 [격차]도 아직 아니고
+     **화면 8(Roadmap)이 주인**이다 — 「이 보고는 훅이 남긴 것인가 사람이 남긴 것인가」는
+     그 화면이 물을 질문이다. 그 화면을 만드는 바퀴가 ①살린다/②지운다를 고른다.
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: `PACK_TARGETS` 3종(**7** — `agents`·`cursor` 가 안 나온다) ·
+  `CONFLICT_ANCHORS` 3종 · `CONFLICT_CHOICES` 4종 · `SCOPE_KINDS` 3종 재확인 ·
+  `ItemType` 10종 재확인
+- **상태**: ✅ 이번 바퀴에 확인함
+
 ### 82. `source_documents.kind` 6종은 **골라도 아무것도 안 달라진다**   [구멍]
 - **증상**: 화면 3 의 업로드 폼이 「목표 · 정책 · 로드맵 · ADR · 노트 · 위키」 여섯 중
   하나를 고르게 하고, 그 값은 DB 에 저장되고 응답으로도 나간다. 그런데 **그 뒤에

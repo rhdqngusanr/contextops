@@ -1,12 +1,13 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { ContextItemDraft, ContextItemsBatchDraftEnvelope } from '@contextops/schema'
 //  ⚠ 값과 **타입**을 따로 들여온다. 유니온 스키마의 `z.infer` 는 느슨해서 `unknown` 이
 //    되고, 정밀한 타입은 `packages/schema` 가 mapped type 으로 따로 낸다 (item.ts 주석).
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
-import { contextItemRevisions, contextItems, repos } from '../../../../../../../db/schema'
+import { repos } from '../../../../../../../db/schema'
 import { createJob, startJob } from '../../../../../../../lib/ai/job'
 import { requireProject } from '../../../../../../../lib/api/guard'
+import { insertDrafts, type DraftEntry, type DraftInsertResult } from '../../../../../../../lib/api/item'
 import { issuesOf, parseBody, pathUuid, route } from '../../../../../../../lib/api/route'
 
 // =====================================================================
@@ -49,82 +50,24 @@ export const POST = route<{ id: string }>('POST /projects/{id}/context-items/bat
     }, 200)
   }
 
-  type Rejected = { index: number; issues: { path: string; message: string }[] }
-  const rejected: Rejected[] = []
-  const drafts: { index: number; draft: Draft }[] = []
+  const rejected: DraftInsertResult['rejected'] = []
+  const entries: DraftEntry[] = []
 
   body.items.forEach((raw, index) => {
     const parsed = ContextItemDraft.safeParse(raw)
-    if (parsed.success) drafts.push({ index, draft: parsed.data as Draft })
+    if (parsed.success) entries.push({ index, draft: parsed.data as Draft })
     else rejected.push({ index, issues: issuesOf(parsed.error) })
   })
 
-  //  같은 batch 안의 중복도, 이미 DB 에 있는 id 도 거부한다 — 조용히 덮어쓰면
-  //  scan 을 두 번 돌린 사람이 남의 항목을 지우게 된다. 고치는 문은 부분 갱신이다.
-  const seen = new Set<string>()
-  const wanted: typeof drafts = []
-  for (const entry of drafts) {
-    const id = entry.draft.id
-    if (seen.has(id)) {
-      rejected.push({ index: entry.index, issues: [{ path: 'id', message: '같은 요청 안에서 중복된 id 다' }] })
-      continue
-    }
-    seen.add(id)
-    wanted.push(entry)
-  }
-
-  const existing = wanted.length === 0
-    ? []
-    : await ctx.db
-      .select({ publicId: contextItems.publicId })
-      .from(contextItems)
-      .where(and(
-        eq(contextItems.projectId, projectId),
-        inArray(contextItems.publicId, wanted.map((e) => e.draft.id)),
-      ))
-  const taken = new Set(existing.map((r) => r.publicId))
-
-  const accepted: { index: number; id: string }[] = []
+  const accepted: DraftInsertResult['accepted'] = []
   await ctx.db.transaction(async (tx) => {
-    for (const { index, draft } of wanted) {
-      if (taken.has(draft.id)) {
-        rejected.push({ index, issues: [{ path: 'id', message: '이미 있는 항목 id 다' }] })
-        continue
-      }
-      const [item] = await tx
-        .insert(contextItems)
-        .values({
-          projectId,
-          publicId: draft.id,
-          type: draft.type,
-          //  🔴 `status` 는 서버가 정한다. 초안은 언제나 draft 다 — 승인 없이
-          //     active 가 되면 발행 절차가 무의미해진다 (계약에도 자리가 없다).
-          status: 'draft',
-          currentRevision: 1,
-          scope: draft.scope,
-          priority: draft.priority,
-          ownerId: draft.owner_id ?? null,
-        })
-        .returning({ id: contextItems.id })
-      if (!item) continue
-
-      await tx.insert(contextItemRevisions).values({
-        itemId: item.id,
-        revision: 1,
-        title: draft.title,
-        body: draft.body,
-        tags: draft.tags,
-        validFrom: draft.valid_from ?? null,
-        validUntil: draft.valid_until ?? null,
-        data: draft.data,
-        sourceRefs: draft.source_refs,
-        confidence: draft.confidence,
-        createdBy: actor.userId,
-        //  scan 이 코드를 훑어 만든 초안이다 (SPEC §2 `origin`).
-        origin: 'code',
-      })
-      accepted.push({ index, id: draft.id })
-    }
+    //  🔴 넣는 코드는 여기 없다 — `insertDrafts()` 하나다 (`lib/api/item.ts`).
+    //     이 문이 정하는 것은 `origin` 뿐이다: scan 이 코드를 훑어 만든 초안이다 (SPEC §2).
+    const done = await insertDrafts(tx, {
+      projectId, entries, origin: 'code', createdBy: actor.userId,
+    })
+    accepted.push(...done.accepted)
+    rejected.push(...done.rejected)
 
     //  scan 요약을 버리지 않는다 — 버리면 보내는데 아무도 안 읽는 필드가 된다.
     await tx

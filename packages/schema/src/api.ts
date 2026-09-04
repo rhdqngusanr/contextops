@@ -5,7 +5,7 @@ import {
 } from './common'
 import type { ItemStatus } from './common'
 import { ContextItemDraft } from './item'
-import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
+import { ContextItemsBatchDraft, MAX_DRAFT_ITEMS, ProgressEvent, Proposal, SyncReport } from './upload'
 
 // =====================================================================
 //  API 계약 (docs/SPEC.md §5)
@@ -547,6 +547,22 @@ export const AnswerQuestions = z.object({
 }).strict()
 
 /**
+ * 🔴 `POST /projects/{id}/jobs/{jobId}/items` — **§7.1 이 낸 항목 후보 중 사람이 고른
+ * 것만 항목이 된다** (SPEC §5 · §7.1 · §9 화면 3 · FINDINGS 84).
+ *
+ * ★ 왜 「전부 받아들인다」가 아니라 고른 목록인가 — §7.1 마지막 줄이 「사람이 고르기
+ *   전에 `context_items` 에 넣지 않는다」이다. 서버가 다 넣으면 그 문장이 거짓이 되고,
+ *   모델이 뽑은 것과 사람이 승인한 것이 같은 뜻이 된다.
+ * ⚠ 오는 것은 **후보의 `id` 뿐이다** — 초안 본문이 아니다. 본문을 같이 받으면 화면이
+ *   모델의 출력을 고쳐서 되보낼 수 있게 되고, 그 항목의 근거(`source_refs`)는 여전히
+ *   원문 구간을 가리켜서 **원문에 없는 문장이 원문을 근거로 배포된다** (P7).
+ *   고치는 문은 항목이 된 **뒤**의 부분 갱신(`ContextItemUpdate`)이다.
+ */
+export const AcceptJobItems = z.object({
+  item_ids: z.array(ItemId).min(1).max(MAX_DRAFT_ITEMS),
+}).strict()
+
+/**
  * `POST /projects/{id}/context-items:batch-draft` 를 **서버가** 팔 때 쓰는 모양.
  *
  * ★ 왜 `ContextItemsBatchDraft` 와 따로 있나 — 그쪽은 플러그인이 **보내기 전에** 스스로
@@ -601,6 +617,7 @@ export const API_REQUESTS: Record<string, z.ZodType> = {
   'POST /projects/{id}/tokens': CreateToken,
   'POST /projects/{id}/documents': CreateDocument,
   'POST /projects/{id}/questions': AnswerQuestions,
+  'POST /projects/{id}/jobs/{jobId}/items': AcceptJobItems,
   'POST /conflicts/{id}/resolve': ResolveConflict,
   'context-items 일괄 초안': ContextItemsBatchDraftEnvelope,
   'context-items 부분 갱신': ContextItemUpdate,
@@ -621,6 +638,7 @@ export type CreateToken = z.infer<typeof CreateToken>
 export type CreateDocument = z.infer<typeof CreateDocument>
 export type ContextItemQuery = z.infer<typeof ContextItemQuery>
 export type ContextItemUpdate = z.infer<typeof ContextItemUpdate>
+export type AcceptJobItems = z.infer<typeof AcceptJobItems>
 export type ConflictQuery = z.infer<typeof ConflictQuery>
 export type ResolveConflict = z.infer<typeof ResolveConflict>
 export type AnswerQuestions = z.infer<typeof AnswerQuestions>

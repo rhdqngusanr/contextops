@@ -3,10 +3,11 @@ import { AnswerQuestions, ConflictQuery, QUESTION_CONFLICT_KINDS } from '@contex
 //  ⚠ 정밀한 초안 타입은 따로 온다 — 유니온 스키마의 `z.infer` 는 느슨하다 (item.ts 주석).
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
-import { conflicts, contextItemRevisions, contextItems } from '../../../../../../db/schema'
+import { conflicts } from '../../../../../../db/schema'
 import { CONFLICT_COLUMNS, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
+import { insertDrafts } from '../../../../../../lib/api/item'
 import { parseBody, parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 import { SEED_ANSWER_MAX, seedDraft, seedQuestionOf } from '../../../../../../lib/api/seed-questions'
 
@@ -114,37 +115,16 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
       const draft = drafts.get(answer.question_id)
       if (!draft) continue
 
-      const [item] = await tx
-        .insert(contextItems)
-        .values({
-          projectId,
-          publicId: draft.id,
-          type: draft.type,
-          status: 'draft',
-          currentRevision: 1,
-          scope: draft.scope,
-          priority: draft.priority,
-          ownerId: draft.owner_id ?? null,
-        })
-        .onConflictDoNothing({ target: [contextItems.projectId, contextItems.publicId] })
-        .returning({ id: contextItems.id })
-      if (!item) fail('VALIDATION_FAILED', `이미 있는 항목 id 다: ${draft.id}`)
-
-      await tx.insert(contextItemRevisions).values({
-        itemId: item.id,
-        revision: 1,
-        title: draft.title,
-        body: draft.body,
-        tags: draft.tags,
-        validFrom: draft.valid_from ?? null,
-        validUntil: draft.valid_until ?? null,
-        data: draft.data,
-        sourceRefs: draft.source_refs,
-        confidence: draft.confidence,
-        createdBy: actor.userId,
-        //  사람이 질문에 답해서 만든 항목이다 (SPEC §2 `origin`).
-        origin: 'manual',
+      //  🔴 넣는 코드는 여기 없다 — `insertDrafts()` 하나다 (`lib/api/item.ts`).
+      //     이 문이 정하는 것은 `origin` 뿐이다: 사람이 질문에 답해서 만든 항목이다 (SPEC §2).
+      //  ⚠ 여기서는 **거절을 400 으로 올린다.** 답변 하나가 조용히 항목이 안 되면
+      //     사람은 「저장됐다」를 보고 자기 문장이 어디 갔는지 못 찾는다 —
+      //     `batch-draft` 가 항목별로 갈라 받는 것과 정반대의 이유다 (거긴 기계가 보낸다).
+      const done = await insertDrafts(tx, {
+        projectId, entries: [{ index: 0, draft }], origin: 'manual', createdBy: actor.userId,
       })
+      if (done.accepted.length === 0) fail('VALIDATION_FAILED', `이미 있는 항목 id 다: ${draft.id}`)
+
       created.push(draft.id)
     }
   })

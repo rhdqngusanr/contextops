@@ -9,7 +9,7 @@ import {
   type SourceDocumentKind,
 } from '@contextops/schema'
 
-import { AI_JOB_STATUS_RULES, aiJobs, conflicts } from '../src/db/schema'
+import { AI_JOB_STATUS_RULES, aiJobs, conflicts, contextItemRevisions, contextItems } from '../src/db/schema'
 import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
@@ -28,6 +28,7 @@ import {
 import { SOURCE_DOCUMENT_KIND_BRIEF, chunkByHeading } from '../src/lib/ai/structure'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
+import { POST as acceptJobItems } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/items/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
 import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
 import { GET as listConflicts } from '../src/app/api/v1/projects/[id]/conflicts/route'
@@ -1037,5 +1038,166 @@ describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화�
     expect(detail.shape).toBe('full')
     expect(detail.stalled).toBe(false)
     expect(detail.updated_at).toBe((await jobRow(job.id)).updatedAt.toISOString())
+  })
+})
+
+// =====================================================================
+describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.1 · FINDINGS 84·31)', () => {
+  /** §7.1 이 후보 둘을 낸 문서 하나. */
+  async function structured(owner: string, projectId: string) {
+    const { job } = await uploadDoc(owner, projectId)
+    stubAi((n) => ({
+      input: {
+        items: n > 0 ? [] : [
+          {
+            id: 'item_doc_retry',
+            type: 'policy',
+            title: '재시도 정책',
+            body: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다.',
+            scope: { kind: 'project' },
+            data: { rule: 'PSP 호출 실패는 지수 백오프로 5회 재시도한다', severity: 'must', enforcement: 'review' },
+            span: { start_char: 0, end_char: 20 },
+          },
+          {
+            id: 'item_doc_card',
+            type: 'constraint',
+            title: '카드 원본 금지',
+            body: '카드 원본 정보를 저장하지 않는다.',
+            scope: { kind: 'project' },
+            data: { statement: '카드 원본 정보를 저장하지 않는다' },
+            span: { start_char: 0, end_char: 20 },
+          },
+        ],
+        open_questions: [],
+      },
+    }))
+    expect(await runJob(job.id)).toBe('succeeded')
+    return job
+  }
+
+  function accept(owner: string, projectId: string, jobId: string, itemIds: string[]) {
+    return acceptJobItems(
+      req('POST', `/api/v1/projects/${projectId}/jobs/${jobId}/items`, {
+        auth: owner, body: { item_ids: itemIds },
+      }),
+      params({ id: projectId, jobId }),
+    )
+  }
+
+  it('🔴 job 이 끝나도 항목은 **0건**이다 — 사람이 고르기 전에는 행이 안 생긴다', async () => {
+    const { owner, projectId } = await seed()
+    await structured(owner, projectId)
+    expect(await db.select().from(contextItems)).toHaveLength(0)
+  })
+
+  it('🔴 고른 것만 항목이 된다 — 안 고른 후보는 Context 에 없다', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+
+    const res = await accept(owner, projectId, job.id, ['item_doc_retry'])
+    expect(res.status).toBe(201)
+    expect((await dataOf(res)).accepted).toEqual([{ index: 0, id: 'item_doc_retry' }])
+
+    const rows = await db.select({ id: contextItems.publicId, status: contextItems.status }).from(contextItems)
+    expect(rows).toEqual([{ id: 'item_doc_retry', status: 'draft' }])
+  })
+
+  it('🔴 그 항목의 `origin` 은 `doc` 이다 — scan 이 올린 것(`code`)과 갈린다 (FINDINGS 31)', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+    await accept(owner, projectId, job.id, ['item_doc_retry'])
+    //  같은 프로젝트에 scan 으로도 하나 넣는다 — 두 문이 서로 다른 값을 찍어야 한다.
+    await batchDraft(req('POST', `/api/v1/projects/${projectId}/context-items/batch-draft`, {
+      auth: owner, body: batchBody([draft('item_scanned')]),
+    }), params({ id: projectId }))
+
+    const rows = await db
+      .select({ id: contextItems.publicId, origin: contextItemRevisions.origin })
+      .from(contextItemRevisions)
+      .innerJoin(contextItems, eq(contextItems.id, contextItemRevisions.itemId))
+      .orderBy(asc(contextItems.publicId))
+    expect(rows).toEqual([
+      { id: 'item_doc_retry', origin: 'doc' },
+      { id: 'item_scanned', origin: 'code' },
+    ])
+  })
+
+  it('🔴 근거는 **문서 원문 구간**을 그대로 물고 온다 (P7)', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    stubAi((n) => ({
+      input: {
+        items: n > 0 ? [] : [{
+          id: 'item_doc_retry',
+          type: 'policy',
+          title: '재시도 정책',
+          body: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다.',
+          scope: { kind: 'project' },
+          data: { rule: 'PSP 호출 실패는 지수 백오프로 5회 재시도한다', severity: 'must', enforcement: 'review' },
+          span: { start_char: 0, end_char: 20 },
+        }],
+        open_questions: [],
+      },
+    }))
+    expect(await runJob(doc.job.id)).toBe('succeeded')
+    await accept(owner, projectId, doc.job.id, ['item_doc_retry'])
+
+    const [row] = await db.select({ refs: contextItemRevisions.sourceRefs }).from(contextItemRevisions)
+    //  서버가 채운 문서 버전을 가리킨다 — 모델이 uuid 를 지어낼 자리가 없다.
+    expect(row!.refs).toEqual([expect.objectContaining({
+      kind: 'source_document',
+      document_version_id: doc.current_version_id,
+    })])
+  })
+
+  it('이 job 의 후보가 아닌 id 는 거절된다 — 남의 초안을 심을 수 없다', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+
+    const data = await dataOf(await accept(owner, projectId, job.id, ['item_not_a_candidate']))
+    expect(data.accepted).toEqual([])
+    expect((data.rejected as { index: number }[])[0]!.index).toBe(0)
+    expect(await db.select().from(contextItems)).toHaveLength(0)
+  })
+
+  it('두 번 받아들이면 둘째는 「이미 있다」로 거절된다 — 조용히 덮지 않는다', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+    await accept(owner, projectId, job.id, ['item_doc_retry'])
+
+    const data = await dataOf(await accept(owner, projectId, job.id, ['item_doc_retry', 'item_doc_card']))
+    expect(data.accepted).toEqual([{ index: 1, id: 'item_doc_card' }])
+    expect((data.rejected as { index: number }[])[0]!.index).toBe(0)
+    expect(await db.select().from(contextItems)).toHaveLength(2)
+  })
+
+  it('아직 안 끝난 job · 탐지 job 은 400 이다 — 「없어서 0건」과 갈린다', async () => {
+    const { owner, projectId } = await seed()
+    const queued = await uploadDoc(owner, projectId)
+    expect((await errorOf(await accept(owner, projectId, queued.job.id, ['item_ghost']))).code).toBe('VALIDATION_FAILED')
+
+    const conflict = await createJob(db, {
+      projectId, feature: 'conflict', input: { changed_item_ids: ['item_alpha'] },
+    })
+    expect((await errorOf(await accept(owner, projectId, conflict.id, ['item_ghost']))).code).toBe('VALIDATION_FAILED')
+  })
+
+  it('🔴 남의 프로젝트 job 은 404 다 — job id 하나로 남의 문서 초안을 심을 수 없다', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+
+    const other = sessionJwt('other-owner')
+    const otherTeam = await dataOf(await createTeam(
+      req('POST', '/api/v1/teams', { auth: other, body: { name: 'Other', slug: 'other' } }),
+      params({}),
+    ))
+    const otherProject = await dataOf(await createProject(
+      req('POST', `/api/v1/teams/${otherTeam.id as string}/projects`, { auth: other, body: { name: 'Xray', slug: 'xray' } }),
+      params({ id: otherTeam.id as string }),
+    ))
+    const otherId = otherProject.id as string
+
+    expect((await errorOf(await accept(other, otherId, job.id, ['item_doc_retry']))).code).toBe('NOT_FOUND')
+    expect(await db.select().from(contextItems)).toHaveLength(0)
   })
 })

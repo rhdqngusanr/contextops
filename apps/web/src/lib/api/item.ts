@@ -1,10 +1,12 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import {
   ITEM_DATA, SOURCE_REFS_MAX,
-  type ContextItem, type ContextItemView, type ItemType, type Scope, type SourceRef,
+  type ContextItem, type ContextItemDraft, type ContextItemView, type ItemType,
+  type Scope, type SourceRef,
 } from '@contextops/schema'
 
-import { contextItemRevisions, contextItems } from '../../db/schema'
+import type { Db } from '../../db/client'
+import { contextItemRevisions, contextItems, type RevisionOrigin } from '../../db/schema'
 
 // =====================================================================
 //  DB 두 행(항목 + 현재 개정) → 계약의 `ContextItem` 하나 (SPEC §2 · §3)
@@ -114,6 +116,128 @@ export function toContextItemView(row: ItemJoinRow): ContextItemView {
 /** 타입별 `data` 를 그 타입의 표로 다시 판다 (전부 `.strict()` — P1 allowlist). */
 export function parseItemData(type: ItemType, data: unknown): unknown {
   return ITEM_DATA[type].parse(data)
+}
+
+// ---------------------------------------------------------------------
+//  초안 → 행 두 개 (항목 + 개정 1) — **넣는 자리는 여기 하나다**
+// ---------------------------------------------------------------------
+
+/** 보낸 배열의 자리를 물고 다닌다 — 거절 사유가 id 인 경우 id 를 못 믿기 때문이다. */
+export interface DraftEntry {
+  readonly index: number
+  readonly draft: ContextItemDraft
+}
+
+/** SPEC §5 의 `{accepted, rejected[{index, issues}]}` 그대로. */
+export interface DraftInsertResult {
+  readonly accepted: { index: number; id: string }[]
+  readonly rejected: { index: number; issues: { path: string; message: string }[] }[]
+}
+
+/**
+ * 🔴 **초안을 항목 행으로 만드는 유일한 자리.** 부르는 문이 셋이고 서로 다른 것은
+ * `origin` **한 칸뿐**이다 — `code`(scan 의 `batch-draft`) · `manual`(씨앗 질문 답변) ·
+ * `doc`(§7.1 구조화 후보를 사람이 받아들인 문 · FINDINGS 84).
+ *
+ * ★ 왜 한 자리로 모으나 — 이 코드가 라우트마다 베껴져 있을 때 각자가 정한 것이 넷이었다:
+ *   ① `status` 를 서버가 정하는가 ② 같은 요청 안의 중복 id 를 어떻게 하는가
+ *   ③ 이미 있는 id 를 덮는가 ④ `origin` 을 무엇으로 찍는가. **①~③ 이 갈리면 어떤 문은
+ *   승인 없이 `active` 를 만들고 어떤 문은 남의 항목을 덮는다.** 여기로 모으면 새 문이
+ *   생겨도 고를 것이 `origin` 하나뿐이다.
+ *
+ * ★ 새 문을 더하는 절차: ① 그 라우트에서 초안을 `ContextItemDraft` 로 파싱한다
+ *   ② 여기 `origin` 을 정해 부른다 ③ 그 `origin` 이 `REVISION_ORIGINS` 에 있어야 한다
+ *   (타입 검사가 막는다) ④ 「그 문으로 만든 항목의 origin 이 다르다」를 시험으로 잠근다.
+ *
+ * ⚠ **`status` 는 인자가 아니다.** 어느 문으로 들어와도 초안은 `draft` 다 —
+ *   승인 없이 `active` 가 되면 발행 절차가 무의미해진다. 인자로 두는 순간 그 규칙은
+ *   부르는 쪽 넷의 합의가 되고, 하나만 어긋나도 구멍이다.
+ * ⚠ **트랜잭션은 부르는 쪽이 연다.** `batch-draft` 는 같은 트랜잭션에서 scan 요약도
+ *   갱신하고, 씨앗 질문은 충돌 행도 닫는다 — 여기서 열면 그 둘이 따로 커밋된다.
+ */
+export async function insertDrafts(
+  tx: Db,
+  opts: {
+    projectId: string
+    entries: readonly DraftEntry[]
+    origin: RevisionOrigin
+    createdBy: string
+  },
+): Promise<DraftInsertResult> {
+  const accepted: { index: number; id: string }[] = []
+  const rejected: { index: number; issues: { path: string; message: string }[] }[] = []
+
+  //  같은 요청 안의 중복을 먼저 턴다 — DB 에 물어보기 전에 걸러야 둘째가 「이미 있다」로
+  //  거절되면서 **첫째가 만든 것을 가리키는** 헷갈리는 사유를 받지 않는다.
+  const seen = new Set<string>()
+  const wanted: DraftEntry[] = []
+  for (const entry of opts.entries) {
+    if (seen.has(entry.draft.id)) {
+      rejected.push({ index: entry.index, issues: [{ path: 'id', message: '같은 요청 안에서 중복된 id 다' }] })
+      continue
+    }
+    seen.add(entry.draft.id)
+    wanted.push(entry)
+  }
+
+  //  🔴 조용히 덮지 않는다 — 덮으면 같은 문서를 두 번 구조화한 사람이 남의 항목을 지운다.
+  //     고치는 문은 부분 갱신(`PATCH /context-items/{id}`)이다.
+  const existing = wanted.length === 0
+    ? []
+    : await tx
+      .select({ publicId: contextItems.publicId })
+      .from(contextItems)
+      .where(and(
+        eq(contextItems.projectId, opts.projectId),
+        inArray(contextItems.publicId, wanted.map((e) => e.draft.id)),
+      ))
+  const taken = new Set(existing.map((r) => r.publicId))
+
+  for (const { index, draft } of wanted) {
+    if (taken.has(draft.id)) {
+      rejected.push({ index, issues: [{ path: 'id', message: '이미 있는 항목 id 다' }] })
+      continue
+    }
+    const [item] = await tx
+      .insert(contextItems)
+      .values({
+        projectId: opts.projectId,
+        publicId: draft.id,
+        type: draft.type,
+        //  🔴 `status` 는 서버가 정한다 (위 주의).
+        status: 'draft',
+        currentRevision: 1,
+        scope: draft.scope,
+        priority: draft.priority,
+        ownerId: draft.owner_id ?? null,
+      })
+      //  ⚠ 위에서 걸렀는데도 부딪히면 **동시에 들어온 같은 id** 다. 던지지 않고
+      //     거절로 내린다 — 나머지 항목까지 롤백시키면 39개가 하나 때문에 사라진다.
+      .onConflictDoNothing({ target: [contextItems.projectId, contextItems.publicId] })
+      .returning({ id: contextItems.id })
+    if (!item) {
+      rejected.push({ index, issues: [{ path: 'id', message: '이미 있는 항목 id 다' }] })
+      continue
+    }
+
+    await tx.insert(contextItemRevisions).values({
+      itemId: item.id,
+      revision: 1,
+      title: draft.title,
+      body: draft.body,
+      tags: draft.tags,
+      validFrom: draft.valid_from ?? null,
+      validUntil: draft.valid_until ?? null,
+      data: draft.data,
+      sourceRefs: draft.source_refs,
+      confidence: draft.confidence,
+      createdBy: opts.createdBy,
+      origin: opts.origin,
+    })
+    accepted.push({ index, id: draft.id })
+  }
+
+  return { accepted, rejected }
 }
 
 /**

@@ -19396,6 +19396,9 @@ var AnswerQuestions = external_exports.object({
     draft: ContextItemDraft.optional()
   }).strict()).min(1).max(20)
 }).strict();
+var AcceptJobItems = external_exports.object({
+  item_ids: external_exports.array(ItemId).min(1).max(MAX_DRAFT_ITEMS)
+}).strict();
 var ContextItemsBatchDraftEnvelope = ContextItemsBatchDraft.extend({
   items: external_exports.array(external_exports.unknown()).min(1).max(50)
 }).strict();
