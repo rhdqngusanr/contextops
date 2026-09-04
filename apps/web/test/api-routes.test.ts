@@ -2,7 +2,7 @@ import type { PGlite } from '@electric-sql/pglite'
 import { and, asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, QUESTION_CONFLICT_KINDS,
+  CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, ContextItemView, QUESTION_CONFLICT_KINDS,
   RESOLUTION_ITEM_OUTCOME, SOURCE_REFS_MAX,
   type ConflictChoice, type ConflictKind, type SourceRef,
 } from '@contextops/schema'
@@ -262,7 +262,7 @@ describe('context-items — batch-draft 는 항목별로 갈라 받는다', () =
     expect(await db.select().from(contextItems)).toHaveLength(1)
   })
 
-  it('목록이 계약(ContextItem)을 그대로 지킨다 · 필터가 실제로 갈린다', async () => {
+  it('목록이 계약(ContextItemView)을 그대로 지킨다 · 필터가 실제로 갈린다', async () => {
     const { owner, projectId } = await seed()
     await batchDraft(req('POST', `/api/v1/projects/${projectId}/context-items/batch-draft`, {
       auth: owner,
@@ -279,7 +279,13 @@ describe('context-items — batch-draft 는 항목별로 갈라 받는다', () =
     const items = all.items as unknown[]
     expect(items).toHaveLength(2)
     //  🔴 응답이 계약을 통과해야 한다. 여기서 빨개지면 표와 응답이 갈린 것이다.
-    for (const item of items) expect(() => ContextItem.parse(item)).not.toThrow()
+    //  ⚠ 화면이 받는 것은 `ContextItemView` 다 — 「갱신」 칸이 하나 더 있다 (FINDINGS 72③).
+    //    `ContextItem` 으로 파싱되면 그 칸이 빠진 것이고, 화면 4·5 는 날짜를 잃는다.
+    for (const item of items) {
+      expect(() => ContextItemView.parse(item)).not.toThrow()
+      expect(ContextItem.safeParse(item).success, '응답에 갱신 시각이 없다').toBe(false)
+      expect(ContextItemView.parse(item).updated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    }
 
     const byType = await dataOf(await listItems(
       req('GET', `/api/v1/projects/${projectId}/context-items?type=policy`, { auth: owner }),

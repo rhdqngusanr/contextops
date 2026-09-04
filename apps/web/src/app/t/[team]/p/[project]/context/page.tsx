@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react'
 import {
-  ITEM_STATUSES, ITEM_TYPES, type ContextItem, type ItemStatus, type ItemType,
+  ITEM_STATUSES, ITEM_TYPES, type ContextItemView, type ItemStatus, type ItemType,
 } from '@contextops/schema'
 
 import { ApiClientError, messageOf } from '../../../../../../lib/web/api'
@@ -10,6 +10,7 @@ import {
   fetchItems, fetchVersions, publishVersion, type ProjectRef, type VersionRow,
 } from '../../../../../../lib/web/queries'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver, type SemverBump } from '../../../../../../lib/web/semver'
+import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
 import { EvidenceList } from '../../../../../../components/evidence'
@@ -45,7 +46,7 @@ type Filter = { type?: ItemType; status?: ItemStatus; scope?: string }
 
 function ContextView({ base, project }: { base: string; project: ProjectRef }) {
   const [filter, setFilter] = useState<Filter>({})
-  const [selected, setSelected] = useState<ContextItem | null>(null)
+  const [selected, setSelected] = useState<ContextItemView | null>(null)
   const [publishing, setPublishing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -188,9 +189,9 @@ function ItemTable({
   selected,
   onSelect,
 }: {
-  items: ContextItem[]
-  selected: ContextItem | null
-  onSelect: (item: ContextItem) => void
+  items: ContextItemView[]
+  selected: ContextItemView | null
+  onSelect: (item: ContextItemView) => void
 }) {
   return (
     <table className="table">
@@ -202,6 +203,8 @@ function ItemTable({
           <th>상태</th>
           <th>confidence</th>
           <th>근거</th>
+          {/* DESIGN_BRIEF §4 화면 5 의 표 순서 그대로다 — 근거 수 다음이 「갱신」이다. */}
+          <th>갱신</th>
           <th>rev</th>
         </tr>
       </thead>
@@ -226,6 +229,7 @@ function ItemTable({
             <td className={item.source_refs.length === 0 ? 'mono ink-warn' : 'mono'}>
               {item.source_refs.length === 0 ? '⚠ 0' : item.source_refs.length}
             </td>
+            <td className="mono meta">{dateText(item.updated_at)}</td>
             <td className="mono">{item.revision}</td>
           </tr>
         ))}
@@ -238,7 +242,7 @@ function ItemTable({
 //  드로어 — 근거가 **본문 옆에** 있다 (DESIGN_BRIEF §2-1)
 // ---------------------------------------------------------------------
 
-function ItemDrawer({ item, onClose }: { item: ContextItem; onClose: () => void }) {
+function ItemDrawer({ item, onClose }: { item: ContextItemView; onClose: () => void }) {
   return (
     <aside className="card pad col drawer">
       <div className="row-between">

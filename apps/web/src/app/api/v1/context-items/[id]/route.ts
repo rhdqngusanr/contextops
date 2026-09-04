@@ -1,10 +1,10 @@
 import { and, eq, isNull } from 'drizzle-orm'
-import { ContextItem, ContextItemUpdate } from '@contextops/schema'
+import { ContextItemUpdate, ContextItemView } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../../../../db/schema'
 import { fail } from '../../../../../lib/api/error'
 import { requireProject } from '../../../../../lib/api/guard'
-import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, parseItemData, toContextItem } from '../../../../../lib/api/item'
+import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, parseItemData, toContextItemView } from '../../../../../lib/api/item'
 import { parseBody, pathUuid, route } from '../../../../../lib/api/route'
 
 // =====================================================================
@@ -84,5 +84,5 @@ export const PATCH = route<{ id: string }>('PATCH /context-items/{id}', async (c
 
   //  응답이 계약을 지키는지 **서버가 먼저 확인한다.** 여기서 빨개지면 표와 응답이
   //  갈린 것이고, 그건 화면이 아니라 여기서 잡아야 한다.
-  return ctx.ok(ContextItem.parse(toContextItem(updated)))
+  return ctx.ok(ContextItemView.parse(toContextItemView(updated)))
 })

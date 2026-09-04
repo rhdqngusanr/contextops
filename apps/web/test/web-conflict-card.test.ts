@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CONFLICT_ANCHORS, CONFLICT_CHOICES, CONFLICT_KINDS, CONFLICT_KIND_RULES,
   RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
-  type ConflictKind, type ContextItem, type DetectedConflictKind, type SourceRef,
+  type ConflictKind, type ContextItemView, type DetectedConflictKind, type SourceRef,
 } from '@contextops/schema'
 
 import {
@@ -51,7 +51,7 @@ const CODE_REF: SourceRef = {
   end_line: 30,
 }
 
-function item(over: Partial<ContextItem> = {}): ContextItem {
+function item(over: Partial<ContextItemView> = {}): ContextItemView {
   return {
     id: 'item_retry_policy',
     project_id: '00000000-0000-4000-8000-000000000000',
@@ -66,8 +66,9 @@ function item(over: Partial<ContextItem> = {}): ContextItem {
     confidence: 'high',
     revision: 3,
     data: { rule: '재시도 5회', severity: 'must', enforcement: 'review' },
+    updated_at: '2026-07-12T09:00:00.000Z',
     ...over,
-  } as ContextItem
+  } as ContextItemView
 }
 
 /** 종류가 정한 칸만 채운 행을 만든다 — DB CHECK 과 같은 규칙을 시험이 흉내 낸다. */
@@ -95,7 +96,12 @@ function base(over: Partial<ConflictCardState> = {}): ConflictCardState {
     conflict: row('contradiction'),
     canDecide: true,
     a: item(),
-    b: item({ id: 'item_retry_code', title: '코드의 재시도는 3회', source_refs: [CODE_REF], revision: 1 }),
+    //  ⚠ 두 쪽의 갱신 날짜가 **서로 다르다** — 같게 두면 「그 칸이 항목을 따라간다」를
+    //    시험이 증명하지 못한다 (DESIGN_BRIEF §4 「A 갱신 2026-07-12 · B 갱신 2026-08-04」).
+    b: item({
+      id: 'item_retry_code', title: '코드의 재시도는 3회', source_refs: [CODE_REF], revision: 1,
+      updated_at: '2026-08-04T09:00:00.000Z',
+    }),
     draft: '',
     busy: false,
     error: null,
@@ -437,5 +443,36 @@ describe('🔴 상한을 화면이 손으로 적지 않는다', () => {
     expect(draw({ conflict: row('seed_question'), a: null, b: null }))
       .toContain(`maxLength="${SEED_ANSWER_MAX}"`)
     expect(draw()).toContain(`maxLength="${RESOLUTION_NOTE_MAX}"`)
+  })
+})
+
+// =====================================================================
+//  🔴 **언제 것인가** — 두 쪽의 갱신 날짜 (FINDINGS 72③ · DESIGN_BRIEF §4 화면 4)
+//
+//  ★ 왜 이 칸이 필요한가 — `stale`(오래됨) 카드가 묻는 것이 정확히 「어느 쪽이 최신인가」다.
+//    날짜가 화면에 없으면 사람은 그 답을 **화면 밖에서** 찾아야 하고, 그러면 카드는
+//    질문만 하고 근거는 안 주는 것이 된다 (DESIGN_BRIEF §2-1 · P7 과 같은 이유).
+// =====================================================================
+
+describe('🔴 두 쪽이 언제 것인지 카드가 말한다', () => {
+  it('두 항목의 갱신 날짜가 나란히 나온다', () => {
+    const t = text(draw({ conflict: row('stale') }))
+    expect(t).toContain('갱신 2026-07-12')
+    expect(t).toContain('갱신 2026-08-04')
+  })
+
+  //  🔴 「그려지기만 하는 칸」이 아니다 — 값을 바꾸면 화면이 갈린다 (loop/PROMPT.md ④2-B ②단계).
+  it('🔴 항목의 값을 바꾸면 카드의 날짜가 따라 바뀐다', () => {
+    const later = text(draw({
+      conflict: row('stale'),
+      b: item({ id: 'item_retry_code', updated_at: '2027-01-02T00:00:00.000Z' }),
+    }))
+    expect(later).toContain('갱신 2027-01-02')
+    expect(later).not.toContain('갱신 2026-08-04')
+  })
+
+  //  ⚠ 항목을 못 찾은 쪽에는 날짜가 없다 — 없는 값을 「-」로 채우면 그건 지어낸 칸이다.
+  it('가리키는 항목을 못 찾은 카드에는 날짜가 없다', () => {
+    expect(text(draw({ a: null, b: null }))).not.toContain('갱신 ')
   })
 })

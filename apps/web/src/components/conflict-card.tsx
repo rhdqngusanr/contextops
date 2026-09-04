@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import {
   CONFLICT_CHOICES, CONFLICT_KIND_RULES, itemOutcomeOf, RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
-  type ConflictAnchor, type ConflictChoice, type ContextItem, type DetectedConflictKind,
+  type ConflictAnchor, type ConflictChoice, type ContextItemView, type DetectedConflictKind,
 } from '@contextops/schema'
 
 import { SEED_ANSWER_MAX } from '../lib/api/seed-questions'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
+import { dateText } from '../lib/web/time'
 import {
   AiBadge, ConfidenceChip, ConflictKindChip, ConflictSeverityChip, CtxTag, ITEM_STATUS_CHIP,
   ItemStatusChip, TypeIcon,
@@ -116,8 +117,8 @@ export type ConflictCardState = {
    * `anchor:'items'` 인 종류가 가리키는 두 항목. **못 찾으면 `null`** 이고, 그때 카드는
    * 빈 칸이 아니라 「못 찾았다」를 그린다.
    */
-  a: ContextItem | null
-  b: ContextItem | null
+  a: ContextItemView | null
+  b: ContextItemView | null
   /**
    * 🔴 **이 사람이 결정을 눌러도 되나.** `POST /conflicts/{id}:resolve` 는 **owner** 만
    * 받고 (`requireProject(…, 'owner')`), 질문에 답하는 문은 member 도 받는다.
@@ -233,7 +234,7 @@ function sideLabel(two: boolean, side: 'a' | 'b'): string {
 }
 
 /** 어긋난 두 항목 중 한쪽. **근거를 제목 옆에 같이 낸다** (DESIGN_BRIEF §2-1 · P7). */
-function ItemSide({ label, itemId, item }: { label: string; itemId: string | null; item: ContextItem | null }) {
+function ItemSide({ label, itemId, item }: { label: string; itemId: string | null; item: ContextItemView | null }) {
   return (
     <div className="card pad-sm col-tight grow">
       <span className="label">{label}</span>
@@ -260,6 +261,12 @@ function ItemSide({ label, itemId, item }: { label: string; itemId: string | nul
             <CtxTag itemId={item.id} revision={item.revision} />
             <ItemStatusChip status={item.status} />
             <ConfidenceChip confidence={item.confidence} />
+            {/* 🔴 **언제 것인가** (DESIGN_BRIEF §4 화면 4 「A 갱신 2026-07-12 · B 갱신 2026-08-04」).
+                ★ 왜 이 칸이 있어야 하나 — `stale`(오래됨) 카드가 묻는 것이 정확히 이것이다.
+                  두 쪽의 날짜가 없으면 사람은 「어느 쪽이 최신」을 **화면 밖에서** 찾아야 한다.
+                ⚠ 「1달 전」이 아니라 날짜다 — 두 쪽을 나란히 놓고 비교하는 자리라
+                  반올림하면 비교가 흐려진다 (`lib/web/time.ts` 의 `dateText`). */}
+            <span className="meta">갱신 {dateText(item.updated_at)}</span>
           </div>
           <p className="meta">{item.body}</p>
           <EvidenceList refs={item.source_refs} />

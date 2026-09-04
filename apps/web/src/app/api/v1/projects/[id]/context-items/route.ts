@@ -3,7 +3,7 @@ import { ContextItemQuery } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../../../../../db/schema'
 import { requireProject } from '../../../../../../lib/api/guard'
-import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItem } from '../../../../../../lib/api/item'
+import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItemView } from '../../../../../../lib/api/item'
 import { parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 
 // =====================================================================
@@ -51,7 +51,7 @@ export const GET = route<{ id: string }>('GET /projects/{id}/context-items', asy
     .offset(query.offset)
 
   return ctx.ok({
-    items: rows.map(toContextItem),
+    items: rows.map(toContextItemView),
     limit: query.limit,
     offset: query.offset,
   })

@@ -346,9 +346,9 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | POST /projects/{id}/tokens | member | {device_name} → {token(1회 표시), device_id} |
 | DELETE /devices/{id} | 본인·owner | → 204 |
 | POST /projects/{id}/documents | member | multipart(zip) 또는 {title, kind, content} → document + `job:{id,status}` — 구조화 job 을 만들고 **응답을 보낸 뒤에** 굴린다 (§7.1) |
-| GET /projects/{id}/context-items | member | ?type&status&scope → items[] |
+| GET /projects/{id}/context-items | member | ?type&status&scope → items[] — 항목을 **응답으로** 내는 문은 `ContextItem` 이 아니라 `ContextItemView` 로 판다: 「마지막으로 바뀐 때」(`updated_at`) 한 칸이 더 있다. 🔴 **그 칸이 `ContextItem` 에 있으면 안 된다** — 컴파일러가 받는 snapshot 의 항목이 `ContextItem` 이고 `snapshot_hash` 가 그것을 통째로 재서, 시각이 섞이면 **내용이 같은 묶음이 매번 다른 지문**을 갖는다 (`generated_at` 을 지문에서 뺀 것과 같은 이유 · §4.1). 읽는 것은 화면뿐이다 — 화면 4 의 「A 갱신 2026-07-12 · B 갱신 2026-08-04」와 화면 5 표의 「갱신」 칸 (§9 · DESIGN_BRIEF §4) |
 | POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}], job} — 받아들인 항목이 있을 때만 탐지 job 을 만든다 (§7.2). 빈 탐지는 §7.5 의 상한만 태운다 |
-| PATCH /context-items/{id} | owner | {revision(현재), patch} → item · revision 불일치 409 |
+| PATCH /context-items/{id} | owner | {revision(현재), patch} → item (`ContextItemView` — 위 행과 같다) · revision 불일치 409 |
 | GET /projects/{id}/jobs | member | ?feature&status&limit&offset → {jobs[] (**`shape:'summary'`** — `result` 없음 · `progress`·`updated_at`·`stalled` 는 있다), limit, offset} — **최신순.** job id 는 `POST /documents`·`batch-draft` 의 응답에만 있어서, 이 문이 없으면 화면 3 이 새로고침 한 번에 도는 job 을 잃는다 (FINDINGS 58). `?feature=structure&limit=1` 이 「마지막 구조화 job」이다 |
 | GET /projects/{id}/jobs/{jobId} | member | → {**shape:'full'**, id, feature, status, progress, input, result, error_code, started_at, finished_at, updated_at, **stalled**} — 화면 3 의 polling (§9). 도는 동안 갈리는 값은 `status`·**`progress {done,total,unit}`**·`updated_at` 이다 (§2). 🔴 **`stalled` 는 서버가 내는 판정**이다 — 「끝나지 않았는데 `updated_at` 이 그 기능의 `stallAfterSec` 을 넘겼다」. 잣대가 서버 전용 표(`AI_JOB_RUNNERS`)에 있고 화면의 시계는 서버와 어긋나므로 재는 쪽이 시각 둘을 다 가진 서버다. 근거(`updated_at`)를 판정 옆에 같이 낸다. 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |

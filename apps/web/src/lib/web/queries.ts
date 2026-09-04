@@ -1,5 +1,5 @@
 import type {
-  AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItem,
+  AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
   Manifest, SourceDocumentKind, SourceRef, TeamRole,
 } from '@contextops/schema'
 
@@ -82,7 +82,7 @@ export function createRepo(projectId: string, name: string): Promise<{ id: strin
 export function fetchItems(
   projectId: string,
   filter: { type?: string; status?: string; scope?: string },
-): Promise<{ items: ContextItem[]; limit: number; offset: number }> {
+): Promise<{ items: ContextItemView[]; limit: number; offset: number }> {
   const q = new URLSearchParams()
   for (const [k, v] of Object.entries(filter)) if (v) q.set(k, v)
   const tail = q.toString()

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { ITEM_TYPES, type ItemType } from '../src/common'
-import { ContextItem, ContextItemDraft, ITEM_DATA, parseContextItem } from '../src/item'
-import { ALL_TYPES, SAMPLE_DATA, sampleDraft, sampleItem } from './fixtures'
+import {
+  ContextItem, ContextItemDraft, ContextItemView, ITEM_DATA, parseContextItem, parseContextItemView,
+} from '../src/item'
+import { ALL_TYPES, SAMPLE_DATA, sampleDraft, sampleItem, sampleView } from './fixtures'
 
 // =====================================================================
 //  ItemType 10종이 **전부 실제로 뭔가를 바꾼다**를 잠근다 (loop/PROMPT.md ④2-B).
@@ -66,5 +68,36 @@ describe('ContextItemDraft', () => {
   it.each(['project_id', 'status', 'revision'] as const)('초안은 서버가 매기는 %s 를 거부한다', (field) => {
     const withServerField = { ...sampleDraft('goal'), [field]: field === 'revision' ? 9 : 'active' }
     expect(ContextItemDraft.safeParse(withServerField).success).toBe(false)
+  })
+})
+
+// =====================================================================
+//  🔴 `ContextItemView` — 화면이 받는 모양은 항목과 **한 칸만** 다르다 (FINDINGS 72③)
+//
+//  ★ 왜 둘로 갈라 두고 시험까지 두나 — 이 한 칸이 `ContextItem` 으로 새면 컴파일러가
+//    받는 snapshot 안에 시각이 들어가고, `snapshotHash()` 가 그것까지 재서 **내용이
+//    같은 묶음이 매번 다른 지문**을 갖는다. 그러면 「같은 snapshot 인가」를 물어볼 수
+//    없다 (P4 가 서 있는 자리다). 아래 둘째 `expect` 가 그 문을 잠근다.
+// =====================================================================
+
+describe('ContextItemView', () => {
+  it('10종 전부 파싱되고 `updated_at` 을 그대로 낸다', () => {
+    for (const type of ALL_TYPES) {
+      const view = parseContextItemView(sampleView(type))
+      expect(view.type).toBe(type)
+      expect(view.updated_at).toBe('2026-08-04T09:00:00.000Z')
+    }
+  })
+
+  it('🔴 `ContextItem` 은 `updated_at` 을 거부한다 — 시각이 snapshot 지문에 못 들어간다', () => {
+    expect(ContextItem.safeParse(sampleView('goal')).success).toBe(false)
+  })
+
+  it('`updated_at` 이 없으면 화면이 받는 모양이 아니다', () => {
+    expect(ContextItemView.safeParse(sampleItem('goal')).success).toBe(false)
+  })
+
+  it('시각의 모양이 아니면 거부한다 (`2026-08-04` 는 날짜지 시각이 아니다)', () => {
+    expect(ContextItemView.safeParse({ ...sampleView('goal'), updated_at: '2026-08-04' }).success).toBe(false)
   })
 })

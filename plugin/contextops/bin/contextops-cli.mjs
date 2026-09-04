@@ -19048,6 +19048,7 @@ var ItemBase = external_exports.object({
   revision: external_exports.int().min(1)
 });
 var DraftBase = ItemBase.omit({ project_id: true, status: true, revision: true });
+var ViewBase = ItemBase.extend({ updated_at: external_exports.iso.datetime() });
 var MissionData = external_exports.object({
   statement: external_exports.string().min(3).max(500),
   rationale: external_exports.string().max(1e3).optional()
@@ -19117,6 +19118,7 @@ var ITEM_DATA = {
 var variantsOf = (base) => nonEmpty(ITEM_TYPES.map((type) => base.extend({ type: external_exports.literal(type), data: ITEM_DATA[type] }).strict()));
 var ContextItem = external_exports.discriminatedUnion("type", variantsOf(ItemBase));
 var ContextItemDraft = external_exports.discriminatedUnion("type", variantsOf(DraftBase));
+var ContextItemView = external_exports.discriminatedUnion("type", variantsOf(ViewBase));
 var AiSourceSpan = external_exports.object({
   start_char: external_exports.int().min(0),
   end_char: external_exports.int().min(0),

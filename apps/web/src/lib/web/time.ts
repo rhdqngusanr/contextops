@@ -27,6 +27,22 @@ const UNITS: { seconds: number; label: string }[] = [
 export const JUST_NOW = '방금'
 
 /**
+ * `2026-07-12T09:00:00Z` → `2026-07-12`. **날(日)만** 낸다.
+ *
+ * ★ 왜 경과(`sinceText`)가 아닌가 — 「A 갱신 2026-07-12 · B 갱신 2026-08-04」는 두 항목
+ *   중 **어느 쪽이 나중인가**를 사람이 직접 재는 자리다 (DESIGN_BRIEF §4 화면 4 ·
+ *   화면 5 표의 「갱신」 칸). 「2달 전 · 1달 전」으로 반올림하면 그 비교가 흐려진다.
+ * ⚠ UTC 로 자른다 — 브라우저 시간대로 자르면 같은 값이 기기마다 하루씩 갈린다.
+ * ⚠ 못 읽은 값을 「-」나 오늘 날짜로 바꾸지 않는다 — 그건 없는 것을 지어내는 것이다.
+ *   그대로 내보내면 화면에서 눈에 띄고, 눈에 띄어야 고쳐진다.
+ */
+export function dateText(iso: string): string {
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return iso
+  return new Date(t).toISOString().slice(0, 10)
+}
+
+/**
  * `2026-09-04T12:18:58Z` → `8분 전`.
  *
  * ⚠ 미래(서버 시계가 앞선 경우)도 `방금`이다. 「-3분 전」은 사람에게 아무 뜻이 없고,

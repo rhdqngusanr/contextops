@@ -3,7 +3,7 @@
 import { use, useState } from 'react'
 import {
   CONFLICT_KIND_RULES, CONFLICT_SEVERITY_RANK, itemOutcomeOf,
-  type ConflictChoice, type ConflictKind, type ContextItem,
+  type ConflictChoice, type ConflictKind, type ContextItemView,
 } from '@contextops/schema'
 
 import {
@@ -83,7 +83,7 @@ function ReviewView({
   const [created, setCreated] = useState<Record<string, string[]>>({})
 
   const all = cards.result.state === 'ready' ? cards.result.data.conflicts : []
-  const byId: Map<string, ContextItem> = new Map(
+  const byId: Map<string, ContextItemView> = new Map(
     (items.result.state === 'ready' ? items.result.data.items : []).map((it) => [it.id, it]),
   )
 

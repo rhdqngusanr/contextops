@@ -61,6 +61,11 @@ export function sampleItem(type: ItemType): Record<string, unknown> {
   return { ...SAMPLE_BASE, type, data: SAMPLE_DATA[type] }
 }
 
+/** 화면이 받는 모양 — 항목 표본에 「마지막으로 바뀐 때」 한 칸 (`ContextItemView`). */
+export function sampleView(type: ItemType): Record<string, unknown> {
+  return { ...SAMPLE_BASE, type, data: SAMPLE_DATA[type], updated_at: '2026-08-04T09:00:00.000Z' }
+}
+
 export function sampleDraft(type: ItemType): Record<string, unknown> {
   const { project_id: _p, status: _s, revision: _r, ...rest } = SAMPLE_BASE
   return { ...rest, type, data: SAMPLE_DATA[type] }

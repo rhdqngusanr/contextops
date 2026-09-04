@@ -2,7 +2,7 @@ import React, { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
   CONFLICT_KIND_RULES,
-  type ConflictKind, type ContextItem, type SourceRef,
+  type ConflictKind, type ContextItemView, type SourceRef,
 } from '@contextops/schema'
 
 import type { ConflictCardHandlers, ConflictCardState } from '../src/components/conflict-card'
@@ -35,7 +35,7 @@ const CODE_REF: SourceRef = {
 }
 
 //  SPEC §10.1 의 paylab 픽스처가 만드는 어긋남 그대로다 (문서 5회 / 코드 3회).
-function item(over: Partial<ContextItem> = {}): ContextItem {
+function item(over: Partial<ContextItemView> = {}): ContextItemView {
   return {
     id: 'item_retry_doc',
     project_id: '00000000-0000-4000-8000-000000000000',
@@ -45,8 +45,9 @@ function item(over: Partial<ContextItem> = {}): ContextItem {
     status: 'active', scope: { kind: 'project' }, priority: 50,
     source_refs: [DOC_REF], tags: [], confidence: 'high', revision: 3,
     data: { rule: '결제 재시도 5회', severity: 'must', enforcement: 'review' },
+    updated_at: '2026-07-12T09:00:00.000Z',
     ...over,
-  } as ContextItem
+  } as ContextItemView
 }
 
 const CODE_ITEM = item({
@@ -56,6 +57,8 @@ const CODE_ITEM = item({
   source_refs: [CODE_REF],
   confidence: 'medium',
   revision: 1,
+  //  DESIGN_BRIEF §4 화면 4 의 「A 갱신 2026-07-12 · B 갱신 2026-08-04」 그대로다.
+  updated_at: '2026-08-04T09:00:00.000Z',
 })
 
 function row(kind: ConflictKind, over: Partial<ConflictRow> = {}): ConflictRow {

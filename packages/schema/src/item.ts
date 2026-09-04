@@ -37,6 +37,22 @@ const ItemBase = z.object({
  */
 const DraftBase = ItemBase.omit({ project_id: true, status: true, revision: true })
 
+/**
+ * 🔴 **화면이 받는 모양** — `ContextItem` 에 「마지막으로 바뀐 때」 한 칸을 더한 것이다.
+ *
+ * ★ 왜 `ItemBase` 에 넣지 않나 — 컴파일러가 받는 snapshot 의 항목이 `ContextItem` 이고
+ *   `snapshotHash()` 가 그 항목들을 **통째로** 잰다 (`packages/compiler/src/hash.ts`).
+ *   시각이 항목 안에 있으면 내용이 같은 묶음이 매번 다른 지문을 갖고, 「같은 snapshot
+ *   인가」를 물어볼 수 없게 된다 — `generated_at` 을 지문에서 뺀 것과 같은 이유다.
+ *   Pack 은 이 값을 **쓰지 않는다.** 읽는 것은 화면뿐이다 (화면 4 의 「갱신 2026-07-12」 ·
+ *   화면 5 표의 「갱신」 칸 · DESIGN_BRIEF §4).
+ * ★ 그래서 서버에도 조립하는 함수가 둘이다 — 발행은 `toContextItem()`, 응답은
+ *   `toContextItemView()` (`apps/web/src/lib/api/item.ts`). 둘이 갈리는 것은 이 한 칸이다.
+ * ⚠ 변형이 셋이 됐다(항목·초안·화면). 넷째를 더하기 전에 **정말 다른 계약인지** 물어라 —
+ *   같은 것을 다르게 **보여 주는** 것뿐이라면 화면이 골라 그리는 것이 맞다.
+ */
+const ViewBase = ItemBase.extend({ updated_at: z.iso.datetime() })
+
 // ---------------------------------------------------------------------
 //  타입별 data
 // ---------------------------------------------------------------------
@@ -145,9 +161,11 @@ const variantsOf = (base: z.ZodObject) =>
 
 export const ContextItem = z.discriminatedUnion('type', variantsOf(ItemBase))
 export const ContextItemDraft = z.discriminatedUnion('type', variantsOf(DraftBase))
+export const ContextItemView = z.discriminatedUnion('type', variantsOf(ViewBase))
 
 type BaseOut = z.infer<typeof ItemBase>
 type DraftOut = z.infer<typeof DraftBase>
+type ViewOut = z.infer<typeof ViewBase>
 
 /** 타입별로 `data` 가 정확히 갈리는 공개 타입. 소비자는 `type` 으로 좁히면 된다. */
 export type ContextItem = {
@@ -158,12 +176,20 @@ export type ContextItemDraft = {
   [K in ItemType]: DraftOut & { type: K; data: z.infer<(typeof ITEM_DATA)[K]> }
 }[ItemType]
 
+export type ContextItemView = {
+  [K in ItemType]: ViewOut & { type: K; data: z.infer<(typeof ITEM_DATA)[K]> }
+}[ItemType]
+
 export function parseContextItem(input: unknown): ContextItem {
   return ContextItem.parse(input) as ContextItem
 }
 
 export function parseContextItemDraft(input: unknown): ContextItemDraft {
   return ContextItemDraft.parse(input) as ContextItemDraft
+}
+
+export function parseContextItemView(input: unknown): ContextItemView {
+  return ContextItemView.parse(input) as ContextItemView
 }
 
 // ---------------------------------------------------------------------

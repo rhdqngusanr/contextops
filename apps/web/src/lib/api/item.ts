@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import {
   ITEM_DATA, SOURCE_REFS_MAX,
-  type ContextItem, type ItemType, type Scope, type SourceRef,
+  type ContextItem, type ContextItemView, type ItemType, type Scope, type SourceRef,
 } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../db/schema'
@@ -42,6 +42,11 @@ export const ITEM_COLUMNS = {
   confidence: contextItemRevisions.confidence,
   source_refs: contextItemRevisions.sourceRefs,
   data: contextItemRevisions.data,
+  //  ⚠ **항목**의 갱신 시각이지 개정의 생성 시각이 아니다 — 상태만 바꾸는 문(발행의
+  //    폐기·충돌 정리)은 개정을 만들지 않고 이 칸만 민다. 항목을 고치는 자리는 전부
+  //    `updatedAt` 을 같이 쓴다 (`grep -n "update(contextItems)" -A 12`).
+  //  ⚠ 이 칸을 **응답에만** 싣는 이유는 `ContextItemView` 옆에 적어 두었다.
+  updated_at: contextItems.updatedAt,
 } as const
 
 type ItemJoinRow = {
@@ -62,6 +67,7 @@ type ItemJoinRow = {
   confidence: ContextItem['confidence']
   source_refs: SourceRef[]
   data: unknown
+  updated_at: Date
 }
 
 /**
@@ -89,6 +95,20 @@ export function toContextItem(row: ItemJoinRow): ContextItem {
   if (row.valid_from !== null) item.valid_from = row.valid_from
   if (row.valid_until !== null) item.valid_until = row.valid_until
   return item as ContextItem
+}
+
+/**
+ * 🔴 **화면이 받는 모양** — 위에 「마지막으로 바뀐 때」 한 칸을 더한다 (FINDINGS 72③).
+ *
+ * ★ 왜 함수가 둘인가 — 발행이 컴파일러에 넘기는 snapshot 은 `toContextItem()` 이 만들고
+ *   거기에는 시각이 **없어야** 한다 (`snapshotHash()` 가 항목을 통째로 재기 때문이다 ·
+ *   `ContextItemView` 옆 주석). 라우트가 화면에 내는 것은 이쪽이다.
+ * ⚠ 새 항목 응답을 내는 라우트가 생기면 **이것**을 불러라. `toContextItem()` 을 부르면
+ *   화면은 「갱신」 칸을 조용히 잃는다 — 응답을 `ContextItemView.parse()` 로 되파는
+ *   자리에서 빨개진다.
+ */
+export function toContextItemView(row: ItemJoinRow): ContextItemView {
+  return { ...toContextItem(row), updated_at: row.updated_at.toISOString() } as ContextItemView
 }
 
 /** 타입별 `data` 를 그 타입의 표로 다시 판다 (전부 `.strict()` — P1 allowlist). */

@@ -8,7 +8,7 @@ import {
 } from '@contextops/schema'
 
 import { ERROR_HINT, hintFor } from '../src/lib/web/api'
-import { JUST_NOW, sinceText } from '../src/lib/web/time'
+import { JUST_NOW, dateText, sinceText } from '../src/lib/web/time'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver } from '../src/lib/web/semver'
 import { toSlug } from '../src/lib/web/slug'
 import { readCallbackHash } from '../src/lib/web/auth'
@@ -283,5 +283,29 @@ describe('🔴 「마지막 보고: 8분 전」 (DESIGN_BRIEF §2-3 — 「실�
 
   it('읽을 수 없는 시각에 NaN 을 그리지 않는다', () => {
     expect(sinceText('어제', now)).toBe(JUST_NOW)
+  })
+})
+
+// =====================================================================
+//  🔴 「갱신 2026-07-12」 — 경과가 아니라 **날짜**인 자리 (FINDINGS 72③)
+//
+//  ★ 왜 둘이 따로 있나 — 화면 4 는 두 항목의 날짜를 **나란히 놓고 비교**하게 한다
+//    (「어느 쪽이 최신인가」가 `stale` 카드의 질문 그 자체다). 「2달 전 · 1달 전」으로
+//    반올림하면 그 비교가 흐려진다. 반대로 job 의 「마지막 걸음」은 절대 시각이
+//    아무 뜻이 없다. 그래서 함수가 둘이고, 화면은 고르기만 한다.
+// =====================================================================
+
+describe('🔴 「갱신 2026-07-12」 — 날짜로 내는 자리 (DESIGN_BRIEF §4 화면 4·5)', () => {
+  it('시각에서 날만 남긴다', () => {
+    expect(dateText('2026-07-12T09:00:00.000Z')).toBe('2026-07-12')
+  })
+
+  it('🔴 시간대와 무관하게 같은 날이다 — 기기마다 하루씩 갈리면 두 쪽 비교가 뒤집힌다', () => {
+    //  UTC 로 자르지 않으면 이 값이 한국(UTC+9)에서는 `2026-07-13` 이 된다.
+    expect(dateText('2026-07-12T23:30:00.000Z')).toBe('2026-07-12')
+  })
+
+  it('읽을 수 없는 값을 오늘 날짜로 지어내지 않는다', () => {
+    expect(dateText('어제')).toBe('어제')
   })
 })
