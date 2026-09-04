@@ -84,23 +84,40 @@ function Do-Install {
     #  ⚠ -User 를 명시해야 한다. 빼면 비관리자 세션에서 "Access is denied" 로 죽는다
     #    (실측 2026-09-03). 스케줄러는 「누구로 등록하는지」가 불명확하면 관리자 권한을 요구한다.
     $me = "{0}\{1}" -f $env:USERDOMAIN, $env:USERNAME
-    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $me
 
-    # 비정상 종료면 재시작. 정상 종료(바퀴 다 돌았거나 STOP)면 그대로 둔다.
+    #  🔴 2026-09-04 **트리거를 없앴다 · 자동 재시작도 없앴다** (사용자 지시:
+    #    *"왜 컴터 껏다키면 자동으로 루프가돌까 내가원하는건 수동으로만 켜지는건데"*).
+    #
+    #    전에는 이랬다:
+    #      -AtLogOn 트리거          → 로그온·재부팅 때마다 **저절로 켜졌다**
+    #      -RestartCount 3 / 5분    → 죽으면 **5분 뒤 되살아났다**
+    #
+    #    ★ 둘이 겹쳐서 사람이 세운 줄 알았는데 다시 돌고 있는 상황이 나왔다.
+    #      실측 2026-09-04: 바퀴 5가 13:58 에 시작 → 프로세스가 0xC000013A
+    #      (STATUS_CONTROL_C_EXIT · 콘솔 종료 신호)로 죽음 → **14:03 에 스케줄러가
+    #      통째로 새 판을 켰다.** 로그에 「루프 시작」이 두 번 찍힌 게 그거다.
+    #
+    #    ★ 이제 트리거가 없다. 작업은 **등록만 돼 있고 저절로 안 뜬다** —
+    #      `ctl.ps1 start` 가 Start-ScheduledTask 로 부를 때만 돈다.
+    #      (트리거 없는 작업도 요청하면 실행된다. 등록은 「PATH·작업 폴더를 박아 둔
+    #       실행 껍데기」 용도로만 남는다.)
+    #  ⚠ 무인 야간으로 되돌리고 싶으면 아래 두 줄을 살리고 Register 에 -Trigger 를 다시 넘겨라.
+    #      $trigger = New-ScheduledTaskTrigger -AtLogOn -User $me
+    #      -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5)
+
     $settings = New-ScheduledTaskSettingsSet `
-        -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5) `
         -ExecutionTimeLimit (New-TimeSpan -Hours 14) `
         -MultipleInstances IgnoreNew `
-        -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-        -StartWhenAvailable
+        -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
     try {
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
+        #  -Trigger 를 안 넘긴다 = 트리거 없는 작업 = **저절로 안 뜬다.**
+        Register-ScheduledTask -TaskName $taskName -Action $action `
             -User $me -RunLevel Limited `
-            -Settings $settings -Description "ContextOps 자율 개발 루프 (loop/loop.ps1)" -ErrorAction Stop | Out-Null
+            -Settings $settings -Description "ContextOps 자율 개발 루프 (loop/loop.ps1) — 수동 전용" -ErrorAction Stop | Out-Null
     } catch {
         Say "작업 스케줄러 등록에 실패했다: $($_.Exception.Message)" "Red"
         Say "" 
@@ -109,7 +126,7 @@ function Do-Install {
         return
     }
 
-    Say "등록했다: 작업 [$taskName] (로그인 시 시작 · 비정상 종료 시 3회 재시작)" "Green"
+    Say "등록했다: 작업 [$taskName] — **수동 전용** (트리거 없음 · 자동 재시작 없음)" "Green"
     Say "아직 안 켰다. 시험 주행부터: ctl.ps1 dryrun" "Yellow"
 }
 
