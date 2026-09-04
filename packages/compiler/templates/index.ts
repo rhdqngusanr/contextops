@@ -15,7 +15,7 @@ import { PROGRESS_REPORT } from './progress-report'
 //    게이트가 아니게 된다.
 // =====================================================================
 
-export const TEMPLATE_VERSION = '1.1'
+export const TEMPLATE_VERSION = '1.2'
 
 /** Pack 을 이루는 문서 종류. `domain`·`scoped` 는 slug 마다 파일이 하나씩 생긴다. */
 export type DocId = 'claude' | 'architecture' | 'domain' | 'workflow' | 'decisions' | 'scoped' | 'policies'
@@ -114,8 +114,15 @@ export const DOCS: Record<DocId, DocSpec> = {
   domain: {
     path: (slug) => `.claude/rules/domain-${slug}.md`,
     target: 'claude',
-    // 제목은 절이 갖는다(`## {도메인 이름}`) — 머리말에 또 적으면 같은 이름이 두 줄 겹친다.
-    head: (v) => ['# 도메인', notice(v)],
+    //  🔴 머리말이 **어느 도메인인지** 적는다 (FINDINGS 91 · 97).
+    //  ★ 왜 — 예전에는 「제목은 절이 갖는다(`## {도메인 이름}`)」로 두었는데, 그 절은
+    //    `domain` **ItemType 항목**만 채운다. `scope.kind:'domain'` 규칙만 있고 그
+    //    도메인 항목이 없는 파일(`domain-refund.md`)은 이름을 적는 사람이 **아무도 없어서**
+    //    본문 어디에도 그 도메인 이름이 안 나왔다 — 아는 길이 파일 이름뿐이라
+    //    발췌·인용하는 순간 사라진다. `scoped` 의 `# 경로 규칙 — {title}` 과 모양을 맞췄다.
+    //  ⚠ `## {도메인 이름}` 절과 겹쳐 보이지만 **층이 다르다**(파일 제목 · 절 제목).
+    //    이 규칙은 `test/naming.test.ts` 가 잠근다 — slug 로 갈라지는 문서는 전부 해당한다.
+    head: (v) => [`# 도메인 — ${v.title}`, notice(v)],
     slots: [
       { section: 'domain' },
       { section: 'scoped_rule', heading: '## 이 도메인의 규칙' },

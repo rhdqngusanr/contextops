@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "compiler_version": "0.1.0",
-  "template_version": "1.1",
+  "template_version": "1.2",
   "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
   "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
   "context_version": "1.0.0",
@@ -29,8 +29,8 @@
     },
     {
       "path": ".claude/rules/domain-payment.md",
-      "sha256": "b60084f94d7e670b280b1d36ff003561014a159bf2182b74653e4986ed3ce1a8",
-      "size": 485,
+      "sha256": "30b6e2788de90bc8eb7e67d189a32b8d8a2af0482a6c75186bd107b950ea6b18",
+      "size": 497,
       "target": "claude",
       "source_item_ids": [
         "item_pl_domain_pay"
@@ -93,5 +93,5 @@
       "reason": "open_question 은 Pack 에 나가지 않는다 — 웹에서 답한 뒤 다른 타입으로 승격된다"
     }
   ],
-  "manifest_hash": "ff41bfdb40850d0d1c8e6aca58028aee9b2a72f1a7db603b50942320277e3a8f"
+  "manifest_hash": "0d27e7d0f70ab519536945b64ef7677ddb5540d2c1f468ad08798c2ce8cee38f"
 }

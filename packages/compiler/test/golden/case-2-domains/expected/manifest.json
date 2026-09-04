@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "compiler_version": "0.1.0",
-  "template_version": "1.1",
+  "template_version": "1.2",
   "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
   "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
   "context_version": "2.1.0",
@@ -10,8 +10,8 @@
   "files": [
     {
       "path": ".claude/rules/domain-ledger.md",
-      "sha256": "949bcc807273b4b5a2c2861644b4620ef4f7081a82b1ad93ca306261b9fe738f",
-      "size": 539,
+      "sha256": "a31e36bac75e45e3485753592439a421fbe555f9eb982be0fe32078aba139438",
+      "size": 550,
       "target": "claude",
       "source_item_ids": [
         "item_pl_dom_ledger",
@@ -20,8 +20,8 @@
     },
     {
       "path": ".claude/rules/domain-payment.md",
-      "sha256": "c477136fc897a9fa7ec9b905ea6d9ef7174cf649ac4cedc0791fd4f8f79acb1c",
-      "size": 430,
+      "sha256": "f2a40b5cfccc96a712681096966056fa9d01a767497321822ddab74715713e27",
+      "size": 442,
       "target": "claude",
       "source_item_ids": [
         "item_pl_dom_payment"
@@ -29,8 +29,8 @@
     },
     {
       "path": ".claude/rules/domain-refund.md",
-      "sha256": "90f04dfe761403d1beb1dac53c5042fdad83ae3182d6198406e1a23e2331e930",
-      "size": 382,
+      "sha256": "a44a1130561eeecf0e28d95213f09bd406b021cccfa90cb87749c27f1a3cabab",
+      "size": 393,
       "target": "claude",
       "source_item_ids": [
         "item_pl_dom_refund"
@@ -85,5 +85,5 @@
     }
   ],
   "excluded": [],
-  "manifest_hash": "addd3a49a82669d9ef0d2beacb626795917588b85b4f46d740c8697409ba69f1"
+  "manifest_hash": "4670e7f0a19ce086e4ebef96eee051b20cbd95bcaf2acff8e6c7642847983415"
 }
