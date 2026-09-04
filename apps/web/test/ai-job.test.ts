@@ -2,13 +2,14 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type Anthropic from '@anthropic-ai/sdk'
 import type { PGlite } from '@electric-sql/pglite'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, type AiJobStatus,
 } from '@contextops/schema'
 
 import { AI_JOB_STATUS_RULES, aiJobs, conflicts } from '../src/db/schema'
+import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
 import { AI_FEATURES, AI_FEATURE_LIMITS, AI_JOB_FEATURES, type AiFeature } from '../src/lib/ai/features'
@@ -265,8 +266,11 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
 
     expect(await runJob(job!.id)).toBe('succeeded')
 
+    //  ⚠ 씨앗 질문 10장이 프로젝트와 같이 심긴다 (`lib/api/seed-questions.ts`).
+    //     여기서 재는 것은 **탐지가 만든 행**이라 종류로 좁힌다.
     const rows = await db.select().from(conflicts)
-      .where(eq(conflicts.projectId, projectId)).orderBy(asc(conflicts.kind))
+      .where(and(eq(conflicts.projectId, projectId), inArray(conflicts.kind, DETECTED_CONFLICT_KINDS)))
+      .orderBy(asc(conflicts.kind))
     expect(rows.length).toBe(DETECTED_CONFLICT_KINDS.length)
     for (const row of rows) {
       const rule = CONFLICT_KIND_RULES[row.kind]
@@ -306,8 +310,11 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
       params({ id: projectId }),
     ))
     const list = data.conflicts as { kind: string; a_item_id: string; severity: string }[]
-    expect(list.length).toBe(1)
-    expect(list[0]).toMatchObject({ kind: 'contradiction', a_item_id: 'item_retry_new', severity: 'high' })
+    //  탐지가 만든 한 장 + 프로젝트를 만들 때 심긴 씨앗 질문 10장.
+    expect(list.length).toBe(1 + SEED_QUESTIONS.length)
+    expect(list.filter((c) => c.kind === 'contradiction')).toEqual([
+      expect.objectContaining({ kind: 'contradiction', a_item_id: 'item_retry_new', severity: 'high' }),
+    ])
   })
 
   it('열린 질문은 **질문 카드**가 된다 — `a_ref` 만 차고 항목 칸은 빈다 (SPEC §7.1)', async () => {
@@ -322,7 +329,8 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
 
     expect(await runJob(job.id)).toBe('succeeded')
 
-    const [row] = await db.select().from(conflicts).where(eq(conflicts.projectId, projectId))
+    const [row] = await db.select().from(conflicts)
+      .where(and(eq(conflicts.projectId, projectId), eq(conflicts.kind, 'open_question')))
     expect(row!.kind).toBe('open_question')
     expect(CONFLICT_KIND_RULES.open_question.anchor).toBe('document')
     expect(row!.aItemId).toBeNull()

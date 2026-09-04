@@ -43,6 +43,13 @@
       "when": 1788466080929,
       "tag": "0005_long_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788495239884,
+      "tag": "0006_perfect_mordo",
+      "breakpoints": true
     }
   ]
 }

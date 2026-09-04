@@ -153,8 +153,16 @@ export type SourceDocumentKind = (typeof SOURCE_DOCUMENT_KINDS)[number]
 export const AI_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as const
 export type AiJobStatus = (typeof AI_JOB_STATUSES)[number]
 
-/** 충돌 종류 5종 (SPEC §2 · §7.2). `open_question` 이 화면 4 의 「질문 카드」다. */
-export const CONFLICT_KINDS = ['contradiction', 'stale', 'duplicate', 'doc_vs_code', 'open_question'] as const
+/**
+ * 충돌 종류 6종 (SPEC §2 · §7.2).
+ *
+ * ⚠ 뒤의 **둘은 「사람에게 묻는 것」**이고 탐지가 만들지 않는다 (`detected: false`).
+ *   `open_question` 은 §7.1 이 문서를 읽다 남긴 질문이고, `seed_question` 은
+ *   프로젝트를 만들 때 심는 **씨앗 질문 10개**다 (§9 화면 3 ③ — 문서가 없어도
+ *   시작할 수 있게 하는 자리). 그 둘을 한데 모은 목록이 `QUESTION_CONFLICT_KINDS` 다.
+ * ⚠ 직렬화된다 (`conflict_kind` pgEnum) — 끝에만 더하고 중간을 지우지 마라.
+ */
+export const CONFLICT_KINDS = ['contradiction', 'stale', 'duplicate', 'doc_vs_code', 'open_question', 'seed_question'] as const
 export type ConflictKind = (typeof CONFLICT_KINDS)[number]
 
 /** 충돌 처리 상태 3종 (SPEC §2). */
@@ -178,13 +186,16 @@ export type ConflictChoice = (typeof CONFLICT_CHOICES)[number]
 // ---------------------------------------------------------------------
 
 /**
- * 충돌 한 장이 **무엇을 가리키나** 2종.
+ * 충돌 한 장이 **무엇을 가리키나** 3종.
  *
  * ⚠ `items` 를 `SOURCE_REF` 의 종류로 더하지 마라. 그러면 항목의 `source_refs` 가
  *   다른 항목을 가리킬 수 있게 되고, 원문까지 가는 사슬이 한 칸 끊긴다 (P7).
  *   충돌이 항목을 가리키는 것과 항목이 원문을 가리키는 것은 **다른 관계**다.
+ * 🔴 `none` 은 「아직 가리킬 것이 없다」다 — 씨앗 질문이 그렇다. 문서도 항목도 없는
+ *   프로젝트에 심기 때문에 **네 칸이 전부 빈다.** `document` 로 눙치면 `a_ref` 를
+ *   지어내야 하고, 그 순간 그 근거는 아무 원문도 가리키지 않는 거짓이 된다 (P7).
  */
-export const CONFLICT_ANCHORS = ['items', 'document'] as const
+export const CONFLICT_ANCHORS = ['items', 'document', 'none'] as const
 export type ConflictAnchor = (typeof CONFLICT_ANCHORS)[number]
 
 /** 충돌 종류 하나의 규칙. 프롬프트·검증·DB 제약·화면이 이 표를 **읽기만** 한다. */
@@ -200,6 +211,7 @@ export interface ConflictKindRule {
    * 🔴 이 종류가 **무엇을 가리키나.** 충돌 행의 어느 칸이 채워지는지가 여기서 갈린다:
    *   - `items`    → `a_item_id` (·`needsB` 면 `b_item_id`) · `a_ref`/`b_ref` 는 비어야 한다
    *   - `document` → `a_ref` (·`needsB` 면 `b_ref`) · `a_item_id`/`b_item_id` 는 비어야 한다
+   *   - `none`     → 넷 다 비어야 한다 (가리킬 것이 아직 없는 질문)
    *
    * ★ 그 규칙은 문서가 아니라 **DB 제약**이다 — `apps/web/src/db/schema.ts` 의
    *   `conflictShapeCheck()` 가 이 표를 읽어 CHECK 을 만든다. 여기 한 줄을 고치고
@@ -257,6 +269,13 @@ export const CONFLICT_KIND_RULES = {
     detected: false, anchor: 'document', needsB: false, madeBy: '§7.1 문서 구조화의 `open_questions`',
     hint: '',
   },
+  //  ⚠ 이 종류만 `anchor: 'none'` 이다. 프로젝트를 만드는 순간 심기 때문에 가리킬
+  //     문서도 항목도 없다 — 답변이 곧 원문이고, 그 답변은 `resolution.note` 에 남는다.
+  seed_question: {
+    detected: false, anchor: 'none', needsB: false,
+    madeBy: '프로젝트를 만들 때 심는 씨앗 질문 (`lib/api/seed-questions.ts`)',
+    hint: '',
+  },
   //  ⚠ `as const` 여야 `detected` 가 `true`/`false` **리터럴**로 남고, 아래
   //     `DetectedConflictKind` 가 표에서 타입으로 파생될 수 있다. `satisfies` 는
   //     빠진 줄을 그대로 막아 준다 (`Record` 주석과 같은 보호다).
@@ -266,6 +285,23 @@ export const CONFLICT_KIND_RULES = {
 export type DetectedConflictKind = {
   [K in ConflictKind]: (typeof CONFLICT_KIND_RULES)[K]['detected'] extends true ? K : never
 }[ConflictKind]
+
+/**
+ * 🔴 **사람에게 묻는 종류.** `GET·POST /projects/{id}/questions` 가 이 목록으로 거른다.
+ *
+ * ★ 왜 표에서 뽑나 — 라우트에 `kind = 'open_question'` 을 적어 두었더니, 씨앗 질문이
+ *   생긴 순간 **질문 카드 화면이 그것을 못 봤다.** 질문 종류가 늘 때 고칠 자리가
+ *   여기 하나여야 한다.
+ * ⚠ 「탐지가 만들지 않는 것 = 사람에게 묻는 것」이다. 셋째 줄을 더할 때 그 뜻이
+ *   아니라면 `ConflictKindRule` 에 축을 하나 더해라 — 여기서 손으로 세지 마라.
+ */
+export type QuestionConflictKind = {
+  [K in ConflictKind]: (typeof CONFLICT_KIND_RULES)[K]['detected'] extends false ? K : never
+}[ConflictKind]
+
+export const QUESTION_CONFLICT_KINDS = CONFLICT_KINDS.filter(
+  (k): k is QuestionConflictKind => !CONFLICT_KIND_RULES[k].detected,
+)
 
 /** 같은 것을 **값**으로. 위 타입과 이 배열은 같은 표에서 나온다. */
 export const DETECTED_CONFLICT_KINDS = CONFLICT_KINDS.filter(

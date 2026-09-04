@@ -2,13 +2,14 @@ import type { PGlite } from '@electric-sql/pglite'
 import { asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem,
+  CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, QUESTION_CONFLICT_KINDS,
   type ConflictChoice, type ConflictKind,
 } from '@contextops/schema'
 
 import { conflicts, contextItemRevisions, contextItems, repos, sourceDocumentVersions, sourceDocuments } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { RESOLUTION_OUTCOME } from '../src/lib/api/conflict'
+import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import { GET as listTeams, POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
@@ -421,7 +422,9 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
       params({ id: projectId }),
     ))
     const rows = data.conflicts as Record<string, unknown>[]
-    expect(rows).toHaveLength(CONFLICT_KINDS.length)
+    //  ⚠ 프로젝트를 만들 때 씨앗 질문 10장이 같이 심긴다 (`lib/api/seed-questions.ts`).
+    //     그 열 장도 같은 검사를 받아야 한다 — `anchor:'none'` 이라 **네 칸이 다 빈다.**
+    expect(rows).toHaveLength(CONFLICT_KINDS.length + SEED_QUESTIONS.length)
     for (const row of rows) {
       const kind = row.kind as ConflictKind
       const rule = CONFLICT_KIND_RULES[kind]
@@ -457,25 +460,36 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
       req('GET', `/api/v1/projects/${projectId}/conflicts?status=open`, { auth: owner }),
       params({ id: projectId }),
     ))
-    expect((open.conflicts as { id: string }[]).map((c) => c.id)).toEqual([kept])
+    //  씨앗 질문 10장도 `open` 이다 — 필터가 가르는 것은 **상태**이지 종류가 아니다.
+    const openIds = (open.conflicts as { id: string }[]).map((c) => c.id)
+    expect(openIds).toHaveLength(1 + SEED_QUESTIONS.length)
+    expect(openIds).toContain(kept)
+    expect(openIds).not.toContain(closed)
 
     const all = await dataOf(await listConflicts(
       req('GET', `/api/v1/projects/${projectId}/conflicts`, { auth: owner }),
       params({ id: projectId }),
     ))
-    expect(all.conflicts).toHaveLength(2)
+    expect(all.conflicts).toHaveLength(2 + SEED_QUESTIONS.length)
   })
 
-  it('질문 카드는 open_question 인 충돌만이다', async () => {
+  it('질문 카드는 **질문 종류**의 충돌만이다 (QUESTION_CONFLICT_KINDS)', async () => {
+    //  ★ 왜 종류를 손으로 안 세나 — 라우트에 `kind = 'open_question'` 이 박혀 있던
+    //    동안 씨앗 질문 10장은 질문 카드 화면에서 **안 보였다** (FINDINGS 67).
     const { owner, projectId } = await seed()
-    await seedConflict(projectId, 'doc_vs_code')
+    const detected = await seedConflict(projectId, 'doc_vs_code')
     const questionId = await seedConflict(projectId, 'open_question')
 
     const data = await dataOf(await listQuestions(
       req('GET', `/api/v1/projects/${projectId}/questions`, { auth: owner }),
       params({ id: projectId }),
     ))
-    expect((data.questions as { id: string }[]).map((q) => q.id)).toEqual([questionId])
+    const rows = data.questions as { id: string; kind: ConflictKind }[]
+    //  씨앗 10장 + 방금 심은 열린 질문 하나. 탐지가 만든 것은 안 섞인다.
+    expect(rows.map((q) => q.id)).toContain(questionId)
+    expect(rows.map((q) => q.id)).not.toContain(detected)
+    expect(rows).toHaveLength(SEED_QUESTIONS.length + 1)
+    expect(new Set(rows.map((q) => q.kind))).toEqual(new Set(QUESTION_CONFLICT_KINDS))
   })
 
   it('답을 주면 질문이 닫히고, 초안을 같이 주면 그때만 항목이 생긴다', async () => {
@@ -503,7 +517,8 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
       req('GET', `/api/v1/projects/${projectId}/questions?status=open`, { auth: owner }),
       params({ id: projectId }),
     ))
-    expect(still.questions).toEqual([])
+    //  답한 둘은 닫혔고, 아직 아무도 안 건드린 씨앗 질문 10장만 열려 있다.
+    expect(still.questions).toHaveLength(SEED_QUESTIONS.length)
   })
 
   it('남의 프로젝트 질문이 섞이면 하나도 반영하지 않는다', async () => {
@@ -524,6 +539,6 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
       req('GET', `/api/v1/projects/${projectId}/questions?status=open`, { auth: owner }),
       params({ id: projectId }),
     ))
-    expect(open.questions).toHaveLength(1)
+    expect(open.questions).toHaveLength(1 + SEED_QUESTIONS.length)
   })
 })

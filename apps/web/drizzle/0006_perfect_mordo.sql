@@ -1,0 +1,1 @@
+ALTER TYPE "public"."conflict_kind" ADD VALUE 'seed_question';

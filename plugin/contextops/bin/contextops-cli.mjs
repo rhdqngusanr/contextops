@@ -19250,7 +19250,7 @@ var ListQuery = external_exports.object({
   offset: external_exports.coerce.number().int().min(0).default(0)
 }).strict();
 var SOURCE_DOCUMENT_KINDS = ["goal", "policy", "roadmap", "adr", "notes", "wiki"];
-var CONFLICT_KINDS = ["contradiction", "stale", "duplicate", "doc_vs_code", "open_question"];
+var CONFLICT_KINDS = ["contradiction", "stale", "duplicate", "doc_vs_code", "open_question", "seed_question"];
 var CONFLICT_STATUSES = ["open", "resolved", "dismissed"];
 var CONFLICT_CHOICES = ["a", "b", "both", "dismiss"];
 var CONFLICT_KIND_RULES = {
@@ -19291,11 +19291,23 @@ var CONFLICT_KIND_RULES = {
     needsB: false,
     madeBy: "\xA77.1 \uBB38\uC11C \uAD6C\uC870\uD654\uC758 `open_questions`",
     hint: ""
+  },
+  //  ⚠ 이 종류만 `anchor: 'none'` 이다. 프로젝트를 만드는 순간 심기 때문에 가리킬
+  //     문서도 항목도 없다 — 답변이 곧 원문이고, 그 답변은 `resolution.note` 에 남는다.
+  seed_question: {
+    detected: false,
+    anchor: "none",
+    needsB: false,
+    madeBy: "\uD504\uB85C\uC81D\uD2B8\uB97C \uB9CC\uB4E4 \uB54C \uC2EC\uB294 \uC528\uC557 \uC9C8\uBB38 (`lib/api/seed-questions.ts`)",
+    hint: ""
   }
   //  ⚠ `as const` 여야 `detected` 가 `true`/`false` **리터럴**로 남고, 아래
   //     `DetectedConflictKind` 가 표에서 타입으로 파생될 수 있다. `satisfies` 는
   //     빠진 줄을 그대로 막아 준다 (`Record` 주석과 같은 보호다).
 };
+var QUESTION_CONFLICT_KINDS = CONFLICT_KINDS.filter(
+  (k) => !CONFLICT_KIND_RULES[k].detected
+);
 var DETECTED_CONFLICT_KINDS = CONFLICT_KINDS.filter(
   //  ⚠ 표를 읽는 순간 `detected` 가 `boolean` 으로 넓어져서 TS 가 이 좁힘을 스스로
   //     증명하지 못한다. 위 타입과 **같은 표**를 보고 있으므로 뜻은 어긋날 수 없다.
