@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { eq } from 'drizzle-orm'
@@ -47,6 +47,22 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
  */
 function fixtureText(rel: string): string {
   return readFileSync(join(root, 'fixtures', rel), 'utf8')
+}
+
+/**
+ * 픽스처 레포에 그 폴더가 **정말 있는지 재고** 경로를 돌려준다. 없으면 **던진다.**
+ *
+ * ★ 왜 재는가 — `architecture` 항목의 `paths` 는 「이 구성요소의 코드가 여기 산다」다.
+ *   손으로 적으면 픽스처가 바뀌었을 때 **조용히 없는 폴더를 가리킨다** — 태그는 멀쩡히
+ *   붙어 있고 심사자가 따라가면 아무것도 없다 (FINDINGS 90 과 같은 고장, 코드 쪽 판).
+ * ⚠ 던지는 이유는 `locate()` 와 같다 — 조용히 넘어가면 아무도 안 센다.
+ */
+function fixtureDir(repo: string, rel: string): string {
+  const at = join(root, 'fixtures', repo, rel)
+  if (!existsSync(at) || !statSync(at).isDirectory()) {
+    throw new Error(`[seed] ${repo}/${rel} 폴더가 픽스처에 없다 — 경로를 적지 말고 픽스처를 봐라`)
+  }
+  return rel
 }
 
 /**
@@ -238,6 +254,30 @@ export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): 
  *   전에는 `item_road_m1` 이 old-roadmap.md 를 가리켰는데 그 문서의 M1 은
  *   「웹훅 수신 v1」이라 **내용이 아예 다른 문서**를 근거라고 적고 있었다.
  */
+/**
+ * 🔴 **goals.md §7 「아키텍처 한 장」의 다섯 줄** — `architecture` 항목의 재료 표.
+ *
+ * ★ 왜 표인가 — 다섯이 **글자만 다르고 모양이 같다.** `fromDoc(...)` 를 다섯 번
+ *   펼쳐 적으면 여섯째 구성요소가 생겼을 때 한 벌을 통째로 복사하게 되고, 복사하는
+ *   사람은 반드시 하나(경로·근거 문장)를 빠뜨린다.
+ * ★ 구성요소를 하나 더하는 절차: **이 표에 한 줄.** 경로는 `src/{component}` 로
+ *   자동이고, 그 폴더가 픽스처에 없으면 `fixtureDir()` 이 던진다.
+ * ⚠ 넷째 칸은 goals.md §7 에서 **그대로 잘라 온 줄**이다. 요약해서 적지 마라 —
+ *   `locate()` 가 원문에서 못 찾고 던진다 (P7 이 끊기는 자리를 씨앗에서 막는다).
+ */
+const ARCHITECTURE = [
+  ['item_arch_payment', 'payment', '승인·매입을 맡는다. PSP 를 직접 부르지 않고 psp 를 거친다',
+    '- `payment` 는 승인·매입을 맡는다. PSP 를 직접 부르지 않고 `psp` 를 거친다.'],
+  ['item_arch_psp', 'psp', '바깥으로 나가는 유일한 자리다. 재시도·타임아웃이 여기 산다',
+    '- `psp` 만이 바깥으로 나간다. 재시도·타임아웃이 사는 자리다.'],
+  ['item_arch_webhook', 'webhook', 'PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다',
+    '- `webhook` 은 PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다.'],
+  ['item_arch_refund', 'refund', '환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다',
+    '- `refund` 는 환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다.'],
+  ['item_arch_ledger', 'ledger', 'append only 다. 여기서 계산이 틀리면 정산이 틀린다',
+    '- `ledger` 는 append only. 여기서 계산이 틀리면 정산이 틀린다.'],
+] as const satisfies readonly (readonly [id: string, component: string, responsibility: string, quote: string])[]
+
 export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft[] {
   return [
     fromDoc('item_mission_paylab', 'mission', goals,
@@ -342,6 +382,50 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
         body: '승인률과 부딪히면 환불 속도가 우선이다.',
         scope: { kind: 'domain', value: 'refund' },
         data: { rule: '환불 접수→종결을 24시간 안에 끝낸다', severity: 'must', enforcement: 'review' },
+      }),
+    //  🔴 **아키텍처 한 장 = goals.md §7 의 다섯 줄** (FINDINGS 94). 이게 없으면
+    //     CLAUDE.md 에 `## Quick Map` 절이 통째로 안 서고 `.claude/rules/architecture.md`
+    //     라는 **Pack 파일 갈래 하나가 데모에 아예 없다.** 「이 코드가 어느 구성요소인가」가
+    //     심사자가 읽는 종이에 한 줄도 없었다는 뜻이다.
+    //  ★ 왜 다섯을 다 넣나 — §7 은 **한 장짜리 그림**이다. 그중 둘만 항목으로 만들면
+    //    Quick Map 이 그림의 일부만 그리고, 심사자는 빠진 셋이 없는 건지 안 옮긴 건지 모른다.
+    //  ⚠ 다섯 줄 전부 원문 그대로다 (P7). `responsibility` 는 그 줄이 말하는 것을 옮긴 것이고
+    //    경로는 §7 그림의 대괄호 이름과 같다 — `item_road_m1`·`item_policy_webhook_sig` 가
+    //    쓰는 경로(`src/payment`·`src/psp`·`src/webhook`)와 같은 낱말이라야 서로 이어진다.
+    ...ARCHITECTURE.map(([id, component, responsibility, quote]) => fromDoc(id, 'architecture', goals, quote, {
+      title: `${component} — ${responsibility}`.slice(0, 120),
+      body: '',
+      data: { component, responsibility, paths: [fixtureDir(retry.repo, `src/${component}`)] },
+    })),
+    //  🔴 **`domain` 타입은 이 항목 하나뿐이다** (FINDINGS 94).
+    //  ⚠ **`scope.kind='domain'` 과 헷갈리지 마라.** `item_policy_refund` 가 만드는
+    //    `domain-refund.md` 는 **scope** 축이 만든 파일이고, 이 항목이 만드는
+    //    `domain-payment.md` 는 **ItemType** 축이 만든 파일이다. 두 축이 이름만 같다.
+    //    (`partition.ts` 주석의 「`domain-payment` 와 `scoped-payment` 는 다른 문서다」)
+    //  ★ 근거는 goals.md §6 용어 표 다섯 줄이다 — glossary 와 invariant 둘 다 **그 표
+    //    안에 글자 그대로** 있다. 불변식을 지어내면 그 줄이 P7 을 못 넘는다.
+    fromDoc('item_domain_payment', 'domain', goals,
+      '| PSP | 카드사에 붙는 결제 대행사. 우리는 두 곳에 붙는다 |\n'
+      + '| 승인(authorize) | 카드 한도를 잡는 것. 돈이 움직이지는 않는다 |\n'
+      + '| 매입(capture) | 잡아 둔 한도에서 실제로 돈을 가져오는 것 |\n'
+      + '| 종결(closed) | 환불이 승인 또는 거절로 끝난 상태. 「검토 중」은 종결이 아니다 |\n'
+      + '| 원장(ledger) | 돈의 움직임을 한 줄씩 append 하는 표. 수정·삭제 없음 |', {
+        title: '결제 도메인 용어',
+        body: '팀이 같은 낱말을 같은 뜻으로 쓴다 — 여기 없는 말은 아직 합의된 말이 아니다.',
+        data: {
+          name: 'payment',
+          glossary: [
+            { term: 'PSP', meaning: '카드사에 붙는 결제 대행사. 우리는 두 곳에 붙는다' },
+            { term: '승인(authorize)', meaning: '카드 한도를 잡는 것. 돈이 움직이지는 않는다' },
+            { term: '매입(capture)', meaning: '잡아 둔 한도에서 실제로 돈을 가져오는 것' },
+            { term: '종결(closed)', meaning: '환불이 승인 또는 거절로 끝난 상태' },
+            { term: '원장(ledger)', meaning: '돈의 움직임을 한 줄씩 append 하는 표' },
+          ],
+          invariants: [
+            '원장은 append 만 한다 — 수정·삭제 없음',
+            '「검토 중」은 종결이 아니다',
+          ],
+        },
       }),
   ]
 }

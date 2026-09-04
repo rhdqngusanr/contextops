@@ -113,13 +113,18 @@ export const PACK_COVERAGE = {
 
   '항목 종류(ItemType)': {
     all: ITEM_TYPES,
-    min: 5,
-    //  🔴 지금 서는 것은 다섯이다 — mission · goal · roadmap · policy · constraint.
-    //     안 서는 다섯 중 `architecture`·`domain`·`open_question` 은 goals.md §5·§6·§7 에
-    //     **원문이 이미 있는데 씨앗이 그 절을 건너뛴다.** `adr`·`workflow` 는 원문이 없다.
-    //     이 줄의 `min` 을 올리는 것이 FINDINGS 94 다 — 픽스처를 늘리고 여기 숫자를 올려라.
-    //  ⚠ 10 으로 올리지 마라. `adr`·`workflow` 는 문서를 먼저 늘려야 한다 (89 의 규칙).
-    why: '지금 5. architecture·domain·open_question 은 원문이 goals.md 에 있다 (FINDINGS 94) · adr·workflow 는 원문이 없다',
+    min: 7,
+    //  🔴 지금 서는 것은 일곱이다 — mission · goal · roadmap · policy · constraint ·
+    //     **architecture · domain** (뒤의 둘이 FINDINGS 94 가 세운 것이다. goals.md §7 의
+    //     다섯 줄과 §6 의 용어 표에서 왔고 지어낸 문장이 하나도 없다).
+    //  🔴 **`open_question` 은 여기 절대 안 선다 — 최대치는 9 다.** 고장이 아니라 설계다:
+    //     `compiler/src/partition.ts` 가 그 타입을 `exclude` 로 보낸다
+    //     (「답이 없는 질문을 규칙처럼 배포하지 않는다」). 그래서 씨앗에 넣어도 이 축은
+    //     안 움직인다 — **넣어 보고 안 올라간다고 이 표를 고치지 마라.**
+    //     ⚠ FINDINGS 94 는 「§5 미결 4건이 원문이니 채울 수 있다」고 적었는데 그건 틀렸다.
+    //  ⚠ 남은 `adr`·`workflow` 는 픽스처 문서에 원문이 **없다.** 채우려면 문장을
+    //    지어내야 하고 그 순간 P7 이 깨진다 — **문서를 먼저** 늘려라 (FINDINGS 89 의 규칙).
+    why: '지금 7. open_question 은 partition 이 Pack 에서 빼므로 구조적으로 못 선다(최대 9) · adr·workflow 는 goals.md 에 원문이 없어 문서를 먼저 늘려야 한다',
     shown: (pack) => {
       const seen = new Set<string>()
       for (const tag of pack.tags) {
