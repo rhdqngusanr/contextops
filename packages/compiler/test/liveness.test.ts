@@ -1,6 +1,7 @@
-import { PACK_TARGETS, SOURCE_REF_KINDS, type ItemType } from '@contextops/schema'
+import { PACK_TARGETS, SOURCE_REF_KINDS, SourceRef, type ItemType } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 import { compile } from '../src'
+import { srcKindOf, srcTag } from '../src/tag'
 import { ALL_TYPES, ANCHOR, makeInput, makeItem } from './fixtures'
 
 // =====================================================================
@@ -104,6 +105,21 @@ describe('SourceRef 4종', () => {
   it('4종이 서로 다른 태그를 낸다', () => {
     const prints = SOURCE_REF_KINDS.map((kind) => fingerprint([makeItem('mission', { source_refs: [SAMPLES[kind]] })]))
     expect(allDistinct(prints)).toBe(true)
+  })
+
+  //  🔴 쓰고 되읽는 왕복을 잠근다. 접두사가 `SRC_TAG` 와 `srcKindOf` 두 곳으로 갈라지면
+  //     태그는 멀쩡한데 **아무도 그 종류를 못 알아본다** — 그러면 「데모가 근거 몇 갈래를
+  //     보여 주나」를 세는 관통(FINDINGS 93)이 조용히 0 을 세게 된다.
+  it('낸 태그를 되읽으면 같은 종류가 나온다', () => {
+    //  ⚠ 표본은 `as const` 라 그대로는 `SourceRef` 가 아니다. 계약으로 **파싱해서** 넘긴다 —
+    //    캐스트로 밀어 넣으면 표본이 계약을 어겨도 이 시험이 초록으로 남는다.
+    const parsed = SOURCE_REF_KINDS.map((kind) => SourceRef.parse(SAMPLES[kind]))
+    expect(parsed.map((ref) => srcKindOf(srcTag(ref)))).toEqual([...SOURCE_REF_KINDS])
+  })
+
+  it('모르는 접두사는 지어내지 않는다', () => {
+    expect(srcKindOf('mystery:1-2')).toBeNull()
+    expect(srcKindOf('접두사가 없다')).toBeNull()
   })
 })
 

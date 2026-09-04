@@ -1,5 +1,5 @@
-import { ITEM_STATUS_EXCLUDE_REASON, type ContextItem, type ItemType } from '@contextops/schema'
-import type { DocId, SectionKey } from '../templates'
+import { ITEM_STATUS_EXCLUDE_REASON, type ContextItem, type ItemType, type ScopeKind } from '@contextops/schema'
+import { DOCS, type DocId, type SectionKey } from '../templates'
 import { slugify } from './text'
 
 // =====================================================================
@@ -58,16 +58,40 @@ function forType<T extends ItemType>(
 }
 
 /**
- * scope 로 갈리는 규칙(policy·constraint)의 배치. **scope.kind 3종이 전부 다른 파일**이다.
+ * 🔴 **scope 3종 → 그 규칙이 사는 문서의 정본 표.**
  *   project → CLAUDE.md · domain → domain-{slug}.md · path → scoped-{slug}.md
+ *
+ * ★ 왜 표인가 — 읽는 쪽이 **둘**이다: 배치(`byScope`)와 「이 scope 의 규칙은 어느 파일로
+ *   나오나」(`scopePackPath`). 두 곳에 `if (kind === 'domain')` 을 적으면 scope 가 늘 때
+ *   한쪽만 고쳐지고, 그러면 규칙은 만들어지는데 아무도 그 파일을 못 찾는다.
  * ⚠ SPEC §4.1 표는 project 와 path 만 적었다. domain scope 를 CLAUDE.md 로 보내면
  *   도메인 규칙이 전역 규칙처럼 보인다 — 그래서 그 도메인 파일로 보낸다.
  */
+const SCOPE_DOC = {
+  project: 'claude',
+  domain: 'domain',
+  path: 'scoped',
+} as const satisfies Record<ScopeKind, DocId>
+
+/** scope 로 갈리는 규칙(policy·constraint)의 배치. **3종이 전부 다른 파일**이다. */
 function byScope(item: ContextItem, projectSection: SectionKey): Placement {
   const value = item.scope.value ?? ''
-  if (item.scope.kind === 'project') return place('claude', projectSection)
-  if (item.scope.kind === 'domain') return place('domain', 'scoped_rule', { slug: slugify(value), title: value })
-  return place('scoped', 'scoped_rule', { slug: slugify(value), title: value, paths: [value] })
+  const doc = SCOPE_DOC[item.scope.kind]
+  if (item.scope.kind === 'project') return place(doc, projectSection)
+  //  `paths:` frontmatter 는 경로 scope 만 갖는다 — 도메인 이름은 경로가 아니다.
+  const paths = item.scope.kind === 'path' ? [value] : []
+  return place(doc, 'scoped_rule', { slug: slugify(value), title: value, paths })
+}
+
+/**
+ * 「이 scope 의 규칙은 Pack 의 **어느 파일**로 나오나」 — 위 표와 `DOCS` 를 잇는 유일한 문.
+ *
+ * ★ 왜 내보내나 — 관통이 「데모가 scope 3종을 다 보여 주나」를 세려면 파일 이름을 알아야
+ *   하는데, 그 이름을 검사 쪽에 적으면 표가 두 곳으로 갈라진다 (FINDINGS 93).
+ * ⚠ slug 를 모르고 갈래만 셀 때는 `'*'` 를 넣어 glob 으로 쓴다.
+ */
+export function scopePackPath(kind: ScopeKind, slug: string): string {
+  return DOCS[SCOPE_DOC[kind]].path(slug)
 }
 
 export const PARTITION = {

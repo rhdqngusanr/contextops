@@ -3,7 +3,9 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
-import { ENFORCEMENT_LABEL, parseTraceTag, PROGRESS_REPORT } from '@contextops/compiler'
+import { parseTraceTag, PROGRESS_REPORT, srcKindOf, type TraceTag } from '@contextops/compiler'
+
+import { measureCoverage } from './pack-coverage'
 
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
@@ -40,15 +42,6 @@ import { fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const outDir = join(root, '.ci', 'walkthrough-pack')
 
-/**
- * 데모 Pack 이 보여 줘야 하는 **강제 수단의 최소 갈래 수** (FINDINGS 89).
- * ★ 왜 2 인가 — 1 이면 「이 정책을 무엇이 강제하나」가 상수처럼 읽힌다. 사람은 같은 말이
- *   모든 줄에 붙어 있으면 그게 값이 아니라 장식인 줄 안다. 둘부터 값으로 읽힌다.
- * ★ 왜 4(전부)가 아닌가 — 픽스처의 줄은 전부 문서까지 역추적된다(P7). 문서에 근거가 없는
- *   갈래는 **지어내면 안 된다.** 넷을 다 보이려면 goals.md 를 먼저 늘려야 한다.
- */
-const PACK_ENFORCEMENT_MIN = 2
-
 const checks: { name: string; ok: boolean; detail: string }[] = []
 function check(name: string, ok: boolean, detail = ''): void {
   checks.push({ name, ok, detail })
@@ -64,13 +57,15 @@ function isProductText(path: string): boolean {
   return (PRODUCT_TEXT_PACK_FILES as readonly string[]).includes(path)
 }
 
-/** 픽스처 문서 하나를 그대로 읽는다 — 근거를 **따라가는** 쪽이 원문을 여기서 본다. */
-function fixtureDoc(name: string): string {
-  return readFileSync(join(root, 'fixtures', 'paylab-docs', name), 'utf8')
+/** 픽스처 파일 하나를 그대로 읽는다 — 근거를 **따라가는** 쪽이 원문을 여기서 본다. */
+function fixtureText(rel: string): string {
+  return readFileSync(join(root, 'fixtures', rel), 'utf8')
 }
 
-/** 태그 조각 `doc:<uuid>#<start>-<end>` 하나. 나머지 3종(repo·proposal·manual)은 문서가 아니다. */
+/** 태그 조각 `doc:<uuid>#<start>-<end>` — **문자** 범위다. */
 const DOC_SRC_RE = /^doc:([0-9a-fA-F-]{36})#(\d+)-(\d+)$/
+/** 태그 조각 `repo:<repo>:<path>:<start>-<end>` — **줄** 범위다 (1-기반·양끝 포함). */
+const REPO_SRC_RE = /^repo:([^:]+):([^:]+):(\d+)-(\d+)$/
 
 /**
  * 🔴 **역추적을 실제로 따라간다** (P7 · FINDINGS 90).
@@ -86,41 +81,59 @@ const DOC_SRC_RE = /^doc:([0-9a-fA-F-]{36})#(\d+)-(\d+)$/
  * ⚠ 기대 문장을 여기 적지 마라 — 씨앗이 낸 `SeedResult.evidence` 를 **읽기만** 한다.
  *   두 곳에 적으면 픽스처를 고친 사람이 검사 쪽 문장을 고쳐서 초록을 만든다.
  */
-function followEvidence(packTexts: string[], expected: EvidenceExpectation[]): {
-  followed: number; items: Set<string>; broken: string[]
+function followEvidence(tags: TraceTag[], expected: EvidenceExpectation[]): {
+  followed: number; seen: Set<string>; broken: string[]
 } {
-  const want = new Map(expected.map((e) => [e.itemId, e]))
+  //  ⚠ 한 항목이 근거를 **여럿** 들 수 있다 (문서 + 코드). 하나만 담으면 둘째 근거는
+  //    아무도 안 따라가고, 그 근거는 조용히 검사 밖에 선다.
+  const want = new Map<string, EvidenceExpectation[]>()
+  for (const e of expected) want.set(e.itemId, [...(want.get(e.itemId) ?? []), e])
   const broken: string[] = []
-  const items = new Set<string>()
+  const seen = new Set<string>()
   let followed = 0
 
-  for (const text of packTexts) {
-    for (const line of text.split('\n')) {
-      const tag = parseTraceTag(line)
-      if (!tag) continue
-      const e = want.get(tag.itemId)
+  for (const tag of tags) {
+    for (const src of tag.src) {
+      //  접두사를 여기서 세지 않는다 — 태그를 만든 표가 답한다 (`srcKindOf`).
+      const kind = srcKindOf(src)
+      //  `proposal`·`manual` 은 따라갈 **원문 파일이 없다** — 제안 id 와 사람의 답변이
+      //  곧 원문이고, 그것은 DB 의 제안 행·충돌 행에 남는다. 여기서 잴 것이 없다.
+      if (kind !== 'source_document' && kind !== 'repository_path') continue
+
+      const e = (want.get(tag.itemId) ?? []).find((x) => x.kind === kind)
       if (!e) {
-        broken.push(`${tag.itemId}: Pack 에 있는데 기대 문장이 없다`)
+        broken.push(`${tag.itemId}: ${kind} 근거가 Pack 에 있는데 기대 문장이 없다`)
         continue
       }
-      for (const src of tag.src) {
+      followed++
+      seen.add(`${e.itemId}#${e.kind}`)
+
+      if (e.kind === 'source_document') {
         const m = DOC_SRC_RE.exec(src)
-        //  문서 근거가 아닌 조각(`proposal:` 등)은 여기서 잴 것이 없다 — 건너뛴다.
-        if (!m?.[1] || !m[2] || !m[3]) continue
-        followed++
-        items.add(tag.itemId)
+        if (!m?.[1] || !m[2] || !m[3]) { broken.push(`${tag.itemId}: 문서 태그 모양이 깨졌다 — ${src}`); continue }
         if (m[1] !== e.documentVersionId) {
-          broken.push(`${tag.itemId}: 태그가 딴 문서를 가리킨다 (${e.docName} 이어야 한다)`)
+          broken.push(`${tag.itemId}: 태그가 딴 문서를 가리킨다 (${e.file} 이어야 한다)`)
           continue
         }
-        const cut = fixtureDoc(e.docName).slice(Number(m[2]), Number(m[3]))
-        if (!cut.includes(e.quote)) {
-          broken.push(`${tag.itemId}: ${e.docName}#${m[2]}-${m[3]} 안에 그 문장이 없다`)
-        }
+        const cut = fixtureText(e.file).slice(Number(m[2]), Number(m[3]))
+        if (!cut.includes(e.quote)) broken.push(`${tag.itemId}: ${e.file}#${m[2]}-${m[3]} 안에 그 문장이 없다`)
+        continue
       }
+
+      //  🔴 코드 근거도 **따라간다.** 「repo 태그가 붙어 있나」로 끝내면 FINDINGS 90 을
+      //     코드 쪽에 그대로 다시 만드는 것이다 — 태그는 멀쩡한데 그 줄이 딴 줄이다.
+      const m = REPO_SRC_RE.exec(src)
+      if (!m?.[1] || !m[2] || !m[3] || !m[4]) { broken.push(`${tag.itemId}: 코드 태그 모양이 깨졌다 — ${src}`); continue }
+      if (m[1] !== e.repo || m[2] !== e.path) {
+        broken.push(`${tag.itemId}: 태그가 딴 코드를 가리킨다 (${e.repo}/${e.path} 이어야 한다)`)
+        continue
+      }
+      //  줄 번호는 1-기반·양끝 포함이다 (`srcTag` 가 그렇게 낸다).
+      const cut = fixtureText(e.file).split('\n').slice(Number(m[3]) - 1, Number(m[4])).join('\n')
+      if (!cut.includes(e.quote)) broken.push(`${tag.itemId}: ${e.file}:${m[3]}-${m[4]} 안에 그 줄이 없다`)
     }
   }
-  return { followed, items, broken }
+  return { followed, seen, broken }
 }
 
 async function main(): Promise<void> {
@@ -139,7 +152,13 @@ async function main(): Promise<void> {
     //    사람이 이 파일까지 고치게 만들면, 그 사람은 검사 쪽 숫자를 고쳐서 초록을 만든다.
     check(`초안 ${seed.drafted}개가 전부 받아들여졌다`, seed.accepted === seed.drafted && seed.rejected.length === 0,
       seed.rejected.length > 0 ? JSON.stringify(seed.rejected) : `accepted ${seed.accepted}`)
-    check('초안이 전부 active 가 됐다 — 아니면 Pack 에 한 줄도 안 나온다', seed.itemUuids.length === seed.drafted)
+    //  🔴 씨앗 질문 하나에 답한 항목까지 포함이다 (`manual` 근거의 유일한 산지 · FINDINGS 93).
+    //  ⚠ 개수를 여기 적지 마라 — `drafted + answered` 로 견준다.
+    const seeded = seed.drafted + seed.answered.length
+    check(`씨앗 항목 ${seeded}개가 전부 active 가 됐다 — 아니면 Pack 에 한 줄도 안 나온다`,
+      seed.itemUuids.length === seeded, `초안 ${seed.drafted} + 질문 답변 ${seed.answered.length}`)
+    check('🔴 씨앗 질문에 답한 것이 항목이 됐다 (화면 3 ③ — 문서가 없어도 시작할 수 있다)',
+      seed.answered.length > 0, seed.answered.join(' · '))
 
     // ── ④ 발행 ────────────────────────────────────────────────────────
     const first = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
@@ -203,19 +222,6 @@ async function main(): Promise<void> {
     check('그 파일이 진행 보고 문단을 전부 담는다', PROGRESS_REPORT.every((line) => workflowText.includes(line)),
       `${PROGRESS_REPORT.length}줄`)
 
-    //  🔴 **데모가 표의 한 갈래로 몰리지 않는다** (FINDINGS 89).
-    //  ★ 왜 이게 따로 필요한가 — `compiler/test/liveness.test.ts` 는 「네 값이 서로 다른
-    //    줄을 낸다」를 재고 여러 바퀴 초록이었다. 그런데 **심사자가 실제로 읽는 종이**에는
-    //    `review` 한 갈래뿐이었다. **표가 살아 있는 것과 데모가 그걸 보여 주는 것은
-    //    다른 질문이고, 뒤의 것은 아무도 안 세고 있었다.**
-    //  ⚠ 기준이 「넷 전부」가 아닌 이유 — 픽스처의 모든 줄은 goals.md 까지 역추적된다(P7).
-    //    갈래를 채우겠다고 문서에 없는 규칙을 씨앗에 적으면 근거 없는 줄이 생긴다.
-    //    갈래를 늘리려면 **문서를 먼저** 늘려라 (SPEC §10.1 이 그 문서의 정본이다).
-    const labels = Object.values(ENFORCEMENT_LABEL)
-    const shown = labels.filter((label) => packTexts.some((t) => t.includes(label)))
-    check(`Pack 이 강제 수단을 ${shown.length}갈래로 보여 준다 (표는 ${labels.length}갈래 · 최소 ${PACK_ENFORCEMENT_MIN})`,
-      shown.length >= PACK_ENFORCEMENT_MIN, shown.join(' · '))
-
     // ── ⑦ 낡은 기준으로 발행하면 409 ───────────────────────────────────
     const stale = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
       auth: owner, body: { semver: '1.1.0', base_version_id: null },
@@ -272,14 +278,37 @@ async function main(): Promise<void> {
     //     붙어 있나」까지다. 여기서는 그 태그의 `#start-end` 를 **원문에서 잘라 보고**
     //     항목이 주장하는 문장이 그 안에 있는지 센다.
     packTexts.push(claude2Text)
-    const expected = [...seed.evidence, settlement.evidence]
-    const followed = followEvidence(packTexts, expected)
+    const tags = packTexts.flatMap((t) => t.split('\n').map(parseTraceTag).filter((x): x is TraceTag => x !== null))
+    const expected = [...seed.evidence, ...settlement.evidence]
+    const followed = followEvidence(tags, expected)
     check(`🔴 P7 — 태그를 따라가면 원문에 그 문장이 있다 (근거 ${followed.followed}개)`,
       followed.broken.length === 0, followed.broken.join(' · '))
     //  ⚠ 위 검사는 **본 것만** 센다 — 항목이 Pack 에서 통째로 빠지면 셀 것이 없어서 초록이다.
-    //    그래서 「기대한 항목이 전부 종이에 있었나」를 따로 센다.
-    const missing = expected.filter((e) => !followed.items.has(e.itemId)).map((e) => e.itemId)
-    check(`기대한 항목 ${expected.length}개가 전부 Pack 에서 역추적됐다`, missing.length === 0, missing.join(' · '))
+    //    그래서 「기대한 근거가 전부 종이에 있었나」를 따로 센다 (항목이 아니라 **근거**
+    //    단위다 — 한 항목의 둘째 근거만 빠지는 것도 구멍이다).
+    const missing = expected
+      .filter((e) => !followed.seen.has(`${e.itemId}#${e.kind}`))
+      .map((e) => `${e.itemId}(${e.kind})`)
+    check(`기대한 근거 ${expected.length}개가 전부 Pack 에서 역추적됐다`, missing.length === 0, missing.join(' · '))
+
+    //  🔴 **데모가 표의 한두 갈래로 몰리지 않는다** (FINDINGS 89·93·94).
+    //  ★ 왜 이게 따로 필요한가 — `compiler/test/liveness.test.ts` 는 「값마다 다른 줄이
+    //    나온다」를 재고 여러 바퀴 초록이었다. 그런데 **심사자가 실제로 읽는 종이**에는
+    //    강제 수단이 한 갈래, 근거가 두 갈래, scope 가 두 갈래뿐이었다.
+    //    **표가 살아 있는 것과 데모가 그걸 보여 주는 것은 다른 질문**이고, 뒤의 것은
+    //    아무도 안 세고 있었다.
+    //  ⚠ 축과 최소치는 여기 적지 않는다 — `pack-coverage.ts` 의 표 하나가 정본이다.
+    //    축이 늘 때 이 파일에 검사를 한 벌 더 복사하게 되면 그 표는 표가 아니다.
+    const coverage = measureCoverage({
+      texts: packTexts,
+      paths: manifest.files.map((f) => f.path),
+      tags,
+      typeOf: new Map([...seed.typeOf, [String(settlement.draft.id), String(settlement.draft.type)]]),
+    })
+    for (const c of coverage) {
+      check(`Pack 이 ${c.axis} 를 ${c.shown.length}갈래로 보여 준다 (표는 ${c.total} · 최소 ${c.min})`,
+        c.ok, c.missing.length === 0 ? c.shown.join(' · ') : `없는 갈래: ${c.missing.join(' · ')}`)
+    }
 
     mkdirSync(join(outDir, 'v1.1.0'), { recursive: true })
     writeFileSync(join(outDir, 'v1.1.0', 'CLAUDE.md'), claude2Text, 'utf8')
@@ -339,6 +368,8 @@ async function main(): Promise<void> {
     const failed = checks.filter((c) => !c.ok)
     writeFileSync(join(root, '.ci', 'walkthrough-publish.json'), JSON.stringify({
       checks,
+      //  눈 판정의 재료다 — 「어느 갈래가 종이에 없나」를 다음 바퀴가 파일에서 읽는다.
+      coverage,
       versions: [
         { semver: '1.0.0', manifest_hash: v1.manifest_hash, files: v1.file_count },
         { semver: '1.1.0', manifest_hash: v2.manifest_hash, files: v2.file_count },

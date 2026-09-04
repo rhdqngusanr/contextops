@@ -10,7 +10,9 @@ import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
+import { GET as listQuestions, POST as answerQuestions } from '../src/app/api/v1/projects/[id]/questions/route'
 import { getDb } from '../src/db/client'
+import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
 
 // =====================================================================
@@ -34,9 +36,17 @@ import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
-/** 픽스처 문서를 그대로 올린다 (P1 — 문서 본문은 사용자가 **의도적으로** 올리는 것이다). */
-function fixtureDoc(name: string): string {
-  return readFileSync(join(root, 'fixtures', 'paylab-docs', name), 'utf8')
+/**
+ * `fixtures/` 아래 파일 하나를 그대로 읽는다.
+ *
+ * ★ 왜 문서와 코드가 **같은 문**인가 — 근거를 따라가는 쪽(관통)은 둘 다 「`fixtures/`
+ *   아래 이 경로를 잘라 보면 그 문장이 있나」로 잰다. 읽는 문이 둘이면 경로를 적는
+ *   방식이 갈라지고, 갈라지면 검사가 한쪽만 따라간다.
+ * ⚠ 문서 본문은 사용자가 **의도적으로** 올리는 것이다 (P1). 코드 본문은 올라가지
+ *   않는다 — `repository_path` 근거가 싣는 것은 **repo·경로·줄 번호뿐**이다.
+ */
+function fixtureText(rel: string): string {
+  return readFileSync(join(root, 'fixtures', rel), 'utf8')
 }
 
 /**
@@ -48,8 +58,8 @@ function fixtureDoc(name: string): string {
  *   주장하는 문장이 없었다 (docs/feedback/FINDINGS.md **90**).
  */
 export type FixtureDoc = {
-  /** `fixtures/paylab-docs/` 안의 파일 이름. 어긋났을 때 사람이 읽는 이름이다 */
-  name: string
+  /** `fixtures/` 아래 상대 경로 (`paylab-docs/goals.md`). 어긋났을 때 사람이 읽는 이름이다 */
+  file: string
   /** 올린 뒤 서버가 준 문서 버전 uuid — 근거가 **어느 문서**를 가리키나 */
   versionId: string
   /** 올린 것과 **같은** 본문. 문장 위치를 여기서 잰다 */
@@ -65,18 +75,43 @@ export type FixtureDoc = {
  */
 export type EvidenceExpectation = {
   itemId: string
-  /** 근거 문서의 파일 이름 (`fixtures/paylab-docs/`) */
-  docName: string
-  documentVersionId: string
+  /** `fixtures/` 아래 상대 경로 — 따라가는 쪽이 **이 파일을** 잘라 본다 */
+  file: string
   /** 근거 범위 안에 **반드시** 있어야 하는 원문 문장 */
   quote: string
-}
+} & (
+  //  ⚠ 갈래 이름은 `SourceRefKind` 와 **같은 낱말**이다. 따라가는 쪽은 태그 조각에서
+  //    `srcKindOf()` 로 종류를 얻어 이 갈래를 고른다 — 이름이 갈리면 못 고른다.
+  | { kind: 'source_document'; documentVersionId: string }
+  | { kind: 'repository_path'; repo: string; path: string }
+)
 
-/** 씨앗 초안 하나 + 그 근거의 기대값. */
+/**
+ * 씨앗 초안 하나 + 그 근거들의 기대값.
+ * ⚠ 근거는 **여럿일 수 있다** (`withRepo`). 하나로 두면 둘째 근거는 아무도 안 따라간다.
+ */
 export type PaylabDraft = {
   /** `batch-draft` 에 그대로 싣는 몸 (스키마가 `.strict()` 라 여분의 키를 못 싣는다) */
   draft: Record<string, unknown>
-  evidence: EvidenceExpectation
+  evidence: EvidenceExpectation[]
+}
+
+/**
+ * 코드 픽스처 하나 — **repo 이름·상대 경로·본문**을 같이 든다.
+ * 🔴 본문을 드는 이유는 **줄 번호를 재려고**다 (`withRepo`). 본문이 서버로 가지는
+ *    않는다 — `repository_path` 근거에 실리는 것은 repo·경로·줄 번호뿐이다 (P1 · §3.1).
+ */
+export type FixtureCode = {
+  /** 서버에 등록한 repo 이름. `fixtures/` 아래 폴더 이름과 같다 */
+  repo: string
+  /** repo 상대 경로. 태그(`repo:{repo}:{path}:{줄}`)에 그대로 실린다 */
+  path: string
+  /** `fixtures/{repo}/{path}` 의 본문. 줄 번호를 여기서 잰다 */
+  text: string
+}
+
+function fixtureCode(repo: string, path: string): FixtureCode {
+  return { repo, path, text: fixtureText(`${repo}/${path}`) }
 }
 
 /**
@@ -116,12 +151,7 @@ function headingPathAt(text: string, index: number): string[] {
 export function fromDoc(
   id: string, type: string, doc: FixtureDoc, quote: string, extra: Record<string, unknown>,
 ): PaylabDraft {
-  const start = doc.text.indexOf(quote)
-  const head = quote.split('\n')[0] ?? quote
-  if (start < 0) throw new Error(`[seed] ${id}: 근거 문장을 ${doc.name} 에서 못 찾았다 — "${head}"`)
-  if (doc.text.indexOf(quote, start + 1) >= 0) {
-    throw new Error(`[seed] ${id}: 근거 문장이 ${doc.name} 에 두 번 이상 있다 — "${head}"`)
-  }
+  const start = locate(id, doc.file, doc.text, quote)
   return {
     draft: {
       id,
@@ -139,7 +169,52 @@ export function fromDoc(
       }],
       ...extra,
     },
-    evidence: { itemId: id, docName: doc.name, documentVersionId: doc.versionId, quote },
+    evidence: [{ kind: 'source_document', itemId: id, file: doc.file, documentVersionId: doc.versionId, quote }],
+  }
+}
+
+/**
+ * 원문에서 문장의 시작 위치를 **잰다**. 못 찾거나 두 번 이상 나오면 **던진다.**
+ *
+ * ★ 왜 문 하나인가 — 문서(`fromDoc`)와 코드(`withRepo`)가 **같은 규칙**을 지켜야 한다.
+ *   한쪽만 「없으면 0」으로 두면 그쪽 근거가 조용히 딴 데를 가리킨다 (FINDINGS 90).
+ */
+function locate(id: string, file: string, text: string, quote: string): number {
+  const head = quote.split('\n')[0] ?? quote
+  const at = text.indexOf(quote)
+  if (at < 0) throw new Error(`[seed] ${id}: 근거 문장을 ${file} 에서 못 찾았다 — "${head}"`)
+  if (text.indexOf(quote, at + 1) >= 0) {
+    throw new Error(`[seed] ${id}: 근거 문장이 ${file} 에 두 번 이상 있다 — "${head}"`)
+  }
+  return at
+}
+
+/**
+ * 🔴 **코드 근거를 한 칸 더 붙인다** (`repository_path` · FINDINGS 93).
+ *
+ * ★ 왜 필요한가 — 「이 규칙이 코드 어디에 걸려 있나」가 이 제품의 말인데, 데모 Pack 의
+ *   태그가 전부 `doc:` 하나뿐이라 그 말이 **심사자가 읽는 종이에 한 번도 안 섰다.**
+ * 🔴 줄 번호는 **적지 않고 잰다** — `quote` 를 코드 파일에서 찾아 계산한다. 손으로 적으면
+ *    픽스처 코드가 한 줄만 밀려도 조용히 딴 줄을 가리킨다 (FINDINGS 90 과 같은 고장).
+ * ⚠ **코드 본문은 서버로 가지 않는다** (P1). 근거에 실리는 것은 repo·경로·줄 번호뿐이고,
+ *   `quote` 는 여기(픽스처)에만 남아 관통이 「따라가면 그 줄인가」를 재는 데 쓰인다.
+ */
+export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): PaylabDraft {
+  const id = String(entry.draft.id)
+  const at = locate(id, `${code.repo}/${code.path}`, code.text, quote)
+  const startLine = code.text.slice(0, at).split('\n').length
+  const endLine = startLine + quote.split('\n').length - 1
+  const refs = entry.draft.source_refs as Record<string, unknown>[]
+  return {
+    draft: {
+      ...entry.draft,
+      source_refs: [...refs, {
+        kind: 'repository_path', repo: code.repo, path: code.path, start_line: startLine, end_line: endLine,
+      }],
+    },
+    evidence: [...entry.evidence, {
+      kind: 'repository_path', itemId: id, file: `${code.repo}/${code.path}`, repo: code.repo, path: code.path, quote,
+    }],
   }
 }
 
@@ -163,7 +238,7 @@ export function fromDoc(
  *   전에는 `item_road_m1` 이 old-roadmap.md 를 가리켰는데 그 문서의 M1 은
  *   「웹훅 수신 v1」이라 **내용이 아예 다른 문서**를 근거라고 적고 있었다.
  */
-export function paylabDrafts(goals: FixtureDoc): PaylabDraft[] {
+export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft[] {
   return [
     fromDoc('item_mission_paylab', 'mission', goals,
       '가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**', {
@@ -177,14 +252,23 @@ export function paylabDrafts(goals: FixtureDoc): PaylabDraft[] {
         body: 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
         data: { outcome: '결제 승인 성공률 99.5%', metric: '주간 승인 성공률', deadline: '2026-06-30' },
       }),
-    fromDoc('item_policy_retry', 'policy', goals,
+    //  🔴 근거가 **둘**이다 — 문서(goals.md §3.1)와 **코드**(`src/payment/retry.ts`).
+    //  ★ 왜 코드까지 다나 — SPEC §10.1 이 말하는 「의도된 어긋남」의 첫째가 바로 이것이다:
+    //    문서는 「5회 · 지수 백오프」인데 코드는 「3회 · 500ms 고정」이다. 규칙만 종이에
+    //    실으면 심사자는 **그 규칙이 지금 코드 어디에서 깨지고 있는지**를 못 따라간다.
+    //    근거가 둘이면 태그가 `doc:…,repo:…` 로 나오고, 그게 이 제품의 말이다.
+    //  ⚠ 코드 본문은 서버로 가지 않는다 (P1) — `withRepo` 가 싣는 것은 줄 번호뿐이다.
+    withRepo(fromDoc('item_policy_retry', 'policy', goals,
       'PSP 호출이 실패하면 **최대 5회까지 재시도**한다. 재시도 간격은 **지수 백오프**로\n'
       + '1초 → 2초 → 4초 → 8초 → 16초로 늘리고, 각 간격에 ±20% 지터를 더한다.\n\n'
       + '**고정 간격 재시도는 금지한다.**', {
         title: 'PSP 재시도는 지수 백오프 5회',
         body: '고정 간격 재시도는 금지한다 — 모든 인스턴스가 같은 박자로 다시 때린다.',
         data: { rule: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다', severity: 'must', enforcement: 'review' },
-      }),
+      }), retry,
+      'export const MAX_RETRY = 3;\n\n'
+      + '/** 재시도 간격(ms). 고정이다 — 늘리지 않는다. */\n'
+      + 'export const RETRY_DELAY_MS = 500;'),
     //  🔴 goals.md §3.3 — SPEC §10.1 이 말하는 「의도된 어긋남 3곳」의 셋째다
     //     (재시도 / 환불 SLA / **PII 로그 금지**). 앞의 둘만 항목이었고 이건 없었다.
     //  ★ **`enforcement: 'hook'` 인 이유** — 이 규칙은 사람 눈으로 못 지킨다.
@@ -233,6 +317,25 @@ export function paylabDrafts(goals: FixtureDoc): PaylabDraft[] {
           ],
         },
       }),
+    //  🔴 **`scope.kind = 'path'` 은 이 항목 하나뿐이다** (FINDINGS 93). 없으면
+    //     `.claude/rules/scoped-*.md` 라는 **Pack 파일 갈래가 통째로 데모에 안 선다** —
+    //     「이 규칙은 이 경로에만 걸린다」가 종이에 한 번도 안 나온다는 뜻이다.
+    //  ★ 경로 `src/webhook` 의 근거는 goals.md §7 아키텍처 그림이다 (「`webhook` 은 PSP
+    //    콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다.」). 지어낸 경로가 아니다.
+    //  ⚠ `enforcement` 는 `review` 다 — 서명 검증을 건너뛴 코드는 리뷰어가 diff 에서
+    //    본다. 갈래를 늘리겠다고 hook 이라고 적으면 데모가 거짓말을 한다 (FINDINGS 89).
+    fromDoc('item_policy_webhook_sig', 'policy', goals,
+      '서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다. 검증 실패는 401 로 끊고,\n'
+      + '재전송은 PSP 가 알아서 한다.', {
+        title: '웹훅은 서명 검증 후에만 처리한다',
+        body: '검증 실패는 401 로 끊는다 — 재전송은 PSP 가 알아서 한다.',
+        scope: { kind: 'path', value: 'src/webhook' },
+        data: {
+          rule: '웹훅 payload 는 서명 검증 후에만 파싱·저장한다',
+          severity: 'must',
+          enforcement: 'review',
+        },
+      }),
     fromDoc('item_policy_refund', 'policy', goals,
       '환불 요청은 **접수 후 24시간 안에 종결**한다.', {
         title: '환불은 24시간 안에 종결한다',
@@ -265,14 +368,45 @@ export type SeedResult = {
    */
   drafted: number
   /**
+   * 🔴 **씨앗 질문에 답해서 만들어진 항목의 id 들** (`manual` 근거의 유일한 산지).
+   *
+   * ★ 왜 세는가 — `drafted` 는 `batch-draft` 로 들어간 것만 센다. 질문 답변으로 들어온
+   *   항목까지 더해야 「씨앗이 만든 항목이 전부 active 가 됐나」를 잴 수 있다.
+   */
+  answered: string[]
+  /**
    * 초안마다 「근거를 따라가면 원문의 이 문장이 나와야 한다」.
    * **부르는 쪽은 기대 문장을 자기가 적지 말고 이걸 읽어라** — 두 곳에 적으면 갈라지고,
    * 갈라지면 검사가 픽스처가 아니라 자기 자신을 재게 된다.
+   * ⚠ 문서·코드에서 온 근거만 들어온다 — `manual` 근거는 따라갈 원문 파일이 없다
+   *   (답변이 곧 원문이고, 그 원문은 충돌 행의 `resolution.note` 에 남는다).
    */
   evidence: EvidenceExpectation[]
   /** active 로 바꾼 항목의 uuid 들. */
   itemUuids: string[]
+  /**
+   * 항목 id → 타입. **DB 에서 읽는다** — 초안 목록과 질문 답변이 만든 것을 둘 다 덮는다.
+   * ⚠ 부르는 쪽은 이 표를 손으로 들지 마라 (`pack-coverage.ts` 의 `PackView.typeOf`).
+   */
+  typeOf: Map<string, string>
 }
+
+/**
+ * 🔴 **관통이 답하는 씨앗 질문 하나** (SPEC §10.5 「2:00 정리」 · FINDINGS 93).
+ *
+ * ★ 왜 필요한가 — 문서에서 온 항목만으로는 근거가 `doc:` 하나뿐이라 **`manual` 근거가
+ *   데모 종이에 한 번도 안 선다.** 「문서가 없어도 답만 하면 항목이 된다」가 화면 3 의
+ *   약속인데, 그 길이 도는지를 관통이 한 번도 안 밟고 있었다.
+ * ⚠ **충돌 정리(`conflicts/{id}/resolve`)로는 이 갈래가 안 선다.** 거기가 붙이는
+ *   `manual` 근거는 **진 항목**에 붙고, 진 항목은 `deprecated` 라 Pack 에서 빠진다
+ *   (`ITEM_STATUS_EXCLUDE_REASON`). 종이에 서는 길은 질문 답변뿐이다.
+ * ⚠ 질문은 **id 로 고른다** — 질문 문장을 여기 베끼면 표와 갈라진다.
+ *   답변은 goals.md §3.2 가 말하는 타임아웃 규칙과 같은 말이다 (지어낸 문장이 아니다).
+ */
+const SEED_ANSWER = {
+  questionId: 'policy_review',
+  answer: '외부 호출마다 타임아웃을 건다 — 기본 5초, 환불 승인 호출만 10초다.',
+} as const
 
 /**
  * 팀 → 프로젝트 → 레포 → 문서 2개 → `paylabDrafts()` 전부 → 전부 `active`.
@@ -300,8 +434,8 @@ export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
 
   //  ⚠ 올린 본문을 그대로 들고 있는다 — 근거 범위를 **이 글자들 위에서** 잰다.
   //    문서를 다시 읽어 재면 올린 것과 다른 글자를 잴 위험이 생긴다.
-  const goalsText = fixtureDoc('goals.md')
-  const roadmapText = fixtureDoc('old-roadmap.md')
+  const goalsText = fixtureText('paylab-docs/goals.md')
+  const roadmapText = fixtureText('paylab-docs/old-roadmap.md')
 
   const goalsDoc = await dataOf(await createDocument(req('POST', `/api/v1/projects/${projectId}/documents`, {
     auth: owner, body: { title: '팀 목표와 규칙', kind: 'goal', content: goalsText },
@@ -310,19 +444,31 @@ export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
     auth: owner, body: { title: '지난 분기 로드맵', kind: 'roadmap', content: roadmapText },
   }), params({ id: projectId })))
 
-  const goals: FixtureDoc = { name: 'goals.md', versionId: goalsDoc.current_version_id as string, text: goalsText }
-  const roadmap: FixtureDoc = { name: 'old-roadmap.md', versionId: roadmapDoc.current_version_id as string, text: roadmapText }
+  const goals: FixtureDoc = {
+    file: 'paylab-docs/goals.md', versionId: goalsDoc.current_version_id as string, text: goalsText,
+  }
+  const roadmap: FixtureDoc = {
+    file: 'paylab-docs/old-roadmap.md', versionId: roadmapDoc.current_version_id as string, text: roadmapText,
+  }
 
-  const drafts = paylabDrafts(goals)
+  //  ⚠ repo 이름은 위 `createRepo` 에 준 것과 **같아야** 한다 — 태그에 그대로 실린다.
+  const drafts = paylabDrafts(goals, fixtureCode('paylab-api', 'src/payment/retry.ts'))
   const batch = await dataOf(await batchDraft(req('POST', `/api/v1/projects/${projectId}/context-items/batch-draft`, {
     auth: owner,
     body: { items: drafts.map((d) => d.draft), repo: 'paylab-api', scan_summary: { file_count: 42, languages: ['ts'] } },
   }), params({ id: projectId })))
 
+  //  🔴 **씨앗 질문 하나에 답한다** — 「문서가 없어도 답만 하면 항목이 된다」(화면 3 ③)가
+  //     실제로 도는 유일한 자리이고, `manual` 근거가 종이에 서는 유일한 길이다.
+  //     ⚠ 여기서 만들어진 항목도 아래 활성화 고리가 같이 집어 간다 (그래서 먼저 부른다).
+  const answered = await answerSeedQuestion(projectId, owner)
+
   //  ⚠ 초안은 `draft` 로 들어온다. `active` 가 아니면 snapshot 에 안 들어가서
   //    **Pack 에 한 줄도 안 나온다** (SPEC §4.1 · docs/STATUS.md 의 같은 판단).
   const itemRows = await getDb()
-    .select({ id: contextItems.id, publicId: contextItems.publicId })
+    //  ⚠ `type` 도 같이 읽는다 — 「데모가 ItemType 몇 갈래를 보여 주나」를 세는 쪽이
+    //    id 로 타입을 되찾아야 하는데, 그 표를 손으로 들면 픽스처가 늘 때 갈라진다.
+    .select({ id: contextItems.id, publicId: contextItems.publicId, type: contextItems.type })
     .from(contextItems)
     .where(eq(contextItems.projectId, projectId))
   for (const row of itemRows) {
@@ -342,7 +488,32 @@ export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
     rejected: batch.rejected as { index: number; issues: unknown[] }[],
     accepted: (batch.accepted as unknown[]).length,
     drafted: drafts.length,
-    evidence: drafts.map((d) => d.evidence),
+    answered,
+    evidence: drafts.flatMap((d) => d.evidence),
     itemUuids: itemRows.map((r) => r.id),
+    typeOf: new Map(itemRows.map((r) => [r.publicId, r.type])),
   }
+}
+
+/**
+ * 씨앗 질문 하나를 찾아 답하고, 그 답이 만든 항목 id 를 낸다.
+ *
+ * ⚠ 열린 질문 목록을 **서버에서 받아** 문장으로 짝짓는다 — 행과 표를 잇는 열쇠가
+ *   질문 문장이기 때문이다 (`seed-questions.ts` 의 주의). 우리가 문장을 베끼지 않고
+ *   `SEED_QUESTIONS` 에서 꺼내므로, 표를 고치면 여기가 **못 찾아서 던진다.**
+ */
+async function answerSeedQuestion(projectId: string, owner: string): Promise<string[]> {
+  const seed = SEED_QUESTIONS.find((q) => q.id === SEED_ANSWER.questionId)
+  if (!seed) throw new Error(`[seed] 씨앗 질문 표에 ${SEED_ANSWER.questionId} 가 없다`)
+
+  const list = await dataOf(await listQuestions(
+    req('GET', `/api/v1/projects/${projectId}/questions`, { auth: owner }), params({ id: projectId }),
+  ))
+  const row = (list.questions as { id: string; question: string }[]).find((q) => q.question === seed.question)
+  if (!row) throw new Error(`[seed] 프로젝트에 열린 씨앗 질문이 없다 — "${seed.question}"`)
+
+  const done = await dataOf(await answerQuestions(req('POST', `/api/v1/projects/${projectId}/questions`, {
+    auth: owner, body: { answers: [{ question_id: row.id, answer: SEED_ANSWER.answer }] },
+  }), params({ id: projectId })))
+  return done.created_item_ids as string[]
 }

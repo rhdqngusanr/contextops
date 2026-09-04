@@ -17,26 +17,55 @@ function safe(value: string, max: number): string {
 }
 
 /**
- * 🔴 **근거 4종의 태그 표.** 종류마다 **다른 문자열**이 나온다 — 그래서 4종이
+ * 🔴 **근거 4종의 태그 표.** 종류마다 **다른 접두사와 다른 몸**이 나온다 — 그래서 4종이
  * 전부 실제로 뭔가를 바꾼다 (`test/liveness.test.ts` 가 잠근다).
  *
  * ★ 새 근거 종류를 더하는 절차: `packages/schema` 의 `SOURCE_REF` 표에 한 줄 → 여기 한 줄.
  *   ①만 하면 여기서 타입 검사가 막힌다.
+ *
+ * ★ **왜 접두사를 칸으로 뺐나** — 되읽는 쪽(`srcKindOf`)이 「이 조각은 몇 번째 종류인가」를
+ *   알아야 하는데, 접두사를 렌더 문자열 안에만 두면 되읽는 쪽이 `'doc'`·`'repo'` 를
+ *   **다시 적게 된다.** 두 곳에 적힌 접두사는 한쪽만 고쳐지고, 그러면 역추적이 조용히
+ *   끊긴다 (태그는 멀쩡한데 아무도 그 종류를 못 알아본다).
+ * ⚠ 접두사에 `:` 를 넣지 마라 — 첫 `:` 까지가 접두사라는 것이 되읽는 쪽의 규칙이다.
  */
 export const SRC_TAG = {
-  source_document: (r) => `doc:${r.document_version_id}#${r.start_char}-${r.end_char}`,
-  repository_path: (r) => {
-    const lines = r.start_line === undefined ? '' : `:${r.start_line}${r.end_line === undefined ? '' : `-${r.end_line}`}`
-    return `repo:${safe(r.repo, 60)}:${r.path}${lines}`
+  source_document: { prefix: 'doc', body: (r) => `${r.document_version_id}#${r.start_char}-${r.end_char}` },
+  repository_path: {
+    prefix: 'repo',
+    body: (r) => {
+      const lines = r.start_line === undefined ? '' : `:${r.start_line}${r.end_line === undefined ? '' : `-${r.end_line}`}`
+      return `${safe(r.repo, 60)}:${r.path}${lines}`
+    },
   },
-  proposal: (r) => `proposal:${r.proposal_id}`,
-  manual: (r) => `manual:${safe(r.note, 60)}`,
-} as const satisfies { [K in SourceRefKind]: (ref: Extract<SourceRef, { kind: K }>) => string }
+  proposal: { prefix: 'proposal', body: (r) => r.proposal_id },
+  manual: { prefix: 'manual', body: (r) => safe(r.note, 60) },
+} as const satisfies {
+  [K in SourceRefKind]: { prefix: string; body: (ref: Extract<SourceRef, { kind: K }>) => string }
+}
 
 export function srcTag(ref: SourceRef): string {
   // 표를 `ref.kind` 로만 찾기 때문에 이 캐스트는 안전하다.
-  const render = SRC_TAG[ref.kind] as (r: SourceRef) => string
-  return render(ref)
+  const spec = SRC_TAG[ref.kind] as { prefix: string; body: (r: SourceRef) => string }
+  return `${spec.prefix}:${spec.body(ref)}`
+}
+
+/** 접두사 → 근거 종류. **위 표에서 뒤집어 만든다** — 손으로 적으면 갈라진다. */
+const KIND_BY_PREFIX = new Map<string, SourceRefKind>(
+  (Object.keys(SRC_TAG) as SourceRefKind[]).map((k) => [SRC_TAG[k].prefix, k]),
+)
+
+/**
+ * 태그 조각(`doc:…` · `repo:…`) 하나 → 그것을 만든 근거 종류. 모르는 접두사면 `null`.
+ *
+ * ★ 왜 필요한가 — 「데모 Pack 이 근거 4종 중 몇 갈래를 보여 주나」를 세는 자리가
+ *   접두사를 자기가 적으면, 그 검사는 픽스처가 아니라 자기 자신을 재게 된다
+ *   (docs/feedback/FINDINGS.md 93). 여기 하나에서 답한다.
+ */
+export function srcKindOf(fragment: string): SourceRefKind | null {
+  const at = fragment.indexOf(':')
+  if (at < 0) return null
+  return KIND_BY_PREFIX.get(fragment.slice(0, at)) ?? null
 }
 
 /**

@@ -15,7 +15,11 @@ export { manifestHash, normalizeText, sha256, snapshotHash } from './hash'
 //     두 곳으로 갈라지지 않는다.
 //     ⚠ 브라우저(화면 7)는 이 index 가 아니라 `@contextops/compiler/tag` 로 들여온다 —
 //       여기는 node:crypto 를 재수출한다. 이유는 package.json 의 `_comment_exports`.
-export { parseTraceTag, traceLines, type TraceTag } from './tag'
+export { parseTraceTag, srcKindOf, traceLines, type TraceTag } from './tag'
+//  🔴 「이 scope 의 규칙은 Pack 의 어느 파일로 나오나」 (SPEC §4.1 partition 표).
+//     ⚠ 관통이 이걸 들여오는 이유는 하나다 — 「데모가 scope 3종을 다 보여 주나」를
+//       세려면 파일 이름이 필요한데, 그 이름을 검사 쪽에 적으면 표가 갈라진다.
+export { scopePackPath } from './partition'
 //  🔴 「이 정책을 무엇이 강제하나」의 **말 정본** (`enforcement` 4종 · SPEC §3).
 //     ⚠ 이 문자열들을 밖에 **복사하지 마라.** 관통이 이걸 들여오는 이유는 하나다 —
 //       「데모 Pack 이 표의 몇 갈래를 실제로 보여 주나」를 세려면 네 갈래의 말을
