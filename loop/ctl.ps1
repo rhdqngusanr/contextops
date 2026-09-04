@@ -198,6 +198,7 @@ function Do-Start {
 
     if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
         Start-ScheduledTask -TaskName $taskName
+        Say ("■ {0} — {1}" -f $LOOP.Project, $LOOP.ProjectLine) "Cyan"
         Say "켰다. 창을 닫아도, 껐다 켜도 계속 돈다." "Green"
         Say "지켜보기: ctl.ps1 status" "DarkGray"
         return

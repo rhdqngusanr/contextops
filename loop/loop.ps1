@@ -104,6 +104,13 @@ $dryTag = ""
 if ($DryRun) { $dryTag = " · DRY RUN" }
 
 Log "=========================================================="
+
+#  ★ 첫 줄은 **무엇을 만드는 루프인가**다. logs/ 는 프로젝트마다 똑같이 생겨서,
+#    나중에 로그를 열었을 때 이 줄이 없으면 어느 저장소 기록인지 모른다.
+#    값은 loop/env.ps1 한 곳에 산다 (Project · ProjectLine).
+Log ("■ {0} — {1}" -f $LOOP.Project, $LOOP.ProjectLine)
+Log ("  저장소: {0}" -f $root)
+
 Log ("루프 시작 — 브랜치 {0} · 모델 {1} · 노력 {2} · 최대 {3}바퀴 / {4}시간{5}" -f `
      $branchNow, $LOOP.Model, $LOOP.Effort, $LOOP.MaxCycles, $LOOP.MaxHours, $dryTag)
 
