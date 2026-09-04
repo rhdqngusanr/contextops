@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit",
+    "_comment_typecheck": "먼저 '무엇을 볼 것인가'를 세고 그 다음에 본다 (FINDINGS 92). tsc 는 exit 0 으로 '검사했다'만 말하고 '무엇을 봤나'는 말하지 않는다 — apps/web 의 scripts/ 가 여러 바퀴 동안 include 밖이었는데 이 층은 계속 초록이었다. 덮임 검사가 먼저 서지 않으면 뒤의 tsc 두 줄은 빈 집합을 검사하고도 통과할 수 있다.",
+    "typecheck": "node tools/tsconfig-coverage.mjs && tsc --noEmit && pnpm -r exec tsc --noEmit",
     "test": "pnpm -r test",
     "build": "pnpm --filter web build"
   },

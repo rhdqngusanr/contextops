@@ -71,10 +71,6 @@ try {
   }), params({ id: projectId })))
   if ((added.rejected as unknown[]).length > 0) throw new Error(JSON.stringify(added.rejected))
 
-  const [loser] = await db
-    .select({ id: contextItems.id })
-    .from(contextItems)
-    .where(and(eq(contextItems.projectId, projectId), eq(contextItems.publicId, 'item_policy_retry_code')))
   await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/item_policy_retry_code`, {
     auth: owner, body: { revision: 1, changes: { status: 'active' } },
   }), params({ id: projectId, itemId: 'item_policy_retry_code' }))

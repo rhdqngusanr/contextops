@@ -16,7 +16,7 @@ import { POST as syncReport } from '../src/app/api/v1/projects/[id]/sync-reports
 import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/route'
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
-import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from '../test/helpers/db'
+import { closeDb, dataOf, errorOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
 import { fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
 
 // =====================================================================
@@ -125,7 +125,7 @@ function followEvidence(packTexts: string[], expected: EvidenceExpectation[]): {
 
 async function main(): Promise<void> {
   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
-  const { pg, db } = await freshDb()
+  const { pg } = await freshDb()
 
   try {
     // ── ①②③ 팀·프로젝트·문서·항목 — 씨앗은 `scripts/seed.ts` 하나다 ────

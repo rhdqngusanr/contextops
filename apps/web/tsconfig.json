@@ -3,7 +3,18 @@
   "_comment": [
     "정본은 ../../tsconfig.base.json 이다. 여기에는 **웹에서만 다른 것**만 적는다:",
     "React JSX 와 DOM 타입은 다른 패키지에 있으면 안 된다 (schema·compiler 는 브라우저를 모른다).",
-    "next 플러그인은 Route Handler·Metadata 의 타입을 붙여 준다."
+    "next 플러그인은 Route Handler·Metadata 의 타입을 붙여 준다.",
+    "",
+    "🔴 include 는 **폴더 이름을 세지 않는다** — 글로브로 전부 덮는다 (FINDINGS 92).",
+    "  ★ 왜 — 전에는 [\"*.ts\", \"src\", \"test\", …] 였고 `*.ts` 는 **맨 위 한 층**이라",
+    "    scripts/ 가 통째로 빠져 있었다. 관통을 만드는 코드(seed·walkthrough-publish·",
+    "    dev-server·dump-*)가 여러 바퀴 동안 타입 검사를 한 번도 안 받았는데",
+    "    typecheck 층은 계속 초록이었다. **새 폴더를 만든 사람이 여기에 한 줄 더하는 것을",
+    "    잊으면 그 폴더는 조용히 검사 밖에 선다** — 잊을 자리를 없앤 것이 이 글로브다.",
+    "  ⚠ 그래서 새 폴더를 더할 때 여기에 할 일은 **없다.** 반대로 어떤 폴더를 검사에서",
+    "    빼려면 exclude 에 적어라 — 빼는 것은 눈에 보여야 하고, 빠뜨리는 것은 안 보인다.",
+    "  ⚠ next-env.d.ts 와 .next/types 두 줄은 next 가 스스로 써 넣는 줄이다. 지우면",
+    "    `next build` 가 다시 써 넣어서 working tree 가 더러워진다 — 그냥 둔다."
   ],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
@@ -13,6 +24,6 @@
     "incremental": true,
     "plugins": [{ "name": "next" }]
   },
-  "include": ["*.ts", "src", "test", "next-env.d.ts", ".next/types/**/*.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", ".next/types/**/*.ts"],
   "exclude": ["node_modules", ".next"]
 }
