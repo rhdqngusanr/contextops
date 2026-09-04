@@ -115,7 +115,10 @@ export function StructureCandidates({
                   <span className="meta mono">{c.type}</span>
                 </span>
                 {/* 🔴 무엇이 될 문장인지 · 어디서 온 문장인지 (DESIGN_BRIEF §2-1 · FINDINGS 86). */}
-                {preview === null ? null : <span className="meta ink-4">{preview}</span>}
+                {/* ⚠ `ink-4` 를 쓰지 마라 — 토큰 표(DESIGN_BRIEF §3)에서 그 값의 용도는
+                    **비활성**이고 카드 바탕 위 대비가 1.6:1 이다. 사람이 고르라고 낸
+                    문장을 안 보이게 그리면 이 항목을 안 고친 것과 같다. 보조 글자는 `meta`(ink-3)다. */}
+                {preview === null ? null : <span className="meta">{preview}</span>}
                 <EvidenceList refs={c.evidence === null ? [] : [c.evidence]} />
               </div>
             </label>
