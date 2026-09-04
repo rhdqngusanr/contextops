@@ -92,7 +92,7 @@
      돌려주는 `id` 는 `public_id` 다 (`lib/api/item.ts` 머리 주석) — **화면은 uuid 를
      볼 수 없다.** `seed.ts` 만 DB 를 직접 읽어서 그 문을 썼다.
 - **정본**: `docs/SPEC.md` §5 · §4.1 · `docs/PLAN.md` P3 둘째 행
-- **상태**: ✅ 이번 바퀴 — 세 가지를 했다:
+- **상태**: ✅ `1aebc22` — 세 가지를 했다:
   ① **문을 옮겼다.** `PATCH /projects/{id}/context-items/{itemId}` 이고 `{itemId}` 는
      `public_id` 다. 전역 `/context-items/{uuid}` 는 지웠다 — 두 문을 두면 화면과 서버가
      서로 다른 이름으로 같은 항목을 부르게 된다. `public_id` 는 프로젝트 안에서만

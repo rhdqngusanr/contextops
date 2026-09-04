@@ -215,7 +215,7 @@
       CLAUDE.md 에 모순되는 `must` 두 줄이 나란히** 있었다. 시험 307→**313**.
       🔴 **남은 것: 세 길 중 하나**(zip — FINDINGS 26+67 ① · SPEC §11 상한이 먼저다) ·
       실패한 job 재시도 (**59**) · **화면이 「A가 맞음 → B 폐기」를 안 알린다** (FINDINGS **74**).
-      ⑧ ✅ **초안을 승인하는 문** (`_` · FINDINGS **79**) — 화면에는 항목의 상태를 바꿀
+      ⑧ ✅ **초안을 승인하는 문** (`1aebc22` · FINDINGS **79**) — 화면에는 항목의 상태를 바꿀
       문이 **하나도 없었다.** 라우트가 `PATCH /context-items/{uuid}` 인데 항목을 내는 문이
       돌려주는 `id` 는 `public_id` 라 **화면이 부를 수가 없었다.** 문을
       `PATCH /projects/{id}/context-items/{itemId}`(public id)로 옮기고 전역 문은 지웠다
