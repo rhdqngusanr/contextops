@@ -1,5 +1,5 @@
 import type {
-  AiJobStatus, ContextItem, Manifest, SourceDocumentKind, TeamRole,
+  AiJobStatus, ConflictKind, ConflictStatus, ContextItem, Manifest, SourceDocumentKind, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, post } from './api'
@@ -222,4 +222,45 @@ export function structureCounts(result: unknown): {
       ? { used: chunks.used, total: chunks.total }
       : null,
   }
+}
+
+// ---------------------------------------------------------------------
+//  화면 3 ③ · 화면 4 — 질문 카드 (SPEC §5 questions · §9 화면 3·4)
+// ---------------------------------------------------------------------
+
+/**
+ * 질문 카드 한 장. **충돌 행과 같은 모양**이고 (`lib/api/conflict.ts` 의 `toConflict`)
+ * 화면이 쓰는 칸만 적는다.
+ * ⚠ `kind` 를 지우지 마라 — 씨앗 질문(`seed_question`)과 §7.1 이 문서를 읽다 남긴
+ *   질문(`open_question`)은 **온 데가 다르고**, 화면 4 가 그 둘에 다른 배지를 단다.
+ */
+export type QuestionRow = {
+  id: string
+  kind: ConflictKind
+  question: string
+  status: ConflictStatus
+}
+
+export function fetchQuestions(
+  projectId: string,
+  query: { status?: ConflictStatus; limit?: number } = {},
+): Promise<{ questions: QuestionRow[]; limit: number; offset: number }> {
+  const q = new URLSearchParams()
+  if (query.status) q.set('status', query.status)
+  if (query.limit !== undefined) q.set('limit', String(query.limit))
+  const tail = q.toString()
+  return apiJson(`/projects/${projectId}/questions${tail ? `?${tail}` : ''}`)
+}
+
+/**
+ * 답을 보낸다 → 씨앗 질문이면 **항목 초안이 같이 만들어진다** (SPEC §5 · §9 화면 3 ③).
+ *
+ * 🔴 **한 번에 보낸다.** 라우트가 하나라도 어긋나면 전부 거부하는 이유와 같다 —
+ *   한 장씩 보내다 중간에서 끊기면 사람은 어디까지 저장됐는지 모른다.
+ */
+export function answerQuestions(
+  projectId: string,
+  answers: { question_id: string; answer: string }[],
+): Promise<{ resolved: string[]; created_item_ids: string[] }> {
+  return post(`/projects/${projectId}/questions`, { answers })
 }

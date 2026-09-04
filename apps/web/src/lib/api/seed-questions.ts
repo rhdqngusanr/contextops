@@ -84,7 +84,9 @@ export const SEED_QUESTIONS: readonly SeedQuestion[] = [
   },
   {
     id: 'goal_done',
-    question: '무엇을 보면 그것이 끝났다고 할 수 있나요?',
+    //  ⚠ 「그것」이라고 앞 질문을 가리키지 마라 — 카드는 **한 장씩** 보여서 앞 카드가
+    //     화면에 없다 (눈으로 읽고 고쳤다: 첫 판 ③ 이 「무엇을 보면 그것이…」였다).
+    question: '이번 분기 목표가 끝났다고 무엇을 보고 판단하나요?',
     title: '완료 판정 기준',
     type: 'goal',
     data: (answer) => ({ outcome: answer }),

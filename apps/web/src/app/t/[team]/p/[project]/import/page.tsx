@@ -5,13 +5,14 @@ import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/sche
 
 import { hintFor } from '../../../../../../lib/web/api'
 import {
-  JOB_POLL_MS, createDocument, fetchJob, fetchJobs, structureCounts,
-  type AiJobSummary, type ProjectRef,
+  JOB_POLL_MS, answerQuestions, createDocument, fetchJob, fetchJobs, fetchQuestions, structureCounts,
+  type AiJobSummary, type ProjectRef, type QuestionRow,
 } from '../../../../../../lib/web/queries'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
 import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL } from '../../../../../../components/chips'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
+import { QuestionStack, type QuestionStackState } from '../../../../../../components/question-stack'
 import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
@@ -20,11 +21,13 @@ import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/s
 //  ★ 이 화면이 제품의 **입구**다. 여기서 문서가 들어가고, §7.1 이 그것을 항목 후보와
 //    질문으로 뜯고, 그 결과를 사람이 화면 4·5 에서 고른다.
 //
-//  🔴 **DESIGN_BRIEF 의 세 카드 중 하나만 그린다** — 「문서 붙여넣기」다.
-//     zip 드롭존은 서버에 경로 검사·개수·용량 상한이 아직 없고(SPEC §11 · FINDINGS 26),
-//     질문 카드 10장은 그 열 개를 만드는 코드가 없다. **누르면 아무 일도 없는 카드를
-//     두지 마라** — 있는 것과 없는 것이 구별되지 않으면 화면 전체가 못 미더워진다
-//     (`components/versions.tsx` 의 「롤백 발행」과 같은 판단이다).
+//  🔴 **DESIGN_BRIEF 의 세 카드 중 둘을 그린다** — 「문서 붙여넣기」와 「질문에 답하기」다.
+//     zip 드롭존은 아직 없다: 서버에 경로 검사·개수·용량 상한이 없다 (SPEC §11 ·
+//     FINDINGS 26). **누르면 아무 일도 없는 카드를 두지 마라** — 있는 것과 없는 것이
+//     구별되지 않으면 화면 전체가 못 미더워진다 (`components/versions.tsx` 의
+//     「롤백 발행」과 같은 판단이다).
+//     ⚠ 질문 카드는 열 장이 **프로젝트를 만들 때 심긴다** (`lib/api/seed-questions.ts`).
+//       화면이 그 문구를 갖고 있지 않다 — 행에 실려 온 것을 그린다.
 //
 //  🔴 **진행 표시는 새로고침을 견딘다.** job id 를 state 에만 들고 있으면 새로고침
 //     한 번에 길을 잃고, 사람은 문서를 다시 올린다 — 그게 §7.5 의 시간당 5회를 태우는
@@ -75,6 +78,7 @@ function ImportView({ base, project }: { base: string; project: ProjectRef }) {
 
       <div className="row items-start wrap">
         <PasteCard projectId={project.id} onCreated={jobs.reload} />
+        <QuestionsCard base={base} projectId={project.id} />
         <StructureCard base={base} projectId={project.id} jobs={jobs} />
       </div>
     </>
@@ -168,7 +172,80 @@ function PasteCard({ projectId, onCreated }: { projectId: string; onCreated: () 
 }
 
 // ---------------------------------------------------------------------
-//  ② 구조화 진행 — polling (SPEC §9 화면 3)
+//  ② 질문에 답하기 — 「문서가 없어도 됩니다」 (SPEC §9 화면 3 ③ · FINDINGS 67)
+//
+//  ★ 상태를 여기서만 들고, 그리는 것은 `QuestionStack` 이 한다. 그래야 시험이 그
+//    여섯 모양을 브라우저 없이 다 그려 볼 수 있다 (`job-progress.tsx` 와 같은 배치).
+// ---------------------------------------------------------------------
+
+function QuestionsCard({ base, projectId }: { base: string; projectId: string }) {
+  const { result, reload } = useAsync(() => fetchQuestions(projectId, { status: 'open' }), [projectId])
+  const [index, setIndex] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<unknown>(null)
+  const [saved, setSaved] = useState<{ resolved: number; created: string[] } | null>(null)
+
+  const questions: QuestionRow[] = result.state === 'ready' ? result.data.questions : []
+
+  //  ⚠ 카드를 옮길 때 **그 칸에 이미 쓴 답을 되돌려 놓는다.** 안 하면 [이전] 을 누른
+  //    사람이 자기가 쓴 답이 사라진 줄 안다.
+  function moveTo(next: number): void {
+    setIndex(next)
+    const q = questions[next]
+    setDraft(q ? answers[q.id] ?? '' : '')
+  }
+
+  const state: QuestionStackState = { questions, index, answers, draft, saving, error, saved }
+
+  async function save(): Promise<void> {
+    setSaving(true)
+    setError(null)
+    try {
+      const body = Object.entries(answers).map(([question_id, answer]) => ({ question_id, answer }))
+      const res = await answerQuestions(projectId, body)
+      setSaved({ resolved: res.resolved.length, created: res.created_item_ids })
+      //  답한 질문은 닫혔다 — 목록을 다시 읽어 두면 새로고침 없이도 남은 것이 맞다.
+      reload()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="card pad col grow">
+      <div className="col-tight">
+        <h2 className="text-section">질문에 답하기</h2>
+        <p className="meta">문서가 없어도 됩니다. 답한 것이 초안 항목이 되고, 발행하면 첫 버전이 됩니다.</p>
+      </div>
+
+      {result.state === 'loading' ? <Skeleton rows={3} /> : null}
+      {result.state === 'error' ? <ErrorState error={result.error} retry={reload} /> : null}
+      {result.state === 'ready' ? (
+        <QuestionStack
+          state={state}
+          contextHref={`${base}/context`}
+          on={{
+            onDraft: setDraft,
+            onNext: ({ skip }) => {
+              const q = questions[index]
+              if (!skip && q) setAnswers({ ...answers, [q.id]: draft.trim() })
+              moveTo(index + 1)
+            },
+            onBack: () => moveTo(Math.max(0, Math.min(index, questions.length) - 1)),
+            onSave: save,
+          }}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------
+//  ③ 구조화 진행 — polling (SPEC §9 화면 3)
 // ---------------------------------------------------------------------
 
 function StructureCard({
