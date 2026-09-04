@@ -29,6 +29,70 @@
 
 ## 다음에 고칠 것
 
+### 71. 충돌을 **결정해도 항목이 안 바뀐다** — 화면 4 가 그 구멍을 처음 보이게 했다   [구멍]
+- **증상**: 화면 4 에서 「A가 맞음」을 눌러도 `conflicts` 행의 `status`·`resolution` 만
+  바뀐다. **가리켜진 두 항목은 그대로**다 — 진 쪽이 `deprecated` 로 가지도, 이긴 쪽이
+  `review` 로 오지도 않는다. 사람은 결정을 눌러 놓고 Context 화면에서 **아무 변화도
+  못 본다.** SPEC §5 는 이 엔드포인트를 「→ 항목 상태 갱신」이라고 적는다.
+- **근거**: 이번 바퀴 직접 확인 —
+  `apps/web/src/app/api/v1/conflicts/[id]/resolve/route.ts:16-19` 머리 주석이 **스스로
+  적어 두었다**: 「SPEC 은 「→ 항목 상태 갱신」이라고 적지만 지금은 결정만 기록한다 ·
+  충돌이 어느 항목을 가리키는지는 §7.2 가 `a_item_id`·`b_item_id` 로 낼 때 정해진다」 ·
+  그 라우트의 `update` 는 `conflicts` 만 친다 (`context_items` INSERT·UPDATE 0건)
+- **정본**: `docs/SPEC.md` §5(`POST /conflicts/{id}:resolve`) · §2(`context_items`)
+- **왜 지금인가**: 🔴 **그 주석이 기다리던 조건이 이미 충족됐다.** `a_item_id`·
+  `b_item_id` 는 `0003` 에서 생겼고 (FINDINGS 54 ✅), `conflictRow()` 가 `anchor:'items'`
+  인 종류에 그 칸을 채운다. 「엉뚱한 항목을 폐기한다」는 걱정의 근거가 사라졌다.
+- **고칠 방향**: 선택 4개 → **항목에 무엇을 하나**를 표로 두어라. `RESOLUTION_OUTCOME`
+  (`lib/api/conflict.ts`) 바로 옆이 그 자리다 — 그 표는 이미 「선택 → 충돌 상태」를
+  들고 있고, 여기 필요한 것은 「선택 → 진 쪽 항목의 다음 상태」다.
+  ⚠ **`both`·`dismiss` 는 항목을 건드리지 않는다** (보류와 무시는 결정이 아니다).
+  ⚠ 항목 상태를 바꾸면 **개정이 하나 생긴다** — 그 개정의 `source_refs` 에
+  `{kind:'manual', note:…}` 가 붙어야 「누가 왜 폐기했나」가 남는다 (P7 · 68 과 같은 자리).
+  ⚠ 트랜잭션 하나여야 한다. 충돌만 닫히고 항목이 안 바뀌면 다시 누를 문이 없다
+  (라우트가 「이미 처리된 충돌」을 400 으로 막는다).
+- **상태**: 대기
+
+### 72. 화면 4 가 DESIGN_BRIEF 의 **세 칸을 아직 안 그린다**   [격차]
+- **증상**: 이번 바퀴에 만든 화면 4 는 DESIGN_BRIEF §4 화면 4 의 카드 셋 중 본체는
+  그리지만 아래 셋이 없다. 셋 다 **서버에 담을 자리나 문이 없어서** 안 그렸다 —
+  지어내면 근거 없는 칸이 된다.
+  ① **병합 카드의 「용어: ___」** — `duplicate` 카드의 [같음, 용어: ___]. 지금은
+     [A로 합침]·[B로 합침] 뿐이다. 고른 용어를 담을 칸이 `resolution` 에 없다
+     (`{choice, note}` 뿐이고 `note` 는 자유 문장이다).
+  ② **[담당자 지정]** — 열린 질문 카드의 둘째 버튼. `OpenQuestionData.owner_id` 는
+     있는데 **충돌 행에는 담당자 칸이 없고**, 사람 목록을 내는 문도 없다.
+  ③ **`A 갱신 2026-07-12 · B 갱신 2026-08-04`** — 두 항목의 갱신 시각. `ContextItem`
+     응답에 `updated_at` 이 **없다** (`ITEM_COLUMNS` 가 안 뽑는다). 「오래됨」 카드에서
+     제일 쓸모 있는 숫자인데 화면이 볼 수가 없다.
+- **근거**: 이번 바퀴 직접 확인 — `grep -n "updated_at" apps/web/src/lib/api/item.ts`
+  0건 · `resolution` 의 모양은 `db/schema.ts:388` 의 `{ choice: ConflictChoice; note?: string }` ·
+  눈으로 읽은 열다섯 모양: `docs/evidence/2026-09-04-screen4/conflict-card-states.txt`
+- **정본**: `docs/DESIGN_BRIEF.md` §4 화면 4 · `docs/SPEC.md` §5
+- **고칠 방향**: **③이 제일 싸고 제일 쓸모 있다** — `ITEM_COLUMNS` 에 한 줄이고
+  화면 5 의 「갱신」 칸도 같은 값을 기다린다 (DESIGN_BRIEF 화면 5 의 표에 그 칸이 있다).
+  ①②는 계약을 넓히는 일이라 **71 과 같이** 정하는 것이 맞다 — 셋 다 「결정이 무엇을
+  남기나」의 갈래다.
+- **상태**: 대기
+
+### 73. 2-B 이번 라운드 — 셋 다 살아 있다 · `confidence` 는 **찍히기만** 한다   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인 —
+  ① **`ItemType` 10종** — `compiler/src/partition.ts`·`sections.ts` 가 읽고
+     `compiler/test/liveness.test.ts` 가 「10종이 서로 다른 파일·다른 문장을 낸다」를 잠근다.
+  ② **에러 코드 11종** — 열한 종 **전부** 표(`ERROR_HINT`) 밖에 내는 자리가 있다
+     (가장 적은 것이 `REVISION_CONFLICT`·`RATE_LIMITED`·`COMPILE_FAILED` 각 1곳).
+  ③ **`confidence` 3단계** — 살아 있지만 **찍히기만 한다**: `compiler/src/tag.ts:50` 이
+     `conf:{값}` 으로 Pack 줄에 넣고 화면이 칩으로 그린다. 값을 바꾸면 Pack 바이트가
+     갈리므로 2단계(「바꾸면 결과가 달라지나」)는 통과다.
+     ⚠ **그러나 아무 판정도 이 값을 안 읽는다** — `low` 인 항목이 Pack 에서 빠지지도,
+     화면에서 걸러지지도 않는다. SPEC 도 §7 프롬프트의 「확신 없으면 confidence:low」
+     한 줄뿐이라 **의도된 소비처가 아직 없다.** 죽은 것은 아니지만 **얇다.**
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: sync 상태 5종(**69**) · `origin` 4종(**31** 이 그 항목이다) ·
+  `SourceDocumentKind` 6종(**65**) · `AI_JOB_STATUS` 4종.
+- **상태**: ✅ 이번 바퀴에 확인함
+
 ### 70. 2-B 이번 라운드 — 살아 있는 것 확인만 하고 새로 죽은 것은 못 찾았다   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다 — 안 남기면
   다음 바퀴가 같은 셋을 또 센다.
