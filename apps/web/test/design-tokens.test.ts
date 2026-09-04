@@ -11,10 +11,11 @@ import { describe, expect, it } from 'vitest'
 //    눈 판정으로는 `#EDEFF3` 과 `#ECEEF2` 를 구별할 수 없다 — 기계만 잡는다.
 //    **게이트는 문서보다 강하다** (CLAUDE.md).
 //
-//  재는 것 셋:
+//  재는 것 넷:
 //    ① DESIGN_BRIEF §3 색 표 == `globals.css` 의 `:root` (양방향)
 //    ② 화면 코드 어디에도 색 리터럴(`#rrggbb`·`rgb(`·`hsl(`)이 없다
 //    ③ `padding`·`margin`·`gap` 은 `var(--sp-*)` 나 `0` 뿐이다 (간격 4/8/12/16/24/32/48)
+//    ④ `ink-4`(표에서 용도가 **비활성** 한 낱말이다)로 **읽어야 하는 글자**를 그리지 않는다
 //
 //  ⚠ 새 색이 필요하면 **DESIGN_BRIEF §3 표에 먼저 한 줄**을 더하고 `:root` 에 같은 값을
 //    적어라. 시험을 고쳐서 통과시키지 마라 — 그건 정본을 코드로 옮기는 것이다.
@@ -108,5 +109,48 @@ describe('🔴 간격은 토큰뿐이다 (DESIGN_BRIEF §3 「간격 4/8/12/16/2
     const css = readFileSync(globalsCss, 'utf8')
     const scale = [...css.matchAll(/--sp-\d:\s*(\d+)px;/g)].map((m) => Number(m[1]))
     expect(scale).toEqual([4, 8, 12, 16, 24, 32, 48])
+  })
+})
+
+// ---------------------------------------------------------------------
+//  ④ 비활성 색으로 **글자**를 그리지 않는다 (FINDINGS 88)
+//
+//  ★ 왜 이 시험이 생겼나 — 위의 ②는 「임의 색을 찍었나」만 센다. 토큰을 제대로 썼는데
+//    **용도가 틀린** 경우는 아무도 안 셌고, 그래서 `ink-4` 로 그린 문장이 다섯 자리 쌓였다.
+//    그중 둘은 제품의 주장 그 자체였다 — P1 을 설명하는 문장(「코드 본문은 서버에 없습니다」)과
+//    P7 을 눈으로 재는 Pack 줄 번호다. 카드 바탕 위 대비가 1.6:1 이라 발표 영상·인쇄된
+//    심사 자료에서는 **글자가 없는 것과 같다.** `toContain` 은 색을 안 센다 —
+//    시험이 전부 초록인 채로 안 보이는 화면이 나갔다 (FINDINGS 86 의 눈 판정에서 잡혔다).
+//
+//  규칙은 하나다: **`ink-4` 는 비활성(`:disabled`)과 장식(`aria-hidden`)에만.**
+//    읽어야 하는 보조 글자는 `meta`/`ink-3`(표에서 「라벨·메타·보조」)다.
+//  ⚠ 「아주 옅은 보조」가 정말로 필요해지면 DESIGN_BRIEF §3 표에 **먼저** 한 줄을 더하고
+//    써라 (`bad-bg` 가 그렇게 들어왔다). 이 시험을 고쳐서 통과시키지 마라.
+// ---------------------------------------------------------------------
+describe('🔴 비활성 색(`ink-4`)으로 읽어야 하는 글자를 그리지 않는다', () => {
+  it('`className` 의 `ink-4` 는 같은 줄에 `aria-hidden` 이 있어야 한다 (장식만 허용)', () => {
+    //  주석은 안 센다 — `className="… ink-4 …"` 속만 본다.
+    const CLASS_INK4 = /className="[^"]*\bink-4\b[^"]*"/
+    const hits: string[] = []
+    for (const file of sourceFiles(webSrc)) {
+      if (!file.endsWith('.tsx')) continue
+      readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+        if (CLASS_INK4.test(line) && !line.includes('aria-hidden')) {
+          hits.push(`${file.slice(webSrc.length + 1)}:${i + 1}`)
+        }
+      })
+    }
+    expect(hits, `읽어야 하는 글자는 meta/ink-3 로 그린다: ${hits.join(' · ')}`).toEqual([])
+  })
+
+  it('`globals.css` 의 `var(--ink-4)` 는 `.ink-4` 유틸리티와 `:disabled` 규칙에만 있다', () => {
+    const hits: string[] = []
+    readFileSync(globalsCss, 'utf8').split('\n').forEach((line, i) => {
+      if (!line.includes('var(--ink-4)')) return
+      //  ⚠ 한 줄 규칙만 통과시킨다. 여러 줄로 적으면 여기서 걸린다 — 그때 다시 생각해라.
+      if (/^\.ink-4\s*\{/.test(line.trim()) || line.includes(':disabled')) return
+      hits.push(`globals.css:${i + 1} — ${line.trim()}`)
+    })
+    expect(hits, `ink-4 는 비활성과 장식에만 쓴다: ${hits.join(' · ')}`).toEqual([])
   })
 })

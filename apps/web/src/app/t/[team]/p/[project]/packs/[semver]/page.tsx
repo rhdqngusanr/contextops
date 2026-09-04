@@ -117,7 +117,7 @@ function FileTree({
         >
           <span className="mono">{f.path}</span>
           {/* sha 앞 4자 — 같은 파일이 버전 간에 바뀌었는지 눈으로 잡는 자리 */}
-          <span className="mono ink-4 tree-sha" title={f.sha256}>{f.sha256.slice(0, 4)}</span>
+          <span className="mono ink-3 tree-sha" title={f.sha256}>{f.sha256.slice(0, 4)}</span>
         </button>
       ))}
     </nav>
@@ -184,7 +184,7 @@ function FileView({
               aria-selected={selectedTag !== undefined && trace.get(i) === selectedTag}
               onClick={() => pick(i)}
             >
-              <span className="pack-lineno ink-4">{i + 1}</span>
+              <span className="pack-lineno ink-3">{i + 1}</span>
               <span className="pack-linetext">{text === '' ? ' ' : text}</span>
             </button>
           ))}

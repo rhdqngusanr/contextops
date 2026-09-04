@@ -48,7 +48,9 @@ export function VersionHistory({
               {/* 해시는 앞 8자만 + 전체는 title 로 (DESIGN_BRIEF §3 「타이포」). */}
               <td className="mono" title={v.snapshot_hash}>{v.snapshot_hash.slice(0, 8)}</td>
               <td className="mono">{v.published_at.replace('T', ' ').slice(0, 16)}</td>
-              <td>{v.change_summary ?? <span className="ink-4">—</span>}</td>
+              {/* 빈 칸의 `—` 는 **장식이다** — `aria-hidden` 이라야 `ink-4`(비활성 색)를
+                  쓸 수 있다. 읽어야 하는 글자에 그 색을 쓰면 design-tokens.test.ts 가 막는다. */}
+              <td>{v.change_summary ?? <span aria-hidden="true" className="ink-4">—</span>}</td>
               <td><a className="btn btn-sm" href={packHref(v.semver)}>Pack 보기</a></td>
             </tr>
           ))}

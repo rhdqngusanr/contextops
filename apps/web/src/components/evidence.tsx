@@ -70,7 +70,7 @@ export function EvidenceList({ refs }: { refs: SourceRef[] }) {
     <div className="col-tight">
       {refs.map((r, i) => <EvidenceLink key={`${r.kind}-${i}`} ref={r} />)}
       {refs.some((r) => r.kind === 'repository_path')
-        ? <span className="meta ink-4">코드 본문은 서버에 없습니다 — 로컬에서 열어 보세요.</span>
+        ? <span className="meta">코드 본문은 서버에 없습니다 — 로컬에서 열어 보세요.</span>
         : null}
     </div>
   )

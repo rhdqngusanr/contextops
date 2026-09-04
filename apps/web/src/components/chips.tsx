@@ -216,7 +216,7 @@ export function CtxTag({ itemId, revision }: { itemId: string; revision?: number
   return (
     <span className="ctx-tag">
       {itemId}
-      {revision === undefined ? null : <span className="ink-4">· rev {revision}</span>}
+      {revision === undefined ? null : <span>· rev {revision}</span>}
     </span>
   )
 }

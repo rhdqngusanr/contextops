@@ -416,7 +416,7 @@ function PublishModal({
             )
           })}
           {official === null
-            ? <span className="meta ink-4">첫 발행은 등급과 무관하게 v1.0.0 입니다 (SPEC §6).</span>
+            ? <span className="meta">첫 발행은 등급과 무관하게 v1.0.0 입니다 (SPEC §6).</span>
             : null}
         </div>
 
