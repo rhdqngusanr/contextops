@@ -232,7 +232,39 @@
   ⚠ **최소치를 10종 전부로 잡지 마라.** `adr`·`workflow` 는 원문이 없고, 원문 없이
   채우면 P7 이 깨진다. 표의 각 줄에 **「지금 몇 갈래이고 왜 그 수인가」**를 적어라 —
   89 가 `permission`·`none` 을 비워 둔 이유를 상수 옆에 적은 것과 같은 모양이다.
-- **상태**: 대기
+- **상태**: ✅ `8b96ef5` — **종이에 서는 타입 5 → 7 · Pack 파일 4 → 6.**
+  ⚠ **커밋 `8b96ef5` 의 메시지는 Pack 파일을 「5 → 7」로 적었는데 틀렸다.** manifest 를
+  직접 세면 **4 → 6** 이다(`.claude/rules/` 5개 + `CLAUDE.md`). 93 의 「4 → 5」를
+  안 세고 이어 적어서 났다 — **95 가 고친 고장(숫자를 안 재고 이어 적기)과 같은 종류다.**
+  🔴 **이 항목이 적은 고칠 방향 하나가 틀렸다 — `open_question` 은 §5 에 원문이 있어도
+     Pack 에 절대 안 선다.** `compiler/src/partition.ts:118` 이 그 타입을 `exclude` 로
+     보낸다(「답이 없는 질문을 규칙처럼 배포하지 않는다」 — 고장이 아니라 설계다).
+     그래서 **이 축의 최대치는 10 이 아니라 9** 이고, 씨앗에 넣어 봐야 축이 안 움직인다.
+     그 이유를 `PACK_COVERAGE` 의 그 줄 옆에 적었다 — 다음 사람이 넣어 보고
+     「왜 안 오르지」로 한 바퀴를 쓰지 않게.
+  ① **`architecture` 5종** — goals.md §7 「아키텍처 한 장」의 다섯 줄을 그대로 올렸다
+     (payment·psp·webhook·refund·ledger). CLAUDE.md 에 `## Quick Map` 절이 서고
+     `.claude/rules/architecture.md` 라는 **Pack 파일 갈래 하나가 처음 생겼다.**
+     ★ 다섯을 다 넣은 이유 — §7 은 **한 장짜리 그림**이다. 둘만 넣으면 Quick Map 이
+       그림의 일부만 그리고, 빠진 셋이 없는 건지 안 옮긴 건지 심사자가 모른다.
+     ★ `ARCHITECTURE` **표 하나**로 모았다 (다섯이 글자만 다르고 모양이 같다).
+       구성요소를 하나 더하는 절차는 「이 표에 한 줄」이다.
+  ② **`domain` 1종** — goals.md §6 용어 표에서 왔다 (`domain-payment.md`).
+     glossary 5개·불변식 2개가 전부 그 표 안에 **글자 그대로** 있다.
+     ⚠ `scope.kind='domain'` 이 만드는 `domain-refund.md` 와 **다른 축**이다 —
+     이제 두 파일이 나란히 나와서 두 축이 이름만 같다는 것이 종이에서 보인다
+     (그리고 그 나란함이 **97** 을 드러냈다).
+  ③ **경로를 적지 않고 잰다** — `fixtureDir()` 이 `fixtures/paylab-api/src/{component}`
+     가 정말 있는지 보고 없으면 던진다. 손으로 적으면 픽스처가 바뀌었을 때 조용히
+     없는 폴더를 가리킨다 (90 과 같은 고장의 **코드 쪽 판**).
+  **축을 늘리지 않았다** — 93 이 만든 `PACK_COVERAGE` 의 ItemType 줄 `min` 을 5 → 7 로
+  올린 것이 전부다. 관통(`walkthrough-publish.ts`)은 한 줄도 안 고쳤다.
+  🔴 **빨개지는 것을 두 번 봤다**: ① 구성요소 이름을 없는 폴더로 바꾸니
+  「`paylab-api/src/ledgerX` 폴더가 픽스처에 없다」로 씨앗이 던졌다 ② architecture 항목을
+  빼니 「Pack 이 항목 종류(ItemType) 를 **6갈래**로 보여 준다 (최소 7) — 없는 갈래:
+  architecture · adr · workflow · open_question」로 FAIL · exit 1.
+  잰 것: 씨앗 항목 9 → 15 · 관통 검사 639개(단계별로 그대로 · 새 `check()` 를 안 더했다).
+  📎 눈 판정: `docs/evidence/2026-09-04-itemtype-coverage/` (`.ci/` 밖 · Pack 사본 3개)
 
 ### 96. 관통 스크립트 셋이 `check()` 를 **각자 복사해서 들고 있다**   [격차]
 - **증상**: `walkthrough-publish.ts:45` · `walkthrough-payload.ts:42` ·
@@ -256,6 +288,90 @@
   ⚠ **셋을 하나로 합치겠다고 관통 스크립트를 한 파일로 모으지 마라** — 단계가 갈라져
   있는 것이 관통의 계약이다 (`walkthrough.ps1` 의 단계 표).
 - **상태**: 대기
+
+### 97. `domain-{slug}.md` 가 **어느 도메인인지 본문에 한 번도 안 적는다**   [구멍]
+- **증상**: `.ci/walkthrough-pack/.claude/rules/domain-refund.md` 를 열면 본문이
+  「`# 도메인`」 → 「`## 이 도메인의 규칙`」 → 규칙 한 줄이다. **「refund」라는 낱말이
+  파일 안에 하나도 없다.** 어느 도메인인지 아는 길은 **파일 이름뿐**이고, Pack 을
+  붙여넣기·인용·발췌하는 순간(심사자가 화면에 한 파일만 띄우는 순간) 사라진다.
+  ⚠ **94 를 고치기 전에는 이게 안 보였다.** 이번에 `domain-payment.md` 가 옆에 생겼는데
+  그 파일은 `## payment` 로 이름을 적는다 — 같은 갈래의 파일 둘이 **한쪽만 이름을 말한다.**
+- **근거**: 이번 바퀴 눈 판정. 사본 두 개를 `.ci/` 밖에 뒀다 —
+  `docs/evidence/2026-09-04-itemtype-coverage/domain-refund.md`(이름 없음) 와
+  같은 폴더의 `domain-payment.md`(`## payment` 있음).
+  ⚠ 원인은 명확하다: 이름을 찍는 자리가 **`domain` ItemType 항목의 절 하나뿐**이다
+  (`compiler/src/sections.ts:155` → `## ${d.name}`). `scope.kind='domain'` 만 있고
+  그 도메인의 `domain` 항목이 없으면 이름을 찍을 사람이 아무도 없다.
+  `templates/index.ts` 의 `DOCS.domain.head` 는 **일부러** 이름을 안 적는다
+  (「제목은 절이 갖는다 — 머리말에 또 적으면 같은 이름이 두 줄 겹친다」).
+  그 판단은 `domain` 항목이 **있을 때**만 맞다.
+- **정본**: `packages/compiler/templates/index.ts`(`DOCS.domain`) ·
+  `packages/compiler/src/sections.ts`(`domain` 절) · `docs/SPEC.md` §4.2 — **P7 은 아니다**
+  (태그는 멀쩡하다. 사람이 읽는 종이에서 **무엇에 관한 규칙인지**가 빠진 것이다)
+- **고칠 방향**: 머리말이 이름을 아는 재료를 **이미 들고 있다** — `DocVars.title` 이
+  `byScope()` 에서 채워진다(`partition.ts:83`). 그런데 `head` 가 안 쓴다.
+  ⚠ **「무조건 머리말에도 찍기」로 고치지 마라** — 그러면 `domain` 항목이 있는 파일에서
+  이름이 두 줄 겹친다(주석이 경고하는 그것이다). 겹치지 않게 하는 길이 둘이다:
+  ① 머리말을 `# 도메인 — {title}` 로 하고 절의 `## {name}` 은 그대로 둔다
+     (겹쳐 보이지만 층이 다르다 — 다른 Pack 파일의 머리말과 모양이 같아진다) ·
+  ② `domain` 항목이 없을 때만 머리말이 이름을 찍는다 (조건이 늘어난다 — 값싸지 않다).
+  ①이 값싸고 다른 문서(`scoped` 는 이미 `# 경로 규칙 — {title}` 이다)와 **모양이 같다.**
+  ⚠ 템플릿을 고치면 `TEMPLATE_VERSION` 을 올리고 golden 의 expected 를 갱신한 이유를
+  커밋 메시지에 적어라 (`loop/PROMPT.md` ⑤).
+- **상태**: 대기
+
+### 98. 아키텍처 다섯 줄이 §7 그림의 **흐름 순서를 잃고 이름 순**으로 나온다   [격차]
+- **증상**: 새로 선 `## Quick Map` 과 `.claude/rules/architecture.md` 의 다섯 줄 순서가
+  **ledger → payment → psp → refund → webhook** 이다. 원문(goals.md §7)은
+  **payment → psp → webhook → refund → ledger** 로 **돈이 흐르는 순서**이고, 그 순서가
+  그 문단의 뜻이다(「`payment` 는 PSP 를 직접 부르지 않고 `psp` 를 거친다」).
+  종이에서는 그 화살표가 사라지고 알파벳 목록이 된다.
+- **근거**: 이번 바퀴 눈 판정 — `docs/evidence/2026-09-04-itemtype-coverage/CLAUDE.md`
+  24–29줄. 원인은 정렬이다: `compiler/src/sort.ts:16` 이 `priority` → `scope` →
+  `title` 순으로 재는데 씨앗의 다섯 항목이 **전부 `priority: 60`** 이라
+  (`seed.ts` `fromDoc` 의 기본값) 제목 코드포인트 순으로 떨어진다.
+- **정본**: `docs/SPEC.md` §4.1 3단계(정렬) · `packages/compiler/src/sort.ts`
+- **고칠 방향**: **컴파일러를 고치지 마라 — 정렬은 P4 의 심장이고 지금 맞다.**
+  순서를 말하는 자리는 이미 있다: `priority` 다. 씨앗의 `ARCHITECTURE` 표에 우선순위
+  칸을 더하고 §7 그림 순서대로 내림차순으로 주면 된다 (표에 한 줄 더하는 모양 그대로).
+  ⚠ 그러면 「우선순위」라는 낱말이 **중요도**가 아니라 **읽는 순서**로 쓰이게 된다 —
+  그게 이 필드의 뜻이 맞는지 SPEC §3 을 먼저 읽어라. 아니면 이 항목은 **닫지 말고
+  「그 값은 그런 뜻이 아니다」로 남겨라** (억지로 고치면 다음 사람이 더 헷갈린다).
+- **상태**: 대기
+
+### 97-B. 2-B 이번 라운드 — `MILESTONE_STATUSES` 4종은 살아 있다 · `PROGRESS_SOURCES` 3종은 **85-B 그대로**   [기록]
+- **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
+- **근거**: 이번 바퀴 직접 확인.
+  ① **`MILESTONE_STATUSES` 4종 — ②단계까지 통과한다.** 소비처의 정본은
+     `lib/api/progress.ts:72`(`RANK` — `Record<MilestoneStatus, number>` 라 한 줄만
+     빠져도 타입 검사가 막는다)이고 `rollupMilestone()` 이 그 표만 읽는다.
+     네 값이 전부 **실제로 나온다**: 보고가 없으면 `not_started`(`:86` 초기값) ·
+     `PROGRESS_EFFECT` 가 `in_progress`·`done_candidate` 를 내고 ·
+     `done` 은 **표 밖에서** 온다(`:88` — `confirmedAt !== null` 이면 무조건 `done`).
+     🔴 `done` 이 `PROGRESS_EFFECT` 에 **없는 것**이 P5 의 자리다 — agent 는 스스로
+     완료를 선언하지 못하고 owner 의 `POST /progress/{id}/confirm` 이 있어야 한다
+     (`confirm/route.ts:41` 이 `done_candidate` 아닌 보고의 확정을 막는다).
+     시험이 넷을 다 잰다: `progress-rollup.test.ts:50`(빈 목록 → `not_started`) ·
+     `:24`(값마다 갈림) · `:35`·`:36`(같은 보고가 확정 전후로 갈린다).
+     소비자는 `roadmap/route.ts:90` 하나다 — **화면은 아직 없다** (PLAN 「웹 화면 6·8」).
+  ② **`PROGRESS_SOURCES` 3종 — 값으로 갈리는 코드가 여전히 0곳이다** (85-B 그대로).
+     ①단계는 지난다: `upload.ts:144`(z.enum — 모르는 값을 막는다) ·
+     `db/schema.ts:155`(pgEnum) · `cli/progress.ts:38`(도움말 — 표시용이라 뺀다).
+     ②단계에서 멈춘다: 값을 읽는 코드가 `lib/api/progress.ts:23`(컬럼 나열) 과
+     `toProgressEvent()` 의 **그대로 되돌려주기**뿐이다. 세 값 어느 것으로 바꿔도
+     저장되고 그대로 나온다 — **갈리는 곳이 없다.**
+     ⚠ 그런데 **쓰는 자리는 둘이 진짜로 있다**: `hook`(`plugin/contextops/scripts/stop.mjs:166`) ·
+     `agent`(`cli/progress.ts:98` 기본값). `manual` 만 쓰는 자리가 없다.
+     🔴 **새 항목을 만들지 않는다 — 이건 죽은 표가 아니라 「읽을 화면이 아직 없는」 것이다.**
+     이 값을 읽을 자리는 화면 8(Realtime)의 「무엇이 이 보고를 만들었나」이고
+     `docs/PLAN.md` 「웹 화면 6·8 — Proposal · Roadmap · Realtime」이 `- [ ]` 로 있다.
+     8·69 와 같은 갈래다. **그 행을 할 때 이 셋이 화면에서 갈리는지 같이 잠가라.**
+- **정본**: `loop/PROMPT.md` ④2-B
+- **다음 라운드의 후보**: 에러 코드 9종(94-B 가 후보로 적었는데 아직 안 쟀다) ·
+  `SYNC_LIMITS`/`SCAN_LIMITS` 상수 · `CONFLICT_CHOICES` 4종 · `AI_JOB_STATUSES`
+  (`ItemType`·sync 상태는 94-B · `ITEM_STATUSES`·`PACK_TARGETS` 는 95-B ·
+  `CONFLICT_KINDS`·`PROGRESS_STATUSES` 는 96-B 가 닫았다)
+- **상태**: [기록]
 
 ### 96-B. 2-B 이번 라운드 — `CONFLICT_KINDS` 6종 · `PROGRESS_STATUSES` 4종 다 살아 있다   [기록]
 - **증상**: 고장이 아니다. `loop/PROMPT.md` ④2-B 를 돌린 결과를 남긴다.
