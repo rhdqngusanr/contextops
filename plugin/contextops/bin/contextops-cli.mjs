@@ -19564,6 +19564,16 @@ var JSON_SCHEMA_FILES = {
   "manifest": Manifest
 };
 
+// ../../packages/schema/src/replay.ts
+var ReplayFrame = external_exports.object({
+  t_ms: external_exports.int().min(0),
+  text: external_exports.string().max(400)
+}).strict();
+var ReplayFrames = external_exports.array(ReplayFrame).min(1).max(200).refine(
+  (frames) => frames.every((f, i) => i === 0 || f.t_ms >= frames[i - 1].t_ms),
+  { message: "t_ms \uB294 \uC904 \uC21C\uC11C\uB300\uB85C \uB298\uC5B4\uB098\uC57C \uD55C\uB2E4" }
+);
+
 // src/cli/api.ts
 function apiUrl(origin, path) {
   return `${origin}/api/v1/${path.replace(/^\//, "")}`;

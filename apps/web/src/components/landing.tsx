@@ -1,4 +1,8 @@
+import { ReplayFrames } from '@contextops/schema'
+
+import replayRecording from '../../../../fixtures/replay/sync.json'
 import styles from './landing.module.css'
+import { TerminalReplay } from './terminal-replay'
 
 // =====================================================================
 //  화면 1 — 랜딩 `/` (SPEC §9 표 1행 · DESIGN_BRIEF §4 「화면 1」)
@@ -25,7 +29,8 @@ import styles from './landing.module.css'
 //
 //  ⚠ **없는 것은 안 만든다** — 이 저장소의 규칙이다 (누르면 아무 일도 안 하는 버튼 금지):
 //    · [2분 영상 보기] — 영상이 없다 (PLAN P6). 영상이 생기는 바퀴에 버튼 한 줄이다.
-//    · 터미널 재생(§10.4) · 스텝 썸네일 — 컴포넌트와 캡처가 없다 (PLAN P5 첫 행).
+//    · 스텝 썸네일 — production 캡처가 아직 없다 (PLAN P5 둘째 행 · FINDINGS 123).
+//      터미널 재생(§10.4)은 있다 — `TERMINAL_REPLAY` · 녹화는 관통이 남긴 실제 출력이다.
 //    · GitHub · Known limitations 링크 — 공개 URL 이 아직 없다 (FINDINGS 122 · 🙋).
 //
 //  ⚠ accent 는 이 화면에 **하나**다 — [샘플 팀으로 둘러보기]. 다른 버튼은 outline.
@@ -102,7 +107,7 @@ export const WHY_NOT_GIT = {
   line: 'DeepWiki는 코드를 사람에게 설명합니다. ContextOps는 팀의 결정을 AI에게 꽂습니다.',
 } as const
 
-/** C-2. 어떻게 동작하나요 — 3단계. ⚠ 썸네일은 없다 (캡처가 아직 없다 · PLAN P5). */
+/** C-2. 어떻게 동작하나요 — 3단계. ⚠ 썸네일은 없다 (production 캡처가 아직 없다 · PLAN P5 둘째 행). */
 export const HOW_IT_WORKS = {
   title: '어떻게 동작하나요',
   steps: [
@@ -120,6 +125,37 @@ export const HOW_IT_WORKS = {
     },
   ],
 } as const
+
+/**
+ * C-3. 터미널 재생 (SPEC §10.4 · DESIGN_BRIEF 화면 1 C-3).
+ *
+ * 🔴 **줄은 전부 녹화에서 온다** — `fixtures/replay/sync.json` 은 관통 sync 단계가 배포되는
+ *   플러그인을 진짜 소켓으로 돌려 남긴 stdout 이고, 관통이 매번 다시 녹화해 대조한다.
+ *   여기 표에는 **설명과 마일스톤**만 있다. 마일스톤은 씨앗(`scripts/seed.ts` 의 `paylabDrafts()`)의
+ *   PL-M1 과 글자 그대로 같아야 한다 — 시험이 잰다. 오른쪽 패널이 「근거 n / 3」이라고 말하려면
+ *   그 3 이 실제 Pack 의 done_when 이어야 한다 (P7).
+ * ⚠ DESIGN_BRIEF 의 「BS-M2 1/3 → 2/3」은 목업 문구다. 녹화는 paylab 이고 0/3 → 1/3 이다 —
+ *   보고 하나가 실제로 그만큼만 바꾼다.
+ */
+export const TERMINAL_REPLAY = {
+  title: '터미널에서는 이렇게 보입니다',
+  lead: '세션을 열면 훅이 새 버전을 알리고, /contextops:sync 로 받고, 작업을 마치면 agent 가 '
+    + '근거와 함께 보고합니다. 오른쪽 Roadmap 이 같은 시각에 바뀝니다.',
+  source: '관통 시나리오가 배포되는 플러그인을 실제로 돌려 남긴 출력입니다 (fixtures/replay/sync.json). '
+    + '사이의 작업은 생략했고, 타이핑과 줄 사이 간격만 읽을 수 있게 늘렸습니다.',
+  milestone: {
+    id: 'PL-M1',
+    title: '재시도·타임아웃 정리',
+    done_when: [
+      'PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다',
+      '모든 외부 호출에 타임아웃이 걸려 있다',
+      '재시도 횟수와 간격이 설정값으로 빠져 있다',
+    ],
+  },
+} as const
+
+/** 녹화는 모듈을 읽을 때 한 번 계약으로 판다 — 모양이 어긋난 파일은 빌드에서 죽는다 (렌더에서가 아니라). */
+export const REPLAY_FRAMES = ReplayFrames.parse(replayRecording)
 
 /**
  * C-4. 서버가 아는 것 / 모르는 것 — P1 의 얼굴 (SPEC §0.1 · DESIGN_BRIEF 화면 1 C-4).
@@ -267,6 +303,17 @@ function HowItWorks() {
   )
 }
 
+function Replay() {
+  return (
+    <section className={styles.section} aria-labelledby="landing-replay">
+      <h2 id="landing-replay">{TERMINAL_REPLAY.title}</h2>
+      <p className="ink">{TERMINAL_REPLAY.lead}</p>
+      <TerminalReplay frames={REPLAY_FRAMES} milestone={TERMINAL_REPLAY.milestone} />
+      <p className="meta">{TERMINAL_REPLAY.source}</p>
+    </section>
+  )
+}
+
 function TrustBoundary() {
   const { knows, unknown } = TRUST_BOUNDARY
   const rows = Math.max(knows.rows.length, unknown.rows.length)
@@ -338,6 +385,7 @@ export function Landing() {
         <Hero />
         <WhyNotGit />
         <HowItWorks />
+        <Replay />
         <TrustBoundary />
         <Install />
       </main>

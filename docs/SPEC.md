@@ -555,7 +555,11 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 - ⚠ 이 파일이 담는 것은 **팀원·기기·보고·진행**뿐이다. 어느 팀인가(이름·slug·게스트 sub)는 `apps/web/src/lib/demo/tenant.ts` 에 있다 — 배너도 그 값을 읽어야 하는데 화면이 픽스처를 import 하면 데모 데이터가 배포 번들에 실린다. 제안은 대상 항목 id 가 코드에만 있어서 시드 스크립트의 표에 산다.
 
 ### 10.4 브라우저 터미널 재생
-`fixtures/replay/*.json`: `[{t_ms, text}]` 형식으로 실제 세션 녹화(`script` 명령 또는 수동 작성). 컴포넌트 `<TerminalReplay src>`가 타이핑 재생, 옆 패널에 같은 타임라인으로 Roadmap 갱신 애니메이션. 랜딩과 `/sync` 상단에 배치.
+`fixtures/replay/*.json`: `[{t_ms, text}]` 형식으로 실제 세션 녹화. 컴포넌트 `<TerminalReplay frames milestone>`가 타이핑 재생, 옆 패널에 같은 타임라인으로 Roadmap 갱신 애니메이션. 랜딩 C-3 에 배치.
+- 🔴 **녹화는 손으로 쓰지 않는다** (62바퀴). `sync.json` 은 관통 sync 단계(`plugin/contextops/scripts/walkthrough-sync.ts` ⑥)가 **배포되는 번들**을 진짜 소켓으로 돌려 남긴 stdout 그대로다 — 훅 알림 → `/contextops:sync` → `contextops progress` 보고. 관통이 매번 다시 녹화해 픽스처와 대조하므로(`t_ms` 제외) CLI 의 문장이 바뀌면 관통이 빨개진다. 계약은 `packages/schema` 의 `ReplayFrames` (명령 줄은 `> `·`$ ` 로 시작 — 재생기가 그 줄만 타이핑한다).
+- 오른쪽 패널은 **왼쪽 줄을 읽어서** 바뀐다 (`panelState`) — 보고 줄 `보고했다 — <ID> · criterion_done · …` 이 드러나는 순간 바로 앞 명령의 `--criterion` 문장이 ✓ 가 된다. 별도 타임라인이 없다. 마일스톤은 씨앗의 PL-M1 과 글자 그대로 같다 (P7 · 시험이 잰다). 「BS-M2 1/3 → 2/3」은 DESIGN_BRIEF 의 목업 문구이고 실제는 paylab 0/3 → 1/3 이다.
+- 재생 속도(`REPLAY_PACE`)는 표시용이다 — 녹화의 실제 지연은 0.3초라 그대로 틀면 못 읽는다. 순서·내용은 손대지 않는다. `prefers-reduced-motion` 이면 전부 드러난 채로 둔다. 서버 렌더도 전부 드러난 상태라 JS 없이 글로 읽힌다.
+- ⚠ `/sync` 상단에는 두지 않았다 — 그 화면은 실제 기기 표가 서는 자리라 녹화가 실데이터처럼 읽힌다.
 
 ### 10.5 6분 발표 타임라인
 0:00 두 Claude 다른 답 → 0:40 왜 git/DeepWiki 아닌가 → 1:10 가져오기·충돌 카드 3장 → 2:00 정리·발행 v1.0 → 2:40 Pack Explorer 역추적 → 3:20 훅 알림·sync·같은 답 → 4:10 자동 progress·propose·v1.1 → 5:10 Roadmap·Sync·네트워크 캡처 → 5:40 마무리 문장.

@@ -1,0 +1,70 @@
+[
+  {
+    "t_ms": 66,
+    "text": "ContextOps: 적용 v0.9.0 · 공식 v1.0.0"
+  },
+  {
+    "t_ms": 66,
+    "text": "  파일 8개 · /contextops:sync 로 갱신한다"
+  },
+  {
+    "t_ms": 66,
+    "text": "  Hook은 파일을 변경하지 않습니다."
+  },
+  {
+    "t_ms": 66,
+    "text": "> /contextops:sync"
+  },
+  {
+    "t_ms": 218,
+    "text": "v0.9.0 → v1.0.0 · 파일 8개를 적용했다"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ .claude/rules/architecture.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ .claude/rules/domain-payment.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ .claude/rules/domain-refund.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ .claude/rules/scoped-src-webhook.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ .claude/rules/workflow.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ .cursor/rules/contextops.mdc"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ AGENTS.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  ✓ CLAUDE.md"
+  },
+  {
+    "t_ms": 218,
+    "text": "  원본은 .contextops/backups/20260905T195356Z-0.9.0-to-1.0.0/ 에 남겼다"
+  },
+  {
+    "t_ms": 218,
+    "text": "  서버에 applied 로 보고했다"
+  },
+  {
+    "t_ms": 218,
+    "text": "$ node \"$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs\" progress --milestone PL-M1 --criterion \"PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\" --evidence src/psp/psp.client.ts:18-46 --summary \"재시도 로직을 psp.client 한 곳으로 모았다\""
+  },
+  {
+    "t_ms": 329,
+    "text": "보고했다 — PL-M1 · criterion_done · 근거 1건 · v1.0.0"
+  }
+]

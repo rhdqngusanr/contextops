@@ -1,0 +1,58 @@
+/* =====================================================================
+   터미널 재생 — 이 조각에만 필요한 모양. 색·간격·글꼴은 전부 globals.css 의 토큰이다.
+   ===================================================================== */
+
+.replay {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.term {
+  padding: var(--sp-4);
+  /* 재생 중 줄이 늘어도 아래 절이 튀지 않게 — 녹화 17줄이 서는 높이다. */
+  min-height: 26em;
+}
+
+.pre {
+  margin: 0;
+  font-size: var(--fs-table);
+  line-height: 1.7;
+  /* 긴 명령 줄은 접는다 — 390px 에서 가로 스크롤보다 읽기 낫다. 컨테이너는 그래도 scroll-x 다. */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cmd { color: var(--ink); }
+.out { color: var(--ink-2); }
+
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  vertical-align: text-bottom;
+  background: var(--accent-ink);
+  animation: replay-caret 1s steps(1) infinite;
+}
+@keyframes replay-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.panel { align-self: start; }
+
+.criteria {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; }
+}
+
+@media (max-width: 900px) {
+  .replay { grid-template-columns: 1fr; }
+  .term { min-height: 0; }
+}

@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, wr
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Manifest, SyncReport } from '@contextops/schema'
+import { Manifest, ProgressEvent, ReplayFrames, SyncReport, type ReplayFrame } from '@contextops/schema'
 
 import { openStage } from '../../../tools/walkthrough-stage'
 
@@ -44,8 +44,8 @@ for (const file of manifest.files) {
 }
 
 // ── 서버 30줄 ────────────────────────────────────────────────────────
-type Received = { reports: SyncReport[]; etags: (string | undefined)[] }
-const received: Received = { reports: [], etags: [] }
+type Received = { reports: SyncReport[]; etags: (string | undefined)[]; progress: ProgressEvent[] }
+const received: Received = { reports: [], etags: [], progress: [] }
 
 /** 한 파일의 첫 바이트를 바꿔서 「서버가 깨진 것을 줬다」를 만든다. */
 let corrupt = false
@@ -91,6 +91,17 @@ function handle(req: IncomingMessage, res: ServerResponse): void {
     req.on('end', () => {
       //  🔴 P1 — 여기 들어온 것에 코드 본문이 있으면 아래 검사가 잡는다.
       received.reports.push(SyncReport.parse(JSON.parse(raw)))
+      envelope(res, 201, { ok: true })
+    })
+    return
+  }
+
+  if (path.endsWith('/progress') && req.method === 'POST') {
+    let raw = ''
+    req.on('data', (chunk) => { raw += String(chunk) })
+    req.on('end', () => {
+      //  🔴 P1 — 근거는 경로·줄뿐이다. 계약(`ProgressEvent` · strict)이 그 밖의 칸을 400 으로 막는다.
+      received.progress.push(ProgressEvent.parse(JSON.parse(raw)))
       envelope(res, 201, { ok: true })
     })
     return
@@ -271,6 +282,92 @@ async function main(): Promise<void> {
       hook.stdout.trim().split('\n')[0] ?? '무출력')
     check('🔴 P6 — 훅이 저장소를 하나도 바꾸지 않았다',
       JSON.stringify(snapshot(hookRepo)) === JSON.stringify(hookBefore))
+
+    // ── ⑥ 🔴 녹화 — 랜딩의 「터미널 재생」은 이 stdout 이다 (SPEC §10.4) ──
+    //  ★ 왜 관통이 녹화하나 — 손으로 쓴 대사는 CLI 가 문장을 바꾼 날부터 거짓말이 된다.
+    //    여기서 **배포되는 번들**을 진짜 소켓으로 돌려 남긴 줄을 `fixtures/replay/sync.json`
+    //    과 매번 대조한다 — 다르면 관통이 빨개지고, 그때 새 녹화로 바꾼다 (t_ms 는 안 잰다).
+    //  ⚠ 이야기는 「훅 알림 → /contextops:sync → 작업 → 진행 보고」다 (DESIGN_BRIEF 화면 1 C-3).
+    //    「작업」은 녹화에 없다 — 사이의 시간은 화면이 설명한다. 지어낸 줄을 넣지 마라.
+    const recHome = tempPath('contextops-wt-home-')
+    const recRepo = connectedRepo(origin, recHome)
+    //  먼저 한 번 받아 둔다 — 그래야 다음 sync 가 「v0.9.0 → v1.0.0」이고 backup 이 실제로 생긴다.
+    const primed = await runCli(recHome, ['sync', '--dir', recRepo])
+    check('녹화 준비 — 먼저 한 번 받았다', primed.code === 0, primed.stderr.trim().slice(0, 160))
+    //  낡은 판을 적용한 것처럼 꾸민다 (⑤ 와 같은 수). 파일 해시는 그대로라 modified 가 아니라 outdated 다.
+    writeJson(join(recRepo, '.contextops', 'manifest.json'),
+      { ...manifest, context_version: '0.9.0', manifest_hash: `${'0'.repeat(63)}1` })
+    rmSync(join(recRepo, '.contextops', 'cache'), { recursive: true, force: true })   // 훅이 네트워크를 타게
+
+    const frames: ReplayFrame[] = []
+    const t0 = Date.now()
+    const record = (text: string): void => { frames.push({ t_ms: Date.now() - t0, text }) }
+    const recordOut = (stdout: string): void => {
+      for (const line of stdout.replace(/\r/g, '').trimEnd().split('\n')) record(line)
+    }
+    /** 사람이 친 모양 그대로 — 빈칸이 든 인자만 따옴표로 싼다 (Pack 의 고정 문단과 같은 꼴). */
+    const shellLine = (args: readonly string[]): string =>
+      args.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')
+
+    const recHook = await run(process.execPath, [join(packageRoot, 'scripts', 'session-start.mjs')], {
+      cwd: recRepo, home: recHome,
+    })
+    recordOut(recHook.stdout)
+    record('> /contextops:sync')
+    const recSync = await runCli(recHome, ['sync', '--dir', recRepo])
+    recordOut(recSync.stdout)
+
+    //  🔴 P7 — 보고하는 완료 기준은 지금 받은 Pack 의 CLAUDE.md 에 **글자 그대로** 있는 문장이다.
+    //     근거 경로는 픽스처 저장소(`fixtures/paylab-api`)에 실제로 있는 파일이다.
+    const criterion = 'PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다'
+    const evidencePath = 'src/psp/psp.client.ts'
+    check('🔴 P7 — 녹화의 완료 기준 문장이 Pack 의 CLAUDE.md 에 글자 그대로 있다',
+      (bodies.get('CLAUDE.md') ?? '').includes(criterion))
+    check('녹화의 근거 경로가 픽스처 저장소에 실제로 있다', (() => {
+      try { statSync(join(repoRoot, 'fixtures', 'paylab-api', ...evidencePath.split('/'))); return true } catch { return false }
+    })())
+    const progressArgs = [
+      'progress', '--milestone', 'PL-M1', '--criterion', criterion,
+      '--evidence', `${evidencePath}:18-46`, '--summary', '재시도 로직을 psp.client 한 곳으로 모았다',
+    ]
+    record(`$ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" ${shellLine(progressArgs)}`)
+    const recProgress = await runCli(recHome, [...progressArgs, '--dir', recRepo])
+    recordOut(recProgress.stdout)
+
+    check('녹화 — 훅 · sync · progress 가 전부 0 으로 끝났다',
+      recHook.code === 0 && recSync.code === 0 && recProgress.code === 0,
+      `${recHook.code} · ${recSync.code} · ${recProgress.code} ${(recSync.stderr + recProgress.stderr).trim().slice(0, 160)}`)
+    check('녹화 — 훅이 새 버전을 알렸고 sync 가 v0.9.0 → v1.0.0 을 적용했다',
+      frames.some((f) => f.text.startsWith('ContextOps: 적용 v0.9.0'))
+        && frames.some((f) => f.text.startsWith(`v0.9.0 → v${manifest.context_version} · 파일 ${manifest.files.length}개`)))
+    const lastProgress = received.progress.at(-1)
+    check('녹화 — progress 가 서버에 닿았다 (PL-M1 · criterion_done · 근거 1건)',
+      lastProgress?.milestone_id === 'PL-M1' && lastProgress.status === 'criterion_done'
+        && lastProgress.criterion === criterion && lastProgress.evidence.length === 1,
+      lastProgress === undefined ? '보고 없음' : `${lastProgress.milestone_id} · ${lastProgress.status}`)
+
+    const parsedFrames = ReplayFrames.safeParse(frames)
+    check('녹화가 ReplayFrames 계약을 지난다', parsedFrames.success, `${frames.length}줄`)
+    const replayOut = join(repoRoot, '.ci', 'walkthrough-replay.json')
+    writeFileSync(replayOut, `${JSON.stringify(frames, null, 2)}\n`, 'utf8')
+
+    //  픽스처와 대조 — backup 폴더 이름의 시각만 가린다 (그건 녹화마다 다르고, 다른 게 맞다).
+    const fixturePath = join(repoRoot, 'fixtures', 'replay', 'sync.json')
+    const mask = (text: string): string => text.replace(/\d{8}T\d{6}Z/g, '<stamp>')
+    const hint = '.ci/walkthrough-replay.json 을 fixtures/replay/sync.json 으로 복사해라'
+    let same = false
+    let detail = ''
+    try {
+      const fixture = ReplayFrames.parse(JSON.parse(readFileSync(fixturePath, 'utf8')))
+      const a = fixture.map((f) => mask(f.text))
+      const b = frames.map((f) => mask(f.text))
+      const at = a.findIndex((line, i) => line !== b[i])
+      same = a.length === b.length && at === -1
+      detail = same ? `${frames.length}줄` : `줄 ${at === -1 ? Math.min(a.length, b.length) + 1 : at + 1} 이 다르다 — ${hint}`
+    } catch {
+      detail = `fixtures/replay/sync.json 이 없거나 계약과 다르다 — ${hint}`
+    }
+    check('🔴 fixtures/replay/sync.json 이 지금 CLI 의 출력과 같다 (t_ms 제외 · SPEC §10.4)', same, detail)
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()))
     for (const path of temps) rmSync(path, { recursive: true, force: true })

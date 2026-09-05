@@ -119,8 +119,11 @@
 목표: 심사위원이 10초 안에 문제를 이해하고, 클릭 하나로 샘플 팀에 들어간다. 스크롤 없이 첫 화면에 A·B·C가 보인다.
 
 > ⚠ **v1 (59바퀴 · `apps/web/src/components/landing.tsx`) 이 뺀 것** — 누르면 아무 일도 안
-> 하는 것을 두지 않는다: [2분 영상 보기](영상이 없다 · P6) · C-2 썸네일 · C-3 터미널
-> 재생(P5 첫 행 · FINDINGS 123) · 푸터 GitHub/Known limitations 링크(URL 🙋 · FINDINGS 122).
+> 하는 것을 두지 않는다: [2분 영상 보기](영상이 없다 · P6) · C-2 썸네일(production 캡처 뒤) ·
+> 푸터 GitHub/Known limitations 링크(URL 🙋 · FINDINGS 122).
+> C-3 터미널 재생은 **있다** (62바퀴 · `TERMINAL_REPLAY` · `<TerminalReplay>`) — 줄은 전부
+> `fixtures/replay/sync.json`(관통이 남긴 실제 출력)에서 오고, 오른쪽 패널은 paylab PL-M1 이
+> 0/3 → 1/3 이다 (아래 「BS-M2 1/3 → 2/3」은 목업 문구다).
 > C-5 는 `npx contextops` 가 아직 없어 **SPEC §8.3 의 실제 명령 4줄**이다.
 > 히어로의 버튼은 [샘플 팀으로 둘러보기] 하나다 — [로그인] 은 머리글에 있다.
 > 문구는 전부 그 파일의 표(`LANDING_HEAD` · `BEFORE_AFTER` · …)에 살고 시험이 읽는다.
