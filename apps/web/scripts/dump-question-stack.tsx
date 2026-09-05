@@ -21,7 +21,9 @@ const { QuestionStack } = await import('../src/components/question-stack')
 //  실행: pnpm --filter web exec tsx scripts/dump-question-stack.tsx
 // =====================================================================
 
-const NOOP: QuestionStackHandlers = { onDraft: () => {}, onNext: () => {}, onBack: () => {}, onSave: () => {} }
+const NOOP: QuestionStackHandlers = {
+  onDraft: () => {}, onNext: () => {}, onSaveAs: () => {}, onBack: () => {}, onSave: () => {},
+}
 
 const QUESTIONS: QuestionRow[] = SEED_QUESTIONS.map((q, i) => ({
   id: `0000000${i}-0000-4000-8000-000000000000`,
@@ -30,13 +32,25 @@ const QUESTIONS: QuestionRow[] = SEED_QUESTIONS.map((q, i) => ({
   status: 'open',
 }))
 
+//  🔴 **문서를 올린 뒤의 스택** — §7.1 이 남긴 열린 질문이 씨앗 질문에 섞인다.
+//     이 모양이 FINDINGS 106 이 가리킨 자리다: 씨앗만 있을 때는 「답한 것 = 항목」이
+//     참이라 아무도 못 봤다.
+const OPEN: QuestionRow[] = [
+  { id: 'aaaaaaa0-0000-4000-8000-000000000000', kind: 'open_question', status: 'open',
+    question: 'MQTT 를 고른 이유가 있나요?' },
+  { id: 'aaaaaaa1-0000-4000-8000-000000000000', kind: 'open_question', status: 'open',
+    question: '환불 SLA 는 몇 시간인가요?' },
+]
+const MIXED: QuestionRow[] = [...QUESTIONS.slice(0, 2), ...OPEN]
+
 function answered(n: number): Record<string, string> {
   return Object.fromEntries(QUESTIONS.slice(0, n).map((q) => [q.id, '그렇게 한다.']))
 }
 
 function base(over: Partial<QuestionStackState>): QuestionStackState {
   return {
-    questions: QUESTIONS, index: 0, answers: {}, draft: '', saving: false, error: null, saved: null, ...over,
+    questions: QUESTIONS, index: 0, answers: {}, saveAs: {}, draft: '',
+    saving: false, error: null, saved: null, ...over,
   }
 }
 
@@ -61,6 +75,17 @@ const SHAPES: [string, Partial<QuestionStackState>][] = [
   ['⑧ 저장 실패', { index: QUESTIONS.length, answers: answered(3), error: new Error('서버가 500 을 냈다') }],
   ['⑨ 결과 — 항목이 생겼다', { saved: { resolved: 3, created: ['item_seed_mission', 'item_seed_goal_quarter'] } }],
   ['⑩ 결과 — 항목이 안 생겼다', { saved: { resolved: 2, created: [] } }],
+  ['⑪ 열린 질문 카드 — 자리를 안 골랐다 (FINDINGS 106)',
+    { questions: MIXED, index: 2, draft: '지연이 낮고 배터리를 덜 쓴다.' }],
+  ['⑪-B 열린 질문 카드 — 자리를 골랐다',
+    { questions: MIXED, index: 2, draft: '지연이 낮고 배터리를 덜 쓴다.',
+      saveAs: { [OPEN[0]!.id]: 'constraint' } }],
+  ['⑫ 섞인 요약 — 넷 답하고 하나만 자리를 골랐다',
+    { questions: MIXED, index: MIXED.length, saveAs: { [OPEN[0]!.id]: 'goal' },
+      answers: Object.fromEntries(MIXED.map((q) => [q.id, '그렇게 한다.'])) }],
+  ['⑬ 섞인 요약 — 열린 질문만 답하고 아무 자리도 안 골랐다',
+    { questions: OPEN, index: OPEN.length,
+      answers: Object.fromEntries(OPEN.map((q) => [q.id, '그렇게 한다.'])) }],
 ]
 
 const lines: string[] = ['화면 3 ③ — 질문 카드 스택의 열 모양 (마크업에서 글자만 뽑은 것)', '']

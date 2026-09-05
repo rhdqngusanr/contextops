@@ -1,7 +1,9 @@
 'use client'
 
 import { use, useState, type FormEvent } from 'react'
-import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/schema'
+import {
+  SOURCE_DOCUMENT_KINDS, type AnswerSlotKey, type SourceDocumentKind,
+} from '@contextops/schema'
 
 import { hintFor, messageOf } from '../../../../../../lib/web/api'
 import {
@@ -186,6 +188,12 @@ function QuestionsCard({ base, projectId }: { base: string; projectId: string })
   const { result, reload } = useAsync(() => fetchQuestions(projectId, { status: 'open' }), [projectId])
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  //  🔴 「이 답을 무엇으로 저장할까요」 — 열린 질문 카드에서만 고른다 (FINDINGS 106).
+  //     ⚠ 답과 **따로** 든다. 한 장씩 넘기는 스택이라 사람은 고른 뒤에 답을 고치거나
+  //       [이전] 로 되돌아온다 — 답에 묶어 두면 그때 고른 자리가 사라진다.
+  //     ⚠ 기본값은 **고르지 않음**(`''` = 기록만)이다. 기본을 항목으로 두면 사람이
+  //       고르지 않은 타입의 초안이 생기고, 그건 서버가 대신 고른 것과 같다 (화면 4 와 같은 판단).
+  const [saveAs, setSaveAs] = useState<Record<string, AnswerSlotKey | ''>>({})
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<unknown>(null)
@@ -201,13 +209,19 @@ function QuestionsCard({ base, projectId }: { base: string; projectId: string })
     setDraft(q ? answers[q.id] ?? '' : '')
   }
 
-  const state: QuestionStackState = { questions, index, answers, draft, saving, error, saved }
+  const state: QuestionStackState = { questions, index, answers, saveAs, draft, saving, error, saved }
 
   async function save(): Promise<void> {
     setSaving(true)
     setError(null)
     try {
-      const body = Object.entries(answers).map(([question_id, answer]) => ({ question_id, answer }))
+      //  ⚠ 고른 자리가 없으면 칸 자체를 안 싣는다 — `''` 를 보내면 계약이 400 이다.
+      //    씨앗 질문에는 값이 안 생긴다 (카드가 고르는 칸을 안 그린다) — 실으면 서버가
+      //    「저장될 자리가 이미 정해져 있다」로 400 을 낸다.
+      const body = Object.entries(answers).map(([question_id, answer]) => {
+        const pick = saveAs[question_id]
+        return pick ? { question_id, answer, save_as: pick } : { question_id, answer }
+      })
       const res = await answerQuestions(projectId, body)
       setSaved({ resolved: res.resolved.length, created: res.created_item_ids })
       //  답한 질문은 닫혔다 — 목록을 다시 읽어 두면 새로고침 없이도 남은 것이 맞다.
@@ -238,6 +252,10 @@ function QuestionsCard({ base, projectId }: { base: string; projectId: string })
               const q = questions[index]
               if (!skip && q) setAnswers({ ...answers, [q.id]: draft.trim() })
               moveTo(index + 1)
+            },
+            onSaveAs: (value) => {
+              const q = questions[index]
+              if (q) setSaveAs({ ...saveAs, [q.id]: value })
             },
             onBack: () => moveTo(Math.max(0, Math.min(index, questions.length) - 1)),
             onSave: save,

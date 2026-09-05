@@ -1,7 +1,9 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { ANSWER_MAX } from '@contextops/schema'
+import {
+  ANSWER_MAX, ANSWER_SLOT_KEYS, ANSWER_SLOTS, CONFLICT_KIND_RULES, QUESTION_CONFLICT_KINDS,
+} from '@contextops/schema'
 
 import { QuestionStack, type QuestionStackHandlers, type QuestionStackState } from '../src/components/question-stack'
 import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
@@ -20,6 +22,12 @@ import type { QuestionRow } from '../src/lib/web/queries'
 //    ③ 「실시간」이라는 낱말이 없다 — DESIGN_BRIEF §2-3
 //    ④ 진행은 **몇 번째인가**다 — 사람 이름도 점수도 없다 (P5)
 //    ⑤ 답 칸의 상한을 화면이 손으로 적지 않는다 (`ANSWER_MAX` 를 읽는다)
+//    ⑥ **자리를 묻는 카드는 표가 정한다** (`answerSlot` · FINDINGS 106) — 씨앗 질문에
+//      그리면 서버가 400 이고, 열린 질문에 안 그리면 답이 기록으로만 남는다
+//
+//  🔴 **왜 「섞인 스택」을 재나** — 문서를 올리기 전에는 이 스택에 씨앗 질문 10장밖에
+//    없어서 「답한 것 = 항목」이 늘 참이었다. §7.1 이 남긴 열린 질문이 섞이는 순간
+//    그 말이 거짓이 되는데, **화면은 그대로 초록이다.** 그게 106 이었다.
 //
 //  ⚠ 이 시험이 재지 **못하는** 것: 간격·색·글꼴. 그건 캡처가 있어야 한다
 //    (`docs/STATUS.md` 「눈 판정 대기」).
@@ -28,6 +36,7 @@ import type { QuestionRow } from '../src/lib/web/queries'
 const NOOP: QuestionStackHandlers = {
   onDraft: () => {},
   onNext: () => {},
+  onSaveAs: () => {},
   onBack: () => {},
   onSave: () => {},
 }
@@ -39,11 +48,24 @@ const QUESTIONS: QuestionRow[] = SEED_QUESTIONS.map((q, i) => ({
   status: 'open',
 }))
 
+/**
+ * 🔴 **문서를 올린 뒤의 스택** — §7.1 이 남긴 열린 질문이 씨앗 질문에 섞인다
+ * (`fetchQuestions(status:'open')` 이 종류를 안 가린다).
+ */
+const OPEN: QuestionRow[] = [
+  { id: 'aaaaaaa0-0000-4000-8000-000000000000', kind: 'open_question', status: 'open',
+    question: 'MQTT 를 고른 이유가 있나요?' },
+  { id: 'aaaaaaa1-0000-4000-8000-000000000000', kind: 'open_question', status: 'open',
+    question: '환불 SLA 는 몇 시간인가요?' },
+]
+const MIXED: QuestionRow[] = [...QUESTIONS.slice(0, 2), ...OPEN]
+
 function base(over: Partial<QuestionStackState> = {}): QuestionStackState {
   return {
     questions: QUESTIONS,
     index: 0,
     answers: {},
+    saveAs: {},
     draft: '',
     saving: false,
     error: null,
@@ -51,6 +73,17 @@ function base(over: Partial<QuestionStackState> = {}): QuestionStackState {
     ...over,
   }
 }
+
+/** 카드 한 장짜리 스택 — 「이 종류가 자리를 묻나」만 보려고 그린다. */
+function oneCard(row: QuestionRow, saveAs: QuestionStackState['saveAs'] = {}): string {
+  return renderToStaticMarkup(createElement(QuestionStack, {
+    state: base({ questions: [row], index: 0, draft: '그렇다.', saveAs }),
+    on: NOOP,
+    contextHref: '/t/paylab/p/api/context',
+  }))
+}
+
+const PICK_LABEL = '이 답을 무엇으로 저장할까요'
 
 function draw(over: Partial<QuestionStackState> = {}): string {
   return renderToStaticMarkup(createElement(QuestionStack, {
@@ -76,6 +109,21 @@ const SHAPES: { what: string; over: Partial<QuestionStackState> }[] = [
   { what: '저장 실패', over: { index: QUESTIONS.length, answers: answered(3), error: new Error('망가짐') } },
   { what: '결과 — 항목이 생겼다', over: { saved: { resolved: 3, created: ['item_seed_mission'] } } },
   { what: '결과 — 항목이 하나도 안 생겼다', over: { saved: { resolved: 2, created: [] } } },
+  { what: '열린 질문 카드 — 자리를 안 골랐다', over: { questions: MIXED, index: 2, draft: '지연이 낮아서다.' } },
+  {
+    what: '열린 질문 카드 — 자리를 골랐다',
+    over: {
+      questions: MIXED, index: 2, draft: '지연이 낮아서다.',
+      saveAs: { [OPEN[0]!.id]: 'constraint' },
+    },
+  },
+  {
+    what: '섞인 요약 — 넷 답하고 하나만 자리를 골랐다',
+    over: {
+      questions: MIXED, index: MIXED.length, saveAs: { [OPEN[0]!.id]: 'goal' },
+      answers: Object.fromEntries(MIXED.map((q) => [q.id, '그렇게 한다.'])),
+    },
+  },
 ]
 
 describe('질문 카드 스택 — 열 모양을 그려서 읽는다', () => {
@@ -174,5 +222,85 @@ describe('질문 카드 스택 — 열 모양을 그려서 읽는다', () => {
     expect(html).not.toContain('건너뛰기')
     expect(html).not.toContain('저장하기')
     expect(html).toContain('답을 기다리는 질문이 없습니다')
+  })
+})
+
+// =====================================================================
+//  🔴 FINDINGS 106 — 열린 질문에도 **자리를 묻는다**
+//
+//  ★ 왜 따로 묶나 — 위의 열 모양은 「씨앗 질문 10장」의 스택이고, 여기서 재는 것은
+//    **문서를 올린 뒤** 그 스택에 섞이는 것이다. 105 를 화면 4 에서 닫았을 때 이
+//    화면이 그대로 남았던 이유가 「씨앗만 있는 스택은 늘 초록」이었기 때문이다.
+// =====================================================================
+
+describe('질문 카드 스택 — 답이 갈 자리를 묻는다 (FINDINGS 106)', () => {
+  it('🔴 묻는 카드인가는 **표가 정한다** — 화면이 종류를 세지 않는다', () => {
+    for (const kind of QUESTION_CONFLICT_KINDS) {
+      const html = oneCard({
+        id: 'bbbbbbb0-0000-4000-8000-000000000000', kind, status: 'open', question: '무엇인가요?',
+      })
+      const asks = CONFLICT_KIND_RULES[kind].answerSlot === 'ask'
+      expect(html.includes(PICK_LABEL), `${kind} 의 카드`).toBe(asks)
+    }
+  })
+
+  it('🔴 씨앗 질문에는 안 묻고 열린 질문에는 묻는다 — 표를 뒤집으면 여기가 빨개진다', () => {
+    //  ⚠ 위 시험은 표에서 기대를 **파생**시키므로 표를 통째로 뒤집으면 같이 뒤집힌다
+    //    (FINDINGS 103·104-B 가 배운 것). 그래서 두 종류를 **손으로** 적어 잠근다:
+    //    씨앗 질문에 그리면 서버가 400 이고 (「저장될 자리가 이미 정해져 있다」),
+    //    열린 질문에 안 그리면 답이 기록으로만 남는다 — 둘 다 조용한 고장이다.
+    expect(oneCard(QUESTIONS[0]!)).not.toContain(PICK_LABEL)
+    expect(oneCard(OPEN[0]!)).toContain(PICK_LABEL)
+  })
+
+  it('고를 수 있는 자리가 `ANSWER_SLOTS` 그대로다 — 화면이 목록을 손으로 안 적는다', () => {
+    const html = oneCard(OPEN[0]!)
+    for (const key of ANSWER_SLOT_KEYS) {
+      expect(html, `${key} 의 라벨이 없다`).toContain(ANSWER_SLOTS[key].label)
+    }
+    //  안 고르는 것도 **하나의 선택**이다 — 그 문을 지우면 사람은 고를 수밖에 없다.
+    expect(html).toContain('저장하지 않고 기록만 합니다')
+  })
+
+  it('🔴 고르기 전과 후가 **서로 다른 약속**을 한다', () => {
+    const before = oneCard(OPEN[0]!)
+    expect(before).toContain('이 답은 기록으로만 남습니다')
+    expect(before).not.toContain('초안 항목 한 개가 됩니다')
+
+    const after = oneCard(OPEN[0]!, { [OPEN[0]!.id]: 'policy_must' })
+    expect(after).toContain(ANSWER_SLOTS.policy_must.label)
+    expect(after).toContain('초안 항목 한 개가 됩니다')
+    expect(after).not.toContain('이 답은 기록으로만 남습니다')
+  })
+
+  it('🔴 요약이 **몇 개가 항목이 되나**를 말한다 — 답한 수로 말하지 않는다', () => {
+    const answers = Object.fromEntries(MIXED.map((q) => [q.id, '그렇게 한다.']))
+    //  넷 답했지만 열린 질문 둘 중 하나만 자리를 골랐다 → 씨앗 2 + 고른 1 = 3.
+    const html = renderToStaticMarkup(createElement(QuestionStack, {
+      state: base({ questions: MIXED, index: MIXED.length, answers, saveAs: { [OPEN[0]!.id]: 'goal' } }),
+      on: NOOP,
+      contextHref: '/t/paylab/p/api/context',
+    }))
+    expect(html).toContain('4개 저장하기')
+    expect(html).toContain('3개')
+    expect(html).toContain('자리를 안 골라서 기록으로만 남습니다')
+  })
+
+  it('🔴 하나도 자리를 안 골랐으면 「만들어집니다」라고 하지 않는다 (FINDINGS 66 과 같은 판단)', () => {
+    const answers = Object.fromEntries(OPEN.map((q) => [q.id, '그렇게 한다.']))
+    const html = renderToStaticMarkup(createElement(QuestionStack, {
+      state: base({ questions: OPEN, index: OPEN.length, answers }),
+      on: NOOP,
+      contextHref: '/t/paylab/p/api/context',
+    }))
+    expect(html).toContain('2개 저장하기')
+    expect(html).not.toContain('만들어집니다')
+    expect(html).toContain('항목은 만들어지지 않습니다')
+  })
+
+  it('씨앗만 있는 스택의 요약은 갈라 말하지 않는다 — 없는 차이를 설명하지 않는다', () => {
+    const html = draw({ index: QUESTIONS.length, answers: answered(3) })
+    expect(html).toContain('만들어집니다')
+    expect(html).not.toContain('자리를 안 골라서')
   })
 })
