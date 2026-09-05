@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { projects, teamMembers, teams, users } from '../../../../../db/schema'
 import { fail } from '../../../../../lib/api/error'
 import { route } from '../../../../../lib/api/route'
-import { signGuestJwt } from '../../../../../lib/api/session'
+import { signSessionJwt } from '../../../../../lib/api/session'
 import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_SESSION_TTL_SEC, DEMO_TENANT } from '../../../../../lib/demo/tenant'
 
 // =====================================================================
@@ -12,7 +12,8 @@ import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_SESSION_TTL_SEC, DEMO_TENANT 
 //
 //  ★ 이 문이 하는 일은 하나다: 「데모 테넌트가 실제로 심어져 있으면, 그것을 읽을 수 있는
 //    수명 짧은 세션을 하나 서명해서 준다.」 만드는 것은 **아무것도 없다** —
-//    `users` 행도 팀 소속도 시드가 만든다 (`scripts/demo-seed.ts`).
+//    `users` 행도 팀 소속도 시드가 만든다 (`lib/demo/seed-demo.ts` · Cron 이 부르는
+//    `GET /cron/demo-reset` 이 그 시드를 돌린다).
 //
 //  🔴 **심어져 있지 않으면 404 다.** 「일단 토큰은 주고 화면에서 404 를 보게」 하면
 //     심사위원이 보는 것은 빈 화면이고 원인은 화면에 안 적힌다. 없는 것은 여기서 말한다.
@@ -70,7 +71,8 @@ export const POST = route('POST /demo/session', async (ctx) => {
     .limit(1)
   if (!membership) fail('NOT_FOUND', '데모 게스트가 팀에 속해 있지 않다')
 
-  const { token, expiresAt } = signGuestJwt(DEMO_GUEST_SUBJECT, ctx.now, DEMO_SESSION_TTL_SEC)
+  //  claims 는 `sub` 하나다 — 게스트에게 이메일·이름은 없다 (`signSessionJwt` 의 주석).
+  const { token, expiresAt } = signSessionJwt({ sub: DEMO_GUEST_SUBJECT }, ctx.now, DEMO_SESSION_TTL_SEC)
   ctx.note({ project_id: project.id })
 
   return ctx.ok({

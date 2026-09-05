@@ -9,7 +9,7 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { demoBannerText, DEMO_ENTRY_PATH } from '../src/lib/demo/tenant'
 import type { DeviceSyncRow } from '../src/lib/web/queries'
-import { seedDemo } from './demo-seed'
+import { seedDemo } from '../src/lib/demo/seed-demo'
 import { bodyOf, closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
 
 //  ⚠ `tsconfig.json` 의 `jsx` 는 Next 가 요구하는 `preserve` 라 tsx(esbuild)가 JSX 를

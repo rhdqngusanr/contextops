@@ -10,7 +10,7 @@ import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-ite
 import { POST as resolveConflict } from '../src/app/api/v1/conflicts/[id]/resolve/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
-import { seedPaylab } from './seed'
+import { seedPaylab } from '../src/lib/demo/seed'
 
 // =====================================================================
 //  「충돌을 결정하면 진 항목이 Pack 에서 빠진다」를 **글자로** 뽑는다 (FINDINGS 71)

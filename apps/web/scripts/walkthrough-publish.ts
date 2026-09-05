@@ -24,7 +24,7 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
 import { closeDb, dataOf, errorOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
-import { ARCHITECTURE, fromDoc, seedPaylab, type EvidenceExpectation } from './seed'
+import { ARCHITECTURE, fromDoc, seedPaylab, type EvidenceExpectation } from '../src/lib/demo/seed'
 
 // =====================================================================
 //  관통 2단계 — 픽스처 문서 → 항목 → 발행 → Pack 파일 (SPEC §2.1 · §5)
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   const { pg } = await freshDb()
 
   try {
-    // ── ①②③ 팀·프로젝트·문서·항목 — 씨앗은 `scripts/seed.ts` 하나다 ────
+    // ── ①②③ 팀·프로젝트·문서·항목 — 씨앗은 `src/lib/demo/seed.ts` 하나다 ────
     //  ⚠ 여기서 다시 적지 마라. 같은 서사를 개발용 서버(dev-server.ts)도 쓴다 —
     //    갈리면 **관통이 보는 데이터와 사람이 화면에서 보는 데이터가 달라진다.**
     const seed = await seedPaylab('walkthrough-owner')

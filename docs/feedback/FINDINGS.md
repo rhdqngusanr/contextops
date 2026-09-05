@@ -75,7 +75,7 @@
   그 값으로 버튼을 숨기면 「막았다」는 착각이 남는다 (막는 것은 서버다).
 - **상태**: 대기 (주인은 랜딩·데모를 다시 만지는 바퀴 · PLAN P4 둘째 행)
 
-### 120. **데모 테넌트를 production 에 심는 문이 없다**   [구멍]
+### 120. ✅ **데모 테넌트를 production 에 심는 문이 없다**   [구멍]
 - **증상**: SPEC §9 는 「시드 스크립트로 매일 03:00 리셋(Vercel Cron)」이라고 적는데,
   지금 데모를 심는 길은 **개발용 하네스 하나뿐**이다 (`pnpm --filter web demo:db` →
   PGlite 를 띄우고 그 안에 심는다). 배포된 DB 에 심는 문도, 그것을 부르는 Cron 도 없다.
@@ -90,7 +90,14 @@
   (`test/helpers` 의존을 끊는다 — 지금 그 의존이 유일한 걸림돌이다) ② `vercel.json` 의
   cron 이 그것을 03:00 에 부른다. ⚠ **누구나 부를 수 있으면 안 된다** — 데모를 리셋하는
   문은 Cron 비밀이나 owner 토큰 뒤에 둔다. 안 그러면 발표 도중에 남이 리셋한다.
-- **상태**: 대기 (주인은 PLAN **P5 둘째 행** — Vercel production · Cron)
+- **상태**: ✅ 63바퀴 (커밋 해시는 STATUS 63바퀴 절) — `GET /cron/demo-reset` 이 **지우고 다시
+  심는다** (`lib/demo/reset.ts` · `teardown.ts` — `project_id` 표 목록을 시험이 스키마와 대조).
+  자물쇠는 `CRON_SECRET`(`lib/api/cron.ts` · Vercel 이 Bearer 로 붙인다 · 없으면 401). 시드 둘이
+  `scripts/` → `src/lib/demo/` 로 올라왔고 `req/params/dataOf` 의 정본이 `inproc.ts`, 세션 서명이
+  `signSessionJwt`(둘째 사용자)가 됐다 — `src/` 에 `test/`·`scripts/` import 0 (시험이 센다).
+  `apps/web/vercel.json` cron 둘 · `next.config.ts` 가 `fixtures/` 를 배포 함수에 싣는다.
+  심다가 던지면 다시 지운다 (`demo-reset-rollback.test.ts`). 🙋 Vercel 연결과 첫 리셋은 사람 몫
+  (PLAN P5 둘째 행 ①의 남은 것). 배포에서 `fixturesRoot()` 가 실제로 찾는지는 그때 본다.
 
 ### 119. **데모의 항목이 15개다 — SPEC §10.3 은 60개를 적는다**   [격차]
 - **증상**: §10.3 은 「항목 60 · progress_events 25 · conflicts 3 resolved + 1 open」을

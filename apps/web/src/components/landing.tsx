@@ -22,9 +22,9 @@ import { TerminalReplay } from './terminal-replay'
 //     DESIGN_BRIEF 의 「북스택」 문구는 목업이다. 여기 실린 것은 픽스처의 「의도된
 //     어긋남」 첫째 — 문서는 「5회 · 지수 백오프」, 코드는 「3회 · 500ms 고정」 — 이고,
 //     After 의 답은 **게스트가 `/demo` 에서 실제로 보는 v1.1.0 의 그 줄**(`item_policy_retry`)
-//     이다. v1.1.0 은 승인된 제안이 그 항목을 고친 판이라(`scripts/demo-seed.ts` 의
+//     이다. v1.1.0 은 승인된 제안이 그 항목을 고친 판이라(`src/lib/demo/seed-demo.ts` 의
 //     `DEMO_PROPOSALS`), 씨앗의 v1.0.0 문장을 적으면 첫 화면과 앱이 다른 문장을 말한다.
-//     `test/web-landing.test.ts` 가 그 표와 `scripts/seed.ts` 의 `paylabDrafts()` 에 대조한다 —
+//     `test/web-landing.test.ts` 가 그 표와 `src/lib/demo/seed.ts` 의 `paylabDrafts()` 에 대조한다 —
 //     픽스처가 바뀌면 랜딩이 거짓말을 하기 전에 시험이 빨개진다.
 //
 //  ⚠ **없는 것은 안 만든다** — 이 저장소의 규칙이다 (누르면 아무 일도 안 하는 버튼 금지):
@@ -131,7 +131,7 @@ export const HOW_IT_WORKS = {
  *
  * 🔴 **줄은 전부 녹화에서 온다** — `fixtures/replay/sync.json` 은 관통 sync 단계가 배포되는
  *   플러그인을 진짜 소켓으로 돌려 남긴 stdout 이고, 관통이 매번 다시 녹화해 대조한다.
- *   여기 표에는 **설명과 마일스톤**만 있다. 마일스톤은 씨앗(`scripts/seed.ts` 의 `paylabDrafts()`)의
+ *   여기 표에는 **설명과 마일스톤**만 있다. 마일스톤은 씨앗(`src/lib/demo/seed.ts` 의 `paylabDrafts()`)의
  *   PL-M1 과 글자 그대로 같아야 한다 — 시험이 잰다. 오른쪽 패널이 「근거 n / 3」이라고 말하려면
  *   그 3 이 실제 Pack 의 done_when 이어야 한다 (P7).
  * ⚠ DESIGN_BRIEF 의 「BS-M2 1/3 → 2/3」은 목업 문구다. 녹화는 paylab 이고 0/3 → 1/3 이다 —

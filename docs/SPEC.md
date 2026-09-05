@@ -374,6 +374,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | POST /projects/{id}/ask | member | {question} → {answer, cited_item_ids[]} (§7.3, 예산 가드) |
 | POST /demo/session | **공개** | → `{access_token, expires_at, entry_path}` — 🔴 **인증 없이 부르는 유일한 쓰기 문**이다. 데모 팀·데모 프로젝트·게스트 `users` 행·그 소속이 **넷 다** 있을 때만 200 이고, 하나라도 없으면 `NOT_FOUND` 다 (「일단 토큰은 주고 화면에서 404 를 보게」 하면 심사위원이 보는 것은 빈 화면이고 원인은 화면에 안 적힌다). 행을 **만들지 않는다** — 게스트도 팀도 시드가 만든다. 응답에 이메일·사람 이름이 없다. ⚠ 빈도 제한이 없다: LLM 을 안 부르고 행을 안 만든다(서명 한 번). 돈이 드는 쪽은 아래 `/demo/ai-once` 이고 그건 `withBudget()` 이 센다 |
 | POST /demo/ai-once | 게스트 | {fixture:'paylab'|'bookstack'} → 충돌 카드 결과 (§7.4) |
+| GET /cron/demo-reset | **Cron** (`CRON_SECRET`) | → `{team_slug, existed, official_version, items, members, devices, reports, progress, proposals}` — 데모 테넌트를 **지우고 다시 심는다** (§9 「매일 03:00 리셋」 · `lib/demo/reset.ts`). 🔴 **GET 으로 상태를 바꾸는 유일한 문**이다 — Vercel Cron 은 GET 으로만 부른다. 그래서 `/cron/` 밑에 따로 살고, 주체(`ctx.actor()`)가 아니라 `CRON_SECRET` 자물쇠(`lib/api/cron.ts`)로 잠긴다 — 세션·기기·게스트 토큰으로는 401 이다. 변수가 없으면 **아무도 못 부른다**(조용히 통과시키지 않는다 — 발표 도중 남이 리셋한다). 심다가 던지면 다시 지운다 — 반쯤 심긴 데모보다 없는 데모가 낫다(`/demo/session` 이 404 로 말한다). 응답에 토큰·이름·이메일이 없다. `maxDuration` 60 |
 | GET /health | 공개 | {ok, db, version} |
 
 에러 코드: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `STALE_BASE`, `REVISION_CONFLICT`, `BUDGET_EXCEEDED`, `RATE_LIMITED`, `COMPILE_FAILED`.
@@ -530,7 +531,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 8 | `…/roadmap` | 마일스톤 행: done_when별 근거 수·마지막 보고·충돌·"완료 확인" · 로드맵 외 작업 · 근거 클릭 시 path:line·commit | Realtime |
 | 9 | `…/sync` | 팀원·기기별 버전/상태/마지막 보고 · 질의창(답변 + 인용 항목 칩) | Realtime |
 
-게스트 데모: `/demo` → **게스트 세션 토큰**으로 `demo` 팀 read-only + `/demo/ai-once` 호출 가능. 데모 테넌트는 production DB의 별도 team_id, 시드 스크립트로 매일 03:00 리셋(Vercel Cron).
+게스트 데모: `/demo` → **게스트 세션 토큰**으로 `demo` 팀 read-only + `/demo/ai-once` 호출 가능. 데모 테넌트는 production DB의 별도 team_id, 매일 03:00(KST) 리셋 — Vercel Cron(`apps/web/vercel.json`)이 `GET /cron/demo-reset` 을 부르고(§5 · `CRON_SECRET` 뒤), 그 문이 `lib/demo/reset.ts` 로 **지우고 다시 심는다**. 시드는 제품 코드다 (`lib/demo/seed.ts` · `seed-demo.ts` — 라우트를 프로세스 안에서 부른다, `inproc.ts`). 픽스처는 `next.config.ts` 의 `outputFileTracingIncludes` 로 배포 함수에 실린다.
 - 🔴 **쿠키가 아니라 로그인과 같은 자리(세션 토큰)다.** 원래 SPEC 은 「세션 쿠키」였는데, 저장 자리를 하나 더 만들면 로그아웃이 한쪽만 지우고 `lib/web/api.ts` 의 `Authorization` 조립이 두 갈래가 된다. 게스트도 **진짜 세션으로 진짜 라우트**를 지난다 — 다른 것은 **바꿀 수 없다**는 것뿐이다.
 - 🔴 **읽기 전용은 등급이 아니라 「주체 종류」로 만든다** (`ACTOR_RULES` 의 `writes` 축 · `apps/web/src/lib/api/auth.ts`). 등급 사다리(`ROLE_RANK`)에 칸을 파면 **모든 GET 라우트가 요구 등급을 같이 낮춰야** 하고, 서른 곳 중 하나만 어긋나면 그게 P1 옆의 구멍이다. 막는 자리는 `lib/api/route.ts` 하나이고 기준은 **HTTP 안전 메서드**(GET·HEAD)다.
 - 게스트는 데모 팀의 **member** 로 앉는다. 그래서 owner 전용 화면 요소(로드맵 「완료 확인」)는 「owner 만 할 수 있습니다」로 정직하게 그려진다.
@@ -551,8 +552,9 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 
 ### 10.3 시드(`fixtures/seed/demo.json`)
 팀 1, 프로젝트 1(+B면 5), 항목 60, 버전 v1.0~v1.2, Proposal 6(approved 4/rejected 1/submitted 1), conflicts 3 resolved + 1 open, devices 12(applied 9/outdated 2/manual 1), progress_events 25(M1 done, M2 2/3, M3 0), 로드맵 외 2.
-- 🔴 **지금 실제로 심기는 것**(`apps/web/scripts/demo-seed.ts`): 팀원 5 + 게스트 1 · 항목 15 · 버전 v1.0.0→v1.1.0 · 제안 4(published 1/approved 1/rejected 1/submitted 1) · **devices 12(applied 9/outdated 2/manual 1)** · progress 6(로드맵 외 1). 항목 60·progress 25 는 paylab 픽스처(§10.1)가 그만큼을 안 가지고 있어서다 — **항목의 정본은 픽스처 하나**이고 데모용으로 따로 지어내지 않는다 (지어내면 데모에서 본 것과 관통이 잰 것이 갈린다).
-- ⚠ 이 파일이 담는 것은 **팀원·기기·보고·진행**뿐이다. 어느 팀인가(이름·slug·게스트 sub)는 `apps/web/src/lib/demo/tenant.ts` 에 있다 — 배너도 그 값을 읽어야 하는데 화면이 픽스처를 import 하면 데모 데이터가 배포 번들에 실린다. 제안은 대상 항목 id 가 코드에만 있어서 시드 스크립트의 표에 산다.
+- 🔴 **지금 실제로 심기는 것**(`apps/web/src/lib/demo/seed-demo.ts` · 부르는 문은 `GET /cron/demo-reset` · 개발용은 `pnpm --filter web demo:db`): 팀원 5 + 게스트 1 · 항목 15 · 버전 v1.0.0→v1.1.0 · 제안 4(published 1/approved 1/rejected 1/submitted 1) · **devices 12(applied 9/outdated 2/manual 1)** · progress 6(로드맵 외 1). 항목 60·progress 25 는 paylab 픽스처(§10.1)가 그만큼을 안 가지고 있어서다 — **항목의 정본은 픽스처 하나**이고 데모용으로 따로 지어내지 않는다 (지어내면 데모에서 본 것과 관통이 잰 것이 갈린다).
+- ⚠ 이 파일이 담는 것은 **팀원·기기·보고·진행**뿐이다. 어느 팀인가(이름·slug·게스트 sub)는 `apps/web/src/lib/demo/tenant.ts` 에 있다 — 배너도 그 값을 읽어야 하는데 화면이 픽스처를 import 하면 데모 데이터가 배포 번들에 실린다. 제안은 대상 항목 id 가 코드에만 있어서 시드의 표(`DEMO_PROPOSALS`)에 산다.
+- 🔴 **리셋은 지우고 심는다** (`lib/demo/reset.ts`). `teams.slug` 가 전역 유일이고 FK 에 cascade 가 없어서, 팀 하나를 통째로 지우는 순서를 아는 자리가 `lib/demo/teardown.ts` 하나다 — `project_id` 를 가진 표의 목록(`PROJECT_SCOPED`)이 정본이고 시험이 스키마와 대조한다(새 표를 빠뜨리면 빨개진다). 제품에 「팀 삭제」 문은 없다 — 그 함수를 라우트에 걸지 마라.
 
 ### 10.4 브라우저 터미널 재생
 `fixtures/replay/*.json`: `[{t_ms, text}]` 형식으로 실제 세션 녹화. 컴포넌트 `<TerminalReplay frames milestone>`가 타이핑 재생, 옆 패널에 같은 타임라인으로 Roadmap 갱신 애니메이션. 랜딩 C-3 에 배치.
@@ -572,7 +574,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 - Path allowlist(§8.5) + zip 업로드 경로 검사(`..`, 절대경로, 심볼릭 거부, 파일 2,000개·20MB 상한).
 - 로그: request_id·route·status·latency·user/team/project id만. body·token·문서 본문 금지.
 - CORS: 웹 origin만. 플러그인은 Bearer만 사용.
-- 비용: §7.5. Supabase: Vercel Cron `/api/health` 6시간마다.
+- 비용: §7.5. Supabase: Vercel Cron `/api/v1/health` 6시간마다 · `/api/v1/cron/demo-reset` 매일 18:00 UTC(03:00 KST) — 둘 다 `apps/web/vercel.json`. Cron 문의 자물쇠는 `CRON_SECRET`(Vercel 이 `Authorization: Bearer` 로 붙인다 · `lib/api/cron.ts` · 없으면 401).
 - 프롬프트 인젝션: 문서·코드 항목 텍스트는 `<untrusted>` 블록으로 감싸 data로만 취급, 도구 호출 없음.
 
 ---

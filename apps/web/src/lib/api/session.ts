@@ -72,7 +72,14 @@ export function verifySessionJwt(token: string, now: Date): SessionClaims {
 }
 
 /**
- * 🔴 **게스트 세션을 우리가 서명해서 내준다** (SPEC §9 「게스트 데모」).
+ * 🔴 **세션을 우리가 서명해서 내준다** — 부르는 자리는 **둘**뿐이다.
+ *
+ *   ① `POST /demo/session` — 게스트 세션 (SPEC §9 「게스트 데모」). claims 는 `sub` 하나다.
+ *   ② 데모 리셋(`lib/demo/seed*.ts`) — 시드가 **라우트를 진짜로 부르기 위한** 팀장·팀원의
+ *      세션. 이름·이메일을 claims 에 싣는다 (`sessionActor` 가 로그인 때마다 `users.name`
+ *      을 claims 로 덮으므로, 이름의 정본이 claims 를 타야 한다 — `seed-demo.ts` 의 주석).
+ *      원래 시험 도우미(`test/helpers/db.ts` 의 `sessionJwt`)가 시험용 secret 으로 하던
+ *      일이다. 시드가 제품 코드가 되면서 **둘째 사용자**가 생겨 여기로 올렸다.
  *
  * ★ 왜 같은 secret 인가 — 세션을 확인하는 자리를 하나로 두기 위해서다.
  *   둘째 secret 을 두면 `verifySessionJwt` 가 두 갈래가 되고, 그 갈래 중 하나만
@@ -80,18 +87,26 @@ export function verifySessionJwt(token: string, now: Date): SessionClaims {
  *   secret 이 달라서가 아니라 **`sub` 가 우리 `users` 표에만 있는 값**이라서다
  *   (`lib/demo/tenant.ts` 의 `DEMO_GUEST_SUBJECT`).
  *
- * ⚠ `email` 을 싣지 않는다. 게스트에게는 없고, 없는 것을 지어내면 그 문자열이
- *   `users` 행에 그대로 앉는다 (P1 과 같은 결의 이야기다).
- * ⚠ 부르는 자리는 `POST /demo/session` 하나여야 한다 — 서명 함수가 여기저기서 불리면
- *   「누가 게스트를 만들 수 있나」가 코드 전체로 흩어진다.
+ * ⚠ 게스트에는 `email` 을 싣지 않는다. 없는 것을 지어내면 그 문자열이 `users` 행에
+ *   그대로 앉는다 (P1 과 같은 결의 이야기다). 시드가 싣는 이메일은 `.invalid` 도메인이다.
+ * ⚠ 셋째 자리를 만들지 마라 — 서명 함수가 여기저기서 불리면 「누가 세션을 만들 수 있나」가
+ *   코드 전체로 흩어진다. 위 둘 다 **서버가 자기 자신을 위해** 만드는 세션이고, 둘 다
+ *   사람의 브라우저로 나가는 것은 ① 뿐이다.
  */
-export function signGuestJwt(sub: string, now: Date, ttlSec: number): { token: string; expiresAt: number } {
+export function signSessionJwt(claims: SessionClaims, now: Date, ttlSec: number): { token: string; expiresAt: number } {
   const secret = process.env[SECRET_ENV]
-  if (!secret) fail('INTERNAL', `${SECRET_ENV} 가 없다 — 게스트 세션을 만들 수 없다`)
+  if (!secret) fail('INTERNAL', `${SECRET_ENV} 가 없다 — 세션을 만들 수 없다`)
 
   const exp = Math.floor(now.getTime() / 1000) + ttlSec
   const head = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
-  const body = Buffer.from(JSON.stringify({ sub, exp })).toString('base64url')
+  //  ⚠ 없는 칸은 **안 적는다.** `email: undefined` 를 JSON 이 빼 주긴 하지만, 그걸 믿고 두면
+  //    「게스트 토큰에 email 이 없다」가 우연이 된다.
+  const body = Buffer.from(JSON.stringify({
+    sub: claims.sub,
+    ...(claims.email === undefined ? {} : { email: claims.email }),
+    ...(claims.name === undefined ? {} : { name: claims.name }),
+    exp,
+  })).toString('base64url')
   const sig = createHmac('sha256', secret).update(`${head}.${body}`).digest('base64url')
   return { token: `${head}.${body}.${sig}`, expiresAt: exp }
 }

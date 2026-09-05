@@ -12,7 +12,7 @@ import { GET as listProposals } from '../src/app/api/v1/projects/[id]/proposals/
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
-import { seedDemo, readDemoSeedFile, demoGuestMembership, type DemoSeedResult } from '../scripts/demo-seed'
+import { seedDemo, readDemoSeedFile, demoGuestMembership, type DemoSeedResult } from '../src/lib/demo/seed-demo'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from './helpers/db'
 
 // =====================================================================

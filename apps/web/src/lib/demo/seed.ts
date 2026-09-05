@@ -1,19 +1,18 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { eq } from 'drizzle-orm'
 
-import { contextItems } from '../src/db/schema'
-import { POST as createTeam } from '../src/app/api/v1/teams/route'
-import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
-import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
-import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
-import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
-import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
-import { GET as listQuestions, POST as answerQuestions } from '../src/app/api/v1/projects/[id]/questions/route'
-import { getDb } from '../src/db/client'
-import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
-import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
+import { contextItems } from '../../db/schema'
+import { POST as createTeam } from '../../app/api/v1/teams/route'
+import { POST as createProject } from '../../app/api/v1/teams/[id]/projects/route'
+import { POST as createRepo } from '../../app/api/v1/projects/[id]/repos/route'
+import { POST as createDocument } from '../../app/api/v1/projects/[id]/documents/route'
+import { POST as batchDraft } from '../../app/api/v1/projects/[id]/context-items/batch-draft/route'
+import { PATCH as updateItem } from '../../app/api/v1/projects/[id]/context-items/[itemId]/route'
+import { GET as listQuestions, POST as answerQuestions } from '../../app/api/v1/projects/[id]/questions/route'
+import { getDb } from '../../db/client'
+import { SEED_QUESTIONS } from '../api/seed-questions'
+import { signSessionJwt } from '../api/session'
+import { fixtureDir, fixtureText } from './fixtures'
+import { dataOf, params, req } from './inproc'
 
 // =====================================================================
 //  🔴 **paylab 씨앗의 정본 하나** (SPEC §10.1)
@@ -25,44 +24,46 @@ import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
 //    갈리면 관통이 보는 데이터와 사람이 화면에서 보는 데이터가 달라지고,
 //    그러면 **화면 눈 판정이 관통을 증명하지 못한다.**
 //
+//  ★ 왜 `scripts/` 가 아니라 제품 코드(`src/lib/demo`)에 있나 — 게스트 데모 테넌트는
+//    이 씨앗 위에 얹히고(`seed-demo.ts`), 그 데모를 배포 DB 에 매일 심는 문이
+//    `GET /cron/demo-reset` 이다 (SPEC §9 · PLAN P5 둘째 행). 라우트가 `scripts/` 를
+//    import 할 수는 없다 — 그 폴더는 배포에 안 실린다. 그래서 씨앗이 올라왔고, 관통·개발용
+//    서버·시험은 **여기 것을 그대로** 쓴다 (정본은 여전히 하나다).
+//    ⚠ 그래서 이 파일은 `app/` 의 라우트를 import 한다 — 시드는 화면·플러그인과 같은
+//      **라우트의 클라이언트**다 (`inproc.ts` 의 주석). `lib/api/*` 가 이 파일을 import
+//      하는 날 순환이 되니, 부르는 쪽은 라우트(`cron/demo-reset`)와 도구뿐이어야 한다.
+//
 //  ★ 여기는 **채우기만** 한다. 「제대로 들어갔나」를 재는 것은 부르는 쪽의 일이다 —
 //    관통은 그걸 check 로 세고, 개발용 서버는 그냥 쓴다. 채우는 코드에 판정을 섞으면
 //    개발용 서버가 관통의 합격 기준을 짊어지게 된다.
 //
-//  ⚠ 부르기 전에 `freshDb()` 로 DB 를 꽂아 둬야 한다 (라우트가 `getDb()` 로 집어 간다).
+//  ⚠ 라우트가 `getDb()` 로 집어 갈 DB 가 있어야 한다 — 시험·도구는 `freshDb()` 로 꽂고,
+//    배포에서는 `DATABASE_URL` 이다. `SUPABASE_JWT_SECRET` 도 있어야 한다 (세션을 서명한다).
 //  ⚠ 서버가 문장을 지어내지 않는다 — 구조화는 §7.1(P3)의 일이다. 여기 있는 항목은
 //    **사람이 화면에서 적는 것과 같은 자리**에 손으로 넣는다. 그게 지금 진짜로 도는 길이다.
 // =====================================================================
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
-
 /**
- * `fixtures/` 아래 파일 하나를 그대로 읽는다.
- *
- * ★ 왜 문서와 코드가 **같은 문**인가 — 근거를 따라가는 쪽(관통)은 둘 다 「`fixtures/`
- *   아래 이 경로를 잘라 보면 그 문장이 있나」로 잰다. 읽는 문이 둘이면 경로를 적는
- *   방식이 갈라지고, 갈라지면 검사가 한쪽만 따라간다.
- * ⚠ 문서 본문은 사용자가 **의도적으로** 올리는 것이다 (P1). 코드 본문은 올라가지
- *   않는다 — `repository_path` 근거가 싣는 것은 **repo·경로·줄 번호뿐**이다.
+ * 시드가 만드는 사람의 이메일. **픽스처에도 코드에도 사람 이메일을 적지 않는다** (P1 과
+ * 같은 결). `.invalid` 는 예약된 최상위 도메인이라 진짜 주소와 절대 겹치지 않는다.
  */
-function fixtureText(rel: string): string {
-  return readFileSync(join(root, 'fixtures', rel), 'utf8')
+export function seedEmail(sub: string): string {
+  return `${sub}@demo.invalid`
 }
 
 /**
- * 픽스처 레포에 그 폴더가 **정말 있는지 재고** 경로를 돌려준다. 없으면 **던진다.**
- *
- * ★ 왜 재는가 — `architecture` 항목의 `paths` 는 「이 구성요소의 코드가 여기 산다」다.
- *   손으로 적으면 픽스처가 바뀌었을 때 **조용히 없는 폴더를 가리킨다** — 태그는 멀쩡히
- *   붙어 있고 심사자가 따라가면 아무것도 없다 (FINDINGS 90 과 같은 고장, 코드 쪽 판).
- * ⚠ 던지는 이유는 `locate()` 와 같다 — 조용히 넘어가면 아무도 안 센다.
+ * 시드가 라우트를 부를 때 쓰는 세션의 수명(초). 심는 데 몇 초면 충분하고, 이 토큰은
+ * 프로세스 밖으로 안 나간다 — 길 이유가 없다.
  */
-function fixtureDir(repo: string, rel: string): string {
-  const at = join(root, 'fixtures', repo, rel)
-  if (!existsSync(at) || !statSync(at).isDirectory()) {
-    throw new Error(`[seed] ${repo}/${rel} 폴더가 픽스처에 없다 — 경로를 적지 말고 픽스처를 봐라`)
-  }
-  return rel
+export const SEED_SESSION_TTL_SEC = 10 * 60
+
+/**
+ * 시드가 쓰는 세션 JWT — **진짜 인증 경로**(`verifySessionJwt`)를 그대로 지난다.
+ * ★ 왜 우회 문이 아닌가 — 시험·시드용 인증 문을 따로 만들면 그 문이 배포에도 남는다.
+ *   서명만 우리가 하고 검사는 라우트가 평소대로 한다.
+ */
+export function seedSession(sub: string, name: string = sub, now: Date = new Date()): string {
+  return signSessionJwt({ sub, email: seedEmail(sub), name }, now, SEED_SESSION_TTL_SEC).token
 }
 
 /**
@@ -663,7 +664,7 @@ const DEFAULT_TENANT: SeedTenant = {
  * 여기서 미리 해 버리면 그 단계가 씨앗에 묻힌다.
  */
 export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_TENANT): Promise<SeedResult> {
-  const owner = sessionJwt(ownerSub)
+  const owner = seedSession(ownerSub)
 
   const team = await dataOf(await createTeam(
     req('POST', '/api/v1/teams', { auth: owner, body: { name: tenant.teamName, slug: tenant.teamSlug } }), params({}),

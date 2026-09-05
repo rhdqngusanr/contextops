@@ -8,7 +8,7 @@ import { ReplayFrames, isReplayCommand } from '@contextops/schema'
 
 import { Landing, REPLAY_FRAMES, TERMINAL_REPLAY } from '../src/components/landing'
 import { REPLAY_PACE, TerminalReplay, panelState } from '../src/components/terminal-replay'
-import { paylabDrafts } from '../scripts/seed'
+import { paylabDrafts } from '../src/lib/demo/seed'
 
 // =====================================================================
 //  🔴 화면 1 C-3 — 터미널 재생을 **그려서 읽는다** (SPEC §10.4 · loop/PROMPT.md ⑦3층)

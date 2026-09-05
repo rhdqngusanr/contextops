@@ -53,8 +53,14 @@ export const DEMO_TENANT = {
    * (FINDINGS 113·116), 이름이 없으면 데모가 `contextops-demo-owner` 를 사람으로 그린다.
    */
   ownerName: '팀장 한지우',
-  /** 매일 이 시각에 리셋한다 (Vercel Cron — PLAN P5 둘째 행). 배너가 이 문자열을 읽는다. */
+  /**
+   * 매일 이 시각(**KST**)에 리셋한다 — `GET /cron/demo-reset` 을 Vercel Cron 이 부른다.
+   * 배너가 이 문자열을 읽는다. ⚠ Cron 표기(`apps/web/vercel.json`)는 UTC 라 여기와 그
+   * 파일이 **같은 시각**인지 `test/demo-reset.test.ts` 가 아래 offset 으로 셈해 잰다.
+   */
   resetAt: '03:00',
+  /** `resetAt` 의 시간대가 UTC 에서 몇 시간 앞서나 (Asia/Seoul · 서머타임 없음). */
+  resetUtcOffsetHours: 9,
 } as const
 
 /** 게스트가 들어가서 처음 보는 화면. `/demo` 가 여기로 보낸다. */

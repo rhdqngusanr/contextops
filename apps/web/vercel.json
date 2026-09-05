@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_comment": [
+    "Vercel 프로젝트의 Root Directory 는 apps/web 이다 — 이 파일은 그 자리에서만 읽힌다.",
+    "crons 의 시각은 UTC 다. demo-reset 의 18:00 UTC = 03:00 KST 이고, 그 셈은",
+    "src/lib/demo/tenant.ts 의 DEMO_TENANT.resetAt · resetUtcOffsetHours 가 정본이다 —",
+    "test/demo-reset.test.ts 가 이 파일과 그 값이 같은 시각인지 센다. 여기만 고치지 마라.",
+    "Cron 은 CRON_SECRET 환경변수가 있으면 Authorization: Bearer <값> 을 붙여 GET 으로 부른다",
+    "(src/lib/api/cron.ts). 그 변수가 없으면 두 문 중 demo-reset 은 401 이다 — 의도다.",
+    "health 는 SPEC §11 「Vercel Cron /api/health 6시간마다」(Supabase pause 방지)다."
+  ],
+  "crons": [
+    { "path": "/api/v1/health", "schedule": "0 */6 * * *" },
+    { "path": "/api/v1/cron/demo-reset", "schedule": "0 18 * * *" }
+  ]
+}

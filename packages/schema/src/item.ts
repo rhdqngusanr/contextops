@@ -35,7 +35,7 @@ const ItemBase = z.object({
   //     ② 못 다 실을 때 **남는 순서** — 「150개 상한, 초과 시 **type별** priority 상위」
   //        (SPEC §7.3 · `apps/web/src/lib/ai/conflict.ts`)
   //  ⚠ 그래서 이 값을 「중요도」가 아니라 「그 타입 안에서 몇 번째로 읽히나」로 써도 된다.
-  //    아키텍처 다섯 줄이 §7 그림 순서로 서는 것이 그 예다 (`apps/web/scripts/seed.ts`).
+  //    아키텍처 다섯 줄이 §7 그림 순서로 서는 것이 그 예다 (`apps/web/src/lib/demo/seed.ts`).
   priority: z.int().min(0).max(100).default(50),
   source_refs: z.array(SourceRef).min(1).max(SOURCE_REFS_MAX),
   tags: z.array(z.string().min(1).max(40)).max(20).default([]),

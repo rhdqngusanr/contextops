@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest'
 import {
   BEFORE_AFTER, INSTALL_STEPS, LANDING_HEAD, Landing, TRUST_BOUNDARY, skillNamesIn,
 } from '../src/components/landing'
-import { DEMO_PROPOSALS } from '../scripts/demo-seed'
-import { paylabDrafts } from '../scripts/seed'
+import { DEMO_PROPOSALS } from '../src/lib/demo/seed-demo'
+import { paylabDrafts } from '../src/lib/demo/seed'
 
 // =====================================================================
 //  🔴 화면 1(랜딩)을 **그려서 읽는다** (loop/PROMPT.md ⑦3층 · DESIGN_BRIEF §4 「화면 1」)
@@ -122,7 +122,7 @@ describe('④ 누르면 아무 일도 안 하는 것이 없다', () => {
   })
 })
 
-describe('🔴 ⑤ Before/After 는 paylab 픽스처의 사실이다 (SPEC §10.1 · scripts/seed.ts)', () => {
+describe('🔴 ⑤ Before/After 는 paylab 픽스처의 사실이다 (SPEC §10.1 · src/lib/demo/seed.ts)', () => {
   it('After 의 답은 데모 v1.1.0 에 실린 승인 제안의 data.rule 과 글자 그대로 같다', () => {
     //  ★ 씨앗(v1.0.0)이 아니라 **published 제안**이다 — 게스트가 여는 판이 v1.1.0 이고,
     //    그 판에서는 이 항목이 제안의 문장으로 바뀌어 있다. 첫 화면과 앱이 같은 문장이어야 한다.
@@ -136,7 +136,7 @@ describe('🔴 ⑤ Before/After 는 paylab 픽스처의 사실이다 (SPEC §10.
     //  제목의 버전이 데모가 실제로 발행하는 버전이다.
     const m = /v(\d+\.\d+\.\d+)/.exec(BEFORE_AFTER.after.title)
     expect(m).not.toBeNull()
-    expect(readFileSync(join(webRoot, 'scripts', 'demo-seed.ts'), 'utf8')).toContain(`'${(m as RegExpExecArray)[1]}'`)
+    expect(readFileSync(join(webRoot, 'src', 'lib', 'demo', 'seed-demo.ts'), 'utf8')).toContain(`'${(m as RegExpExecArray)[1]}'`)
   })
 
   it('씨앗 초안(v1.0.0)도 같은 규칙을 말한다 — 제안은 문장을 구체화했지 뒤집지 않았다', () => {

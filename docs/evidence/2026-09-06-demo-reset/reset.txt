@@ -1,0 +1,17 @@
+◆ GET /api/v1/cron/demo-reset — PGlite · 2026-09-05T20:23:04.060Z
+────────────────────────────────────────────────────────────────────────
+CRON_SECRET 없음 + 아무 값     → 401 {"code":"UNAUTHORIZED","message":"CRON_SECRET 가 없다 — Cron 문이 잠겨 있다","request_id":"01c39157-622b-4c84-ac08-9060bb2a73fa"}
+틀린 값                         → 401 "UNAUTHORIZED"
+DB: 팀(slug=demo) 0 · 기기 0 · 사람 0
+
+맞는 값 (첫 심기)               → 200 · 292ms
+  {"team_slug":"demo","existed":false,"official_version":"1.1.0","items":15,"members":5,"devices":12,"reports":12,"progress":6,"proposals":4}
+DB: 팀(slug=demo) 1 · 기기 12 · 사람 7
+POST /demo/session               → 201
+
+맞는 값 (둘째 — 리셋)           → 200 · 243ms
+  {"team_slug":"demo","existed":true,"official_version":"1.1.0","items":15,"members":5,"devices":12,"reports":12,"progress":6,"proposals":4}
+DB: 팀(slug=demo) 1 · 기기 12 · 사람 7   ← 첫 심기와 같아야 한다 (지우기가 진짜로 지웠다)
+
+⚠ 배포(Supabase · Vercel)에서 돌린 것이 아니다 — PGlite 위의 같은 라우트다. 배포에서의 시간과
+  `outputFileTracingIncludes` 가 실제로 fixtures/ 를 실었는지는 🙋 Vercel 연결 뒤 첫 리셋에서 본다.

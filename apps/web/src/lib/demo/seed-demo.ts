@@ -1,31 +1,32 @@
-import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { PROGRESS_SOURCES, PROGRESS_STATUSES, REPORTABLE_SYNC_STATUSES, TEAM_ROLES, type Manifest } from '@contextops/schema'
 
-import { GET as listItems } from '../src/app/api/v1/projects/[id]/context-items/route'
-import { GET as getManifest } from '../src/app/api/v1/projects/[id]/packs/[semver]/manifest/route'
-import { POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
-import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
-import { POST as postSyncReport } from '../src/app/api/v1/projects/[id]/sync-reports/route'
-import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
-import { POST as publishVersion } from '../src/app/api/v1/projects/[id]/versions/publish/route'
-import { POST as approveProposal } from '../src/app/api/v1/proposals/[id]/approve/route'
-import { POST as rejectProposal } from '../src/app/api/v1/proposals/[id]/reject/route'
-import { POST as submitProposal } from '../src/app/api/v1/proposals/[id]/submit/route'
-import { getDb } from '../src/db/client'
-import { progressEvents, syncReports, teamMembers, users } from '../src/db/schema'
-import { DEMO_GUEST_SUBJECT, DEMO_TENANT } from '../src/lib/demo/tenant'
-import { seedPaylab, type SeedResult } from './seed'
-import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
+import { GET as listItems } from '../../app/api/v1/projects/[id]/context-items/route'
+import { GET as getManifest } from '../../app/api/v1/projects/[id]/packs/[semver]/manifest/route'
+import { POST as createProposal } from '../../app/api/v1/projects/[id]/proposals/route'
+import { POST as postProgress } from '../../app/api/v1/projects/[id]/progress/route'
+import { POST as postSyncReport } from '../../app/api/v1/projects/[id]/sync-reports/route'
+import { POST as createToken } from '../../app/api/v1/projects/[id]/tokens/route'
+import { POST as publishVersion } from '../../app/api/v1/projects/[id]/versions/publish/route'
+import { POST as approveProposal } from '../../app/api/v1/proposals/[id]/approve/route'
+import { POST as rejectProposal } from '../../app/api/v1/proposals/[id]/reject/route'
+import { POST as submitProposal } from '../../app/api/v1/proposals/[id]/submit/route'
+import { getDb } from '../../db/client'
+import { progressEvents, syncReports, teamMembers, users } from '../../db/schema'
+import { fixtureJson } from './fixtures'
+import { dataOf, params, req } from './inproc'
+import { seedEmail, seedPaylab, seedSession, type SeedResult } from './seed'
+import { DEMO_GUEST_SUBJECT, DEMO_TENANT } from './tenant'
 
 // =====================================================================
 //  🔴 **게스트 데모 테넌트를 심는 자리 하나** (SPEC §9 「게스트 데모」 · §10.3)
 //
-//    pnpm --filter web demo:seed        (빈 DB 에 데모 팀을 통째로 만든다)
+//    부르는 자리 셋 — 전부 이 함수 하나다:
+//      · `GET /cron/demo-reset` (배포 · Vercel Cron 이 매일) — `reset.ts` 가 지우고 다시 심는다
+//      · `pnpm --filter web demo:db` (개발용 씨앗 서버 · `scripts/demo-server.ts`)
+//      · `test/demo-guest.test.ts` · `scripts/dump-demo.tsx`
 //
 //  ★ 무엇을 만드나 — paylab 씨앗(`seed.ts`) 위에 **데모에만 있는 것** 넷을 얹는다:
 //    ① 팀원 5명과 그들의 소속 ② 발행 두 번(v1.0.0 → v1.1.0) ③ 기기 12대와 마지막 보고
@@ -42,11 +43,10 @@ import { dataOf, params, req, sessionJwt } from '../test/helpers/db'
 //    ⚠ 그래서 시각은 **보고를 라우트로 만든 다음** 그 행 하나만 옮긴다 — 보고 자체를
 //      손으로 넣으면 계약을 안 지나고, 계약이 넓어질 때 데모만 조용히 낡는다.
 //
-//  ⚠ 배포에서 매일 03:00 에 이걸 돌리는 것은 Cron 의 몫이다 (PLAN P5 둘째 행).
-//    지금은 사람이 부르는 스크립트다 — 없는 것을 있다고 적지 않는다.
+//  ⚠ 여기는 **심기만** 한다. 이미 심어진 데모를 지우는 것은 `teardown.ts`, 둘을 잇는 것은
+//    `reset.ts` 다 — 심는 코드에 지우는 코드를 섞으면 시험·개발용 서버가 빈 DB 에서도
+//    지우기부터 돌게 된다.
 // =====================================================================
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
 // ---------------------------------------------------------------------
 //  ① 픽스처 계약 — `fixtures/seed/demo.json`
@@ -91,9 +91,20 @@ const DemoSeedFile = z.object({
 })
 export type DemoSeedFile = z.infer<typeof DemoSeedFile>
 
+/** `fixtures/` 아래 상대 경로 — 지우는 쪽(`teardown.ts`)도 같은 파일에서 사람 목록을 읽는다. */
+export const DEMO_SEED_FILE = 'seed/demo.json'
+
 export function readDemoSeedFile(): DemoSeedFile {
-  const raw: unknown = JSON.parse(readFileSync(join(root, 'fixtures', 'seed', 'demo.json'), 'utf8'))
-  return DemoSeedFile.parse(raw)
+  return DemoSeedFile.parse(fixtureJson(DEMO_SEED_FILE))
+}
+
+/**
+ * 🔴 **데모가 만드는 사람의 `sub` 전부** — 팀장 · 픽스처의 팀원 · 게스트.
+ * ★ 왜 한 함수인가 — 지우는 쪽이 이 목록을 따로 들면 픽스처에 팀원을 한 명 더한 날
+ *   그 사람의 `users` 행이 리셋마다 남는다. 심는 쪽과 지우는 쪽이 **같은 목록**을 읽어야 한다.
+ */
+export function demoSubjects(file: DemoSeedFile = readDemoSeedFile()): string[] {
+  return [DEMO_TENANT.ownerSubject, ...file.members.map((m) => m.sub), DEMO_GUEST_SUBJECT]
 }
 
 // ---------------------------------------------------------------------
@@ -104,7 +115,7 @@ export function readDemoSeedFile(): DemoSeedFile {
  * 데모의 제안 셋. **화면 6 이 세 갈래를 다 그리게** 하는 것이 목적이다:
  * 승인되어 v1.1.0 에 실린 것 · 사유와 함께 거절된 것 · 아직 결정을 기다리는 것.
  *
- * ⚠ `target` 은 `scripts/seed.ts` 가 만드는 항목의 id 다. 없는 id 를 적으면 발행이
+ * ⚠ `target` 은 `src/lib/demo/seed.ts` 가 만드는 항목의 id 다. 없는 id 를 적으면 발행이
  *   그 제안에서 롤백되므로 **심는 도중에 터진다** — 조용히 넘어가지 않는다.
  * ★ 한 줄 더하는 절차: ①이 표에 한 줄 ②`decision` 이 `approved` 면 그 항목이 v1.1.0 의
  *   Pack 본문에서 바뀐다 — 바뀐 문장을 눈으로 확인해라.
@@ -113,7 +124,7 @@ type DemoProposal = {
   author: string
   title: string
   summary: string
-  /** `scripts/seed.ts` 가 만드는 항목의 id. 없으면 심는 도중에 던진다. */
+  /** `src/lib/demo/seed.ts` 가 만드는 항목의 id. 없으면 심는 도중에 던진다. */
   target: string
   /** 바뀔 `data`. **지금 항목에서 읽어 온 초안 위에 덮는다** (`draftFor()`) — 그래서
    *  화면 6 의 before/after Diff 가 **진짜 지금 문장**과 견준다. */
@@ -132,7 +143,8 @@ type DemoProposal = {
 
 //  ⚠ 내보내는 이유는 하나다 — 랜딩의 After 답이 **이 표의 published 행**과 같은지
 //    `test/web-landing.test.ts` 가 잰다. 게스트가 v1.1.0 에서 보는 문장과 첫 화면의 문장이
-//    갈리면 그게 첫 화면의 거짓말이다. 제품 코드는 이 표를 읽지 않는다.
+//    갈리면 그게 첫 화면의 거짓말이다. **화면은 이 표를 import 하지 않는다** — 하면 데모
+//    데이터가 브라우저 번들에 실린다 (`tenant.ts` 머리의 같은 주의). 읽는 것은 시드뿐이다.
 export const DEMO_PROPOSALS: DemoProposal[] = [
   {
     author: 'demo-member-junho',
@@ -206,11 +218,6 @@ export type DemoSeedResult = {
   proposalCount: number
 }
 
-/** 픽스처의 사람에게 줄 이메일. **픽스처에 사람 이메일을 적지 않는다** (P1 과 같은 결). */
-function demoEmail(sub: string): string {
-  return `${sub}@demo.invalid`
-}
-
 function hoursAgo(now: Date, hours: number): Date {
   return new Date(now.getTime() - hours * 60 * 60 * 1000)
 }
@@ -221,7 +228,7 @@ function hoursAgo(now: Date, hours: number): Date {
  * ★ 왜 이 함수가 있나 — 덤프를 눈으로 읽다가 잡았다: 화면 9 의 「팀원」 칸과 화면 6 의
  *   「작성자」 칸에 **`demo-member-haeun` 같은 sub 가 그대로** 그려지고 있었다.
  *   원인은 `sessionActor()` 가 로그인할 때마다 `users.name` 을 **claims 로 덮어쓰기**
- *   때문이다 (진짜 OAuth 도 그렇게 돈다 — 그게 이름의 출처다). 시험용 `sessionJwt` 의
+ *   때문이다 (진짜 OAuth 도 그렇게 돈다 — 그게 이름의 출처다). `seedSession` 의
  *   기본 이름이 sub 라서, 기기 토큰을 발급받는 순간 심어 둔 한글 이름이 사라졌다.
  * ⚠ 그러니 **이름의 정본은 픽스처이고, 그 이름이 claims 를 타고 들어가야 한다.**
  *   `addMember` 에서만 이름을 넣으면 다음 로그인 한 번에 지워진다.
@@ -229,7 +236,7 @@ function hoursAgo(now: Date, hours: number): Date {
 function memberJwt(file: DemoSeedFile, sub: string): string {
   const member = file.members.find((m) => m.sub === sub)
   if (!member) throw new Error(`[demo-seed] 팀원 목록에 ${sub} 가 없다`)
-  return sessionJwt(sub, { name: member.name, email: demoEmail(sub) })
+  return seedSession(sub, member.name)
 }
 
 /**
@@ -243,7 +250,7 @@ async function addMember(
   const db = getDb()
   const [user] = await db
     .insert(users)
-    .values({ authSubject: member.sub, email: demoEmail(member.sub), name: member.name })
+    .values({ authSubject: member.sub, email: seedEmail(member.sub), name: member.name })
     .onConflictDoUpdate({ target: users.authSubject, set: { name: member.name } })
     .returning({ id: users.id })
   if (!user) throw new Error(`[demo-seed] ${member.sub} 의 users 행을 만들지 못했다`)
@@ -315,9 +322,7 @@ export async function seedDemo(now: Date = new Date()): Promise<DemoSeedResult> 
   //  🔴 팀장의 **이름**을 claims 에 실어서 다시 만든다. `seedPaylab` 안에서 만든 토큰은
   //     이름이 sub 라, 이 토큰으로 한 번 더 부르는 순간 `users.name` 이 sub 로 덮인다
   //     (`memberJwt` 의 주석과 같은 고장 · 덤프에서 눈으로 잡았다).
-  const owner = sessionJwt(DEMO_TENANT.ownerSubject, {
-    name: DEMO_TENANT.ownerName, email: demoEmail(DEMO_TENANT.ownerSubject),
-  })
+  const owner = seedSession(DEMO_TENANT.ownerSubject, DEMO_TENANT.ownerName)
 
   //  ── 팀원 + 게스트 ────────────────────────────────────────────────────
   const memberIds = new Map<string, string>()

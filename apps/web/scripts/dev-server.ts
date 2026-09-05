@@ -2,8 +2,8 @@ import { createServer } from 'node:http'
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket'
 
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
-import { seedDemo } from './demo-seed'
-import { seedPaylab } from './seed'
+import { seedDemo } from '../src/lib/demo/seed-demo'
+import { seedPaylab } from '../src/lib/demo/seed'
 import { closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
 
 // =====================================================================
@@ -19,7 +19,7 @@ import { closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/
 //    ① PGlite 를 띄우고 마이그레이션을 먹인 뒤 **TCP 로 노출**한다 (pglite-socket).
 //       그래서 Next 는 평소처럼 `DATABASE_URL` 로 postgres-js 를 쓴다 — 배포와 같은 길이다.
 //       ⚠ `setDbForTest` 를 배포 코드에 끌어들이지 않는 것이 요점이다.
-//    ② paylab 씨앗을 심고 v1.0.0 을 발행한다 (씨앗의 정본은 `scripts/seed.ts` 하나)
+//    ② paylab 씨앗을 심고 v1.0.0 을 발행한다 (씨앗의 정본은 `src/lib/demo/seed.ts` 하나)
 //    ③ 세션 JWT 를 하나 찍어 준다. `SUPABASE_JWT_SECRET` 만 맞으면 **진짜 인증 경로**를
 //       그대로 지난다 — 인증을 우회하는 문을 만들지 않는다. 그 문은 배포에도 남는다.
 //

@@ -362,9 +362,9 @@
       축 한 줄이고 막는 자리는 `lib/api/route.ts` 하나다 (기준은 HTTP 안전 메서드).
       등급 사다리에 칸을 팠으면 **모든 GET 라우트의 요구 등급**을 같이 낮춰야 했고,
       서른 곳 중 하나만 어긋나면 그게 P1 옆의 구멍이다.
-      시드 정본은 `fixtures/seed/demo.json`(팀원·기기·보고·진행) + `scripts/demo-seed.ts`
-      (제안 표 — 대상 항목 id 가 코드에만 있다). 항목·문서는 `scripts/seed.ts` 하나에서
-      온다 — 데모용으로 베끼면 데모와 관통이 갈린다.
+      시드 정본은 `fixtures/seed/demo.json`(팀원·기기·보고·진행) + `src/lib/demo/seed-demo.ts`
+      (제안 표 — 대상 항목 id 가 코드에만 있다 · 63바퀴에 `scripts/` 에서 제품 코드로 올라왔다).
+      항목·문서는 `src/lib/demo/seed.ts` 하나에서 온다 — 데모용으로 베끼면 데모와 관통이 갈린다.
       웹 시험 488 → **505** · SPEC §5·§9·§10.3 을 코드와 같게 고쳤다.
       **눈으로 읽었다** — `docs/evidence/2026-09-06-demo/demo.txt` (`scripts/dump-demo.tsx` 가
       **진짜 게스트 토큰으로 진짜 라우트**를 부른다). 덤프가 시험이 못 잡은 것을 하나 잡았다:
@@ -422,6 +422,17 @@
       ⚠ 스텝 썸네일(C-2)은 production 캡처가 생긴 뒤다 — 둘째 행의 몫.
 - [ ] **Vercel production · Cron · 보안 캡처 증거 · 새 PC fresh install**
       **완료 기준**: production 으로 발표 시나리오 1회 완주
+      → ① **Cron 의 코드 쪽은 됐다** (63바퀴 · FINDINGS 120 닫음). `GET /cron/demo-reset` 이
+      데모 테넌트를 **지우고 다시 심는다** (`lib/demo/reset.ts` · `teardown.ts`) — `CRON_SECRET`
+      자물쇠 뒤(`lib/api/cron.ts` · 없으면 401), 심다가 던지면 다시 지운다. 시드 둘이 `scripts/`
+      에서 제품 코드(`src/lib/demo/`)로 올라왔고 `test/helpers` 의존이 0 이 됐다(시험이 센다).
+      `apps/web/vercel.json` 에 cron 둘(health 6시간 · demo-reset 18:00 UTC = 03:00 KST —
+      시험이 `DEMO_TENANT.resetAt` 과 대조). 픽스처는 `next.config.ts` 의
+      `outputFileTracingIncludes` 로 배포 함수에 싣는다. 시험 14개 (`demo-reset` · `-rollback`).
+      🙋 **남은 것은 전부 계정이 필요하다** — Vercel 연결(Root Directory `apps/web` ·
+      `CRON_SECRET`·`SUPABASE_JWT_SECRET`·`DATABASE_URL`) → 첫 리셋을 손으로 한 번
+      (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → `/demo` 가
+      production 에서 열리는지 → 보안 캡처 · fresh install.
 
 ## P6 — 발표 (SPEC 9/16~9/17)
 

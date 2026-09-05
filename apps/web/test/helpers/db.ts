@@ -98,50 +98,15 @@ export function sessionJwt(
 
 // ---------------------------------------------------------------------
 //  요청 만들기 — 라우트가 받는 것과 같은 표준 `Request` 다
+//
+//  🔴 정본은 `src/lib/demo/inproc.ts` 다 — 데모 시드가 제품 코드(Cron 의 리셋 문)가
+//     되면서 **둘째 사용자**가 생겨 그리로 올렸다. 여기서는 다시 내보내기만 한다.
+//     ⚠ 여기에 같은 함수를 다시 적지 마라 — 시험이 부르는 라우트와 시드가 부르는 라우트가
+//       다른 모양의 요청을 받게 된다.
 // ---------------------------------------------------------------------
 
-const ORIGIN = 'http://localhost:3000'
-
-export function req(
-  method: string,
-  path: string,
-  //  `headers` 는 ETag 조건부 요청(`if-none-match`) 때문에 있다 — SPEC §5 packs 세 줄이
-  //  304 를 약속하고, 그건 머리를 보내 봐야만 잴 수 있다.
-  opts: { auth?: string; body?: unknown; raw?: string; headers?: Record<string, string> } = {},
-): Request {
-  const headers: Record<string, string> = { ...opts.headers }
-  if (opts.auth) headers.authorization = `Bearer ${opts.auth}`
-  const hasBody = opts.body !== undefined || opts.raw !== undefined
-  if (hasBody) headers['content-type'] = 'application/json'
-  return new Request(`${ORIGIN}${path}`, {
-    method,
-    headers,
-    body: opts.raw ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body)),
-  })
-}
-
-/**
- * Next 15 의 Route Handler 두 번째 인자.
- * ⚠ 값이 `string | string[]` 인 이유 — catch-all 구간(`[...path]`)은 배열로 온다
- *   (`src/lib/api/route.ts` 의 같은 주석). `string` 으로만 잡으면 그 라우트를 시험에서
- *   못 부르고, 그때 `as any` 로 뚫게 된다.
- */
-export function params<P extends Record<string, string | string[]>>(value: P): { params: Promise<P> } {
-  return { params: Promise.resolve(value) }
-}
-
-export async function bodyOf(res: Response): Promise<Record<string, unknown>> {
-  return (await res.json()) as Record<string, unknown>
-}
-
-/** 성공 응답의 `data` 를 꺼낸다 — 봉투 모양(`{data, meta}`)도 같이 확인한다. */
-export async function dataOf(res: Response): Promise<Record<string, unknown>> {
-  const json = await bodyOf(res)
-  if (!('data' in json)) throw new Error(`성공 봉투가 아니다: ${JSON.stringify(json)}`)
-  const meta = json.meta as { request_id?: string } | undefined
-  if (!meta?.request_id) throw new Error('meta.request_id 가 없다')
-  return json.data as Record<string, unknown>
-}
+export { bodyOf, dataOf, params, req } from '../../src/lib/demo/inproc'
+import { bodyOf } from '../../src/lib/demo/inproc'
 
 /** 실패 응답의 `error` 를 꺼낸다. */
 export async function errorOf(
