@@ -395,7 +395,7 @@
 
 ## P5 — 배포와 마감 (SPEC 9/14~9/15)
 
-- [x] **AGENTS/cursor 타깃 · Pack zip · 터미널 재생 컴포넌트** — `8faad6a` `2a1db06` + 62바퀴 (아래 ③)
+- [x] **AGENTS/cursor 타깃 · Pack zip · 터미널 재생 컴포넌트** — `8faad6a` `2a1db06` `8c53a89`
       → ① **Pack zip 은 됐다** (60바퀴). `GET …/packs/{semver}/zip` — 압축 없이(store) 담고
       항목 시각은 Manifest 의 `generated_at` 이라 **같은 버전은 같은 byte** 다 (P4 의 연장 ·
       라이브러리 0 · `lib/api/zip.ts`). zip 안에 `.contextops/manifest.json` 이 플러그인
@@ -414,7 +414,7 @@
       전부 파일을 낸다 — liveness 시험이 `PACK_TARGETS` 를 돌며 잠근다. scoped 줄이 끝에
       `· 도메인:`/`· 경로:` 를 적게 됐다(한 절에 모이면 범위가 사라져서). 플러그인 allowlist 는
       이미 두 경로를 알고 있었다 — 관통 sync 가 실제로 쓴다.
-      → ③ **터미널 재생은 됐다** (62바퀴 · FINDINGS 123 닫음). 녹화 `fixtures/replay/sync.json` 은
+      → ③ **터미널 재생은 됐다** (62바퀴 `8c53a89` · FINDINGS 123 닫음). 녹화 `fixtures/replay/sync.json` 은
       **관통 sync 단계가 배포되는 번들을 돌려 남긴 stdout** 이다(훅 알림 → `/contextops:sync` →
       `progress` 보고 · 17줄) — 손으로 쓴 줄이 0 이고, 관통이 매번 다시 녹화해 대조한다(`t_ms` 제외).
       `<TerminalReplay>` 가 랜딩 C-3 에 섰고 오른쪽 Roadmap 미니 패널은 왼쪽 줄을 읽어서 바뀐다

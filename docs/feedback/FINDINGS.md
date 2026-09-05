@@ -39,7 +39,7 @@
 - **고칠 방향**: 터미널 재생 컴포넌트는 **PLAN P5 첫 행**이 만든다 — 그 바퀴에 랜딩 C-3 을
   같이 넣는다 (`fixtures/replay/*.json` 의 `[{t_ms,text}]`). 썸네일은 production 캡처가 생긴
   뒤다 (P5 둘째 행). ⚠ 캡처 없이 목업 그림을 넣지 마라 — 화면에 없는 것을 보여 주는 셈이다.
-- **상태**: ✅ 62바퀴 — 터미널 재생(C-3)이 섰다. 녹화 `fixtures/replay/sync.json` 은 관통 sync 단계가
+- **상태**: ✅ 62바퀴 `8c53a89` — 터미널 재생(C-3)이 섰다. 녹화 `fixtures/replay/sync.json` 은 관통 sync 단계가
   배포되는 번들을 돌려 남긴 stdout 17줄이고(손으로 쓴 줄 0) 관통이 매번 다시 녹화해 대조한다.
   `<TerminalReplay>` + Roadmap 미니 패널(근거 0/3 → 1/3 · 씨앗의 PL-M1). 시험 15개
   (`web-terminal-replay.test.ts`). ⚠ **썸네일(C-2)은 그대로 없다** — production 캡처가 생기면
@@ -3200,7 +3200,7 @@
   하면 위 liveness 시험이 빨개진다 — **그때 시험을 고치면서 이 항목을 닫아라.**
   (SPEC §14 절삭 순서 4번이라 일정이 밀리면 잘릴 수도 있다. 잘리면 그 결정을 여기 적어라)
 - **상태**: ✅ 61바퀴 (템플릿 1.2 → 1.3 · `DOCS` 표의 거울 문서 `agents`·`cursor` · liveness 시험이
-  `PACK_TARGETS` 를 돌며 「타깃마다 파일이 나온다」를 잰다 · 커밋은 62바퀴가 올렸다 — 아래 해시)
+  `PACK_TARGETS` 를 돌며 「타깃마다 파일이 나온다」를 잰다 · 커밋은 62바퀴가 올렸다 — `2a1db06`)
 
 ### 8. ✅ workflow 항목이 없는 프로젝트에는 진행 보고 규칙이 안 나간다   [구멍]
 - **증상**: SPEC §4.3 의 고정 텍스트(진행 보고 CLI 사용법)는 `.claude/rules/workflow.md`
