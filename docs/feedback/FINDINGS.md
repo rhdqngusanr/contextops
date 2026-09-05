@@ -29,6 +29,34 @@
 
 ## 다음에 고칠 것
 
+### 125. **scan 단계의 「env 값 0건」 검사가 잰 값이 0개다** — 픽스처 규칙이 값을 금지한다   [구멍]
+- **증상**: `plugin/contextops/scripts/walkthrough-scan.ts` 는 픽스처 `.env.example` 의 **값**이 `scan.json` 에
+  없는지 재는데, 그 파일은 `tools/fixtures.mjs` ③(「.env.example 에 값이 0건」)이 **값을 금지**한다. 그래서
+  `envLeaked` 는 늘 빈 배열이고 검사는 **아무것도 안 재고** 초록이다 (124 와 같은 종류 · 다른 단계).
+- **근거**: 64바퀴 직접 읽음 — `walkthrough-scan.ts:42-51` (값 길이 ≥ 8 만 센다 · 픽스처 값은 전부 빈 문자열) ·
+  `tools/fixtures.mjs:144-156` · `.ci/logs/walkthrough/scan.txt` 의 「env 값 0건 (P1)」.
+- **정본**: `docs/SPEC.md` §8.3 · §11 · P1
+- **왜 고장이 아닌가**: 스캐너가 값을 안 읽는 것은 사실이고(`scan.ts` 는 `.env*` 에서 키만 꺼낸다 · 단위 시험이 있다),
+  관통은 초록이다. 틀린 것은 「관통이 그걸 **잰다**」는 주장이다.
+- **고칠 방향**: 124 와 같게 — 픽스처를 임시 폴더에 복사해 값이 든 `.env` 를 심고 `scan --dir <임시>` 로 돌린 뒤,
+  심은 값이 산출물에 없고 키는 있는지 본다. **잰 값이 0개면 FAIL.** ⚠ 픽스처 `.env.example` 에 값을 넣는 쪽은
+  고르지 마라 — fixtures.mjs ③ 이 그걸 막는 이유(저장소에 secret 을 들이지 않는다)가 맞다.
+- **상태**: 대기 (주인은 PLAN **P5 둘째 행** 「보안 캡처 증거」 — `docs/evidence/2026-09-06-p1-payload/p1-payload.md` §4·§7 이 이 구멍을 적어 두고 있다)
+
+### 124. ✅ **payload 단계의 「env 값 0건」 검사가 잰 값이 0개였다**   [구멍]
+- **증상**: `apps/web/scripts/walkthrough-payload.ts` 의 「env 값이 payload 에 0건 (P1)」은 픽스처 `.env.example` 의
+  값만 재는데 그 파일은 값이 0건이어야 한다(`tools/fixtures.mjs` ③). **잰 값이 0개**인 채로 63바퀴 내내 초록이었다 —
+  loop/PROMPT.md ④2-B 의 「정의만 있고 아무 일도 안 하는」 검사.
+- **근거**: 64바퀴 직접 읽음 — 예전 `walkthrough-payload.ts:216-226` (`.filter(value => value.length >= 8 …)` · 값 전부 빈 문자열) ·
+  `fixtures/paylab-api/.env.example` (17개 키 · 값 0).
+- **정본**: `docs/SPEC.md` §3.1 · §11 · P1
+- **왜 고장이 아닌가**: 관통은 초록이고 실제로 값이 나간 적도 없다. 틀린 것은 「잰다」는 주장이다.
+- **상태**: ✅ 64바퀴 (커밋 해시는 STATUS 64바퀴 절) — 관통이 임시 저장소에 값이 든 `.env` 를 심는다(`PLANTED_ENV` ·
+  `PSP_A_API_KEY` 값 + `.env` 에만 있는 `SENTRY_DSN`). 검사는 **잰 값이 0개면 FAIL** 이고 detail 에 「잰 값 N개」를 찍는다.
+  `scan_summary` 검사가 심은 키 이름이 나갔는지도 본다(스캐너가 그 파일을 열어 키만 꺼냈다는 증거). 산출물에 나간
+  body 3건을 그대로 남긴다(`sent`) — `docs/evidence/2026-09-06-p1-payload/` 가 그것을 읽는다. 실측: 잰 값 2개 · 0건 ·
+  env 키 14 → 15. ⚠ scan 단계의 같은 구멍은 **125** 로 남겼다.
+
 ### 123. ✅ 랜딩의 **「어떻게 동작하나요」에 썸네일이 없고 터미널 재생(§10.4)이 없다**   [격차]
 - **증상**: DESIGN_BRIEF 화면 1 C-2 는 각 스텝 아래 **실제 화면 썸네일**, C-3 은 타이핑되는
   터미널 + 같은 타임라인의 Roadmap 미니 패널을 적는데, 랜딩 v1 은 글 세 단이고 C-3 절은 없다.

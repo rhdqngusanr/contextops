@@ -5,13 +5,160 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 62바퀴 · (이 커밋)_
+_마지막 갱신: 2026-09-06 · 루프 64바퀴 · `(아래 커밋)`_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴는 둘을 했다.** ① 61바퀴가 CI 도중에 끊긴 채 **커밋하지 못한** 거울 문서 작업을 같은
+**이번 바퀴는 둘을 했다.** ① 63바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 데모 리셋 작업을 같은 트리에서
+전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`f15c650`) — 58·59·60·61·63 **다섯 바퀴**다 (아래 「밟은 함정」).
+② `docs/PLAN.md` **P5 둘째 행의 둘째 조각 — 보안 캡처 증거의 코드 쪽 절반**을 만들었다. 관통 7단계 초록 · 고장 0 이라
+④3 의 ② 로 갔고, 그 행에서 루프가 계정 없이 할 수 있는 조각이 이것이었다. 그 행의 나머지(Vercel 연결 · 첫 리셋 ·
+네트워크 탭 캡처 · fresh install)는 🙋 다.
+
+🔴 **잰 것 — P1 을 「주장」이 아니라 관통 산출물에서 나온 표로 읽을 수 있다. 그리고 그 표의 한 줄이 거짓이었다.**
+
+| | 전 | 후 |
+|---|---|---|
+| P1 을 사람이 읽는 문서 | **0** (관통 로그와 `.ci/*.json` 에만 · 관통마다 지워진다) | `docs/evidence/2026-09-06-p1-payload/p1-payload.md` + 관통 산출물 둘 복사 |
+| 「어떤 필드가 나갔나」 | 스키마를 읽어야 안다 | payload 단계가 **나간 body 3건을 산출물에 그대로 남긴다** (`sent` · `finish(extra)`) — 문서 §2 가 그것을 읽는다 |
+| 나가는 body 4종의 **없는 칸** | 어디에도 표가 없었다 | 문서 §1 표 — 엔드포인트 · 나가는 것 · **없는 것** · 누가 잰다 (payload ①②③⑤ · sync 「P1」) |
+| 「env 값이 payload 에 0건」 검사 | **잰 값 0개** — 픽스처 `.env.example` 은 값이 0건이어야 해서(`fixtures.mjs` ③) 늘 빈 배열이었다 | 관통이 임시 저장소에 값이 든 `.env` 를 심는다(`PLANTED_ENV` 2개) · **0개면 FAIL** · detail 「잰 값 2개」 |
+| 스캐너가 `.env` 를 열어 **키만** 꺼냈다는 증거 | 없음 (`.env.example` 의 키가 나갔다는 것만) | `.env` 에만 있는 `SENTRY_DSN` 이 body 에 있다 — env 키 14 → 15 |
+| Memory · transcript 를 읽는 플러그인 코드 | 셈 안 함 | `transcript` · `.claude/projects` · `memory` 를 `grep -rni` → **0곳** (문서 §6) |
+| payload 단계 검사 | 10 | 10 (둘을 갈아 끼웠다 — 수는 같다 · 재는 것이 달라졌다) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`(아래 커밋)`) |
+
+🔴 **「정의만 있고 아무 일도 안 하는 검사」를 관통 안에서 찾았다 (④2-B).** 「env 값이 payload 에 0건 (P1)」은 63바퀴 내내
+초록이었는데 **잰 값이 0개**였다. 두 게이트가 서로를 무효화한 것이다 — fixtures.mjs ③ 은 픽스처에 값을 금지하고(옳다),
+payload 검사는 그 픽스처의 값을 찾는다(그래서 늘 없다). 눈으로는 절대 안 잡힌다 — 로그에 `OK env 값이 payload 에 0건` 이
+찍히니까. 고친 방향은 픽스처를 건드리지 않고 **관통이 임시 사본에 값을 심는 것**이다. 같은 구멍이 scan 단계에도 있다 —
+FINDINGS 125 로 남겼다(다음 바퀴).
+
+🔴 **증거 문서는 못 말하는 것을 §7 에 적었다.** 배포에서 찍은 것이 아니다(소켓은 진짜 · 서버는 관통의 짧은 것 · DB 는 PGlite) ·
+scan 단계의 env 검사는 아직 0개 · `body` 한 줄에 사람이 코드를 붙여 넣으면 계약은 못 막는다(2,000자 상한만 · Skill 의 규칙이
+막는다). 셋째는 KNOWN_LIMITATIONS 후보다 — P6 둘째 행에서.
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-p1-payload/walkthrough-payload.json` 의 `sent` 3건: batch-draft 의 `items[0]`
+은 id·title·body(한 줄)·scope·priority·source_refs(경로·줄)·tags·confidence·type·data 이고 `scan_summary.excluded` 가
+`.env (키 이름만 읽었다 — 값은 안 읽는다)` 라고 스스로 말한다. progress 는 경로·줄만, proposals 는 근거 경로·줄만.
+심은 값 두 개(`sk_live_PLANTED…` · `https://PLANTED…`)는 세 body 어디에도 없다.
+
+**다음 바퀴의 일 — FINDINGS 125**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **125 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P5 둘째 행**(지금 열려 있는 맨 위 행 중 루프가
+할 수 있는 것)이고, 이 바퀴가 그 행에서 만든 증거 문서의 §4 가 「아직 잰 값 0개」라고 적어 둔 그 줄이다. ④3 ②의
+「그 행을 할 때 같이 닫는다」에 해당한다.
+
+> **125 를 닫는 법** — `plugin/contextops/scripts/walkthrough-scan.ts` 가 픽스처를 임시 폴더에 복사하고 값이 든 `.env` 를
+> 심은 뒤 `scan --dir <임시>` 로 돌린다. 심은 값이 `scan.json` 에 없고 키는 있는지 — **잰 값이 0개면 FAIL**.
+> payload 단계(`apps/web/scripts/walkthrough-payload.ts` 의 `PLANTED_ENV`)가 한 것과 같다 — 심는 값 표를 둘이 따로 들면
+> 갈라지니 하나로 올릴지 그때 판단해라(둘째 사용자가 생겼다). 끝나면 `p1-payload.md` §4·§7 의 ⚠ 줄을 지운다.
+> 그 다음은 P5 둘째 행의 나머지가 전부 🙋 라 **P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS) 중 README 다 —
+> FINDINGS 122 의 🙋 URL 이 없어도 본문은 쓸 수 있고, KNOWN_LIMITATIONS 에는 위 §7 셋째 줄이 들어간다.
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3).
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+---
+
+
+### 지난 바퀴 (63) — 데모 리셋 · GET /cron/demo-reset · 시드를 제품 코드로 (PLAN P5 둘째 행 ① · `f15c650`)
+
+
+**63바퀴는 `docs/PLAN.md` P5 둘째 행의 첫 조각 — Cron 이 부르는 데모 리셋 문**을 만들었다
+(FINDINGS 120 닫음). 관통은 7단계 866 검사 초록 · 고장 0 이라 ④3 의 ② 로 갔다 — PLAN 의 `- [ ]`
+중 위의 셋은 사람이 막고 있고(🙋 Supabase · 🙋 Anthropic 키 · GATE 3), P5 둘째 행에서 루프가
+계정 없이 할 수 있는 조각이 이것이었다. 그 행의 나머지(Vercel 연결 · 보안 캡처 · fresh install)는
+🙋 다.
+
+🔴 **잰 것 — 데모를 배포 DB 에 심는 문이 생겼고, 자물쇠 뒤에 있으며, 두 번 돌려도 하나다.**
+
+| | 전 | 후 |
+|---|---|---|
+| 데모를 심는 길 | `scripts/demo-server.ts`(PGlite · 개발 기계) 하나 | + **`GET /api/v1/cron/demo-reset`** — 배포 DB 에 **지우고 다시 심는다** (`lib/demo/reset.ts`) |
+| 시드가 사는 곳 | `scripts/seed.ts` · `scripts/demo-seed.ts` (`test/helpers/db` 의존 — 120 의 「유일한 걸림돌」) | `src/lib/demo/seed.ts` · `seed-demo.ts` — `src/` 에서 `test/`·`scripts/` import **0** (시험이 센다) |
+| `req/params/dataOf` 의 정본 | `test/helpers/db.ts` | `src/lib/demo/inproc.ts` — 시험 도우미는 다시 내보내기만 |
+| 세션 서명 | `signGuestJwt` (게스트 한 곳) | `signSessionJwt` — 둘째 사용자(시드)가 생겨 올렸다 · 없는 claim 은 안 적는다 |
+| 자물쇠 | — | `CRON_SECRET` (`lib/api/cron.ts`) — 없음·틀림·세션 토큰·기기 토큰 전부 **401** · `timingSafeEqual` |
+| 팀을 통째로 지우는 자리 | **0곳** (FK cascade 없음 · slug 전역 유일) | `lib/demo/teardown.ts` — `PROJECT_SCOPED` 11표 순서 · 시험이 「`project_id` 가진 표가 전부 목록에 있나」를 스키마와 대조 |
+| 심다가 던지면 | — | 다시 지운다 → `/demo/session` 404 (`demo-reset-rollback.test.ts` — 팀이 생긴 **뒤에** 던지게 갈아 끼워 잼) |
+| Cron | `vercel.json` 없음 | `apps/web/vercel.json` — health `0 */6 * * *` · demo-reset `0 18 * * *`(= 03:00 KST · 시험이 `DEMO_TENANT.resetAt` + `resetUtcOffsetHours` 로 셈) · 경로마다 `route.ts` 실존 |
+| 픽스처가 배포 함수에 | — | `next.config.ts` `outputFileTracingIncludes` + `fixturesRoot()` 가 cwd 에서 위로 찾는다 (못 찾으면 **그 줄을 가리키며 던진다**) |
+| 웹 시험 | 551 | **565** (CI test 층 실측 · `demo-reset` +13 · `demo-reset-rollback` +1) |
+| 리셋 한 번 (PGlite) | — | 첫 심기 292ms · 리셋 243ms · 팀 1 · 기기 12 · 사람 7 — **두 번 뒤에도 같다** |
+| CI | — | principles OK · typecheck · test · build · walkthrough · docs → GREEN (`f15c650`) |
+
+🔴 **GET 으로 상태를 바꾸는 유일한 문이다.** Vercel Cron 은 GET 으로만 부른다. 이 저장소의
+게스트 읽기 전용은 「GET 은 안 바꾼다」(`route.ts` 의 `SAFE_METHODS`)에 기대므로, 예외를
+`/cron/` 밑에 격리하고 주체(`ctx.actor()`)가 아니라 secret 으로 잠갔다 — 사람·기기·게스트 토큰은
+전부 401 이다. `/cron/` 밖에 이런 문을 더 만들면 그 근거가 사라진다 (route 주석에 적었다).
+
+🔴 **지우고 심는다.** 심기만 하면 둘째 날 slug 가 겹쳐 400 이고, 「있으면 건너뛰기」로 두면
+심사위원이 어제 만진 흔적이 남는다. 지우기와 심기는 한 트랜잭션이 아니다(심기는 라우트 수십 번 ·
+각자 트랜잭션) — 그래서 「실패하면 지운다」가 대신 서 있다. **반쯤 심긴 데모보다 없는 데모가 낫다** —
+없으면 `/demo/session` 이 404 로 말하고, 반쯤이면 링크는 열리는데 화면이 빈다.
+
+🔴 **시드가 `app/` 의 라우트를 import 한다 — 방향이 거꾸로로 보이지만 그게 맞다.** 시드는 화면·
+플러그인과 같은 **라우트의 클라이언트**다. 핸들러 안의 로직을 베껴 DB 에 넣으면 심어진 데모가
+제품이 만드는 것과 다른 모양이 되고 화면에서는 안 보인다. 단 `lib/api/*` 가 시드를 import 하는
+날 순환이 된다 — 부르는 쪽은 `cron/demo-reset` 라우트와 도구뿐이어야 한다 (seed.ts 머리).
+
+🔴 **`teardown.ts` 는 표다.** `project_id` 를 가진 표 11개를 FK 자식부터 늘어놓고 `for` 로 지운다.
+새 표를 더한 사람이 여기를 잊으면 리셋이 FK 위반으로 500 이 되는데, 그건 배포에서야 보인다 —
+그래서 시험이 스키마의 표 목록과 이 목록을 **양방향**으로 대조한다 (「표에 한 줄」 · CLAUDE.md).
+`project_id` 가 없는 자식 셋(pack_files · context_item_revisions · source_document_versions)과
+순환 FK 둘(`official_version_id` · `current_version_id`)은 본문이 먼저 끊는다.
+
+⚠ **배포에서 돌린 것이 아니다.** PGlite 위의 같은 라우트다. 못 잰 것 셋 — ① `/var/task` 에서
+`fixturesRoot()` 가 실제로 `fixtures/` 를 찾나(`outputFileTracingRoot` 가 모노레포 뿌리라 상대
+경로가 보존된다고 **믿고** 있다) ② Supabase 에서 리셋이 60초 안에 끝나나(라우트 ~70번 · PGlite 0.3초)
+③ Vercel 의 Root Directory 가 `apps/web` 이어야 `vercel.json` 이 읽힌다. 셋 다 🙋 첫 리셋에서 본다.
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-demo-reset/reset.txt` (`scripts/dump-demo-reset.ts`):
+secret 없음 → 401 「CRON_SECRET 가 없다 — Cron 문이 잠겨 있다」 · 틀림 → 401 · 맞음 → 200
+`{existed:false, official_version:"1.1.0", items:15, members:5, devices:12, reports:12, progress:6, proposals:4}`
+· `/demo/session` 201 · 둘째 → `existed:true` 같은 수 · DB 팀 1 · 기기 12 · 사람 7 그대로.
+응답에 `@`·`eyJ` 0 (이메일·토큰 없음 — 시험도 센다).
+
+
+
+
+> **그 바퀴가 다음으로 지목한 것 = `docs/PLAN.md` **P5 둘째 행**의 남은 조각 중 루프가 계정 없이 할 수 있는 것 —
+> **보안 캡처 증거**. 관통 payload 단계가 매번 남기는 `.ci/walkthrough-payload.json`(업로드
+> payload 10검사 · 코드 본문 0건)과 scan 단계의 `.ci/walkthrough-scan.json` 을 `docs/evidence/` 로
+> 정리해 「서버는 코드 본문·secret·기억·transcript 를 받지 않는다」(P1 · 심사 첫 질문)를 **사람이 읽는
+> 문서**로 만든다 — 어떤 필드가 나갔고 어떤 필드가 **없는지**를 표로. ⚠ 새 코드를 만들 일이 아니다 —
+> 관통이 이미 재는 것을 **증거로 굳히는** 일이다. 캡처(네트워크 탭)는 🙋 배포 뒤.
+> 그것도 끝나면 P5 둘째 행의 나머지는 전부 🙋 라, 다음은 **P6 둘째 행**(제출서 · README ·
+> KNOWN_LIMITATIONS) 중 README 다 — FINDINGS 122 의 🙋 URL 이 없어도 본문은 쓸 수 있다.
+> ⚠ 만들기 전에 `docs/SPEC.md` §11 · §3.1 · §16 · §17 을 읽고 **코드에서 그 이름을 찾아라.**
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3).
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+> ⚠ 63바퀴는 CI GREEN 까지 가고 STATUS·PLAN·FINDINGS 를 다 쓴 뒤 **커밋하지 못한 채** 끝났다 —
+> 58·59·60·61 에 이어 **다섯 번째**다. 64바퀴가 같은 트리에서 전 층 CI(GREEN · 880)를 다시 돌려 그대로 올렸다
+> (`f15c650`). 증거 폴더는 UTC 날짜(`2026-09-05-demo-reset`)로 남아 있었다 — 63 의 「밟은 함정」은 「손으로 옮겼다」고
+> 적었지만 옮겨져 있지 않았다. 64 가 문서가 가리키는 `2026-09-06-demo-reset` 으로 옮겼다.
+
+
+---
+
+
+### 지난 바퀴 (62) — 터미널 재생 · 랜딩 C-3 (PLAN P5 첫 행 ③ · 행 닫음 · `8c3e8c5` `5b5b98b`)
+
+**62바퀴는 둘을 했다.** ① 61바퀴가 CI 도중에 끊긴 채 **커밋하지 못한** 거울 문서 작업을 같은
 트리에서 전 층 CI 를 다시 돌려(GREEN · 843) 그대로 올렸다 (`2a1db06`) — **58·59·60·61 네 바퀴
 연속**이다 (아래 「밟은 함정」). ② `docs/PLAN.md` **P5 첫 행의 마지막 조각 — 터미널 재생**을
 만들었다. **그 행이 닫혔다** (FINDINGS 123 닫음). 남은 `- [ ]` 는 P5 둘째 행부터다.
@@ -60,31 +207,8 @@ schema 를 인라인해서 `bundle.test.ts` 가 「소스에서 방금 만든 �
 `보고 1건 · v1.0.0 기준` 이다. accent 1 · `<button>` 0 · 「실시간」·「영상」 0.
 ⚠ 브라우저 캡처는 없다 — **타이핑이 실제로 움직이는가**는 아래 「눈 판정 대기」.
 
-**다음 바퀴의 일 — FINDINGS 없음**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
-
-🔴 **「없음」인 이유는 큐가 비어서가 아니다 — 다음 일이 FINDINGS 가 아니라 PLAN 행이라서다**
-(54~61바퀴와 같은 이유다. 그 줄의 모양을 넓히는 것이 FINDINGS **109** 다).
-
-> **다음 바퀴의 일 = `docs/PLAN.md` **P5 둘째 행**(Vercel production · Cron · 보안 캡처 증거 ·
-> fresh install) 중 **루프가 계정 없이 할 수 있는 조각 하나**. 권한다: **FINDINGS 120** —
-> 데모 시드를 부르는 문을 **제품 코드 쪽에** 두고(`test/helpers` 의존을 끊는다 — 지금 그 의존이
-> 유일한 걸림돌이다) `vercel.json` 의 cron 이 03:00 에 부르게. ⚠ 누구나 부를 수 있으면 안 된다 —
-> Cron 비밀이나 owner 토큰 뒤에. 그 문이 생기면 120 을 닫고, `/demo` 가 production 에서도 열릴
-> 재료가 갖춰진다 (Vercel 연결 자체는 🙋).
-> 둘째 후보: **보안 캡처 증거** — 관통 payload 단계가 이미 남기는 `.ci/walkthrough-payload.json`
-> 을 `docs/evidence/` 로 정리해 「업로드에 코드 본문 0건」을 문서로 (심사 첫 질문).
-> ⚠ 만들기 전에 `docs/SPEC.md` §9(게스트 데모) · §10.3 · §11 을 읽고 **코드에서 그 이름을 찾아라.**
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3).
-- 대장의 대기(122 · 121 · 120 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+**그 바퀴가 다음으로 지목한 것**: PLAN P5 둘째 행 중 루프가 계정 없이 할 수 있는 조각 —
+FINDINGS 120(데모 시드를 제품 코드로 · Cron 뒤에)을 권했다. 63바퀴가 그것을 했다.
 
 ---
 
@@ -239,144 +363,7 @@ Node 가 `.css` 를 몰라 loader 훅으로 빈 모듈을 끼운다). 덤프가 
 
 
 
-### 지난 바퀴 (58) — 게스트 데모 테넌트 · 읽기 전용 게스트 (PLAN P4 둘째 행 ② · `7510e07`)
 
-> ⚠ 58바퀴는 CI GREEN 까지 확인하고 **커밋 전에 끝났다.** 59바퀴가 같은 트리에서 CI 를 다시
-> 돌려(GREEN) 그대로 올렸다 — 그래서 해시가 59바퀴의 것이다. **멈춘 자리에 커밋이 없으면
-> 그 작업은 사라진다** (loop/PROMPT.md ⑤) — 이번엔 다음 바퀴가 주웠지만, 그건 운이다.
-
-**58바퀴는 `docs/PLAN.md` **P4 둘째 행의 둘째 조각**을 만들었다 — **게스트 데모 테넌트**다.**
-링크 하나(`/demo`)로 들어와서 **읽기만** 하는 길이 처음으로 끝까지 뚫렸다.
-그 행의 완료 기준은 GATE 3(시크릿 창에서 링크만으로 3분 체험)이고, 남은 것은
-**랜딩 v1** 과 `/demo/ai-once`(P3)다.
-
-🔴 **잰 것 — 심사위원이 링크를 열면 볼 것이 있다.**
-
-| | 전 | 후 |
-|---|---|---|
-| `/demo` | 없음 (404) | 세션 → `/t/demo/p/paylab-api/context` 로 보낸다 |
-| 데모 테넌트를 심는 문 | **0곳** | `fixtures/seed/demo.json` + `scripts/demo-seed.ts` |
-| 게스트가 보는 기기 | — | **12대** (applied 9 · outdated 2 · manual 1 — DESIGN_BRIEF §4 그대로) |
-| 게스트가 보는 제안 | — | **4장** (published · approved · rejected · submitted) |
-| 발행 | — | v1.0.0 → **v1.1.0** (승인된 제안이 실제로 Pack 을 바꿨다 · 해시가 다르다) |
-| 주체 종류 | 사람 · 기기 | **사람 · 기기 · 게스트** (`ACTOR_RULES` — 새 축 `writes`) |
-| 게스트의 쓰기 | — | **전부 403** (막는 자리는 `route.ts` 하나) |
-| 웹 시험 | 488 | **505** |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN |
-
-🔴 **57바퀴가 「정하고 시작하라」고 남긴 질문에 답했다 — 읽기 전용은 「등급」이 아니라
-「주체 종류」다.** 고른 것은 셋째 길이다: `ROLE_RANK` 에 칸을 파지도 않았고, 데모 팀에
-그냥 member 를 만들지도 않았다. **게스트는 데모 팀의 member 이면서 주체 종류가 다르다.**
-- ★ 왜 등급이 아닌가 — 등급을 파면 **모든 GET 라우트가 요구 등급을 같이 낮춰야** 한다
-  (지금은 읽기도 전부 `'member'` 다). 서른 곳 중 하나만 안 낮추면 게스트가 그 화면에서만
-  빈손이 되고, **반대로 하나를 잘못 낮추면 P1 의 방어선 옆에 구멍**이 난다.
-- ★ `ACTOR_RULES` 에 축을 하나 더하니 **라우트는 한 줄도 안 고쳤다.**
-  막는 자리는 `lib/api/route.ts` 의 `refuseWrite()` 하나이고 기준은 **HTTP 안전 메서드**다.
-  ⚠ 그리고 그것이 `ctx.actor()` 안이라 **body 를 읽기 전에** 끊긴다 — 잘못된 body 를
-  실어 보내도 400 이 아니라 403 이다 (시험이 그것을 잰다).
-- ⚠ 게스트가 부를 쓰기 문이 생기면(§7.4 `POST /demo/ai-once`) **그 라우트 이름 하나만**
-  예외로 적어라. 「게스트도 POST 할 수 있다」로 넓히면 이 검사가 사실상 사라진다.
-
-🔴 **세션은 쿠키가 아니라 로그인과 같은 자리다** (SPEC §9 를 코드에 맞춰 고쳤다).
-저장 자리를 하나 더 만들면 로그아웃이 한쪽만 지우고 `Authorization` 조립이 두 갈래가 된다.
-게스트도 **진짜 세션으로 진짜 라우트**를 지난다 — 다른 것은 못 바꾼다는 것뿐이다.
-게스트 토큰은 `sub` 하나로 갈린다(`DEMO_GUEST_SUBJECT`) — Supabase 의 sub 는 uuid 라
-진짜 로그인과 절대 안 겹친다. **이메일은 안 실린다** (payload 를 열어 시험이 센다).
-
-🔴 **없으면 404 라고 말한다.** 데모 팀·프로젝트·게스트 행·그 소속이 **넷 다** 있어야
-세션이 나간다. 「일단 토큰은 주고 화면에서 빈 목록을 보게」 하면 심사위원이 보는 것은
-빈 앱이고 **원인은 화면에 안 적힌다.**
-
-🔴 **덤프가 시험이 못 잡은 것을 잡았다** (`docs/evidence/2026-09-06-demo/demo.txt`).
-화면 9 의 「팀원」 칸과 화면 6 의 「작성자」 칸에 **`demo-member-haeun` 같은 sub 가
-그대로** 그려지고 있었다. 원인은 `sessionActor()` 가 로그인마다 `users.name` 을
-**claims 로 덮기** 때문이다 (진짜 OAuth 도 그렇게 돈다 — 그게 이름의 출처다).
-시드가 이름을 행에 심어도 기기 토큰을 발급받는 순간 지워졌다. **이름의 정본은 픽스처이고
-그 이름이 claims 를 타고 들어가야 한다** (`memberJwt()`). 시험으로 잠갔다.
-⚠ 이 덤프는 앞선 덤프들과 다르다 — 손으로 만든 props 가 아니라 **진짜 게스트 토큰으로
-진짜 라우트**를 부른다. 그래서 답하는 물음이 「컴포넌트가 예쁜가」가 아니라
-**「링크를 열면 볼 것이 있는가」**다.
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-demo/demo.txt`
-(`apps/web/scripts/dump-demo.tsx`). 요약이 `기기 12 · applied 9 · outdated 2 · manual 1`
-이고, outdated 두 대는 **앞 버전(v1.0.0)** 을 보고했고 「4일 전」·「5일 전」이다.
-로드맵은 `PL-M1 · done_candidate` 에 [완료 확인 대기] 가 서고 **로드맵 외 1건**이 있다
-(`PROGRESS_STATUSES.none` 이 화면에 서는 자리).
-
-🔴 **재다가 셋 나왔다** — **121** 게스트가 member 버튼을 눌러 받은 403 을 화면이
-「이 작업은 팀 owner만 할 수 있습니다」로 옮긴다(게스트에겐 거짓말이다) ·
-**120** 데모를 **production 에 심는 문이 없다**(지금은 개발용 하네스뿐 · 주인은 P5) ·
-**119** 데모의 항목이 15개다(§10.3 은 60을 적는다 — 픽스처를 넓히는 것이 정답이고
-데모용으로 지어내면 관통과 갈린다).
-
-**그 바퀴가 다음으로 지목한 것**: PLAN P4 둘째 행의 마지막 조각 — 「랜딩 v1」. 59바퀴가 했다.
-
-
-
-### 지난 바퀴 (57) — 웹 화면 9 (Sync) · 이름을 내는 문 (PLAN P4 둘째 행 ① · `8c3e8c5` `aee5de2`)
-
-**이번 바퀴는 `docs/PLAN.md` **P4 둘째 행의 첫 조각**을 만들었다 — 웹 **화면 9(Sync)** 다.**
-그 행의 완료 기준은 GATE 3(시크릿 창에서 링크만으로 3분 체험)이라 한 바퀴에 안 끝난다.
-56바퀴가 지목한 대로 **표부터** 했다.
-
-🔴 **잰 것 — 발행한 규칙이 각 기기에 실제로 닿았는지가 화면에서 보인다.**
-
-| | 전 | 후 |
-|---|---|---|
-| `GET …/sync-status` 를 읽는 화면 | **0곳** | `…/sync` (좌측 내비에 탭 한 줄) |
-| `SYNC_CHIP` 5종을 그리는 자리 | **0곳** (정의만 있었다) | 화면 9 의 표 · 요약 · 각주 |
-| uuid → **이름**을 내는 문 | **0곳** | `lib/api/user.ts` (`{id,name}` 둘뿐 · 이메일 없음) |
-| 화면 6 의 「작성자」 칸 | 없었다 | 이름으로 그린다 (FINDINGS **113** 닫음) |
-| 「Realtime」 상수 | `ROADMAP_POLL_MS` (화면 8 전용 이름) | `REALTIME_POLL_MS` (**둘째 사용자**) |
-| 웹 시험 | 467 | **488** |
-| 관통 검사 | 741 | **762** |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough **762** · docs → GREEN |
-
-🔴 **56바퀴가 「정하고 시작하라」고 남긴 질문에 답했다 — 이름을 내는 문을 만들었다.**
-화면 6 과 화면 9 가 **같은 문**을 기다리고 있었다 (FINDINGS 113). 그 문의 모양이 이번
-바퀴의 결정이다: **나가는 칸은 `{id, name}` 둘뿐이고 이메일은 없다.** ★ 왜 문을 하나로
-두나 — 라우트마다 `select` 를 손으로 적으면 어느 라우트가 이메일까지 실어 보내게 되고,
-**그 응답은 이미 브라우저에 도착한 뒤라 되돌릴 수 없다.** 여기 한 줄을 더하면 모든 화면이
-같이 넓어진다.
-⚠ **P5 와 헷갈리지 마라.** 금지된 것은 개인 생산성 점수·순위지 「누가 냈나」·「어느
-팀원의 노트북이 낡았나」가 아니다 — 그건 팀이 할 일을 정하는 사실이다. 시험이 표에서
-`점수`·`순위`·`횟수`·`기여` 라는 낱말을 센다.
-
-🔴 **`user_id` 를 `user` 로, `author_id` 를 `author` 로 바꿨다 — 더한 게 아니라 대신했다.**
-둘 다 실으면 같은 사람이 두 칸에 앉고 화면은 어느 쪽을 읽을지 고르게 된다.
-⚠ 제안의 join 은 **left** 다 (`author_id` 가 nullable) — inner 로 두면 주인 없는 제안이
-목록에서 **조용히 사라진다**. 기기의 join 은 **inner** 다 (`devices.user_id` 는 NOT NULL
-FK) — left 로 두면 있을 수 없는 갈래를 화면이 그려야 한다. 둘이 다른 것이 실수가 아니다.
-
-🔴 **표 셋이 늘었고 시험이 잠근다.** `SYNC_ORDER`(급한 것이 위 — outdated → modified →
-보고 없음 → manual → applied) · `SYNC_APPLY`(플러그인 / zip 수동 / 모름) ·
-`SYNC_MEANING`(다섯 상태의 **뜻**). `SYNC_MEANING` 은 `chips.tsx` 로 올렸다 — 툴팁과
-화면 9 각주가 **같은 표**를 읽는다. 56바퀴까지는 `applied` 하나만 문장이 있었고 나머지
-넷은 칩만 보고 뜻을 짐작해야 했다.
-⚠ `SYNC_APPLY` 만 표 시험의 ②(「값이 전부 다르다」)를 **안 쓴다** — 방식은 셋뿐이고 상태
-다섯이 그 셋에 모인다. 전부 다르라고 강요하면 **없는 방식을 지어내게 된다.** 대신
-갈려야 하는 자리(manual ≠ applied · unknown ≠ applied)를 직접 잰다.
-
-🔴 **없는 것을 지어내지 않는다.** 보고가 없는 기기는 버전 `—` · 「아직 보고가 없습니다」 ·
-적용 방식 `—` 다. `v0.0.0` 을 채우면 「낡은 버전을 쓰는 기기」로 보이고, 적용 방식에
-「플러그인」을 적으면 **화면이 사실이 아닌 것을 말한다** (한 번도 안 왔으니 모른다).
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-sync/sync.txt` (모양 20여 개 ·
-`apps/web/scripts/dump-sync.tsx`). 🔴 **덤프가 재게 해 준 것**: 13대짜리 팀에서 표가
-`outdated 2 → 보고 없음 1 → manual 1 → applied 9` 순으로 서고, 상단 요약이
-`기기 13 · applied 9 · outdated 2 · manual 1 · 보고 없음 1` 로 DESIGN_BRIEF §4 의 예시와
-맞는다. **그리고 덤프에서 새 격차가 보였다** — 아래 118.
-
-🔴 **재다가 셋 나왔다** — **118** 표가 `v1.1.0 · outdated` 라고만 말하고 **공식 버전이
-무엇인지**는 어디에도 없다(무엇으로 맞춰야 하는지 모른다 · 화면 8 은 그 줄이 있다) ·
-**117** `POST …/ask` 가 0곳이라 질의창을 만들 문이 없다(§14 절삭 **1번**이라 자를 수 있다) ·
-**116** `decided_by` 는 아직 uuid 뿐이다(113 과 같은 종류 · 이제 join 한 번이지만 **그릴
-자리가 화면에 없다**).
-
-**그 바퀴가 다음으로 지목한 것**: PLAN P4 둘째 행의 남은 조각 — 「게스트 데모 · 랜딩 v1」.
-58바퀴가 그중 **게스트 데모**를 했다. 같이 던진 물음(「읽기 전용 게스트를 등급으로 만들지
-데모 팀에 진짜 member 를 만들지 정하고 시작해라」)에는 **셋째 길**로 답했다 — 게스트는
-데모 팀의 member 이면서 **주체 종류가 다르다** (`ACTOR_RULES` 의 `writes` 축).
 
 
 ---
@@ -683,6 +670,12 @@ FK) — left 로 두면 있을 수 없는 갈래를 화면이 그려야 한다. 
 
 ## 눈 판정 대기
 
+🔴 **데모 리셋 — 배포에서 돌린 적이 없다** (63바퀴 · 🙋 Vercel 연결 뒤). PGlite 위에서는 읽었다
+(`docs/evidence/2026-09-06-demo-reset/reset.txt`). 못 잰 것 셋: `/var/task` 에서 `fixturesRoot()`
+가 `fixtures/` 를 찾나(못 찾으면 500 + 로그에 `Error` 이름만 — 자세한 문구는 서버 로그의
+`unhandled` 줄이 아니라 **던진 문구**를 봐야 하니 Vercel Functions 로그를 열어라) ·
+Supabase 에서 60초 안에 끝나나 · Cron 로그에 200 이 찍히나. 첫 리셋 뒤 시크릿 창에서 `/demo`.
+
 🔴 **화면 1 의 터미널 재생 — 브라우저에서 움직이는 것을 본 적이 없다** (62바퀴). 덤프는 읽었다
 (`docs/evidence/2026-09-06-replay/landing.txt` — 17줄 순서 · 패널 1/3). 못 잰 것은 **사람이
 브라우저에서** 본다 (`pnpm --filter web demo:db` → `http://localhost:3000/` → 스크롤):
@@ -884,7 +877,7 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 |---|---|---|
 | Supabase 프로젝트 생성 · `DATABASE_URL` · **`SUPABASE_JWT_SECRET`** | 계정·결제가 필요하다 | **🔴 지금.** 코드는 다 됐다 — 값만 꽂으면 P1 첫 행이 닫히고 실제 로그인이 돈다. 필요한 값은 `apps/web/.env.example` 에 전부 있다 |
 | Anthropic API 키 (서버측 AI 용, 종량제) | 키 발급은 사람이 | P3 시작할 때 |
-| Vercel 프로젝트 연결 · 환경변수 | 계정 연결이 필요하다 | P5 |
+| Vercel 프로젝트 연결 · 환경변수 (**Root Directory `apps/web`** · `CRON_SECRET` · `SUPABASE_JWT_SECRET` · `DATABASE_URL`) → 첫 리셋 한 번 (`curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset`) → `/demo` 가 열리나 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처 한 장(P1 증거의 나머지 절반 · `docs/evidence/2026-09-06-p1-payload/` 옆에) | 계정 연결이 필요하다 | **🔴 지금.** 코드 쪽(Cron · 리셋 문 · `vercel.json`)은 63바퀴에, P1 증거의 코드 쪽은 64바퀴에 다 됐다 — 값만 꽂으면 데모가 production 에서 매일 03:00 KST 에 다시 선다 |
 | 실데이터 픽스처(`brain`) 공개 가능 여부 판단 | 제품 결정이다 | P5 (안 되면 paylab 만 · SPEC §14 절삭 6번) |
 
 ⚠ 루프는 위 항목을 **추측으로 진행하지 않는다.** 값은 `.env.local` 에만 산다 (P1).
@@ -896,6 +889,16 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 > 같은 벽에 두 번 부딪히면 `loop/PROMPT.md` ③ 의 규칙으로, 기계가 잴 수 있으면
 > `tools/principles.ps1` 의 검사로 올린다.
 
+- 🔴 **「잴 것이 없어서 초록」은 초록이 아니다.** payload 단계의 「env 값이 payload 에 0건」은 픽스처
+  `.env.example` 의 값을 찾았는데, 다른 게이트(`fixtures.mjs` ③)가 그 파일에 값을 **금지**한다 — 두 게이트가
+  서로를 무효화해 검사가 63바퀴 내내 0개를 재고 OK 를 찍었다 (FINDINGS 124 · 125). **「N 개를 재어 0건」처럼
+  잰 수를 detail 에 찍고, 0개면 FAIL 로 만들어라.** 로그에 OK 만 찍히는 검사는 눈으로 절대 못 잡는다.
+- 🔴 **다섯 바퀴(58·59·60·61·63) CI GREEN 까지 가고 커밋 없이 끝났다.** 63 은 STATUS·PLAN·FINDINGS 까지 다 쓴 뒤
+  끝났다. 그리고 63 의 함정 메모(「손으로 옮겼다」)는 **옮겨지지 않은 채**였다 — 적은 것과 디스크가 달랐다.
+  **적기 전에 `ls` 로 한 번 봐라.** 64 는 CI GREEN 직후 코드·PLAN·FINDINGS 를 첫 커밋으로, STATUS 를 둘째로 했다.
+- **`new Date().toISOString().slice(0, 10)` 은 UTC 날짜다.** KST 새벽에 돌린 덤프가 `docs/evidence/`
+  에 **어제 날짜** 폴더를 만들었다 (63바퀴 · 64바퀴가 옮겼다). 증거 폴더 이름은
+  `toLocaleDateString('sv-SE')` 로 — 다른 덤프 스크립트는 날짜를 손으로 박아서 이 함정이 없다.
 - 🔴 **네 바퀴 연속(58·59·60·61) CI GREEN 근처까지 가고 커밋 없이 끝났다.** 61 은 CI 가
   walkthrough 도중에 끊긴 채였다. 62바퀴는 **코드·PLAN·FINDINGS 를 CI GREEN 직후 첫 커밋으로**
   올리고 STATUS 는 둘째 커밋으로 했다 — 이 순서를 지켜라 (loop/PROMPT.md ⑤).

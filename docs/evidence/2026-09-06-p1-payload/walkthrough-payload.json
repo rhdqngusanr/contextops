@@ -1,0 +1,199 @@
+{
+  "at": "2026-09-05T20:35:12.618Z",
+  "planted_env_keys": [
+    "PSP_A_API_KEY",
+    "SENTRY_DSN"
+  ],
+  "sent": [
+    {
+      "path": "/api/v1/projects/{id}/context-items/batch-draft",
+      "body": {
+        "items": [
+          {
+            "id": "item_payments_module",
+            "title": "결제 모듈이 원장과 분리돼 있다",
+            "body": "결제 요청과 원장 기록이 서로 다른 모듈이다.",
+            "scope": {
+              "kind": "project"
+            },
+            "priority": 50,
+            "source_refs": [
+              {
+                "kind": "repository_path",
+                "repo": "paylab-api",
+                "path": "src/main.ts",
+                "start_line": 1
+              }
+            ],
+            "tags": [],
+            "confidence": "medium",
+            "type": "architecture",
+            "data": {
+              "component": "payments",
+              "responsibility": "결제 요청을 받아 원장에 남긴다",
+              "paths": [
+                "src/main.ts"
+              ]
+            }
+          }
+        ],
+        "repo": "paylab-api",
+        "scan_summary": {
+          "file_count": 48,
+          "languages": [
+            "json",
+            "prisma",
+            "typescript",
+            "yaml"
+          ],
+          "entrypoints": [
+            "src/main.ts"
+          ],
+          "infra_files": [
+            ".github/workflows/deploy.yml",
+            "docker-compose.yml",
+            "prisma/schema.prisma"
+          ],
+          "env_keys": [
+            "DATABASE_URL",
+            "LOG_LEVEL",
+            "NODE_ENV",
+            "PORT",
+            "PSP_A_API_KEY",
+            "PSP_A_BASE_URL",
+            "PSP_A_MERCHANT_ID",
+            "PSP_A_WEBHOOK_SECRET",
+            "PSP_B_API_KEY",
+            "PSP_B_BASE_URL",
+            "PSP_B_MERCHANT_ID",
+            "PSP_B_WEBHOOK_SECRET",
+            "SENTRY_DSN",
+            "SETTLEMENT_CRON",
+            "SETTLEMENT_TIMEZONE"
+          ],
+          "dependencies": [
+            "@nestjs/cli",
+            "@nestjs/common",
+            "@nestjs/config",
+            "@nestjs/core",
+            "@nestjs/platform-express",
+            "@prisma/client",
+            "@types/express",
+            "@types/node",
+            "class-transformer",
+            "class-validator",
+            "jest",
+            "prisma",
+            "reflect-metadata",
+            "rxjs",
+            "typescript"
+          ],
+          "excluded": [
+            ".contextops/",
+            ".env (키 이름만 읽었다 — 값은 안 읽는다)",
+            ".env.example (키 이름만 읽었다 — 값은 안 읽는다)"
+          ]
+        }
+      }
+    },
+    {
+      "path": "/api/v1/projects/{id}/progress",
+      "body": {
+        "milestone_id": "M1",
+        "status": "criterion_done",
+        "criterion": "결제 모듈이 분리된다",
+        "evidence": [
+          {
+            "path": "src/main.ts",
+            "start_line": 1,
+            "end_line": 40
+          }
+        ],
+        "summary": "결제 모듈을 분리했다",
+        "context_version": "unknown",
+        "source": "agent",
+        "client_event_id": "a55147b1-bd33-40ff-93d4-25bdc84244ab"
+      }
+    },
+    {
+      "path": "/api/v1/projects/{id}/proposals",
+      "body": {
+        "title": "결제 모듈 분리를 규칙으로 올린다",
+        "summary": "코드가 이미 그렇게 돼 있다.",
+        "items": [
+          {
+            "operation": "update",
+            "target_item_id": "item_payments_module",
+            "evidence": [
+              {
+                "kind": "repository_path",
+                "repo": "paylab-api",
+                "path": "src/main.ts",
+                "start_line": 1
+              }
+            ],
+            "reason": "코드에서 확인했다"
+          }
+        ],
+        "relates_to": [
+          "M1"
+        ],
+        "base_version_id": "22222222-3333-4444-8555-666666666666",
+        "client_request_id": "99210458-6a76-486d-be15-c0038f40bfb3"
+      }
+    }
+  ],
+  "stage": "payload",
+  "checks": [
+    {
+      "name": "scan 이 지난다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "upload-draft 가 지난다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "progress 가 지난다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "propose 가 지난다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "계약에 없는 키는 거절되고 요청이 아예 안 나간다 (P1)",
+      "ok": true,
+      "detail": "exit 2 · 새 요청 0건"
+    },
+    {
+      "name": "나간 요청 3건이 전부 업로드 계약을 지난다 (SPEC §3.1)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "픽스처 48개 파일의 본문이 payload 에 0건 (P1)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "env 값이 payload 에 0건 (P1)",
+      "ok": true,
+      "detail": "잰 값 2개 (심은 .env 2)"
+    },
+    {
+      "name": "기기 토큰이 body 에 0건",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "scan_summary 가 실제로 실려 나갔다 (키 이름만 · 심은 .env 의 키 포함)",
+      "ok": true,
+      "detail": "env 키 15개"
+    }
+  ]
+}

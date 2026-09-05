@@ -429,6 +429,13 @@
       `apps/web/vercel.json` 에 cron 둘(health 6시간 · demo-reset 18:00 UTC = 03:00 KST —
       시험이 `DEMO_TENANT.resetAt` 과 대조). 픽스처는 `next.config.ts` 의
       `outputFileTracingIncludes` 로 배포 함수에 싣는다. 시험 14개 (`demo-reset` · `-rollback`).
+      → ② **보안 캡처 증거의 코드 쪽 절반은 됐다** (64바퀴 · FINDINGS 124 닫음).
+      `docs/evidence/2026-09-06-p1-payload/p1-payload.md` — 관통 scan·payload·sync 단계가 매번 재는 P1 을
+      사람이 읽는 표로: 나가는 body 4종의 **있는 필드와 없는 필드** · 실제로 나간 body 3건의 필드 전부(관통
+      산출물 `sent` 그대로) · 계약 밖 키는 exit 2 · 요청 0건 · 48파일 본문 0건 · 심은 env 값 2개 0건 · 토큰 0건 ·
+      서버 로그 필드표 · Memory/transcript 읽는 코드 0곳. 🔴 고친 것: payload 단계의 env 값 검사가 **잰 값이 0개**
+      였다(픽스처 `.env.example` 은 값이 0건이어야 해서) → 관통이 임시 저장소에 값을 심고, 0개면 FAIL.
+      ⚠ scan 단계의 같은 구멍은 FINDINGS 125 (대기) · 브라우저 네트워크 탭 캡처는 🙋 배포 뒤.
       🙋 **남은 것은 전부 계정이 필요하다** — Vercel 연결(Root Directory `apps/web` ·
       `CRON_SECRET`·`SUPABASE_JWT_SECRET`·`DATABASE_URL`) → 첫 리셋을 손으로 한 번
       (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → `/demo` 가

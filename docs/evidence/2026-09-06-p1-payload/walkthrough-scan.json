@@ -1,0 +1,250 @@
+{
+  "repo": "paylab-api",
+  "files": [
+    {
+      "path": ".github/workflows/deploy.yml",
+      "language": "yaml"
+    },
+    {
+      "path": "docker-compose.yml",
+      "language": "yaml"
+    },
+    {
+      "path": "nest-cli.json",
+      "language": "json"
+    },
+    {
+      "path": "package.json",
+      "language": "json"
+    },
+    {
+      "path": "prisma/schema.prisma",
+      "language": "prisma"
+    },
+    {
+      "path": "src/app.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/errors.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/http-exception.filter.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/logger.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/mask.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/money.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/request-id.middleware.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/common/result.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/config/config.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/config/config.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/health/health.controller.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/health/health.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/ledger/entry.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/ledger/ledger.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/ledger/ledger.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/main.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/dto/create-payment.dto.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/dto/payment-response.dto.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/payment.controller.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/payment.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/payment.repository.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/payment.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/payment.types.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/payment/retry.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/prisma/prisma.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/prisma/prisma.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/psp/mock-psp.client.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/psp/psp.client.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/psp/psp.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/psp/psp.types.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/refund/dto/create-refund.dto.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/refund/policy.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/refund/refund.controller.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/refund/refund.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/refund/refund.repository.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/refund/refund.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/webhook/dto/webhook-event.dto.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/webhook/signature.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/webhook/webhook.controller.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/webhook/webhook.module.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/webhook/webhook.service.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "src/webhook/webhook.types.ts",
+      "language": "typescript"
+    },
+    {
+      "path": "tsconfig.json",
+      "language": "json"
+    }
+  ],
+  "summary": {
+    "file_count": 48,
+    "languages": [
+      "json",
+      "prisma",
+      "typescript",
+      "yaml"
+    ],
+    "entrypoints": [
+      "src/main.ts"
+    ],
+    "infra_files": [
+      ".github/workflows/deploy.yml",
+      "docker-compose.yml",
+      "prisma/schema.prisma"
+    ],
+    "env_keys": [
+      "DATABASE_URL",
+      "LOG_LEVEL",
+      "NODE_ENV",
+      "PORT",
+      "PSP_A_API_KEY",
+      "PSP_A_BASE_URL",
+      "PSP_A_MERCHANT_ID",
+      "PSP_A_WEBHOOK_SECRET",
+      "PSP_B_API_KEY",
+      "PSP_B_BASE_URL",
+      "PSP_B_MERCHANT_ID",
+      "PSP_B_WEBHOOK_SECRET",
+      "SETTLEMENT_CRON",
+      "SETTLEMENT_TIMEZONE"
+    ],
+    "dependencies": [
+      "@nestjs/cli",
+      "@nestjs/common",
+      "@nestjs/config",
+      "@nestjs/core",
+      "@nestjs/platform-express",
+      "@prisma/client",
+      "@types/express",
+      "@types/node",
+      "class-transformer",
+      "class-validator",
+      "jest",
+      "prisma",
+      "reflect-metadata",
+      "rxjs",
+      "typescript"
+    ],
+    "excluded": [
+      ".env.example (키 이름만 읽었다 — 값은 안 읽는다)"
+    ]
+  }
+}

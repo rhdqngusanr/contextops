@@ -40,6 +40,19 @@ const PROJECT = '11111111-2222-4333-8444-555555555555'
 const VERSION = '22222222-3333-4444-8555-666666666666'
 const REQUEST_ID = '00000000-0000-4000-8000-000000000000'
 
+//  🔴 임시 저장소에 **값이 든 `.env`** 를 심는다 — secret 유출 검사가 실제로 무언가를 재게.
+//  ★ 왜 — 픽스처의 `.env.example` 은 **값이 0건**이어야 한다 (`tools/fixtures.mjs` ③ 이 그걸
+//    잠근다). 그래서 그 파일의 값만 재던 예전 검사는 이 픽스처에서 **잰 값이 0개**였고,
+//    「env 값이 payload 에 0건」이 아무것도 안 재고 초록이었다 (FINDINGS 124). 값은 여기서
+//    심고(픽스처는 그대로 둔다), 심은 값이 어느 body 에도 없고 **키 이름은** 나갔는지 둘 다 본다.
+//  ⚠ 값은 진짜 secret 처럼 길고 유일하게 — 우연히 겹칠 수 없는 글자로.
+const PLANTED_ENV: Record<string, string> = {
+  //  `.env.example` 에도 있는 키 — 값만 심는다
+  PSP_A_API_KEY: 'sk_live_PLANTED_paylab_walkthrough_secret_7f3a9c1e',
+  //  `.env` 에만 있는 키 — 스캐너가 이 파일을 실제로 읽었다는 증거
+  SENTRY_DSN: 'https://PLANTED_walkthrough_dsn_4b8d2e6f@o0.ingest.sentry.io/0',
+}
+
 //  잰 것을 쌓고 산출물을 쓰는 문은 하나다 — `tools/walkthrough-stage.ts` (FINDINGS 96).
 const stage = openStage('payload')
 const { check } = stage
@@ -100,6 +113,11 @@ function run(args: string[]): Promise<{ code: number; out: string; err: string }
 
 async function main(server: Server, origin: string): Promise<void> {
   cpSync(fixture, repo, { recursive: true })
+  writeFileSync(
+    join(repo, '.env'),
+    `${Object.entries(PLANTED_ENV).map(([k, v]) => `${k}=${v}`).join('\n')}\n`,
+    'utf8',
+  )
   mkdirSync(join(repo, '.contextops'), { recursive: true })
   writeFileSync(
     join(repo, '.contextops', 'project.json'),
@@ -213,27 +231,40 @@ async function main(server: Server, origin: string): Promise<void> {
   }
   check(`픽스처 ${scan.files.length}개 파일의 본문이 payload 에 0건 (P1)`, leaked.length === 0, leaked.join(' · '))
 
-  //  ③ `.env*` 의 값이 없다. (스캐너가 키 이름만 꺼내는지는 `scan` 단계가 잰다)
-  let envLeaked: string[] = []
+  //  ③ `.env*` 의 값이 없다 — 심은 `.env` 의 값과 `.env.example` 의 값(있다면) 전부.
+  //     ⚠ **잰 값이 0개면 FAIL 이다.** 「잴 것이 없어서 초록」은 이 검사가 났던 고장 그 자체다.
+  let envValues = Object.values(PLANTED_ENV)
   try {
-    envLeaked = readFileSync(join(repo, '.env.example'), 'utf8')
+    envValues = envValues.concat(readFileSync(join(repo, '.env.example'), 'utf8')
       .split('\n')
       .map((line) => line.split('=').slice(1).join('=').trim())
-      .filter((value) => value.length >= 8 && all.includes(value))
+      .filter((value) => value.length >= 8))
   } catch {
-    /* 픽스처에 .env.example 이 없으면 잴 것이 없다 */
+    /* 픽스처에 .env.example 이 없으면 심은 값만 잰다 */
   }
-  check('env 값이 payload 에 0건 (P1)', envLeaked.length === 0, envLeaked.join(' · '))
+  const envLeaked = envValues.filter((value) => all.includes(value))
+  check('env 값이 payload 에 0건 (P1)', envValues.length > 0 && envLeaked.length === 0,
+    envLeaked.length > 0 ? envLeaked.join(' · ') : `잰 값 ${envValues.length}개 (심은 .env ${Object.keys(PLANTED_ENV).length})`)
 
   //  ④ 토큰은 헤더로만 간다 — body 에 실리면 로그·프록시에 남는다.
   check('기기 토큰이 body 에 0건', !all.includes(TOKEN))
 
   //  ⑤ env **키 이름**은 나가도 된다 (SPEC §3.1) — 그게 실제로 나갔는지도 본다.
   //     안 나가면 scan_summary 가 빈 채로 올라간다는 뜻이라 그것도 고장이다.
+  //     심은 `.env` 에만 있는 키가 나갔으면 스캐너가 **그 파일을 열어 키만 꺼냈다**는 증거다.
   const draftBody = sent.find((s) => s.path.endsWith('/context-items/batch-draft'))?.body ?? ''
-  const someKey = scan.summary.env_keys[0]
-  check('scan_summary 가 실제로 실려 나갔다 (키 이름만)',
-    someKey !== undefined && draftBody.includes(someKey), `env 키 ${scan.summary.env_keys.length}개`)
+  const plantedOnly = Object.keys(PLANTED_ENV).filter((k) => !scan.summary.env_keys.includes(k))
+  check('scan_summary 가 실제로 실려 나갔다 (키 이름만 · 심은 .env 의 키 포함)',
+    plantedOnly.length === 0 && Object.keys(PLANTED_ENV).every((k) => draftBody.includes(k)),
+    plantedOnly.length > 0 ? `스캔에 없는 키: ${plantedOnly.join(' · ')}` : `env 키 ${scan.summary.env_keys.length}개`)
+
+  //  ⑥ 나간 body 를 산출물에 그대로 남긴다 — 「어떤 필드가 나갔고 어떤 필드가 없는지」를
+  //     사람이 읽는 증거(docs/evidence)로 굳히는 재료다. 토큰은 헤더라 여기 없다 (④가 잰다).
+  stage.finish = ((finish) => (extra?: Record<string, unknown>) => finish({
+    ...extra,
+    planted_env_keys: Object.keys(PLANTED_ENV),
+    sent: sent.map((s) => ({ path: s.path.replace(PROJECT, '{id}'), body: JSON.parse(s.body) as unknown })),
+  }))(stage.finish)
 }
 
 const server = createServer(handle)
