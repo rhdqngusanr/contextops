@@ -2099,7 +2099,12 @@
   ② **끝에서 줄인다** — zip 배포를 안 하기로 정하면 `REPORTABLE_SYNC_STATUSES` 에서
      빼고 SPEC §6 의 문장도 같이 지운다. ⚠ `SYNC_STATUSES` 는 그대로 둔다 (옛 행).
   🔴 **먼저 정할 것은 「Pack zip 을 내려받는 길을 만드나」다** — 그 답이 이 항목의 답이다.
-- **상태**: 대기
+  → **답했다 (60바퀴): 만든다.** `GET …/packs/{semver}/zip` 이 생겼고 zip 안에
+  `.contextops/manifest.json` 이 플러그인이 쓰는 자리·모양 그대로 든다 — 그러니 ① 이다.
+  남은 것은 **찍는 쪽**이다: 플러그인 `status` 가 「우리 `cache/<semver>/` 가 없는데
+  `manifest.json` 과 파일이 다 맞는다」를 `manual` 로 판정하고 보고한다. 그때 「그 값을
+  보고하면 화면 9 가 달라진다」를 시험으로 잠근다 (`SYNC_APPLY.manual` 이 이미 기다린다).
+- **상태**: 대기 (zip 문은 됐다 · 주인은 플러그인 `status` 를 만지는 바퀴)
 
 ### 68. `SourceRef` 의 `proposal` 을 **만드는 제품 코드가 0곳**이다 — 제안이 만든 줄이 그 제안으로 역추적되지 않는다   [구멍]
 - **증상**: 개발자의 제안이 승인되어 발행되면 `insertRevision()` 이 `origin:'proposal'` 을

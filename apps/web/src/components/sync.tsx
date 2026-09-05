@@ -84,6 +84,18 @@ export function countByStatus(devices: readonly DeviceSyncRow[]): Record<SyncSta
   return counts
 }
 
+/**
+ * 「이 Pack 을 받은 기기 9 / 12」(DESIGN_BRIEF §4 화면 7 상단 우측).
+ *
+ * ★ 「받았다」의 기준은 **보고한 manifest_hash 가 이 Pack 의 것인가** 하나다 — 상태를 안 본다.
+ *   `modified` 도 받은 뒤 손으로 고친 것이고, `manual` 도 받은 것이다. 상태로 세면
+ *   「받았는데 안 받은 것으로 세는」 갈래가 생기고 그 규칙이 화면 9 와 갈린다.
+ * ⚠ 보고가 없는 기기(`manifest_hash: null`)는 못 센다 — 지어내지 않는다.
+ */
+export function countReceived(devices: readonly DeviceSyncRow[], manifestHash: string): number {
+  return devices.filter((d) => d.manifest_hash === manifestHash).length
+}
+
 // ---------------------------------------------------------------------
 //  요약 — 0 인 상태는 그리지 않는다
 // ---------------------------------------------------------------------

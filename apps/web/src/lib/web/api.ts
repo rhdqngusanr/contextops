@@ -122,6 +122,20 @@ export async function apiText(path: string): Promise<string> {
   return res.text()
 }
 
+/**
+ * 파일로 저장할 응답 (`application/zip`). 봉투가 아니다 — `apiText` 와 같은 이유다.
+ * ★ 파일 이름은 **서버가** 정한다 (`content-disposition`). 화면이 지어내면 같은 zip 이
+ *   화면마다 다른 이름으로 저장된다. 머리가 없으면 `undefined` 를 그대로 돌려준다 —
+ *   부르는 쪽이 「이름을 모른다」를 알고 고르게.
+ */
+export async function apiBlob(path: string): Promise<{ blob: Blob; filename: string | undefined }> {
+  const res = await fetch(`${API}${path}`, { headers: authHeaders() })
+  if (!res.ok) await raise(res)
+  const disposition = res.headers.get('content-disposition') ?? ''
+  const match = /filename="([^"]+)"/.exec(disposition)
+  return { blob: await res.blob(), filename: match?.[1] }
+}
+
 export function post<T>(path: string, body: unknown): Promise<T> {
   return apiJson<T>(path, { method: 'POST', body: JSON.stringify(body) })
 }

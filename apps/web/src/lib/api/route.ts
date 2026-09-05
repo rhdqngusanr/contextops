@@ -5,7 +5,7 @@ import { getDb, type Db } from '../../db/client'
 import { actorWrites, readBearer, resolveActor, type Actor } from './auth'
 import { ApiError } from './error'
 import { logRequest } from './log'
-import { failure, matchesEtag, noContent, notModified, ok, packText, quoteEtag } from './respond'
+import { failure, matchesEtag, noContent, notModified, ok, packText, packZip, quoteEtag } from './respond'
 
 // =====================================================================
 //  Route Handler 를 감싸는 자리 하나 (SPEC §5 · §11)
@@ -41,13 +41,18 @@ export type RouteContext<P> = {
    * `If-None-Match` 가 맞으면 **본문을 만들지 않고** 304 를 돌려준다 —
    * 그래서 `body` 는 값이 아니라 함수다. 안 그러면 304 인데도 Pack 을 조립한다.
    */
-  cached(
-    opts: { etag: string; cacheControl: string; kind: 'json' | 'text' },
-    body: () => unknown,
-  ): Response
+  //  ★ 본문의 **종류가 표**다 — `json`(봉투) · `text`(Pack 파일 그대로) · `zip`(파일로 저장).
+  //    새 종류를 더하는 절차: ① 여기 `CachedOpts` 에 갈래 ② `respond.ts` 에 만드는 함수
+  //    ③ 아래 `cached` 의 분기 한 줄. 라우트는 종류만 말하고 `Response` 를 만들지 않는다.
+  cached(opts: CachedOpts, body: () => unknown): Response
   /** 로그에 남길 식별자를 붙인다 (SPEC §11 — id 만, 이름·본문 금지). */
   note(fields: { user_id?: string; project_id?: string }): void
 }
+
+export type CachedOpts =
+  | { etag: string; cacheControl: string; kind: 'json' | 'text' }
+  //  zip 은 저장될 **파일 이름**까지 응답이 정한다 (`respond.ts` 의 `packZip`).
+  | { etag: string; cacheControl: string; kind: 'zip'; filename: string }
 
 export type Handler<P> = (ctx: RouteContext<P>) => Promise<Response>
 
@@ -101,10 +106,10 @@ export function route<P extends Record<string, string | string[]> = Record<strin
             return notModified(requestId, opts)
           }
           const value = body()
-          return opts.kind === 'text'
-            ? packText(String(value), requestId, opts)
-            //  JSON 쪽은 봉투를 지킨다 — 화면이 `{data, meta}` 하나만 읽게.
-            : ok(value, requestId, 200, { etag: quoteEtag(opts.etag), 'cache-control': opts.cacheControl })
+          if (opts.kind === 'text') return packText(String(value), requestId, opts)
+          if (opts.kind === 'zip') return packZip(value as Uint8Array, requestId, opts)
+          //  JSON 쪽은 봉투를 지킨다 — 화면이 `{data, meta}` 하나만 읽게.
+          return ok(value, requestId, 200, { etag: quoteEtag(opts.etag), 'cache-control': opts.cacheControl })
         },
         note: (fields) => Object.assign(noted, fields),
       })

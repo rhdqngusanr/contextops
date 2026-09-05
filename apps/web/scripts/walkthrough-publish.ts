@@ -16,6 +16,9 @@ import { POST as approveProposal } from '../src/app/api/v1/proposals/[id]/approv
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { GET as latestManifest } from '../src/app/api/v1/projects/[id]/packs/latest/manifest/route'
 import { GET as packFile } from '../src/app/api/v1/projects/[id]/packs/[semver]/files/[...path]/route'
+import { GET as packZip } from '../src/app/api/v1/projects/[id]/packs/[semver]/zip/route'
+import { ZIP_MANIFEST_PATH } from '../src/lib/api/pack'
+import { listZip } from '../test/helpers/zip'
 import { POST as syncReport } from '../src/app/api/v1/projects/[id]/sync-reports/route'
 import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/route'
 import { POST as postProgress } from '../src/app/api/v1/projects/[id]/progress/route'
@@ -250,6 +253,35 @@ async function main(): Promise<void> {
     //     sync 단계는 자기가 Manifest 를 지어내야 하고, 그러면 「서버가 준 것을
     //     플러그인이 받아들이나」를 재는 게 아니라 우리가 만든 것을 우리가 읽는 꼴이다.
     writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+    // ── ⑥-B zip 으로 받아도 **같은 Pack** 이다 (SPEC §5 zip · §6 `manual`) ──
+    //  ★ 왜 관통이 재나 — 화면 9 의 `manual` 은 「zip 을 손으로 풀어 적용했다」인데, 그 zip 이
+    //    플러그인이 받는 것과 다르면 그 기기는 영원히 `modified` 다. 되읽는 것은 시험용
+    //    독립 리더(`test/helpers/zip.ts`)이고, 산출물은 `unzip -l` 로도 한 번 열어 본다.
+    const zipOnce = await packZip(
+      req('GET', `/api/v1/projects/${projectId}/packs/1.0.0/zip`, { auth: owner }),
+      params({ id: projectId, semver: '1.0.0' }),
+    )
+    const zipBytes1 = new Uint8Array(await zipOnce.arrayBuffer())
+    const zipAgain = await packZip(
+      req('GET', `/api/v1/projects/${projectId}/packs/1.0.0/zip`, { auth: owner }),
+      params({ id: projectId, semver: '1.0.0' }),
+    )
+    const zipBytes2 = new Uint8Array(await zipAgain.arrayBuffer())
+    const zipEntries = listZip(zipBytes1)
+    const zipMismatch = manifest.files.filter((f) => {
+      const e = zipEntries.find((x) => x.path === f.path)
+      return e === undefined || sha256(e.text) !== f.sha256 || !e.crcOk
+    })
+    check('zip 이 Manifest 의 파일 전부 + manifest.json 을 담는다',
+      zipOnce.status === 200 && zipEntries.length === manifest.files.length + 1
+        && zipEntries.some((e) => e.path === ZIP_MANIFEST_PATH),
+      `항목 ${zipEntries.length}개 · ${zipOnce.headers.get('content-disposition') ?? ''}`)
+    check('zip 안 본문의 sha256 · CRC 가 Manifest 와 전부 같다', zipMismatch.length === 0,
+      zipMismatch.map((f) => f.path).join(' · '))
+    check('🔴 P4 — 같은 버전을 두 번 받으면 zip 의 byte 가 같다',
+      Buffer.from(zipBytes1).equals(Buffer.from(zipBytes2)), `${zipBytes1.length} bytes`)
+    writeFileSync(join(outDir, 'pack-v1.0.0.zip'), zipBytes1)
+
     check('🔴 P7 — 모든 Pack 파일에 역추적 태그가 있다 (예외 표 밖에서)', untagged === 0)
     check('🔴 P7 — Manifest 의 모든 파일이 항목에서 왔다 (예외 표 밖에서)',
       manifest.files.every((f) => f.source_item_ids.length > 0 || isProductText(f.path)))

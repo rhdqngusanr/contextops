@@ -396,6 +396,20 @@
 ## P5 — 배포와 마감 (SPEC 9/14~9/15)
 
 - [ ] **AGENTS/cursor 타깃 · Pack zip · 터미널 재생 컴포넌트**
+      → ① **Pack zip 은 됐다** (60바퀴). `GET …/packs/{semver}/zip` — 압축 없이(store) 담고
+      항목 시각은 Manifest 의 `generated_at` 이라 **같은 버전은 같은 byte** 다 (P4 의 연장 ·
+      라이브러리 0 · `lib/api/zip.ts`). zip 안에 `.contextops/manifest.json` 이 플러그인
+      `sync` 가 쓰는 자리·모양 그대로 든다 — 손으로 푼 기기가 `status` 로 판정받는 재료다.
+      화면 7 상단 우측에 [Pack 다운로드 (.zip)] 과 「이 Pack을 받은 기기 N / M」이 섰다
+      (`countReceived` — 화면 9 와 같은 문 · 같은 표). 관통 publish 단계가 zip 을 되읽고
+      byte 동일성을 잰다(28 → 31) · 독립 도구 `unzip -t` 로 열었다
+      (`docs/evidence/2026-09-06-zip/zip.txt`). 🔴 시험이 잡은 것: DB jsonb 가 Manifest 의
+      키를 제 순서로 늘어놓아 zip 안 manifest.json 이 플러그인 것과 **글자가 달랐다** →
+      계약으로 되판 뒤 적는다. ⚠ `manual` 을 **보고하는** 쪽(플러그인 `status`)은 아직
+      없다 — FINDINGS 69 는 그대로 대기이고 주인은 플러그인을 만지는 바퀴다.
+      → ② 남은 것: **AGENTS/cursor 타깃**(컴파일러 `DOCS` 표에 문서 둘 · `TEMPLATE_VERSION`
+      올리고 golden 갱신 이유를 커밋에) · **터미널 재생 컴포넌트**(`fixtures/replay/*.json` ·
+      `<TerminalReplay>` · 랜딩 C-3 — FINDINGS 123 을 같이 닫는다). 절삭 순서는 4·2 번이다.
 - [ ] **Vercel production · Cron · 보안 캡처 증거 · 새 PC fresh install**
       **완료 기준**: production 으로 발표 시나리오 1회 완주
 

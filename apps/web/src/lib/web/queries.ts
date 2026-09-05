@@ -5,7 +5,7 @@ import type {
   ProgressStatus, ProposalAction, ProposalItem, ProposalStatus, SourceDocumentKind, SyncStatus, TeamRole,
 } from '@contextops/schema'
 
-import { apiJson, apiText, patch, post } from './api'
+import { apiBlob, apiJson, apiText, patch, post } from './api'
 
 // =====================================================================
 //  화면이 부르는 엔드포인트의 **목록이자 타입** (SPEC §5)
@@ -159,6 +159,16 @@ export function fetchPackFile(projectId: string, semver: string, path: string): 
   //    한 조각으로 받고, 그 파일은 영원히 404 다.
   const encoded = path.split('/').map(encodeURIComponent).join('/')
   return apiText(`/projects/${projectId}/packs/${semver}/files/${encoded}`)
+}
+
+/**
+ * Pack 한 벌을 zip 으로 (`GET …/packs/{semver}/zip` · SPEC §5). 화면 9 의 `manual` 이
+ * 가리키는 길이다 — 플러그인을 못 까는 기기가 손으로 받는다.
+ * ⚠ 서버가 이름을 안 주면 여기서 하나 짓는다 — 저장 대화상자에 빈 이름이 서면 안 된다.
+ */
+export async function downloadPackZip(projectId: string, semver: string): Promise<{ blob: Blob; filename: string }> {
+  const got = await apiBlob(`/projects/${projectId}/packs/${semver}/zip`)
+  return { blob: got.blob, filename: got.filename ?? `pack-v${semver}.zip` }
 }
 
 // ---------------------------------------------------------------------

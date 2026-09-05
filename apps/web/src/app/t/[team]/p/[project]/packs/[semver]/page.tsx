@@ -6,9 +6,11 @@ import type { ContextItem, Manifest, ManifestFile } from '@contextops/schema'
 //    브라우저 번들에 못 들어간다 — 이유는 그 패키지의 package.json 주석에 있다.
 import { traceLines, type TraceTag } from '@contextops/compiler/tag'
 
-import { fetchItems, fetchManifest, fetchPackFile, type ProjectRef } from '../../../../../../../lib/web/queries'
+import { messageOf } from '../../../../../../../lib/web/api'
+import { downloadPackZip, fetchItems, fetchManifest, fetchPackFile, fetchSyncStatus, type ProjectRef } from '../../../../../../../lib/web/queries'
 import { useAsync } from '../../../../../../../lib/web/use-async'
 import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon } from '../../../../../../../components/chips'
+import { countReceived } from '../../../../../../../components/sync'
 import { EvidenceList } from '../../../../../../../components/evidence'
 import { ProjectGate } from '../../../../../../../components/project-gate'
 import { EmptyState, ErrorState, Skeleton } from '../../../../../../../components/states'
@@ -65,7 +67,7 @@ function PackExplorer({ project, semver }: { project: ProjectRef; semver: string
 
   return (
     <>
-      <PackHeader manifest={m} semver={semver} />
+      <PackHeader project={project} manifest={m} semver={semver} />
       <div className="row items-start">
         <FileTree files={m.files} current={current} onPick={setPath} />
         {current
@@ -76,7 +78,7 @@ function PackExplorer({ project, semver }: { project: ProjectRef; semver: string
   )
 }
 
-function PackHeader({ manifest, semver }: { manifest: Manifest; semver: string }) {
+function PackHeader({ project, manifest, semver }: { project: ProjectRef; manifest: Manifest; semver: string }) {
   return (
     <header className="row-between wrap">
       <div className="col-tight">
@@ -89,9 +91,62 @@ function PackHeader({ manifest, semver }: { manifest: Manifest; semver: string }
           <span>파일 {manifest.files.length}</span>
         </div>
       </div>
-      {/* ⚠ 「Pack 다운로드(.zip)」 버튼은 아직 없다 — `packs/{semver}/zip` 은 PLAN P5 첫
-          행이 주인이다. 누르면 404 가 나는 버튼을 두는 것이 없는 것보다 나쁘다. */}
+      {/* DESIGN_BRIEF §4 화면 7 「상단 우측: [Pack 다운로드 (.zip)] · 이 Pack을 받은 기기 9 / 12」 */}
+      <div className="row wrap">
+        <ReceivedBy project={project} manifest={manifest} />
+        <DownloadZip project={project} semver={semver} />
+      </div>
     </header>
+  )
+}
+
+/**
+ * 「이 Pack 을 받은 기기 9 / 12」 — 화면 9 와 **같은 문**(`sync-status`)을 읽고
+ * 「받았다」의 기준도 같은 표(`countReceived`)다. 못 읽으면 칸을 비운다 — 숫자를 지어내지 않는다.
+ */
+function ReceivedBy({ project, manifest }: { project: ProjectRef; manifest: Manifest }) {
+  const sync = useAsync(() => fetchSyncStatus(project.id), [project.id])
+  if (sync.result.state !== 'ready') return null
+  const devices = sync.result.data.devices
+  return (
+    <span className="meta" title="마지막 보고의 manifest 해시가 이 Pack 과 같은 기기">
+      이 Pack을 받은 기기 <span className="mono ink">{countReceived(devices, manifest.manifest_hash)} / {devices.length}</span>
+    </span>
+  )
+}
+
+/**
+ * [Pack 다운로드 (.zip)] — `GET …/packs/{semver}/zip`. 화면 9 의 `manual` 이 가리키는 길이다.
+ * ★ `<a href>` 가 아니라 fetch 인 이유 — 세션 토큰은 `Authorization` 머리로만 나간다
+ *   (`lib/web/api.ts`). 링크로 걸면 브라우저가 머리 없이 열어서 401 페이지를 저장한다.
+ * ⚠ 파일 이름은 서버가 준 것을 그대로 쓴다 (`content-disposition`).
+ */
+function DownloadZip({ project, semver }: { project: ProjectRef; semver: string }) {
+  const [state, setState] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; error: unknown }>({ kind: 'idle' })
+
+  async function download(): Promise<void> {
+    setState({ kind: 'busy' })
+    try {
+      const { blob, filename } = await downloadPackZip(project.id, semver)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+      setState({ kind: 'idle' })
+    } catch (error) {
+      setState({ kind: 'error', error })
+    }
+  }
+
+  return (
+    <span className="row">
+      <button type="button" className="btn btn-sm" disabled={state.kind === 'busy'} onClick={() => void download()}>
+        {state.kind === 'busy' ? '받는 중…' : 'Pack 다운로드 (.zip)'}
+      </button>
+      {state.kind === 'error' ? <span className="meta ink-bad">✕ {messageOf(state.error)}</span> : null}
+    </span>
   )
 }
 

@@ -67,6 +67,33 @@ export function packText(
   })
 }
 
+/**
+ * Pack 한 벌 (SPEC §5 `GET …/packs/{semver}/zip` → `application/zip`, ETag=manifest_hash).
+ *
+ * ★ `packText` 와 같은 이유로 봉투가 아니다 — 브라우저가 이 바이트를 **파일로 저장**한다.
+ * ★ `content-disposition` 이 파일 이름을 정한다. 화면이 이름을 지어내면 같은 zip 이
+ *   화면마다 다른 이름으로 저장되고, 사람은 무엇이 무엇인지 모른다.
+ * ⚠ 이름은 ASCII 여야 한다 (slug · semver 라서 그렇다). 한글이 들어가면 RFC 6266 의
+ *   `filename*` 이 필요한데, 그건 그때 이 함수 안에서 한다 — 라우트가 만들지 않는다.
+ */
+export function packZip(
+  body: Uint8Array,
+  requestId: string,
+  opts: { etag: string; cacheControl: string; filename: string },
+): Response {
+  return new Response(body as BodyInit, {
+    status: 200,
+    headers: {
+      'content-type': 'application/zip',
+      'content-disposition': `attachment; filename="${opts.filename}"`,
+      'content-length': String(body.byteLength),
+      etag: quoteEtag(opts.etag),
+      'cache-control': opts.cacheControl,
+      'x-request-id': requestId,
+    },
+  })
+}
+
 /** `If-None-Match` 가 맞았다 → 304. 본문이 없어야 하므로 봉투도 없다. */
 export function notModified(
   requestId: string,

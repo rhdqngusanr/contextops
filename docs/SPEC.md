@@ -365,7 +365,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | GET /projects/{id}/packs/latest/manifest | device/member | ETag=manifest_hash, If-None-Match → 304 |
 | GET /projects/{id}/packs/{semver}/manifest | device/member | immutable, `Cache-Control: max-age=31536000` |
 | GET /projects/{id}/packs/{semver}/files/{path} | device/member | text/plain, ETag=sha256 |
-| GET /projects/{id}/packs/{semver}/zip | member | application/zip (동기 생성, 파일 ≤ 20개) |
+| GET /projects/{id}/packs/{semver}/zip | device/member | application/zip (동기 생성) · ETag=manifest_hash · `{semver}` 와 같은 불변 캐시 · `content-disposition` 이 파일 이름(`<slug>-v<semver>.zip`)을 정한다. 🔴 **압축 없이(store) 담고 항목 시각은 Manifest 의 `generated_at` 이다** — 같은 버전은 언제나 같은 byte 다 (P4 의 연장 · 라이브러리 없이 `lib/api/zip.ts`). zip 안에 **`.contextops/manifest.json`** 이 같이 든다 — 플러그인 `sync` 가 쓰는 자리·모양 그대로(Zod 로 되판 키 순서 · jsonb 순서가 아니다)라서, 손으로 푼 기기도 `status` 로 판정받는다(§6 `manual`). ⚠ 원래 「member · 파일 ≤ 20개」였다: 기기 토큰을 막지 않는 이유는 기기가 이미 파일을 하나씩 다 받을 수 있어서 막아도 지키는 것이 없기 때문이고, 20 을 따로 세지 않는 이유는 Manifest 계약(`files.max`)이 이미 상한이고 store 는 그 수에서 무겁지 않기 때문이다 |
 | POST /projects/{id}/sync-reports | device | {version, manifest_hash, status, files:[{path,sha256}]} → 202 |
 | GET /projects/{id}/sync-status | member | → `{devices:[{device_id, device_name, **user:{id,name}**, status, version, manifest_hash, reported_at}]}` — 🔴 살아 있는 기기만 세고(취소된 토큰 제외) 보고가 하나도 없는 기기가 `unknown` 이다 — 순서가 반대면(보고부터 세면) **한 번도 보고하지 않은 기기가 목록에서 사라진다**(그것이 화면이 보여 줘야 할 것이다). 🔴 `user` 는 **이름 하나**다 — 이메일은 안 나간다 (`lib/api/user.ts` 가 내는 칸이 정본이다). uuid 만 내면 화면 9 가 「팀원」 칸을 만들 수 없다. ⚠ P5 — 이 목록은 기기와 버전의 상태지 사람의 성적이 아니다. 「누가 제일 자주 sync 했나」류를 더하지 마라 |
 | POST /projects/{id}/progress | device | ProgressEvent → 202 (client_event_id 중복은 200 idempotent) |
