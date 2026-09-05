@@ -21,12 +21,17 @@ $LOOP = @{
     #  전체 이름으로 박는다. 별칭("opus")은 최신 것을 따라가므로 **어느 날 갑자기
     #  다른 모델로 도는데 로그만 봐서는 모른다.**
     #
+    #  🔴 2026-09-06 claude-opus-5 → **claude-fable-5-1** (사용자 지시).
+    #    남은 일이 P3~P6 (서버 AI · 화면 · 데모 · 발표 자료)이라 성격이 바뀐다.
+    #
     #  ⚠ 과부하 때 모델을 바꾼 전례가 있다 (2026-09-03 23:5x, Opus 500/529 로
     #    바퀴가 215초·1턴 만에 끊겼다). 그때 claude-sonnet-5 로 내렸다가
     #    2026-09-04 되돌렸다 — **되돌리기 전에 실제로 한 번 찔러 보고** 확인했다
-    #    (`claude -p "Reply with exactly: OK" --model claude-opus-5` → is_error:False).
-    #    ★ 상태 페이지나 짐작으로 판단하지 마라. 한 번 부르는 게 제일 싸고 확실하다.
-    Model = "claude-opus-5"
+    #    (`claude -p "Reply with exactly: OK" --model <모델>` → is_error:False).
+    #    ★ 모델을 바꿀 때는 **한 번 부르고 나서** 켜라. 상태 페이지나 짐작은 근거가 아니다.
+    #    ★ 바꾼 뒤 첫 두 바퀴의 턴 수·비용·커밋 수를 STATUS 「잰 것」에 남겨라 —
+    #      모델이 바뀌면 바퀴의 값이 바뀐다. 옛 수치로 상한을 판단하면 어긋난다.
+    Model = "claude-fable-5-1"
 
     #  추론 노력 (low | medium | high | xhigh | max — CLI `--effort`).
     #  ★ 왜 high 인가 — ContextOps 의 한 바퀴는 「화면 하나 예쁘게」가 아니라
