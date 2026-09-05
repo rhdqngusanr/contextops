@@ -278,6 +278,39 @@
 
 - [ ] **웹 화면 6·8** — Proposal · Roadmap · Realtime
       **완료 기준**: agent progress → Roadmap 갱신 · **Roadmap 기본 행이 마일스톤** (P5)
+      ① ✅ **웹 화면 8 — Roadmap · Realtime** (`7398e44` · 55바퀴) — `…/roadmap`.
+      **이 행의 완료 기준 절반을 쟀다**: 기기가 `POST …/progress` 로 보고하면 그 수가
+      Roadmap 의 행에서 갈리고(`evidence_count`·`status`·`last_report_at`), **행은
+      마일스톤이다** (P5 — 응답에도 화면에도 `device_id`·`confirmed_by` 가 없고,
+      그것을 시험이 센다). Realtime 은 **폴링 10초**다 (SPEC §14 절삭 8 · `ROADMAP_POLL_MS`) —
+      job 폴링과 달리 **끝나는 일이 아니라서** 화면을 연 내내 돈다.
+      🔴 **[완료 확인] 은 만들 수가 없었다.** `POST /progress/{id}/confirm` 은 **보고
+      하나의 id** 로 부르는데 그 id 를 내는 문이 하나도 없었다 — 보고를 만든 것은 기기이고
+      그 응답은 사람의 브라우저에 안 온다. 라우트가 **`confirmable`**(아직 확정 안 된 제일
+      최근 `done_candidate` **하나**)을 내면서 그 버튼이 처음 존재할 수 있게 됐다.
+      목록으로 안 낸다 — 여럿을 내면 「어느 것을 확정하나」를 화면이 고르게 되고 그 규칙이
+      서버와 갈린다. ★ 이게 「agent 는 스스로 완료를 선언하지 못한다」의 **화면 쪽 절반**이다.
+      🔴 **`PROGRESS_STATUSES` 의 `none` 이 처음으로 무언가를 바꾼다** (④2-B) — 「어느
+      마일스톤도 아니다」 보고는 `PROGRESS_EFFECT.none === undefined` 라 **어디에도 안
+      보였다.** `off_roadmap` 이 그 자리다. 가르는 규칙은 **하나**(지금 Manifest 의
+      마일스톤 id 가 아닌 것)라 지난 Pack 에만 있던 마일스톤도 같이 걸린다.
+      표 둘이 늘었다: `MILESTONE_CHIP`(4종 — **`done_candidate`≠`done` 이 제품의 약속
+      하나를 통째로 들고 있어서 tone 까지 시험이 잠근다**) · `PROGRESS_SOURCE_LABEL`(3종).
+      `MILESTONE_STATUSES` 는 **둘째 사용자(화면)가 생겨** `packages/schema` 로 올라갔고,
+      진행 막대는 `job-progress.module.css` 가 예고한 대로 **둘째 사용자가 와서**
+      `globals.css` 로 올라갔다 (`.bar`/`.bar-fill`).
+      웹 시험 396 → **430** · 관통 670 → **704**.
+      **눈으로 읽었다** — `docs/evidence/2026-09-06-roadmap/roadmap.txt` (20모양).
+      덤프를 읽어 **거짓 문장 하나**를 잡았다: 마일스톤이 0개인데 타일이 「전부 한 번은
+      보고됐습니다」라고 말했다 (아무것도 없는데 전부 됐다고 한다).
+      **빨개지는 것을 봤다** — 라우트에서 `confirmedAt === null` 을 빼면 확정한 뒤에도
+      버튼이 남고(API 시험 빨감) · 화면에서 충돌 수를 행마다 더하면 「3」이 「6」이 된다.
+      🔴 재다가 나온 것: **Manifest 마일스톤에 `due` 가 없다** (FINDINGS **111** — 계약과
+      Pack 본문에는 있는데 Manifest 만 안 나른다) · **화면 9 가 아직 없어 `SYNC_CHIP` 5종을
+      그리는 곳이 0곳이다** (FINDINGS **110** — 주인은 이 Phase 둘째 행).
+      ⚠ **남은 것: 화면 6 (Proposals 목록·상세 diff).** 그래서 이 행은 안 닫는다.
+      ⚠ **브라우저 캡처는 아직 없다** — 이 환경에 브라우저가 없다. 눈 판정은 마크업을
+      읽는 시험 + 위 덤프로 대신했다.
 - [ ] **웹 화면 9 · 게스트 데모 · 랜딩 v1**
       **완료 기준**: 🔴 **GATE 3** — 시크릿 창에서 링크만으로 3분 체험
 
