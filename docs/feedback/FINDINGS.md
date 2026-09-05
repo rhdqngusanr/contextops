@@ -29,6 +29,73 @@
 
 ## 다음에 고칠 것
 
+### 115. **CLI 가 찍는 제안 주소가 앱에 없는 주소다** — 눌러도 404   [구멍]
+- **증상**: `contextops propose` 가 성공하면 `→ {origin}/p/{project_id}/proposals/{id}` 를
+  찍는다. 그런데 웹의 주소는 **`/t/{team}/p/{project}/proposals/{id}`** 다 (§9 는 slug 로
+  적는다). 사람이 그 줄을 누르면 404 다.
+- **근거**: 56바퀴(`e1e79d5`)에 직접 읽음 — `plugin/contextops/bin/contextops-cli.mjs:20062` 가
+  `${config.api_origin}/p/${config.project_id}/proposals/${id}` 를 찍는다 ·
+  `apps/web/src/app/t/[team]/p/[project]/proposals/[id]/page.tsx` 가 이번 바퀴에 생긴
+  유일한 상세 주소다 · 앱에 `/p/…` 로 시작하는 라우트는 없다.
+- **정본**: `docs/SPEC.md` §9 (주소는 slug) · §8.4 CLI
+- **왜 고장이 아닌가**: 진행은 안 막힌다 — 웹의 「제안」 탭에서 목록으로 갈 수 있다.
+  다만 **사람이 실제로 누르는 줄**이라 데모에서 보인다.
+- **고칠 방향**: 둘 중 하나다. ① CLI 가 slug 를 모르므로(설정에 `project_id` 만 있다)
+  **주소를 안 찍고** 「웹의 제안 탭에서 볼 수 있다」로 바꾼다 · ② 웹에 uuid 로 여는
+  전달 라우트(`/p/{project_id}/…` → slug 로 302)를 만든다. ⚠ ②를 고르면 주소가 둘이
+  되므로 「이 주소를 공유하면 같은 것을 본다」를 지키는 쪽(slug)이 정본이어야 한다.
+- **상태**: 대기 (주인은 플러그인·CLI 를 다시 만지는 바퀴 · PLAN P5 첫 행)
+
+### 114. **항목별 [승인]/[거절] 을 담을 자리가 서버에 없다**   [구멍]
+- **증상**: `docs/DESIGN_BRIEF.md` §4 화면 6 은 「항목별 [승인] [거절] + 전체 [모두 승인]
+  [거절(사유 필수)]」을 적는다. 그런데 상태를 담는 칸은 **제안 한 장에 하나**뿐이고
+  (`proposals.status`), 항목(`items` jsonb)에는 상태 칸이 없다. 그래서 이번 바퀴의 화면은
+  **전체 결정만** 그렸다 — 항목별 버튼을 그리면 누르고 나서 아무 일도 안 한다.
+- **근거**: 56바퀴(`e1e79d5`)에 직접 읽음 — `apps/web/src/db/schema.ts` 의 `proposals` 에 항목별
+  상태 칸이 없다 · `packages/schema` 의 `ProposalItem` 에도 없다 ·
+  `PROPOSAL_DECISIONS` 는 제안 한 장을 옮기는 표다.
+- **정본**: `docs/SPEC.md` §2 · §5 · `docs/DESIGN_BRIEF.md` §4 화면 6
+- **왜 고장이 아닌가**: 승인·거절은 **전체로** 되고 발행까지 간다 (관통이 지난다).
+  DESIGN_BRIEF 가 코드보다 넓은 것이고, 이 저장소의 규칙은 **코드가 현실**이다.
+- **고칠 방향**: 둘 중 하나를 **고르고 나서** 손대라. ① 항목별 결정을 만든다 —
+  `items` 안에 상태를 넣지 말고(그러면 제안 본문이 바뀐다) 결정 표를 따로 둔다
+  (`proposal_item_decisions`). 발행의 `applyProposals` 도 「승인된 항목만」으로 바뀐다 ·
+  ② 안 만든다 — DESIGN_BRIEF 의 그 줄을 지우고 「제안은 한 장 단위로 승인한다」로 적는다.
+  ⚠ ①은 §2.1 의 발행 트랜잭션을 건드린다. 제출일을 보면 ②가 먼저 검토돼야 한다.
+- **상태**: 대기 (주인은 §2.1 을 다시 만지는 바퀴 · 그 전에 **결정**이 필요하다)
+
+### 113. **제안 목록에 「작성자」를 그릴 수 없다** — 이름을 내는 문이 없다   [구멍]
+- **증상**: DESIGN_BRIEF §4 화면 6 의 함 목록은 「상태 | 제목 | **작성자** | 관련 마일스톤 |
+  항목 수 | 제출 시각」인데, 응답에 있는 것은 `author_id`(uuid) 뿐이다. **uuid → 이름**을
+  내는 문이 API 에 하나도 없어서 이번 바퀴의 표는 그 칸을 **아예 안 만들었다**
+  (uuid 를 그리면 아무 뜻 없는 글자가 표에 남는다).
+- **근거**: 56바퀴(`e1e79d5`)에 직접 셈 — `grep -rn "users.name" apps/web/src/app/api` 0건 ·
+  `GET /teams` 는 팀·프로젝트만 낸다 (`name` 은 팀 이름이다) · `PROPOSAL_COLUMNS` 는
+  `author_id`·`decided_by` 를 uuid 로 낸다.
+- **정본**: `docs/SPEC.md` §5 · §9 화면 6 · `docs/DESIGN_BRIEF.md` §4 화면 6
+- **⚠ P5 와 헷갈리지 마라**: 「제안을 누가 냈나」는 **감시가 아니다** — 금지된 것은
+  개인 생산성 점수·순위다 (P5). 화면 8(Roadmap)에 사람이 없는 것과는 다른 이야기다.
+- **왜 고장이 아닌가**: 승인·거절은 그 칸 없이도 된다. 다만 **여럿이 쓰는 팀에서는**
+  누구 제안인지 모르면 결정하기 어렵다.
+- **고칠 방향**: `GET /proposals/{id}`·목록이 `author: {name}` 한 칸을 같이 내는 것이
+  제일 좁다 (users 조인 한 줄). ⚠ 이메일은 내지 마라 — 이름 하나면 화면이 할 일을 한다.
+  같은 문이 화면 9(팀원·기기 표)에도 필요하니 그 바퀴에 같이 하면 하나로 끝난다.
+- **상태**: 대기 (주인은 화면 9 · PLAN P4 둘째 행)
+
+### 112. **제안 목록에 거르개가 없다** — 라우트가 `?status` 를 안 받는다   [격차]
+- **증상**: DESIGN_BRIEF §4 화면 6 은 「함 목록 테이블(status/author 필터)」인데
+  `GET /projects/{id}/proposals` 가 파싱하는 것은 `ListQuery`(limit·offset)뿐이다.
+  그래서 이번 바퀴의 화면에는 칩이 없다 — 누르면 아무 일도 안 하는 칩을 두지 않았다.
+- **근거**: 56바퀴(`e1e79d5`)에 직접 읽음 — `apps/web/src/app/api/v1/projects/[id]/proposals/route.ts`
+  의 `parseQuery(ctx.req, ListQuery)` · 인덱스는 이미 `(project_id, status, created_at)` 라
+  **DB 는 준비돼 있다**.
+- **정본**: `docs/SPEC.md` §5 · `docs/DESIGN_BRIEF.md` §4 화면 6
+- **고칠 방향**: `ProposalQuery = ListQuery.extend({ status: z.enum(PROPOSAL_STATUSES).optional() })`
+  한 줄(`packages/schema`) → 라우트 조건 한 줄 → 화면은 `CONFLICT_KIND_CHIP` 을 읽는
+  화면 4 처럼 **`PROPOSAL_STATUS_CHIP` 을 읽어서** 칩을 그린다 (표가 이미 있다).
+  ⚠ `author` 필터는 113 이 먼저다 — 고를 이름이 화면에 없다.
+- **상태**: 대기 (주인은 화면 6 을 다시 만지는 바퀴)
+
 ### 111. Manifest 의 마일스톤에 **`due` 가 없다** — 화면 8 이 기한을 말할 수 없다   [구멍]
 - **증상**: `RoadmapData.due`(`CalendarDate`)는 계약에 있고 Pack 본문에도 나간다
   (`compiler/src/sections.ts:93` 이 `` `due: 2026-09-20` `` 로 적는다). 그런데
