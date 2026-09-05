@@ -407,9 +407,15 @@
       키를 제 순서로 늘어놓아 zip 안 manifest.json 이 플러그인 것과 **글자가 달랐다** →
       계약으로 되판 뒤 적는다. ⚠ `manual` 을 **보고하는** 쪽(플러그인 `status`)은 아직
       없다 — FINDINGS 69 는 그대로 대기이고 주인은 플러그인을 만지는 바퀴다.
-      → ② 남은 것: **AGENTS/cursor 타깃**(컴파일러 `DOCS` 표에 문서 둘 · `TEMPLATE_VERSION`
-      올리고 golden 갱신 이유를 커밋에) · **터미널 재생 컴포넌트**(`fixtures/replay/*.json` ·
-      `<TerminalReplay>` · 랜딩 C-3 — FINDINGS 123 을 같이 닫는다). 절삭 순서는 4·2 번이다.
+      → ② **AGENTS/cursor 타깃은 됐다** (61바퀴 · 템플릿 1.2 → 1.3 · FINDINGS 7 닫음).
+      `DOCS` 표에 **거울 문서** 둘(`agents` → `AGENTS.md` · `cursor` → `.cursor/rules/contextops.mdc`)
+      — partition 에 줄을 더하지 않고 `compose` 가 원본 문서들의 블록을 **그대로** 모은다
+      (같은 태그 · P7 그대로). 둘은 머리말만 다르고 본문이 byte 로 같다. `PACK_TARGETS` 3종이
+      전부 파일을 낸다 — liveness 시험이 `PACK_TARGETS` 를 돌며 잠근다. scoped 줄이 끝에
+      `· 도메인:`/`· 경로:` 를 적게 됐다(한 절에 모이면 범위가 사라져서). 플러그인 allowlist 는
+      이미 두 경로를 알고 있었다 — 관통 sync 가 실제로 쓴다.
+      → ③ 남은 것: **터미널 재생 컴포넌트**(`fixtures/replay/*.json` · `<TerminalReplay>` ·
+      랜딩 C-3 — FINDINGS 123 을 같이 닫는다). 절삭 순서 **2번**이라 밀리면 이것을 자른다.
 - [ ] **Vercel production · Cron · 보안 캡처 증거 · 새 PC fresh install**
       **완료 기준**: production 으로 발표 시나리오 1회 완주
 

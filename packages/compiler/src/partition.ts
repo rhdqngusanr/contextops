@@ -1,5 +1,5 @@
 import { ITEM_STATUS_EXCLUDE_REASON, type ContextItem, type ItemType, type ScopeKind } from '@contextops/schema'
-import { DOCS, type DocId, type SectionKey } from '../templates'
+import { DOCS, type DocId, type PlaceableDocId, type SectionKey } from '../templates'
 import { slugify } from './text'
 
 // =====================================================================
@@ -37,7 +37,10 @@ export function docKey(ref: DocRef): string {
   return `${ref.doc}:${ref.slug}`
 }
 
-function place(doc: DocId, section: SectionKey, opts?: { slug?: string; title?: string; paths?: readonly string[] }): Placement {
+//  ⚠ `PlaceableDocId` — 거울 문서(`agents`·`cursor`)에는 항목을 놓을 수 없다. 거울은 `collect` 가
+//    이 표의 결과를 읽어 만든다 (`templates/index.ts` 의 `compose`). 여기서 막지 않으면 같은 항목이
+//    두 번 놓여 AGENTS.md 에 두 번 나온다.
+function place(doc: PlaceableDocId, section: SectionKey, opts?: { slug?: string; title?: string; paths?: readonly string[] }): Placement {
   return {
     kind: 'place',
     ref: { doc, slug: opts?.slug ?? '', title: opts?.title ?? '', paths: opts?.paths ?? [] },

@@ -1,4 +1,4 @@
-import type { ContextItem, ItemType } from '@contextops/schema'
+import type { ContextItem, ItemType, ScopeKind } from '@contextops/schema'
 import type { SectionKey } from '../templates'
 import { esc } from './text'
 
@@ -175,9 +175,25 @@ export const SECTIONS = {
     }),
   },
 
-  // 경로·도메인에 매인 규칙은 policy 와 constraint 둘 다 온다 — 줄 모양은 위와 같은 것을 쓴다.
+  // 경로·도메인에 매인 규칙은 policy 와 constraint 둘 다 온다 — 줄 모양은 위와 같은 것에
+  // **범위**를 끝에 붙인다 (`SCOPE_INLINE_LABEL`).
   scoped_rule: {
     spaced: false,
-    render: (item) => (item.type === 'policy' ? policyLine(item) : constraintLine(item)),
+    render: (item) => {
+      const [line] = item.type === 'policy' ? policyLine(item) : constraintLine(item)
+      if (item.scope.kind === 'project') return [line as string]   // partition 이 여기로 보내지 않는다 — 방어선
+      return [`${line as string} · ${SCOPE_INLINE_LABEL[item.scope.kind]}: ${esc(item.scope.value ?? '')}`]
+    },
   },
 } as const satisfies Record<SectionKey, SectionSpec>
+
+/**
+ * 🔴 **scoped_rule 줄이 제 범위를 말하는 표** — `project` 는 없다 (그 규칙은 CLAUDE.md 본문에 서서
+ * 파일 자체가 범위다). ★ 왜 줄에 적나 — 거울 문서(`AGENTS.md`)는 domain-*·scoped-* 파일의 규칙을
+ * **한 절**에 모은다. 파일 이름·frontmatter 가 나르던 범위가 거기서 사라지므로 줄이 스스로 말해야 한다.
+ * ⚠ 이 값들을 밖에 복사하지 마라 — 시험(`test/liveness.test.ts`)은 이 표를 import 해서 잰다.
+ */
+export const SCOPE_INLINE_LABEL = {
+  domain: '도메인',
+  path: '경로',
+} as const satisfies Record<Exclude<ScopeKind, 'project'>, string>

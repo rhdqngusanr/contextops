@@ -5,6 +5,7 @@ import type { ContextItem } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 import { compile } from '../src'
 import type { CompileInput, PackFile } from '../src'
+import { CURSOR_FRONTMATTER } from '../templates'
 import { PROGRESS_REPORT } from '../templates/progress-report'
 
 // =====================================================================
@@ -33,6 +34,7 @@ function isTemplateLine(line: string): boolean {
   if (line.startsWith('> ')) return true                      // 꼬리말·파트 안내
   if (line.startsWith('  - "')) return true                   // scoped frontmatter 의 paths
   if (line.startsWith('<!--')) return true                    // 생성 안내 · 절 태그
+  if ((CURSOR_FRONTMATTER as readonly string[]).includes(line)) return true   // .mdc frontmatter (거울 문서)
   return (PROGRESS_REPORT as readonly string[]).includes(line) // SPEC §4.3 고정 텍스트
 }
 

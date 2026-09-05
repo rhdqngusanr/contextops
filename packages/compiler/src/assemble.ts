@@ -6,6 +6,7 @@ import { SECTIONS } from './sections'
 import { sortItems } from './sort'
 import { traceTag } from './tag'
 import { normalizeText } from './hash'
+import { compareCodepoints } from './text'
 
 // =====================================================================
 //  조립 — partition 이 정한 배치대로 문서를 만들고, 줄 번호를 재고, 분량을 맞춘다.
@@ -90,6 +91,26 @@ export function collect(items: readonly ContextItem[]): { docs: DocDraft[]; excl
       })
       doc.sections.set(section, blocks)
     }
+  }
+
+  // 🔴 거울 문서 (`DOCS[id].compose` · SPEC §4.1 「동일 내용」) — 위에서 배치가 **끝난 뒤** 만든다.
+  //    다른 문서의 블록을 그대로 (같은 Block · 같은 태그) 모으므로 partition 은 거울을 모르고,
+  //    ItemType 이 늘어도 여기는 안 고친다. slug 가 여럿인 문서는 slug 순으로 — 입력 순서가
+  //    새어 들 자리를 막는다 (P4).
+  for (const id of Object.keys(DOCS) as DocId[]) {
+    const sources = DOCS[id].compose
+    if (sources === undefined) continue
+    const mirror = emptyDoc(id)
+    for (const source of sources) {
+      const instances = [...byKey.values()]
+        .filter((d) => d.id === source)
+        .sort((a, b) => compareCodepoints(a.slug, b.slug))
+      for (const instance of instances) {
+        for (const [section, blocks] of instance.sections) for (const block of blocks) append(mirror, section, block)
+      }
+    }
+    //  블록이 하나도 없으면 만들지 않는다 — 머리말만 있는 파일은 근거 없는 파일이다 (P7 · Manifest 가 막는다).
+    if (mirror.sections.size > 0) byKey.set(docKey({ doc: id, slug: '', title: '', paths: [] }), mirror)
   }
 
   excluded.sort((a, b) => (a.item_id < b.item_id ? -1 : a.item_id > b.item_id ? 1 : 0))
@@ -206,6 +227,9 @@ function relieveClaudeMd(docs: DocDraft[], base: BaseVars, warnings: string[]): 
  */
 function splitLongDoc(doc: DocDraft, base: BaseVars, warnings: string[]): DocDraft[] {
   if (doc.id === 'claude') return [doc]                    // CLAUDE.md 는 위 12,000자 규칙이 맡는다
+  //  거울 문서는 나누지 않는다 — 원본들이 이미 각자 한도 안이고, `AGENTS-2.md` 는 sync allowlist 밖이다
+  //  (`templates/index.ts` 의 `compose` 주석).
+  if (DOCS[doc.id].compose !== undefined) return [doc]
   const rendered = renderDoc(doc, base)
   if (rendered.text.length <= RULES_MAX_CHARS) return [doc]
 

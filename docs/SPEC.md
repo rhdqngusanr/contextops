@@ -269,7 +269,7 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 | adr 전체 | `.claude/rules/decisions.md` |
 | policy/constraint(scope=path) | `.claude/rules/scoped-{slug}.md` (frontmatter `paths:`) |
 | open_question | Pack 제외 → `excluded` (웹에만 표시) |
-| 동일 내용 | `AGENTS.md` (CLAUDE.md 본문 + rules 인라인 요약), `.cursor/rules/contextops.mdc` |
+| 동일 내용 | `AGENTS.md` (CLAUDE.md 본문 + rules 인라인 요약), `.cursor/rules/contextops.mdc` — 🔴 **거울 문서**다 (템플릿 1.3 · 61바퀴). partition 에 줄을 더하지 않고 `DOCS` 표의 `compose` 가 위 문서들의 절(블록)을 **그대로** 모은다 — 그래서 ItemType 이 늘어도 거울은 안 고친다. 인라인 요약 = CLAUDE.md 의 절 전부 + 결정 요약(adr 한 줄) + domain 본문 + **도메인·경로 규칙 한 절** + workflow 본문. architecture 상세·adr 전문은 뺀다(Quick Map·결정 요약이 그 요약이다). 둘은 머리말(.mdc 는 `alwaysApply: true` frontmatter)만 다르고 **본문이 byte 로 같다**. ⚠ 거울은 5단계 분량 규칙의 대상이 아니다 — 원본이 이미 각자 한도 안이고, 나누면 `AGENTS-2.md` 가 §8.5 allowlist 밖으로 떨어진다. ⚠ 도메인·경로 규칙이 한 절에 모이면 파일 이름·frontmatter 가 나르던 범위가 사라지므로 **scoped 줄은 끝에 `· 도메인: {name}` / `· 경로: {glob}` 을 적는다** (원본 파일에서도 같은 줄이다 — 렌더가 하나다) |
 
 3. **sort** — 섹션 순서 고정(mission→goal→roadmap→policy→constraint→quickmap) → priority desc → scope(project<domain<path) → title(ko/en locale-independent, codepoint) → id.
    - `priority` 는 **「먼저」**이고 **같은 타입 안에서만** 견줘진다 — 절은 타입별로 갈려 있고(§4.1 2단계), 절삭도 「type별 priority 상위」다(§7.3). 그래서 「중요도」가 아니라 **「그 타입 안에서 몇 번째로 읽히나」**로 써도 된다 (예: architecture 다섯 줄이 §7 그림의 흐름 순서로 선다).

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "compiler_version": "0.1.0",
-  "template_version": "1.2",
+  "template_version": "1.3",
   "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
   "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
   "context_version": "1.0.0",
@@ -42,6 +42,42 @@
       "size": 1143,
       "target": "claude",
       "source_item_ids": [
+        "item_pl_wf_payment"
+      ]
+    },
+    {
+      "path": ".cursor/rules/contextops.mdc",
+      "sha256": "97e6854fbcec8fb8d638758526bf872a8e8cbf758c4cc779def80fa47edf6053",
+      "size": 3177,
+      "target": "cursor",
+      "source_item_ids": [
+        "item_pl_adr_retry",
+        "item_pl_arch_gateway",
+        "item_pl_constraint_pii",
+        "item_pl_domain_pay",
+        "item_pl_goal_fail",
+        "item_pl_m1",
+        "item_pl_m2",
+        "item_pl_mission",
+        "item_pl_policy_refund",
+        "item_pl_wf_payment"
+      ]
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "f1d7503190c40fbd65a0d393da3387da8a842ba9e429359d13f40b95b565e9e5",
+      "size": 3037,
+      "target": "agents",
+      "source_item_ids": [
+        "item_pl_adr_retry",
+        "item_pl_arch_gateway",
+        "item_pl_constraint_pii",
+        "item_pl_domain_pay",
+        "item_pl_goal_fail",
+        "item_pl_m1",
+        "item_pl_m2",
+        "item_pl_mission",
+        "item_pl_policy_refund",
         "item_pl_wf_payment"
       ]
     },
@@ -93,5 +129,5 @@
       "reason": "open_question 은 Pack 에 나가지 않는다 — 웹에서 답한 뒤 다른 타입으로 승격된다"
     }
   ],
-  "manifest_hash": "0d27e7d0f70ab519536945b64ef7677ddb5540d2c1f468ad08798c2ce8cee38f"
+  "manifest_hash": "32481bf1d7099d5aff4642eb85e28be1ffe892511e702b20dd489e50e00f8247"
 }

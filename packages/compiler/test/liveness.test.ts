@@ -1,6 +1,7 @@
 import { PACK_TARGETS, SCOPE_KINDS, SOURCE_REF_KINDS, SourceRef, type ContextItem, type ItemType, type ScopeKind } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 import { compile } from '../src'
+import { SCOPE_INLINE_LABEL } from '../src/sections'
 import { SCOPE_ORDER } from '../src/sort'
 import { srcKindOf, srcTag } from '../src/tag'
 import { ALL_TYPES, ANCHOR, makeInput, makeItem } from './fixtures'
@@ -85,7 +86,8 @@ describe('scope.kind 3종 · 배치 (SCOPE_DOC)', () => {
     const paths = (['project', 'domain', 'path'] as const).map((kind) => {
       const scope = kind === 'project' ? { kind } : { kind, value: 'payment' }
       const result = compile(makeInput([ANCHOR, makeItem('policy', { scope })]))
-      return result.files.find((f) => f.text.includes('item_t_policy'))?.path
+      //  거울(agents·cursor)은 세 갈래를 전부 담으므로 뺀다 — 재는 것은 **원본 파일**의 배치다.
+      return result.files.find((f) => f.target === 'claude' && f.text.includes('item_t_policy'))?.path
     })
     expect(paths).toEqual(['CLAUDE.md', '.claude/rules/domain-payment.md', '.claude/rules/scoped-payment.md'])
   })
@@ -193,13 +195,94 @@ describe('SourceRef 4종', () => {
   })
 })
 
-describe('PackTarget 3종', () => {
-  // ⚠ 지금 나오는 타깃은 `claude` 하나다. `agents`·`cursor` 는 docs/PLAN.md P5 행이고
-  //   docs/feedback/FINDINGS.md 에 [구멍]으로 올려 뒀다. 그 행을 하면 여기가 빨개진다 —
-  //   **그때 이 시험을 고치면서 FINDINGS 를 닫아라.** 빨개지는 것이 알림이다.
-  it('아직 claude 타깃만 나온다 (agents·cursor 는 P5 행 · FINDINGS 8)', () => {
-    const result = compile(makeInput([ANCHOR, makeItem('domain'), makeItem('adr'), makeItem('workflow')]))
-    expect([...new Set(result.files.map((f) => f.target))]).toEqual(['claude'])
-    expect(PACK_TARGETS).toEqual(['claude', 'agents', 'cursor'])
+describe('PackTarget 3종 · 거울 문서 (SPEC §4.1 「동일 내용」 · FINDINGS 7)', () => {
+  //  🔴 `PACK_TARGETS` 의 값이 **전부** 파일을 낸다. 예전엔 `claude` 만 나왔고 enum 값 둘이
+  //     아무것도 안 바꿨다 (FINDINGS 7). 타깃을 더하는 절차는 `templates/index.ts` 의 `MirrorDocId` 주석.
+  const result = compile(
+    makeInput([
+      ANCHOR,
+      makeItem('goal'),
+      makeItem('roadmap'),
+      makeItem('architecture'),
+      makeItem('domain'),
+      makeItem('adr'),
+      makeItem('workflow'),
+      makeItem('policy', { scope: { kind: 'domain', value: 'payment' } }),
+      makeItem('constraint', { scope: { kind: 'path', value: 'src/webhook/**' } }),
+    ]),
+  )
+  const text = (path: string): string => {
+    const file = result.files.find((f) => f.path === path)
+    expect(file, `${path} 가 Pack 에 없다`).toBeDefined()
+    return file?.text as string
+  }
+  /** 머리말(첫 `<!-- ContextOps generated` 줄까지)을 뗀 본문 — 두 거울이 여기서 같아야 한다. */
+  const body = (path: string): string => {
+    const lines = text(path).split('\n')
+    const at = lines.findIndex((l) => l.startsWith('<!-- ContextOps generated'))
+    expect(at).toBeGreaterThanOrEqual(0)
+    return lines.slice(at + 1).join('\n')
+  }
+
+  it.each([...PACK_TARGETS])('%s 타깃으로 나오는 파일이 하나 이상 있다', (target) => {
+    expect(result.files.filter((f) => f.target === target).length).toBeGreaterThan(0)
+  })
+
+  it('나오는 타깃의 집합이 PACK_TARGETS 와 같다 (값이 늘면 여기서 빨개진다 — 표에 문서를 더해라)', () => {
+    expect([...new Set(result.files.map((f) => f.target))].sort()).toEqual([...PACK_TARGETS].sort())
+  })
+
+  it('AGENTS.md 는 CLAUDE.md 의 항목을 전부 담는다 (CLAUDE.md 본문)', () => {
+    const claude = result.manifest.files.find((f) => f.path === 'CLAUDE.md')?.source_item_ids ?? []
+    const agents = result.manifest.files.find((f) => f.path === 'AGENTS.md')?.source_item_ids ?? []
+    expect(claude.length).toBeGreaterThan(0)
+    for (const id of claude) expect(agents).toContain(id)
+  })
+
+  it('AGENTS.md 는 rules 의 요약도 담는다 — 결정 요약 · 도메인 · 도메인·경로 규칙 · 작업 절차', () => {
+    const agents = text('AGENTS.md')
+    for (const id of ['item_t_adr', 'item_t_domain', 'item_t_policy', 'item_t_constraint', 'item_t_workflow']) {
+      expect(agents, `${id} 가 AGENTS.md 에 없다`).toContain(`ctx:${id} `)
+    }
+    //  전문(adr_full · architecture 상세)은 요약이 아니다 — 결정 요약 한 줄만 들어간다.
+    expect(agents).not.toContain('- 배경: ')
+    expect(agents).not.toContain('- 책임: ')
+  })
+
+  it('🔴 거울에 모인 도메인·경로 규칙은 줄 스스로 범위를 말한다 (파일 이름이 나르던 정보)', () => {
+    const agents = text('AGENTS.md')
+    expect(agents).toContain(`· ${SCOPE_INLINE_LABEL.domain}: payment`)
+    expect(agents).toContain(`· ${SCOPE_INLINE_LABEL.path}: src/webhook/**`)
+    //  원본 파일에서도 같은 줄이다 — 렌더가 하나라서다 (거울은 블록을 **그대로** 복사한다).
+    expect(text('.claude/rules/domain-payment.md')).toContain(`· ${SCOPE_INLINE_LABEL.domain}: payment`)
+    expect(text('.claude/rules/scoped-src-webhook.md')).toContain(`· ${SCOPE_INLINE_LABEL.path}: src/webhook/**`)
+  })
+
+  it('SCOPE_INLINE_LABEL 은 project 를 뺀 scope 전부를 덮는다 (표의 항목이 전부 쓰인다)', () => {
+    expect(Object.keys(SCOPE_INLINE_LABEL).sort()).toEqual(SCOPE_KINDS.filter((k) => k !== 'project').sort())
+  })
+
+  it('AGENTS.md 와 .cursor/rules/contextops.mdc 는 머리말만 다르고 본문이 byte 로 같다 (「동일 내용」)', () => {
+    expect(body('.cursor/rules/contextops.mdc')).toBe(body('AGENTS.md'))
+    expect(text('.cursor/rules/contextops.mdc').startsWith('---\n')).toBe(true)
+    expect(text('.cursor/rules/contextops.mdc')).toContain('alwaysApply: true')
+  })
+
+  it('거울은 항목이 하나도 없으면 만들어지지 않는다 — 거울에 갈 것이 없는 snapshot 은 없지만, 표가 그렇게 말한다', () => {
+    //  ANCHOR(mission) 하나면 CLAUDE.md 가 있으니 거울도 있다. 거울의 근거는 비지 않는다 (P7).
+    const small = compile(makeInput([ANCHOR]))
+    for (const path of ['AGENTS.md', '.cursor/rules/contextops.mdc']) {
+      const entry = small.manifest.files.find((f) => f.path === path)
+      expect(entry, `${path} 가 없다`).toBeDefined()
+      expect(entry?.source_item_ids).toEqual(['item_t_mission'])
+    }
+  })
+
+  it('항목 하나를 바꾸면 거울도 같이 바뀐다 (죽은 복사본이 아니다)', () => {
+    const a = compile(makeInput([ANCHOR, makeItem('goal')]))
+    const b = compile(makeInput([ANCHOR, makeItem('goal', { title: '다른 목표 표본' })]))
+    for (const path of ['AGENTS.md', '.cursor/rules/contextops.mdc']) {
+      expect(a.files.find((f) => f.path === path)?.sha256).not.toBe(b.files.find((f) => f.path === path)?.sha256)
+    }
   })
 })

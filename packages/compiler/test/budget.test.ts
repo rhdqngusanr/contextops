@@ -47,6 +47,15 @@ describe('CLAUDE.md 12,000자', () => {
     expect(small.files.map((f) => f.path)).not.toContain('.claude/rules/policies.md')
     expect(small.warnings).toEqual([])
   })
+
+  //  🔴 거울 문서(AGENTS.md)는 분량 규칙의 대상이 아니다 — 「CLAUDE.md 본문 + rules 인라인」이
+  //     한 장이어야 하므로, 정책이 policies.md 로 옮겨진 뒤에도 거울에는 **그대로** 있다.
+  it('CLAUDE.md 가 정책을 policies.md 로 옮겨도 AGENTS.md 에는 정책이 그대로 있다', () => {
+    const agents = result.files.find((f) => f.path === 'AGENTS.md')?.text as string
+    expect(agents.length).toBeGreaterThan(CLAUDE_MD_MAX_CHARS)     // 12,000자 규칙을 안 받는다
+    for (let i = 0; i < 40; i++) expect(agents).toContain(`ctx:item_bulk_${String(i).padStart(3, '0')} `)
+    expect(result.files.filter((f) => f.path.startsWith('AGENTS'))).toHaveLength(1)   // 나뉘지 않는다
+  })
 })
 
 describe('rules 파일 30,000자', () => {
@@ -61,6 +70,12 @@ describe('rules 파일 30,000자', () => {
   it('나뉜 파일에도 안내가 붙는다', () => {
     for (const part of parts) expect(part.text).toContain('나뉘었다')
     expect(result.warnings.join(' ')).toContain('domain-payment.md')
+  })
+
+  it('거울(AGENTS.md)은 30,000자를 넘어도 나뉘지 않는다 — AGENTS-2.md 는 sync allowlist 밖이다', () => {
+    const mirrors = result.files.filter((f) => f.path.startsWith('AGENTS'))
+    expect(mirrors.map((f) => f.path)).toEqual(['AGENTS.md'])
+    expect((mirrors[0]?.text.length ?? 0) > RULES_MAX_CHARS).toBe(true)
   })
 
   it('항목이 잘리지 않고 전부 어느 한 파트에 있다', () => {

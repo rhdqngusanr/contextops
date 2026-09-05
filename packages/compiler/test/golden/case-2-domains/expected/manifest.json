@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "compiler_version": "0.1.0",
-  "template_version": "1.2",
+  "template_version": "1.3",
   "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
   "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
   "context_version": "2.1.0",
@@ -10,8 +10,8 @@
   "files": [
     {
       "path": ".claude/rules/domain-ledger.md",
-      "sha256": "a31e36bac75e45e3485753592439a421fbe555f9eb982be0fe32078aba139438",
-      "size": 550,
+      "sha256": "56e1cd69e0bcb2509917dc5a1b84d0d6a21d2e3279b9eeac120e57575313d992",
+      "size": 571,
       "target": "claude",
       "source_item_ids": [
         "item_pl_dom_ledger",
@@ -38,8 +38,8 @@
     },
     {
       "path": ".claude/rules/scoped-infra.md",
-      "sha256": "5171888534cc3d371f034e32148154d4fd4aab511d76783a9e132af6347f4a22",
-      "size": 375,
+      "sha256": "1efed24712198819971bd86fcb69c8bf36efa0ea5867bd4f0404865e2f76264a",
+      "size": 395,
       "target": "claude",
       "source_item_ids": [
         "item_pl_policy_infra"
@@ -47,8 +47,8 @@
     },
     {
       "path": ".claude/rules/scoped-migrations.md",
-      "sha256": "a0aeaa83c5f5bea6e953e59209888a09510298eeb1c90d0a27328d5679fbbe3a",
-      "size": 572,
+      "sha256": "50faf085960b51991c4c67c81fdd190f1b92ffbac084597f5857219a177750d6",
+      "size": 622,
       "target": "claude",
       "source_item_ids": [
         "item_pl_constraint_migration",
@@ -61,6 +61,40 @@
       "size": 770,
       "target": "claude",
       "source_item_ids": []
+    },
+    {
+      "path": ".cursor/rules/contextops.mdc",
+      "sha256": "0ce563842a4c8c277bec4fa94f85f37aa99c243a309d2e01378bdeca96fc88b5",
+      "size": 2630,
+      "target": "cursor",
+      "source_item_ids": [
+        "item_pl_constraint_migration",
+        "item_pl_dom_ledger",
+        "item_pl_dom_payment",
+        "item_pl_dom_refund",
+        "item_pl_m1",
+        "item_pl_mission",
+        "item_pl_policy_infra",
+        "item_pl_policy_ledger_ro",
+        "item_pl_policy_migration"
+      ]
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "47ec89ee1ee0c5d418b2ea6aadb3afa4cd313767af8f62649ce392895a479760",
+      "size": 2490,
+      "target": "agents",
+      "source_item_ids": [
+        "item_pl_constraint_migration",
+        "item_pl_dom_ledger",
+        "item_pl_dom_payment",
+        "item_pl_dom_refund",
+        "item_pl_m1",
+        "item_pl_mission",
+        "item_pl_policy_infra",
+        "item_pl_policy_ledger_ro",
+        "item_pl_policy_migration"
+      ]
     },
     {
       "path": "CLAUDE.md",
@@ -85,5 +119,5 @@
     }
   ],
   "excluded": [],
-  "manifest_hash": "4670e7f0a19ce086e4ebef96eee051b20cbd95bcaf2acff8e6c7642847983415"
+  "manifest_hash": "6b51f6228644a1c8fa02473e56c869199cdbd1c6eb9f298e9c7e87d7faa6272e"
 }

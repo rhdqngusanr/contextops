@@ -15,10 +15,30 @@ import { PROGRESS_REPORT } from './progress-report'
 //    게이트가 아니게 된다.
 // =====================================================================
 
-export const TEMPLATE_VERSION = '1.2'
+//  1.3 (2026-09-06) — `agents`·`cursor` 거울 문서가 생겼고, scoped_rule 줄이 제 범위(도메인·경로)를
+//      끝에 적는다. ★ 왜 — 거울 문서는 여러 파일의 규칙을 **한 장**에 모으므로 「어느 파일에 있었나」가
+//      없어진다. 줄이 스스로 범위를 말하지 않으면 경로 규칙이 전역 규칙처럼 읽힌다.
+export const TEMPLATE_VERSION = '1.3'
+
+/**
+ * 🔴 **거울 문서** — 제 항목은 없고 다른 문서의 절을 **그대로** 모아 한 장으로 내는 문서
+ * (SPEC §4.1 표의 마지막 줄 「동일 내용」). `agents` = `AGENTS.md` · `cursor` = `.cursor/rules/contextops.mdc`.
+ *
+ * ★ 새 타깃(예: `.windsurf/rules/…`)을 더하는 절차 — 넷이고, 코드 밖에 없다:
+ *   ① `packages/schema` 의 `PACK_TARGETS` **끝에** 값 (직렬화된다 — 중간에 넣지 마라)
+ *   ② 여기 `MirrorDocId` 에 이름 하나 + 아래 `DOCS` 에 `compose` 가 있는 항목 하나
+ *   ③ `plugin/contextops/src/cli/managed.ts` 의 `MANAGED_PATHS` 에 그 경로 (없으면 sync 가 거부하고 멈춘다)
+ *   ④ `test/liveness.test.ts` 「PackTarget」이 `PACK_TARGETS` 를 돌며 「타깃마다 파일이 나온다」를 자동으로 센다
+ * ⚠ partition 표는 거울 문서를 **모른다** — `place()` 가 `PlaceableDocId` 만 받아서 타입이 막는다.
+ *   항목이 어느 절로 가는지는 한 번만 정해지고, 거울은 그 결과를 읽는다. 그래서 ItemType 이 늘어도 여기는 안 고친다.
+ */
+export type MirrorDocId = 'agents' | 'cursor'
 
 /** Pack 을 이루는 문서 종류. `domain`·`scoped` 는 slug 마다 파일이 하나씩 생긴다. */
-export type DocId = 'claude' | 'architecture' | 'domain' | 'workflow' | 'decisions' | 'scoped' | 'policies'
+export type DocId = 'claude' | 'architecture' | 'domain' | 'workflow' | 'decisions' | 'scoped' | 'policies' | MirrorDocId
+
+/** partition 이 항목을 놓을 수 있는 문서 — 거울 문서는 뺀다. */
+export type PlaceableDocId = Exclude<DocId, MirrorDocId>
 
 /**
  * 문서 안의 절. 한 절은 **한 가지 모양의 줄**만 담는다 (`src/sections.ts` 의 표).
@@ -65,10 +85,55 @@ export type DocSpec = {
    *   만들지 정할 수 없다.
    */
   always?: true
+  /**
+   * 🔴 **거울 문서** — 여기 적힌 문서들의 절(블록)을 그대로 모아 이 문서의 절로 삼는다.
+   *   slug 가 여럿인 문서(`domain`·`scoped`)는 **모든 slug** 를 slug 순으로 모은다.
+   * ★ 왜 partition 에 한 줄 더 넣지 않나 — 그러면 ItemType 을 하나 더할 때 「CLAUDE.md 에도,
+   *   AGENTS.md 에도」를 사람이 기억해야 하고, 다음 사람은 반드시 하나를 빠뜨린다.
+   *   거울은 표를 **읽기만** 한다 (`src/assemble.ts` 의 `collect`).
+   * ⚠ 거울은 분량 규칙(§4.1 5단계)의 대상이 아니다 — 원본 파일들이 이미 각자 한도 안이고,
+   *   거울을 나누면 `AGENTS-2.md` 같은 이름이 나와 sync allowlist 밖으로 떨어진다.
+   */
+  compose?: readonly PlaceableDocId[]
   head: (v: DocVars) => string[]
   slots: readonly Slot[]
   foot?: (v: DocVars) => string[]
 }
+
+/**
+ * 거울 문서의 재료와 절 순서 — `agents`·`cursor` 가 **같은 것**을 쓴다 (「동일 내용」).
+ * CLAUDE.md 의 절 전부 + rules 의 인라인 요약(결정 요약 · 도메인 · 도메인·경로 규칙 · 작업 절차).
+ * ⚠ `architecture` 상세와 `adr_full` 은 뺀다 — Quick Map 과 결정 요약이 그 요약이다.
+ *   `policies` 는 재료가 아니다 — 분량 규칙이 옮기기 **전**의 `claude` 를 읽으므로 정책은 이미 들어 있다.
+ */
+const INLINE_SOURCES: readonly PlaceableDocId[] = ['claude', 'architecture', 'domain', 'scoped', 'workflow']
+const INLINE_SLOTS: readonly Slot[] = [
+  { section: 'mission', heading: '## Mission' },
+  { section: 'goal', heading: '## Goals' },
+  { section: 'roadmap', heading: '## Roadmap', lead: '<!-- ctx:roadmap -->' },
+  { section: 'policy', heading: '## Policies (must follow)' },
+  { section: 'constraint', heading: '## Constraints' },
+  { section: 'quickmap', heading: '## Quick Map' },
+  { section: 'adr_summary', heading: '## 결정 요약' },
+  //  ⚠ `domain`·`workflow` 블록은 제 `## 제목` 을 갖고 시작한다 — 위에 `##` 을 또 얹으면
+  //    h2 아래 h2 가 되어 사람이 읽기 어렵다. 대신 어디서 왔는지를 주석 한 줄로 적는다.
+  { section: 'domain', lead: '<!-- 도메인 — .claude/rules/domain-*.md 의 본문 -->' },
+  { section: 'scoped_rule', heading: '## 도메인·경로 규칙', lead: '<!-- 각 줄 끝의 「도메인:」·「경로:」가 그 규칙의 범위다 -->' },
+  { section: 'workflow', lead: '<!-- 작업 절차 — .claude/rules/workflow.md 의 본문 -->' },
+]
+/** 거울 문서의 꼬리 — 정본이 어디인지 말한다. `> ` 로 시작해야 한다 (템플릿 줄 · P7 시험이 그렇게 알아본다). */
+const MIRROR_FOOT = '> 정본은 CLAUDE.md 와 .claude/rules/ 다 — 이 파일은 같은 내용을 한 장으로 옮긴 것이다. 진행 보고는 Claude Code 플러그인이 한다.'
+
+/**
+ * `.cursor/rules/*.mdc` 의 frontmatter. Cursor 는 `alwaysApply: true` 인 규칙을 모든 대화에 넣는다.
+ * ⚠ 이 줄들은 항목에서 온 것이 아니다 — `test/traceability.test.ts` 의 `isTemplateLine` 이 이 표로 알아본다.
+ */
+export const CURSOR_FRONTMATTER: readonly string[] = [
+  '---',
+  'description: ContextOps 가 만든 팀 규칙 — 손으로 고치지 말고 /contextops:propose 로 제안한다',
+  'alwaysApply: true',
+  '---',
+]
 
 /**
  * 모든 Pack 파일의 첫 줄들. **손으로 고치지 말라는 경고가 없으면 사용자가 고치고,
@@ -165,5 +230,24 @@ export const DOCS: Record<DocId, DocSpec> = {
       { section: 'policy', heading: '## Policies (must follow)' },
       { section: 'constraint', heading: '## Constraints' },
     ],
+  },
+
+  // ── 거울 문서 (SPEC §4.1 「동일 내용」) — 항목은 위 문서들에서 온다. `compose` 를 봐라. ──
+  agents: {
+    path: () => 'AGENTS.md',
+    target: 'agents',
+    compose: INLINE_SOURCES,
+    head: (v) => [`# ${v.projectName} — Team Context v${v.version}`, notice(v)],
+    slots: INLINE_SLOTS,
+    foot: () => [MIRROR_FOOT],
+  },
+
+  cursor: {
+    path: () => '.cursor/rules/contextops.mdc',
+    target: 'cursor',
+    compose: INLINE_SOURCES,
+    head: (v) => [...CURSOR_FRONTMATTER, `# ${v.projectName} — Team Context v${v.version}`, notice(v)],
+    slots: INLINE_SLOTS,
+    foot: () => [MIRROR_FOOT],
   },
 }
