@@ -189,6 +189,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `docs/evidence/` | 바퀴마다 남긴 근거 — 캡처 · 덤프 · 관통 산출물 복사본 |
 | `docs/history/` | STATUS 에서 내려온 지난 바퀴 기록 |
 | `docs/KNOWN_LIMITATIONS.md` | 알려진 한계 — 지금 안 되는 것 |
+| `docs/SUBMISSION.md` | 제출서 원문 — 랜딩·README 와 같은 문장인지 시험이 잰다 · 🙋 자리(팀명 · URL · 영상) |
 | `CLAUDE.md` | 저장소 개발 규칙 — 사람과 AI 세션이 같이 지킨다 |
 | `LICENSE` | MIT |
 

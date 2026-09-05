@@ -1,0 +1,153 @@
+# 제출서 — ContextOps
+
+> **Wanted AI Championship 2026** · 제출 2026-09-20 · 개발 1인 + Claude Code
+>
+> 이 문서는 대회 제출 양식에 옮겨 적을 **원문**이다. 재료는 `docs/SPEC.md` §16(초안)과 `README.md` 이고,
+> 랜딩(`apps/web/src/components/landing.tsx`)과 **같은 문장**을 말하는지 `apps/web/test/readme.test.ts` 가 잰다.
+> 여기 적힌 기능은 전부 **지금 코드에 있는 것**이다 — 없는 것은 [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) 에 있다.
+> 없는 기능을 제출서에 적으면 심사의 첫 질문이 그것이 된다.
+
+## 🙋 사람이 채우는 자리
+
+| 항목 | 값 | 어디에도 같이 적나 |
+|---|---|---|
+| 제출 팀명 | 🙋 | README 머리 · 랜딩 푸터 (`LANDING_FOOT`) — FINDINGS 122 |
+| 공개 저장소 URL | 🙋 | README 머리 · 랜딩 푸터 · KNOWN_LIMITATIONS 의 `<marketplace>` 줄 — FINDINGS 122 |
+| production URL | 🙋 (Vercel · Supabase 연결 뒤) | README 머리 — `docs/STATUS.md` 「막힌 것」 |
+| 2분 영상 링크 | 🙋 (PLAN P6 첫 행) | — |
+| 슬라이드 링크 | 🙋 (PLAN P6 첫 행) | — |
+
+---
+
+## 한 줄
+
+**팀의 지식과 Claude의 기억을 같은 방향으로**
+
+팀장이 승인한 목표·로드맵·결정을 모든 팀원의 Claude Code에 같은 버전으로 배포하고, 로드맵이 실제로 진행되는지
+근거와 함께 보여줍니다. 팀장은 브라우저에서 15분, 개발자는 명령 한 줄.
+
+## 문제
+
+AI 코딩 도구는 `CLAUDE.md` 같은 파일로 팀 지식을 받습니다. 그런데 그 파일은 **git을 쓰는 개발자 개인이 각자
+관리**합니다. 팀장의 목표·정책은 AI에 안 들어가고, 같은 팀인데 **팀원마다 AI가 다른 답**을 하며, 로드맵이 실제로
+어디까지 왔는지 **아무도 모릅니다.**
+
+같은 팀의 두 사람이 같은 질문을 했을 때 — 샘플 팀(`paylab`)의 실제 문서와 코드입니다:
+
+> **$ PSP 호출이 실패하면 몇 번까지 재시도해?**
+>
+> | Before · 각자의 Claude | After · Team Context v1.1.0 |
+> |---|---|
+> | **A** (`paylab-docs/goals.md §3.1`) — 최대 5회까지 지수 백오프로 재시도합니다. 고정 간격은 금지라고 되어 있습니다. | PSP 호출은 최대 5회까지 재시도한다. 간격은 지수 백오프(0.5s·1s·2s·4s·8s)이고, 재시도 대상은 타임아웃과 5xx 뿐이다. |
+> | **B** (`paylab-api/src/payment/retry.ts:11`) — MAX_RETRY = 3 이고 간격은 500ms 고정입니다. | must · 근거: `paylab-docs/goals.md §3.1` · `paylab-api/src/payment/retry.ts:11–14` · 팀장 승인 · `<!-- ctx:item_policy_retry -->` |
+> | 같은 팀, 같은 질문, 다른 답 | A·B·C 모두 같은 답 |
+
+After 의 문장은 예시가 아니라 **게스트가 `/demo` 에서 실제로 받는 Pack 의 그 줄**입니다. 줄 끝의 역추적 태그가
+그 문장이 어느 항목에서 왔는지를 말합니다.
+
+## 해결
+
+ContextOps는 기존 문서·팀장 답변·코드에서 뽑은 항목을 AI가 정해진 형식으로 구조화하고, 충돌을 찾아 사람이
+결정하게 하고, 승인된 것을 모든 팀원의 Claude Code에 같은 버전·같은 해시로 배포하며, 각 팀원의 AI가 작업 끝에
+로드맵 진행을 근거와 함께 보고합니다.
+
+1. **만든다** — 문서·답변·코드에서 항목을 뽑고, 서로 어긋난 것은 사람이 결정합니다. 승인된 것만 남습니다.
+2. **배포한다** — 같은 snapshot 은 언제나 같은 Pack 입니다. 모든 기기가 같은 버전·같은 해시를 받습니다.
+3. **진행이 보인다** — 각자의 AI 가 작업 끝에 근거를 보고하고, 완료는 사람이 확인합니다. 행은 마일스톤입니다.
+
+## AI 활용
+
+AI 가 있는 자리는 셋 — **서버측 둘**(우리 API 키)과 **사용자 로컬 하나**(사용자 본인의 Claude Code) — 이고,
+셋 다 **사람이 결정하기 전** 단계에만 있습니다.
+
+1. **문서·답변 → 스키마 항목 구조화** (`apps/web/src/lib/ai/structure.ts`) — 팀장이 등록한 문서를 항목 10종 중
+   하나로 나누고, 각 항목에 **원문 offset 근거**를 붙입니다. 근거 ID 는 입력에 존재하는 것만 허용해 환각을
+   구조적으로 차단합니다. Claude API 의 tool use 로 출력 형식을 고정합니다 (`lib/ai/client.ts`).
+2. **항목 간 충돌·오래됨·중복 탐지** (`apps/web/src/lib/ai/conflict.ts`) — AI 는 판정하지 않고 **질문 카드**를
+   만듭니다. 결정은 팀장이 클릭으로 합니다.
+3. **사용자 본인의 Claude Code 가 로컬에서** 코드 근거 추출·변경 제안·진행 보고 (`plugin/contextops/skills/`) —
+   저장소 파일은 사용자 기계에서 읽히고, 서버로는 **경로·줄 번호·구조화된 항목**만 갑니다. 코드 본문은 가지 않습니다.
+
+승인 이후의 컴파일·해시·배포에는 **LLM 이 없습니다** — 같은 snapshot 은 언제나 같은 byte 의 Pack 입니다
+(`packages/compiler` · golden 3종). 서버측 호출은 전부 우리 API 키로, `withBudget()` 한 문을 거쳐 일일 예산과
+빈도 상한 안에서만 일어납니다 (`apps/web/src/lib/ai/budget.ts`).
+
+⚠ SPEC §16 초안의 「(4) 승인 항목만 근거로 답하는 질의」는 **문이 없습니다** — 라우트가 없어 화면에도 질의창이
+없습니다. 이 제출서는 그 기능을 적지 않습니다 (`docs/KNOWN_LIMITATIONS.md` 「서버측 AI 4종 중 둘은 문이 없다」 · FINDINGS 117).
+
+## 신뢰 경계 — 깨면 안 되는 원칙 7개
+
+[`tools/principles.ps1`](../tools/principles.ps1) 이 매 커밋마다 **기계로 셉니다.** 문장은 README 와 같습니다.
+
+| # | 원칙 | 무엇이 잰다 |
+|---|---|---|
+| **P1** | 서버는 저장소 **코드 본문·secret·개인 Memory·대화 transcript를 절대 받지 않습니다.** 업로드는 `.strict()` allowlist 스키마로만 통과 | 스키마 금지어 0건 · 관통이 진짜 소켓으로 나간 body 를 받아 코드 본문 0건·심은 env 값 0건을 잽니다 |
+| **P2** | 제품 코드는 **사용자의 Claude를 대신 호출하지 않습니다.** Claude는 사용자가 Skill을 직접 실행할 때만 동작 | `claude -p`·Agent SDK 가 `plugin/`·`packages/`·`apps/` 에 0건 |
+| **P3** | 서버측 LLM은 **우리 API 키**로만 · 4개 기능 한정 · 일일 예산·rate limit | 모든 호출이 `withBudget()` 경유 |
+| **P4** | **승인 이후 파이프라인에는 LLM이 없습니다.** 같은 snapshot → byte-identical Pack | 컴파일러에 시각·난수·네트워크 0건 · golden 3종 · 항목 순서를 셔플해도 같은 byte |
+| **P5** | 진행은 **마일스톤 단위만.** 개인 생산성 점수·순위를 만들지 않습니다 | 기계로 못 잽니다 — 눈 판정 항목 |
+| **P6** | Hook은 **사용자의 파일을 변경하지 않습니다.** 변경은 사용자가 `/contextops:sync` 를 실행할 때만 | 훅이 쓰는 경로는 `hooks.json` 의 `_writes` 에 선언한 git-ignore 경로뿐 · 훅을 프로세스로 돌린 뒤 바이트 대조 |
+| **P7** | 모든 Pack 줄은 항목 ID → 원문(문서 offset 또는 `path:line`)으로 **역추적**됩니다 | Pack 전 줄에 `<!-- ctx:… -->` 태그 · 태그 없는 줄이 하나라도 있으면 실패 |
+
+| ✓ 서버가 아는 것 | ✕ 서버가 모르는 것 |
+|---|---|
+| 팀·프로젝트 ID | 저장소 코드 본문 |
+| 구조화된 항목 (제목·규칙·마일스톤) | 환경변수 · secret |
+| 팀장이 직접 등록한 문서 원문 | 개인 CLAUDE.local.md |
+| 경로 · 줄 번호 · 커밋 해시 | Auto Memory |
+| 버전 · manifest 해시 | Claude 대화 내용 |
+
+P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](evidence/2026-09-06-p1-payload/p1-payload.md) —
+관통 시나리오가 진짜 소켓으로 받은 body 4종의 **있는 필드와 없는 필드**를 산출물 그대로 적었습니다.
+
+## 도구와 기술
+
+- **Claude Code Plugin** — Skill 3(`/contextops:init` · `sync` · `propose`) · 훅 2(`SessionStart` · `Stop`) · CLI 단일 번들
+  (`plugin/contextops/bin/contextops-cli.mjs`). 훅은 알리기만 하고 LLM 을 부르지 않습니다.
+- **Claude API** — `@anthropic-ai/sdk` · tool use 구조화 출력 · `withBudget()` 필수.
+- **웹·서버** — TypeScript 5 / Node 22 · Next.js 15 (App Router · Route Handlers) · Postgres (Supabase) + Drizzle ORM ·
+  PGlite (시험·로컬) · Zod · vitest · Vercel (Cron 포함).
+- **개발 전 과정 Claude Code** — 이 저장소는 자율 루프(`loop/`)가 만들었습니다. 한 바퀴마다 새 헤드리스 세션이
+  문서에서 할 일을 읽고, 하나만 고치고, 검사하고, 커밋하고, 다음 바퀴를 위한 기록(`docs/STATUS.md`)을 남깁니다.
+  이 루프는 배포되는 제품이 아니라 개발 도구이므로 P2 의 예외입니다 (`CLAUDE.md`).
+
+## 어떻게 보나
+
+**샘플 팀** — `/demo` 를 열면 게스트 세션으로 샘플 팀에 들어갑니다. 읽기 전용이고 매일 03:00(KST) 초기화됩니다.
+로그인 없이 앱 화면(가져오기 · 정리 · Context · 제안 · Pack Explorer · Roadmap · Sync)을 그대로 봅니다.
+
+**개발자 설치**
+
+```
+claude plugin marketplace add <marketplace>                      # 플러그인 저장소를 등록한다
+claude plugin install contextops                                 # 플러그인을 깐다 (훅 · Skill · CLI)
+node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup          # 이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에
+/contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다
+```
+
+그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.
+
+**로컬에서** — 계정이 없어도 전부 돕니다. DB 는 프로세스 안의 PGlite 이고 서버측 AI 는 키가 없으면 픽스처 결과로
+떨어집니다 (`README.md` 「로컬에서 돌리기」).
+
+## 무엇이 검증돼 있나
+
+- **관통 시나리오** ([`tools/walkthrough.ps1`](../tools/walkthrough.ps1)) — 픽스처 → 항목 → 발행 → Pack → 배포되는
+  번들이 진짜 소켓으로 `scan → upload → sync → applied` 까지 **실제로 지난다.** 7단계.
+- **원칙 검사** ([`tools/principles.ps1`](../tools/principles.ps1)) — P1·P2·P3·P4·P6·P7 을 기계로 센다.
+- **golden** ([`packages/compiler/test/golden/`](../packages/compiler/test/golden/)) — 같은 snapshot → 같은 byte 를 잠근다.
+- 전 층은 [`tools/ci.ps1`](../tools/ci.ps1) 한 줄 — 「테스트 초록」은 완성이 아니고, **관통이 지나야** 「된다」입니다.
+
+## 알려진 한계
+
+정직하게 적습니다 — 전부 [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) 에 있고, 각 줄은 코드에서 이름을 찾은 뒤 적었습니다.
+심사 전에 읽어 두시면 좋은 것 넷:
+
+- **production 이 아직 없습니다** — 모든 관통·데모·캡처는 개발 기계의 PGlite 위에서 돌았습니다.
+- **`upload-draft` 의 `body` 에 사람이 코드를 붙여 넣으면 계약은 못 막습니다** — P1 은 「규칙대로 썼을 때 파이프라인이 본문을 안 나른다」까지입니다.
+- **서버측 AI 4종 중 둘(질의 · 데모 AI 한 번)은 문이 없습니다** (FINDINGS 117).
+- **모든 상태는 「마지막 보고 기준」입니다** — 화면은 폴링으로 갱신됩니다. 라이브 갱신은 없습니다.
+
+## 라이선스
+
+MIT — [`LICENSE`](../LICENSE)
