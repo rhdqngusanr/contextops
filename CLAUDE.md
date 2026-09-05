@@ -8,8 +8,12 @@
 ## 🔴 시작
 
 1. **`docs/feedback/INBOX.md`** — 사용자 지시. 여기 뭐가 있으면 그게 지금의 일이다
-2. **`docs/feedback/FINDINGS.md`** — 관통이 찾아 놓은 대장. 보통 일은 여기 맨 위에 있다
-3. **`docs/PLAN.md`** — Phase 체크리스트. `- [ ]` 맨 위 하나가 다음 행이다
+2. **`docs/feedback/FINDINGS.md`** — 관통이 찾아 놓은 대장. ⚠ 여기서 고르는 건 **`고장`뿐**이다
+3. **`docs/PLAN.md`** — Phase 체크리스트. **고장이 없으면 `- [ ]` 맨 위 행이 이번 일이다**
+
+> 🔴 **PLAN 이 FINDINGS 보다 위다** (2026-09-05). 실측: 24바퀴 동안 PLAN 이 한 칸도
+> 안 움직이고 FINDINGS 만 89→102 로 늘었다. **격차는 눈으로 보는 한 무한히 나온다** —
+> 제출일이 있는 프로젝트에서 그건 조용한 실패다. 상세와 순서는 `loop/PROMPT.md` ④3.
 4. **`docs/STATUS.md`** — 어디까지 했고 무엇에 막혀 있나
 5. 검증은 한 줄: `powershell -ExecutionPolicy Bypass -File tools/ci.ps1`
 
