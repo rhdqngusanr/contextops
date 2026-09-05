@@ -1,15 +1,16 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
-import { AnswerQuestions, ConflictQuery, QUESTION_CONFLICT_KINDS, SOURCE_REFS_MAX } from '@contextops/schema'
+import { ANSWER_MAX, AnswerQuestions, CONFLICT_KIND_RULES, ConflictQuery, QUESTION_CONFLICT_KINDS } from '@contextops/schema'
 //  ⚠ 정밀한 초안 타입은 따로 온다 — 유니온 스키마의 `z.infer` 는 느슨하다 (item.ts 주석).
-import type { ContextItemDraft as Draft } from '@contextops/schema'
+import type { ConflictKind, ContextItemDraft as Draft } from '@contextops/schema'
 
 import { conflicts } from '../../../../../../db/schema'
-import { CONFLICT_COLUMNS, questionRef, sameQuestionRef, toConflict } from '../../../../../../lib/api/conflict'
+import { slotDraft } from '../../../../../../lib/api/answer'
+import { CONFLICT_COLUMNS, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
-import { appendSourceRef, insertDrafts } from '../../../../../../lib/api/item'
+import { insertDrafts } from '../../../../../../lib/api/item'
 import { parseBody, parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
-import { SEED_ANSWER_MAX, seedDraft, seedQuestionOf } from '../../../../../../lib/api/seed-questions'
+import { seedDraft, seedQuestionOf } from '../../../../../../lib/api/seed-questions'
 
 // =====================================================================
 //  `GET·POST /projects/{id}/questions` — member (SPEC §5 · §9 화면 3·4)
@@ -20,13 +21,17 @@ import { SEED_ANSWER_MAX, seedDraft, seedQuestionOf } from '../../../../../../li
 //    `seed_question` 10장 (`lib/api/seed-questions.ts` · 화면 3 ③).
 //
 //  🔴 **답변이 항목이 되는 길은 둘이고, 둘 다 서버가 문장을 지어내지 않는다.**
-//    ① `draft` 가 오면 그것을 만든다 (부르는 쪽이 구조를 안다).
-//    ② 씨앗 질문이면 **표가 정한 자리**로 답변을 그대로 옮긴다 (`seedDraft` · LLM 없음).
-//    ⚠ `open_question` 에는 ②가 없다 — 그 답변을 타입별 `data` 로 뜯는 것은 §7.1 의
-//      일이고, 여기서 흉내 내면 근거를 지어내게 된다.
-//    🔴 **두 길 다 서버가 근거 한 줄을 더 붙인다** — `questionRef()` (P7 · FINDINGS 56).
-//      그게 없으면 ①로 들어온 항목은 부르는 쪽이 준 근거만 들고 있어서, 그 항목의 Pack
-//      줄에서 「사람이 어느 질문에 답한 것인가」로 갈 길이 없다.
+//     어느 길인가는 여기서 세지 않는다 — `CONFLICT_KIND_RULES[kind].answerSlot` 이 정한다:
+//    ① `seeded` — 씨앗 질문. **표가 정한 자리**로 답변을 그대로 옮긴다 (`seedDraft`).
+//    ② `ask`    — 열린 질문. 자리를 **사람이 고른다** (`save_as` → `ANSWER_SLOTS`).
+//       ⚠ 서버가 대신 고르지 않는다. 자유 문장을 타입별 `data` 로 뜯는 것은 §7.1 의
+//         일이고, 여기서 흉내 내면 근거를 지어내게 된다.
+//       ⚠ 안 고르면(=`save_as` 없음) 답만 기록하고 질문을 닫는다 — 사람이 「기록만」을
+//         고른 것이다. 예전에는 그 길**밖에** 없었고, 그래서 화면 4 의 열린 질문 카드는
+//         답을 저장해도 항목이 하나도 안 생겼다 (FINDINGS 105).
+//    🔴 **두 길 다 초안을 서버가 짓는다** — `answerDraft()` 하나 (`lib/api/answer.ts`).
+//      근거 한 줄(`questionRef`)이 거기서 붙는다: 그 항목의 Pack 줄에서 「사람이 어느
+//      질문에 답한 것인가」로 갈 길이 있어야 한다 (P7 · FINDINGS 56).
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
@@ -64,7 +69,7 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
 
   const ids = body.answers.map((a) => a.question_id)
   const open = await ctx.db
-    .select({ id: conflicts.id, question: conflicts.question })
+    .select({ id: conflicts.id, kind: conflicts.kind, question: conflicts.question })
     .from(conflicts)
     .where(and(
       eq(conflicts.projectId, projectId),
@@ -72,7 +77,7 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
       eq(conflicts.status, 'open'),
       inArray(conflicts.id, ids),
     ))
-  const answerable = new Map(open.map((r) => [r.id, r.question]))
+  const answerable = new Map(open.map((r) => [r.id, r] as const))
   //  하나라도 이 프로젝트의 열린 질문이 아니면 **전부 거부한다.** 일부만 반영하면
   //  화면은 「저장됐다」를 보고 사람은 어느 답이 빠졌는지 모른다.
   const unknown = ids.filter((id) => !answerable.has(id))
@@ -85,34 +90,40 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
   //     아무 일도 안 일어났다」만 본다. 어느 답이 문제인지를 **먼저** 말한다.
   const drafts = new Map<string, Draft>()
   for (const answer of body.answers) {
-    const question = answerable.get(answer.question_id) ?? ''
+    const row = answerable.get(answer.question_id)
+    if (!row) continue
+    const slot = CONFLICT_KIND_RULES[row.kind as ConflictKind].answerSlot
     let draft: Draft | undefined
-    if (answer.draft) {
-      draft = answer.draft as Draft
-    } else {
-      const seed = seedQuestionOf(question)
-      if (!seed) continue
-      draft = seedDraft(seed, answer.answer)
-      if (!draft) {
-        fail('VALIDATION_FAILED', `답변은 ${SEED_ANSWER_MAX}자까지입니다`, [
-          { path: 'answer', message: `${seed.question} — ${answer.answer.length}자` },
+
+    if (slot === 'seeded') {
+      //  ⚠ 이 종류에는 `save_as` 를 받지 않는다. **조용히 무시하지 않는다** — 무시하면
+      //     사람은 자기가 고른 자리로 저장된 줄 알고, 실제로는 표가 정한 자리로 간다.
+      if (answer.save_as) {
+        fail('VALIDATION_FAILED', '이 질문은 저장될 자리가 이미 정해져 있다', [
+          { path: 'save_as', message: answer.question_id },
         ])
       }
+      const seed = seedQuestionOf(row.question)
+      if (!seed) continue
+      draft = seedDraft(seed, answer.answer)
+    } else {
+      //  자리를 안 고른 답은 **기록만** 된다 (질문은 닫힌다).
+      if (!answer.save_as) continue
+      draft = slotDraft(answer.save_as, {
+        questionId: answer.question_id, question: row.question, answer: answer.answer,
+      })
     }
 
-    //  🔴 **어느 길로 왔든 그 항목은 자기가 나온 질문을 근거로 든다** (P7 · FINDINGS 56).
-    //     씨앗 초안은 이미 같은 줄을 들고 있어서 여기서 겹치지 않는다 (`same` 이 잡는다) —
-    //     즉 이 세 줄은 **초안을 실어 보내는 길**을 위해 있다. 그 길의 근거는 부르는 쪽이
-    //     통째로 정하므로, 붙이지 않으면 Pack 줄에서 질문 카드로 갈 길이 없다.
-    //  ⚠ 질문이 물고 있는 `a_ref`(원문 구간)를 물려주지 않는 이유는 `questionRef()` 에 있다.
-    const ref = questionRef(question)
-    const refs = appendSourceRef(draft.source_refs, ref, sameQuestionRef(ref))
-    if (!refs) {
-      fail('VALIDATION_FAILED', `근거가 ${SOURCE_REFS_MAX}개라 어느 질문에서 나왔는지를 붙일 자리가 없다 — 근거를 하나 줄여라`, [
-        { path: 'draft.source_refs', message: answer.question_id },
+    //  ⚠ 초안을 못 만드는 이유는 하나다 — 답변이 목적지 칸보다 길다 (`ANSWER_MAX`).
+    //     여기서 400 을 내지 않으면 사람은 「저장됐다」를 보고 자기 문장이 어디 갔는지
+    //     못 찾는다 (`batch-draft` 가 항목별로 갈라 받는 것과 정반대의 이유다 —
+    //     거긴 기계가 보낸다).
+    if (!draft) {
+      fail('VALIDATION_FAILED', `답변은 ${ANSWER_MAX}자까지입니다`, [
+        { path: 'answer', message: `${row.question} — ${answer.answer.length}자` },
       ])
     }
-    drafts.set(answer.question_id, { ...draft, source_refs: refs })
+    drafts.set(answer.question_id, draft)
   }
 
   const created: string[] = []
@@ -135,9 +146,6 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
 
       //  🔴 넣는 코드는 여기 없다 — `insertDrafts()` 하나다 (`lib/api/item.ts`).
       //     이 문이 정하는 것은 `origin` 뿐이다: 사람이 질문에 답해서 만든 항목이다 (SPEC §2).
-      //  ⚠ 여기서는 **거절을 400 으로 올린다.** 답변 하나가 조용히 항목이 안 되면
-      //     사람은 「저장됐다」를 보고 자기 문장이 어디 갔는지 못 찾는다 —
-      //     `batch-draft` 가 항목별로 갈라 받는 것과 정반대의 이유다 (거긴 기계가 보낸다).
       const done = await insertDrafts(tx, {
         projectId, entries: [{ index: 0, draft }], origin: 'manual', createdBy: actor.userId,
       })

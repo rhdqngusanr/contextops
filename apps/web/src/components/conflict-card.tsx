@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import {
-  CONFLICT_CHOICES, CONFLICT_KIND_RULES, itemOutcomeOf, RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
-  type ConflictAnchor, type ConflictChoice, type ContextItemView, type DetectedConflictKind,
+  ANSWER_MAX, ANSWER_SLOT_KEYS, ANSWER_SLOTS, CONFLICT_CHOICES, CONFLICT_KIND_RULES, itemOutcomeOf,
+  RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
+  type AnswerSlotKey, type ConflictAnchor, type ConflictChoice, type ContextItemView,
+  type DetectedConflictKind,
 } from '@contextops/schema'
-
-import { SEED_ANSWER_MAX } from '../lib/api/seed-questions'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
 import { dateText } from '../lib/web/time'
 import {
@@ -131,6 +131,12 @@ export type ConflictCardState = {
   canDecide: boolean
   /** 지금 칸에 쓰고 있는 글 — 탐지 카드는 **메모**, 질문 카드는 **답**이다. */
   draft: string
+  /**
+   * 🔴 「이 답을 무엇으로 저장할까요」 — `''` 면 **기록만** 한다 (FINDINGS 105).
+   * ⚠ 자리를 묻는 카드인지는 여기서 세지 않는다 —
+   *   `CONFLICT_KIND_RULES[kind].answerSlot === 'ask'` 하나가 정한다.
+   */
+  saveAs: AnswerSlotKey | ''
   busy: boolean
   error: unknown
   /**
@@ -145,6 +151,7 @@ export type ConflictCardHandlers = {
   onDraft: (value: string) => void
   /** 탐지 카드의 결정. `dismiss` 만 `dismissed` 로 가고 나머지는 `resolved` 다. */
   onChoose: (choice: ConflictChoice) => void
+  onSaveAs: (value: AnswerSlotKey | '') => void
   /** 질문 카드의 답 저장 (`POST /projects/{id}/questions`). */
   onAnswer: () => void
 }
@@ -349,6 +356,12 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
 // ---------------------------------------------------------------------
 
 function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandlers }) {
+  //  🔴 자리를 물어야 하는 카드인가는 **표가 정한다.** `kind === 'open_question'` 이라고
+  //     적으면 질문 종류가 늘 때 이 파일을 찾아야 하고, 못 찾으면 답 칸만 있고 항목이
+  //     안 생기는 카드가 조용히 하나 는다 (FINDINGS 105 가 그 고장이었다).
+  const asks = CONFLICT_KIND_RULES[state.conflict.kind].answerSlot === 'ask'
+  const slot = state.saveAs === '' ? null : ANSWER_SLOTS[state.saveAs]
+
   return (
     <div className="col-tight">
       <label className="field">
@@ -357,13 +370,33 @@ function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandl
           className="textarea"
           rows={3}
           value={state.draft}
-          maxLength={SEED_ANSWER_MAX}
+          maxLength={ANSWER_MAX}
           placeholder="한두 문장이면 충분합니다."
           onChange={(e) => on.onDraft(e.target.value)}
         />
         {/* ⚠ 상한을 손으로 적지 않는다 — 서버가 답을 담는 칸의 크기가 정본이다. */}
-        <span className="meta mono">{state.draft.length} / {SEED_ANSWER_MAX}자</span>
+        <span className="meta mono">{state.draft.length} / {ANSWER_MAX}자</span>
       </label>
+
+      {/* 🔴 **자리를 사람이 고른다.** 서버가 대신 고르면 그건 사람이 안 한 판단이고,
+          아무도 안 고르게 두면 답은 기록으로만 남는다 — 그게 FINDINGS 105 였다.
+          ⚠ 목록을 손으로 적지 않는다: `ANSWER_SLOT_KEYS` 에 한 줄이 늘면 여기 따라온다. */}
+      {asks ? (
+        <label className="field">
+          <span className="label">이 답을 무엇으로 저장할까요</span>
+          <select
+            className="select"
+            value={state.saveAs}
+            onChange={(e) => on.onSaveAs(e.target.value as AnswerSlotKey | '')}
+          >
+            <option value="">저장하지 않고 기록만 합니다</option>
+            {ANSWER_SLOT_KEYS.map((key) => (
+              <option key={key} value={key}>{ANSWER_SLOTS[key].label}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <div className="row">
         <button
           type="button"
@@ -375,9 +408,17 @@ function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandl
         </button>
         {state.busy ? <span className="meta">저장하는 중입니다…</span> : null}
       </div>
-      {/* 🔴 저장하기 **전에** 무엇이 생기는지 약속하지 않는다. 답이 항목이 되는 질문과
-          기록으로만 남는 질문이 섞여 있고 (§7.1 이 남긴 질문은 구조화가 따로 필요하다),
-          그 판정은 서버가 한다. 약속은 저장한 뒤에 **서버가 낸 수**로 한다 (아래). */}
+
+      {/* 🔴 **고른 뒤에만** 무엇이 생기는지 약속한다. 자리를 묻지 않는 카드(씨앗 질문)는
+          여기서 약속하지 않는다 — 그 판정은 서버가 하고, 약속은 저장한 뒤에 **서버가 낸
+          수**로 한다 (아래 `Decided`). 안 그러면 「만들어집니다」를 0개에도 말하게 된다. */}
+      {asks ? (
+        <p className="meta">
+          {slot === null
+            ? '이 답은 기록으로만 남습니다. 항목은 만들어지지 않습니다.'
+            : `이 답이 「${slot.label}」 초안 항목 한 개가 됩니다. 발행 전까지 팀 규칙이 아닙니다.`}
+        </p>
+      ) : null}
     </div>
   )
 }

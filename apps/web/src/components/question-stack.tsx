@@ -1,4 +1,5 @@
-import { SEED_ANSWER_MAX } from '../lib/api/seed-questions'
+import { ANSWER_MAX } from '@contextops/schema'
+
 import type { QuestionRow } from '../lib/web/queries'
 import { ErrorState } from './states'
 
@@ -114,13 +115,13 @@ export function QuestionStack({
           className="textarea"
           rows={4}
           value={state.draft}
-          maxLength={SEED_ANSWER_MAX}
+          maxLength={ANSWER_MAX}
           onChange={(e) => on.onDraft(e.target.value)}
           placeholder="한두 문장이면 충분합니다."
         />
         {/* ⚠ 상한을 여기 손으로 적지 않는다 — 서버가 답을 담는 칸의 크기가 정본이다
-            (`lib/api/seed-questions.ts` 의 `SEED_ANSWER_MAX`). */}
-        <span className="meta mono">{state.draft.length} / {SEED_ANSWER_MAX}자</span>
+            (`packages/schema` 의 `ANSWER_MAX` · `ANSWER_SLOTS` 옆). */}
+        <span className="meta mono">{state.draft.length} / {ANSWER_MAX}자</span>
       </label>
 
       <div className="row">

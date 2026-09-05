@@ -2,6 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
+  ANSWER_MAX, ANSWER_SLOT_KEYS, ANSWER_SLOTS,
   CONFLICT_ANCHORS, CONFLICT_CHOICES, CONFLICT_KINDS, CONFLICT_KIND_RULES,
   RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
   type ConflictKind, type ContextItemView, type DetectedConflictKind, type SourceRef,
@@ -11,7 +12,6 @@ import {
   CHOICE_LABEL, CONFLICT_SIDES, ConflictCard, choiceItemEffect,
   type ConflictCardHandlers, type ConflictCardState,
 } from '../src/components/conflict-card'
-import { SEED_ANSWER_MAX } from '../src/lib/api/seed-questions'
 import type { ConflictCard as ConflictRow } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -26,14 +26,14 @@ import type { ConflictCard as ConflictRow } from '../src/lib/web/queries'
 //    ② 없는 것을 지어내지 않는다 (못 찾은 항목 · 항목 0개면 「만들어졌습니다」 금지)
 //    ③ 없는 문을 그리지 않는다 (결정된 카드에 버튼이 없다)
 //    ④ 근거가 판정 **옆에** 있다 (P7 · DESIGN_BRIEF §2-1)
-//    ⑤ 상한을 화면이 손으로 적지 않는다 (`SEED_ANSWER_MAX` · `RESOLUTION_NOTE_MAX`)
+//    ⑤ 상한을 화면이 손으로 적지 않는다 (`ANSWER_MAX` · `RESOLUTION_NOTE_MAX`)
 //    ⑥ 「실시간」이라는 낱말이 없다 (DESIGN_BRIEF §2-3) · 사람 이름·점수가 없다 (P5)
 //
 //  ⚠ 이 시험이 재지 **못하는** 것: 간격·색·글꼴. 그건 캡처가 있어야 한다
 //    (`docs/STATUS.md` 「눈 판정 대기」).
 // =====================================================================
 
-const NOOP: ConflictCardHandlers = { onDraft: () => {}, onChoose: () => {}, onAnswer: () => {} }
+const NOOP: ConflictCardHandlers = { onDraft: () => {}, onSaveAs: () => {}, onChoose: () => {}, onAnswer: () => {} }
 
 const DOC_REF: SourceRef = {
   kind: 'source_document',
@@ -103,6 +103,7 @@ function base(over: Partial<ConflictCardState> = {}): ConflictCardState {
       updated_at: '2026-08-04T09:00:00.000Z',
     }),
     draft: '',
+    saveAs: '',
     busy: false,
     error: null,
     created: null,
@@ -141,6 +142,13 @@ const SHAPES: { what: string; over: Partial<ConflictCardState> }[] = [
     over: { conflict: row('contradiction', { status: 'dismissed', resolution: { choice: 'dismiss' } }) },
   },
   { what: '⑪ 열린 질문 (원문을 가리킨다)', over: { conflict: row('open_question'), a: null, b: null } },
+  {
+    what: '⑪-B 열린 질문 — 자리를 골랐다',
+    over: {
+      conflict: row('open_question'), a: null, b: null,
+      draft: '기존 장비가 MQTT 만 지원한다.', saveAs: 'policy_must',
+    },
+  },
   { what: '⑫ 씨앗 질문 (가리킬 것이 없다)', over: { conflict: row('seed_question'), a: null, b: null } },
   {
     what: '⑬ 답 저장됨 — 항목이 생겼다',
@@ -160,7 +168,7 @@ const SHAPES: { what: string; over: Partial<ConflictCardState> }[] = [
 ]
 
 describe('충돌 카드 — 모든 모양을 그려서 읽는다', () => {
-  it('열다섯 모양이 전부 그려지고, 서로 다르다', () => {
+  it('열여섯 모양이 전부 그려지고, 서로 다르다', () => {
     const drawn = SHAPES.map((s) => draw(s.over))
     for (const [i, html] of drawn.entries()) {
       expect(text(html).length, `${SHAPES[i]!.what}: 빈 카드다`).toBeGreaterThan(20)
@@ -174,6 +182,46 @@ describe('충돌 카드 — 모든 모양을 그려서 읽는다', () => {
       expect(t, s.what).not.toContain('실시간')
       expect(t, s.what).not.toMatch(/점수|순위|랭킹/)
     }
+  })
+})
+
+describe('🔴 답이 갈 자리를 사람이 고른다 (FINDINGS 105)', () => {
+  //  ★ 왜 표를 도나 — 「어느 카드가 자리를 묻나」를 시험이 손으로 적으면, 질문 종류가
+  //    늘 때 이 시험은 **늘 초록인 채로** 새 종류를 안 본다. 그게 105 의 모양이었다.
+  it('자리를 묻는 카드는 `answerSlot: ask` 인 종류뿐이다', () => {
+    for (const kind of CONFLICT_KINDS) {
+      const html = draw({ conflict: row(kind), a: null, b: null })
+      const asks = CONFLICT_KIND_RULES[kind].answerSlot === 'ask'
+      expect(html.includes('이 답을 무엇으로 저장할까요'), `${kind}`).toBe(asks)
+    }
+  })
+
+  it('고를 수 있는 자리가 `ANSWER_SLOTS` 그대로 그려진다 — 화면이 목록을 손으로 안 적는다', () => {
+    const html = draw({ conflict: row('open_question'), a: null, b: null })
+    for (const key of ANSWER_SLOT_KEYS) {
+      expect(html, `${key} 가 빠졌다`).toContain(`value="${key}"`)
+      expect(text(html), `${key} 의 라벨이 없다`).toContain(ANSWER_SLOTS[key].label)
+    }
+  })
+
+  //  🔴 **없는 것을 약속하지 않는다** (FINDINGS 66 과 같은 금지).
+  it('고르기 전에는 「기록만」이라고 말하고, 고른 뒤에만 항목을 약속한다', () => {
+    const before = text(draw({ conflict: row('open_question'), a: null, b: null, saveAs: '' }))
+    expect(before).toContain('기록으로만 남습니다')
+    expect(before).not.toContain('초안 항목 한 개가 됩니다')
+
+    const after = text(draw({ conflict: row('open_question'), a: null, b: null, saveAs: 'goal' }))
+    expect(after).toContain(ANSWER_SLOTS.goal.label)
+    expect(after).toContain('초안 항목 한 개가 됩니다')
+    expect(after).not.toContain('기록으로만 남습니다')
+  })
+
+  //  ⚠ 씨앗 질문은 자리가 표에 있어서 물을 것이 없다 — 물으면 사람이 고른 자리와
+  //    서버가 쓰는 자리가 달라진다 (라우트는 그 요청을 400 으로 막는다).
+  it('씨앗 질문 카드에는 고르는 칸도 약속 문장도 없다', () => {
+    const t = text(draw({ conflict: row('seed_question'), a: null, b: null }))
+    expect(t).not.toContain('이 답을 무엇으로 저장할까요')
+    expect(t).not.toContain('기록으로만 남습니다')
   })
 })
 
@@ -439,9 +487,9 @@ describe('🔴 결정이 항목에 무엇을 하는지 카드가 말한다 (FIND
 })
 
 describe('🔴 상한을 화면이 손으로 적지 않는다', () => {
-  it('답 칸은 `SEED_ANSWER_MAX`, 메모 칸은 `RESOLUTION_NOTE_MAX` 를 읽는다', () => {
+  it('답 칸은 `ANSWER_MAX`, 메모 칸은 `RESOLUTION_NOTE_MAX` 를 읽는다', () => {
     expect(draw({ conflict: row('seed_question'), a: null, b: null }))
-      .toContain(`maxLength="${SEED_ANSWER_MAX}"`)
+      .toContain(`maxLength="${ANSWER_MAX}"`)
     expect(draw()).toContain(`maxLength="${RESOLUTION_NOTE_MAX}"`)
   })
 })

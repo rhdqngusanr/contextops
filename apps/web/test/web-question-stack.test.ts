@@ -1,9 +1,10 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { ANSWER_MAX } from '@contextops/schema'
 
 import { QuestionStack, type QuestionStackHandlers, type QuestionStackState } from '../src/components/question-stack'
-import { SEED_ANSWER_MAX, SEED_QUESTIONS } from '../src/lib/api/seed-questions'
+import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import type { QuestionRow } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -18,7 +19,7 @@ import type { QuestionRow } from '../src/lib/web/queries'
 //    ② 없는 문을 그리지 않는다 (첫 카드에 [이전] 이 없다 · FINDINGS 59 와 같은 판단)
 //    ③ 「실시간」이라는 낱말이 없다 — DESIGN_BRIEF §2-3
 //    ④ 진행은 **몇 번째인가**다 — 사람 이름도 점수도 없다 (P5)
-//    ⑤ 답 칸의 상한을 화면이 손으로 적지 않는다 (`SEED_ANSWER_MAX` 를 읽는다)
+//    ⑤ 답 칸의 상한을 화면이 손으로 적지 않는다 (`ANSWER_MAX` 를 읽는다)
 //
 //  ⚠ 이 시험이 재지 **못하는** 것: 간격·색·글꼴. 그건 캡처가 있어야 한다
 //    (`docs/STATUS.md` 「눈 판정 대기」).
@@ -100,8 +101,8 @@ describe('질문 카드 스택 — 열 모양을 그려서 읽는다', () => {
 
   it('답 칸의 상한을 화면이 손으로 적지 않는다', () => {
     const html = draw({ index: 0, draft: '가나다' })
-    expect(html).toContain(`maxLength="${SEED_ANSWER_MAX}"`)
-    expect(html).toContain(`3 / ${SEED_ANSWER_MAX}자`)
+    expect(html).toContain(`maxLength="${ANSWER_MAX}"`)
+    expect(html).toContain(`3 / ${ANSWER_MAX}자`)
   })
 
   it('없는 문을 그리지 않는다 — 첫 카드에 [이전] 이 없다', () => {

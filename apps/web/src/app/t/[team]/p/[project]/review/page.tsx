@@ -3,7 +3,7 @@
 import { use, useState } from 'react'
 import {
   CONFLICT_KIND_RULES, CONFLICT_SEVERITY_RANK, itemOutcomeOf,
-  type ConflictChoice, type ConflictKind, type ContextItemView,
+  type AnswerSlotKey, type ConflictChoice, type ConflictKind, type ContextItemView,
 } from '@contextops/schema'
 
 import {
@@ -78,6 +78,10 @@ function ReviewView({
 
   const [filter, setFilter] = useState<ConflictKind | null>(null)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  //  🔴 「이 답을 무엇으로 저장할까요」 — 열린 질문 카드에서만 고른다 (FINDINGS 105).
+  //     ⚠ 기본값은 **고르지 않음**이다 (`''` = 기록만). 기본을 항목으로 두면 사람이
+  //       고르지 않은 타입의 초안이 생기고, 그건 서버가 대신 고른 것과 같다.
+  const [saveAs, setSaveAs] = useState<Record<string, AnswerSlotKey | ''>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, unknown>>({})
   const [created, setCreated] = useState<Record<string, string[]>>({})
@@ -129,7 +133,11 @@ function ReviewView({
   function answer(row: ConflictRow): void {
     void act(row, async () => {
       const value = (drafts[row.id] ?? '').trim()
-      const res = await answerQuestions(project.id, [{ question_id: row.id, answer: value }])
+      //  ⚠ 고른 자리가 없으면 칸 자체를 안 싣는다 — `''` 를 보내면 계약이 400 이다.
+      const pick = saveAs[row.id]
+      const res = await answerQuestions(project.id, [
+        pick ? { question_id: row.id, answer: value, save_as: pick } : { question_id: row.id, answer: value },
+      ])
       //  🔴 「항목이 만들어졌다」를 답의 수로 말하지 않는다 — 서버가 낸 수를 그대로 쓴다
       //     (화면 3 이 같은 자리에서 배운 것이다).
       setCreated((prev) => ({ ...prev, [row.id]: res.created_item_ids }))
@@ -183,12 +191,14 @@ function ReviewView({
               a: row.a_item_id === null ? null : byId.get(row.a_item_id) ?? null,
               b: row.b_item_id === null ? null : byId.get(row.b_item_id) ?? null,
               draft: drafts[row.id] ?? '',
+              saveAs: saveAs[row.id] ?? '',
               busy: busy === row.id,
               error: errors[row.id] ?? null,
               created: created[row.id] ?? null,
             }}
             on={{
               onDraft: (value) => setDrafts((prev) => ({ ...prev, [row.id]: value })),
+              onSaveAs: (value) => setSaveAs((prev) => ({ ...prev, [row.id]: value })),
               onChoose: (choice) => choose(row, choice),
               onAnswer: () => answer(row),
             }}

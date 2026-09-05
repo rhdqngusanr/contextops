@@ -1,11 +1,11 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { CONFLICT_KIND_RULES } from '@contextops/schema'
+import { ANSWER_MAX, CONFLICT_KIND_RULES } from '@contextops/schema'
 
 import { conflicts, contextItemRevisions, contextItems, packFiles } from '../src/db/schema'
 import type { Db } from '../src/db/client'
-import { SEED_ANSWER_MAX, SEED_QUESTIONS, seedDraft, seedQuestionOf } from '../src/lib/api/seed-questions'
+import { SEED_QUESTIONS, seedDraft, seedQuestionOf } from '../src/lib/api/seed-questions'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { GET as listQuestions, POST as answerQuestions } from '../src/app/api/v1/projects/[id]/questions/route'
@@ -75,17 +75,17 @@ describe('씨앗 질문 표', () => {
     expect(seedQuestionOf('우리가 물어본 적 없는 질문인가요?')).toBeUndefined()
   })
 
-  it('🔴 `SEED_ANSWER_MAX` 길이의 답변이 **모든 줄에서** 통과한다', () => {
+  it('🔴 `ANSWER_MAX` 길이의 답변이 **모든 줄에서** 통과한다', () => {
     //  ★ 이 시험이 상수를 정직하게 잠근다 — 목적지 칸이 500자보다 좁은 타입을
     //    표에 더하면 여기서 빨개진다 (`WorkflowData.steps` 는 300자다).
-    const answer = '가'.repeat(SEED_ANSWER_MAX)
+    const answer = '가'.repeat(ANSWER_MAX)
     for (const q of SEED_QUESTIONS) {
-      expect(seedDraft(q, answer), `${q.id} 가 ${SEED_ANSWER_MAX}자를 못 담는다`).toBeDefined()
+      expect(seedDraft(q, answer), `${q.id} 가 ${ANSWER_MAX}자를 못 담는다`).toBeDefined()
     }
   })
 
   it('한 글자만 더 길면 초안이 안 만들어진다 — 라우트가 그것으로 400 을 낸다', () => {
-    const tooLong = '가'.repeat(SEED_ANSWER_MAX + 1)
+    const tooLong = '가'.repeat(ANSWER_MAX + 1)
     for (const q of SEED_QUESTIONS) expect(seedDraft(q, tooLong)).toBeUndefined()
   })
 
@@ -176,7 +176,7 @@ describe('🔴 문서를 하나도 안 올려도 질문이 있다', () => {
       body: {
         answers: [
           { question_id: rows[0]!.id, answer: '짧은 답' },
-          { question_id: rows[1]!.id, answer: '가'.repeat(SEED_ANSWER_MAX + 1) },
+          { question_id: rows[1]!.id, answer: '가'.repeat(ANSWER_MAX + 1) },
         ],
       },
     }), params({ id: projectId }))

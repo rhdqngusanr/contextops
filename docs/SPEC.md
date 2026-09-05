@@ -355,7 +355,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | POST /projects/{id}/jobs/{jobId}/items | member | {item_ids[]} → 201 {accepted[{index,id}], rejected[{index,issues}]} — 🔴 **§7.1 이 낸 항목 후보가 항목이 되는 유일한 문이다** (§7.1 · FINDINGS 84). 고른 id 만 `status:'draft'` · `origin:'doc'` 로 들어간다. 본문은 요청이 아니라 **job 의 `result` 에서** 온다 — 요청이 본문을 실으면 화면이 모델 출력을 고쳐 되보낼 수 있고 그 항목의 근거는 여전히 원문 구간을 가리킨다 (P7). 구조화 job 이 아니거나 아직 안 끝났으면 `VALIDATION_FAILED`, 남의 프로젝트 job 은 없는 job 과 같은 404 다. ⚠ 항목별로 갈라 받는다 (`batch-draft` 와 같은 이유) — 후보 하나가 계약과 안 맞는다고 나머지를 못 받으면 그 문서는 통째로 막힌다 |
 | GET /projects/{id}/conflicts | member | ?status → conflicts[] |
 | POST /conflicts/{id}/resolve | owner | {choice:'a'|'b'|'both'|'dismiss', note?} → 항목 상태 갱신 |
-| POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer, draft?}]} → 항목 생성. **어느 종류가 질문인가는 `QUESTION_CONFLICT_KINDS` 가 정한다** (§2 — 지금은 `open_question`·`seed_question` 둘). 🔴 초안 없이 온 답이 **씨앗 질문**이면 서버가 표(`seed-questions.ts`)가 정한 자리로 답을 옮겨 초안을 만든다 — **여기에 LLM 이 없다.** `open_question` 에는 그 길이 없다 (자유 문장을 타입별 `data` 로 뜯는 것은 §7.1 의 일이다) — 초안이 안 오면 답만 기록하고 질문을 닫는다. 답이 목적지 칸(500자)보다 길면 `VALIDATION_FAILED` 이고 **아무 질문도 닫히지 않는다** |
+| POST /projects/{id}/questions | member | 질문 카드 목록 조회 GET / 답변 POST {answers:[{question_id, answer, save_as?}]} → 항목 생성. **어느 종류가 질문인가는 `QUESTION_CONFLICT_KINDS` 가 정한다** (§2 — 지금은 `open_question`·`seed_question` 둘). 🔴 **답이 어디로 가는가는 `CONFLICT_KIND_RULES[kind].answerSlot` 이 정한다 — 여기에 LLM 이 없다.** `seeded`(씨앗 질문)면 서버가 표(`seed-questions.ts`)가 정한 자리로 답을 옮겨 초안을 만든다. `ask`(열린 질문)면 **자리를 사람이 고른다** — 그 값이 `save_as` 이고 값 목록의 정본은 `ANSWER_SLOTS`(`packages/schema`)다. 서버가 대신 고르지 않는다 (자유 문장을 타입별 `data` 로 뜯는 것은 §7.1 의 일이다). `save_as` 가 안 오면 답만 기록하고 질문을 닫는다. ⚠ `seeded` 인 질문에 `save_as` 가 오면 `VALIDATION_FAILED` 다 — 조용히 무시하면 사람이 고른 자리와 실제로 저장된 자리가 달라진다. ⚠ **초안 본문(`ContextItemDraft`)을 실어 보내는 길은 없다** — 있던 동안 그 칸을 보내는 제품 코드가 한 곳도 없었고(시험만 불렀다), 열어 두면 「답변이 어느 칸으로 가나」를 아는 표가 화면에도 생긴다 (`AcceptJobItems` 가 id 만 받는 것과 같은 이유 · FINDINGS 105). 답이 목적지 칸(500자)보다 길면 `VALIDATION_FAILED` 이고 **아무 질문도 닫히지 않는다** |
 | POST /projects/{id}/proposals | member/device | Proposal → proposal |
 | POST /proposals/{id}/submit / /approve / /reject | 작성자 / owner | {note?} → proposal |
 | POST /projects/{id}/versions/publish | owner | {semver, base_version_id, change_summary} → version (§2.1) |
@@ -520,7 +520,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 1 | `/` 랜딩 | Before/After 비교, "샘플 팀으로 둘러보기", 2분 영상, 왜 git/DeepWiki가 아닌가 3+1문장, 설치 4줄, 신뢰 경계 표 | 정적 |
 | 2 | `/login`, `/t/new`, `/t/[team]/p/new` | OAuth 버튼, 폼 | loading/error |
 | 3 | `…/import` 가져오기 | ~~zip 드롭존~~(아직 없다 — §11 상한이 먼저다) · 문서 붙여넣기 · **질문 카드 10장**(한 장씩 · `n / 10` · 건너뛰기 · 마지막 요약) | 구조화 진행 표시(polling) |
-| 4 | `…/review` 정리 | Conflict 카드(원문 A ↔ B/코드 라인, 선택 버튼 4개) · 병합 카드 · 질문 카드 | empty("충돌 없음") |
+| 4 | `…/review` 정리 | Conflict 카드(원문 A ↔ B/코드 라인, 선택 버튼 4개) · 병합 카드 · 질문 카드(답 칸 + **「이 답을 무엇으로 저장할까요」** — `answerSlot:'ask'` 인 종류에만 · §5) | empty("충돌 없음") |
 | 5 | `…/context` | 항목 테이블(type/status/scope 필터) · 상세 드로어(원문 패널) · 발행 모달(semver 추천·변경 요약·영향 파일 수) · 버전 히스토리 | 409 재로드 안내 |
 | 6 | `…/proposals`, `…/proposals/[id]` | 함 목록(status/author 필터) · before/after Diff · 근거 링크 · 항목별 승인/거절 | |
 | 7 | `…/packs/[semver]` Pack Explorer | 3열: 파일 트리 / 내용(줄번호, 선택 블록 하이라이트, 이전 버전 diff 토글) / 항목·원문·hash·제외 사유 · "Pack 다운로드" | |

@@ -19032,10 +19032,11 @@ var SourceRef = external_exports.discriminatedUnion("kind", nonEmpty(SOURCE_REF_
 var SOURCE_REFS_MAX = 20;
 
 // ../../packages/schema/src/item.ts
+var ITEM_TITLE_MAX = 120;
 var ItemBase = external_exports.object({
   id: ItemId,
   project_id: external_exports.uuid(),
-  title: external_exports.string().min(2).max(120),
+  title: external_exports.string().min(2).max(ITEM_TITLE_MAX),
   body: external_exports.string().max(2e3),
   status: external_exports.enum(ITEM_STATUSES),
   scope: Scope,
@@ -19128,6 +19129,41 @@ var variantsOf = (base) => nonEmpty(ITEM_TYPES.map((type) => base.extend({ type:
 var ContextItem = external_exports.discriminatedUnion("type", variantsOf(ItemBase));
 var ContextItemDraft = external_exports.discriminatedUnion("type", variantsOf(DraftBase));
 var ContextItemView = external_exports.discriminatedUnion("type", variantsOf(ViewBase));
+var ANSWER_SLOT_KEYS = [
+  "mission",
+  "goal",
+  "constraint",
+  "policy_must",
+  "policy_should"
+];
+var slot = (row) => row;
+var ANSWER_SLOTS = {
+  mission: slot({
+    label: "\uBBF8\uC158 \u2014 \uC774 \uD504\uB85C\uC81D\uD2B8\uAC00 \uB9CC\uB4DC\uB294 \uAC83",
+    type: "mission",
+    data: (answer) => ({ statement: answer })
+  }),
+  goal: slot({
+    label: "\uBAA9\uD45C \u2014 \uC774\uBC88\uC5D0 \uB05D\uB0B4\uC57C \uD558\uB294 \uAC83",
+    type: "goal",
+    data: (answer) => ({ outcome: answer })
+  }),
+  constraint: slot({
+    label: "\uC81C\uC57D \u2014 \uD300\uC744 \uBB36\uACE0 \uC788\uB294 \uAC83",
+    type: "constraint",
+    data: (answer) => ({ statement: answer })
+  }),
+  policy_must: slot({
+    label: "\uC815\uCC45(\uBC18\uB4DC\uC2DC) \u2014 \uC5B4\uAE30\uBA74 \uC548 \uB418\uB294 \uAC83",
+    type: "policy",
+    data: (answer) => ({ rule: answer, severity: "must", enforcement: "review" })
+  }),
+  policy_should: slot({
+    label: "\uC815\uCC45(\uAD8C\uC7A5) \u2014 \uB418\uB3C4\uB85D \uC9C0\uD0A4\uB294 \uAC83",
+    type: "policy",
+    data: (answer) => ({ rule: answer, severity: "should", enforcement: "review" })
+  })
+};
 var AiSourceSpan = external_exports.object({
   start_char: external_exports.int().min(0),
   end_char: external_exports.int().min(0),
@@ -19271,6 +19307,7 @@ var CONFLICT_KIND_RULES = {
     anchor: "items",
     needsB: true,
     byAi: true,
+    answerSlot: "none",
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uC591\uB9BD\uD560 \uC218 \uC5C6\uB2E4 \u2014 \uB458 \uB2E4 \uC9C0\uD0A4\uBA74 \uBAA8\uC21C\uC774 \uB418\uB294 \uB450 \uD56D\uBAA9\uC774\uB2E4."
   },
@@ -19279,6 +19316,7 @@ var CONFLICT_KIND_RULES = {
     anchor: "items",
     needsB: true,
     byAi: true,
+    answerSlot: "none",
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uD55C\uCABD\uC758 \uB0A0\uC9DC\xB7\uBC84\uC804\uC774 \uB2E4\uB978 \uCABD\uC5D0 \uC758\uD574 \uBB34\uD6A8\uAC00 \uB410\uB2E4. **\uC5B4\uB290 \uCABD\uC774 \uB9DE\uB294\uC9C0\uB294 \uD310\uB2E8\uD558\uC9C0 \uB9C8\uB77C.**"
   },
@@ -19287,6 +19325,7 @@ var CONFLICT_KIND_RULES = {
     anchor: "items",
     needsB: true,
     byAi: true,
+    answerSlot: "none",
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uAC19\uC740 \uAC1C\uB150\uC744 \uB450 \uD56D\uBAA9\uC774 \uAC01\uAC01 \uC801\uC5C8\uB2E4."
   },
@@ -19295,6 +19334,7 @@ var CONFLICT_KIND_RULES = {
     anchor: "items",
     needsB: true,
     byAi: true,
+    answerSlot: "none",
     madeBy: "\xA77.2 \uD0D0\uC9C0",
     hint: "\uBB38\uC11C\uC5D0\uC11C \uC628 \uD56D\uBAA9(origin=doc)\uACFC \uCF54\uB4DC\uC5D0\uC11C \uC628 \uD56D\uBAA9(origin=code)\uC774 \uC11C\uB85C \uB2E4\uB978 \uB9D0\uC744 \uD55C\uB2E4."
   },
@@ -19306,6 +19346,7 @@ var CONFLICT_KIND_RULES = {
     anchor: "document",
     needsB: false,
     byAi: true,
+    answerSlot: "ask",
     madeBy: "\xA77.1 \uBB38\uC11C \uAD6C\uC870\uD654\uC758 `open_questions`",
     hint: ""
   },
@@ -19316,6 +19357,7 @@ var CONFLICT_KIND_RULES = {
     anchor: "none",
     needsB: false,
     byAi: false,
+    answerSlot: "seeded",
     madeBy: "\uD504\uB85C\uC81D\uD2B8\uB97C \uB9CC\uB4E4 \uB54C \uC2EC\uB294 \uC528\uC557 \uC9C8\uBB38 (`lib/api/seed-questions.ts`)",
     hint: ""
   }
@@ -19402,7 +19444,7 @@ var AnswerQuestions = external_exports.object({
   answers: external_exports.array(external_exports.object({
     question_id: external_exports.uuid(),
     answer: external_exports.string().min(1).max(2e3),
-    draft: ContextItemDraft.optional()
+    save_as: external_exports.enum(ANSWER_SLOT_KEYS).optional()
   }).strict()).min(1).max(20)
 }).strict();
 var AcceptJobItems = external_exports.object({

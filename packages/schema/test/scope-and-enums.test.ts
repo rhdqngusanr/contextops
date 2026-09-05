@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import {
+  CONFLICT_KINDS, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, QUESTION_CONFLICT_KINDS,
+} from '../src/api'
 import { CONFIDENCE_LEVELS, ITEM_STATUSES, SCOPE_KINDS, Scope } from '../src/common'
 import { ContextItem, PolicyData } from '../src/item'
 import { sampleItem } from './fixtures'
@@ -43,5 +46,30 @@ describe('그 밖의 enum — 값이 늘거나 줄면 여기서 빨개진다', (
   it('목록에 없는 값은 거부한다', () => {
     expect(ContextItem.safeParse({ ...sampleItem('goal'), confidence: 'certain' }).success).toBe(false)
     expect(ContextItem.safeParse({ ...sampleItem('goal'), status: 'published' }).success).toBe(false)
+  })
+})
+
+describe('🔴 충돌 종류 표의 두 축이 갈라지지 않는다 (FINDINGS 105)', () => {
+  //  ★ 왜 재나 — `answerSlot` 은 `detected` 와 **다른 것을 말하는 축**이지만, 지금은
+  //    「탐지가 낸 것 = 답이 아니라 선택으로 정리하는 것」이 참이다. 그 둘이 조용히
+  //    갈라지면 라우트는 답을 받는데 화면은 답 칸을 안 그리는(또는 그 반대) 종류가 생긴다.
+  //  ⚠ 여기가 빨개졌다면 표가 틀린 게 아니라 **뜻이 바뀐 것**일 수 있다 —
+  //    그때는 이 시험을 고치기 전에 `QUESTION_CONFLICT_KINDS` 의 파생 규칙을 다시 봐라.
+  it('`answerSlot: none` 인 줄이 곧 탐지 종류다', () => {
+    const none = CONFLICT_KINDS.filter((k) => CONFLICT_KIND_RULES[k].answerSlot === 'none')
+    expect(none).toEqual([...DETECTED_CONFLICT_KINDS])
+  })
+
+  it('사람에게 묻는 종류는 전부 답이 갈 자리를 말한다', () => {
+    for (const kind of QUESTION_CONFLICT_KINDS) {
+      expect(['seeded', 'ask'], kind).toContain(CONFLICT_KIND_RULES[kind].answerSlot)
+    }
+  })
+
+  //  🔴 두 값이 **둘 다 살아 있어야** 한다 — 하나만 쓰이면 그 축은 이름만 남는다.
+  it('`seeded` 와 `ask` 가 각각 적어도 한 줄씩 있다', () => {
+    const slots = QUESTION_CONFLICT_KINDS.map((k) => CONFLICT_KIND_RULES[k].answerSlot)
+    expect(slots).toContain('seeded')
+    expect(slots).toContain('ask')
   })
 })

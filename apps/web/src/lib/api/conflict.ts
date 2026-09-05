@@ -69,8 +69,18 @@ export function resolutionNote(conflictId: string, choice: ConflictChoice): stri
  *   (`test/api-seed-questions.test.ts` 가 잰다).
  */
 export function questionRef(question: string): SourceRef {
-  const note = question.length <= MANUAL_NOTE_MAX ? question : `${question.slice(0, MANUAL_NOTE_MAX - 1)}…`
-  return { kind: 'manual', note }
+  return { kind: 'manual', note: clip(question, MANUAL_NOTE_MAX) }
+}
+
+/**
+ * 긴 문장을 **머리를 남기고** 자른다 (`…` 한 글자를 자리에 넣는다).
+ *
+ * ★ 왜 함수인가 — 자르는 자리가 둘이다: 근거 note(200자)와, 질문에서 만든 항목의
+ *   제목(`ITEM_TITLE_MAX` · `answer.ts`). 각자 적으면 한쪽만 `…` 를 빼먹거나 상한을
+ *   한 글자 넘긴다 — 넘긴 쪽은 파싱에서 터지고, 그건 사람의 답이 사라지는 자리다.
+ */
+export function clip(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`
 }
 
 /** 같은 근거가 이미 있나 — `appendSourceRef` 에 준다. 두 벌이 되면 태그만 길어진다. */

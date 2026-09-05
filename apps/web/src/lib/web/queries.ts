@@ -1,6 +1,6 @@
 import { ITEM_TYPES, SourceRef } from '@contextops/schema'
 import type {
-  AiJobStatus, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
+  AiJobStatus, AnswerSlotKey, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
   ItemStatus, ItemType, Manifest, SourceDocumentKind, TeamRole,
 } from '@contextops/schema'
 
@@ -379,14 +379,20 @@ export function fetchQuestions(
 }
 
 /**
- * 답을 보낸다 → 씨앗 질문이면 **항목 초안이 같이 만들어진다** (SPEC §5 · §9 화면 3 ③).
+ * 답을 보낸다 → **항목 초안이 같이 만들어진다** (SPEC §5 · §9 화면 3 ③ · 화면 4).
  *
  * 🔴 **한 번에 보낸다.** 라우트가 하나라도 어긋나면 전부 거부하는 이유와 같다 —
  *   한 장씩 보내다 중간에서 끊기면 사람은 어디까지 저장됐는지 모른다.
+ *
+ * 🔴 `save_as` 는 「이 답을 무엇으로 저장할까요」다 (`ANSWER_SLOTS` · FINDINGS 105).
+ *   **열린 질문에서만** 싣는다 — 씨앗 질문은 자리가 표에 이미 있고, 실으면 400 이다.
+ *   안 실으면 답만 기록되고 질문이 닫힌다.
+ * ⚠ 조립한 초안을 보내지 않는다. 보내는 것은 **고른 자리의 이름**뿐이고, 답변을 그
+ *   타입의 칸으로 옮기는 것은 서버다 — 그래야 그 표가 한 곳에 남는다.
  */
 export function answerQuestions(
   projectId: string,
-  answers: { question_id: string; answer: string }[],
+  answers: { question_id: string; answer: string; save_as?: AnswerSlotKey }[],
 ): Promise<{ resolved: string[]; created_item_ids: string[] }> {
   return post(`/projects/${projectId}/questions`, { answers })
 }

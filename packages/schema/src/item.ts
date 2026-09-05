@@ -12,11 +12,19 @@ import { nonEmpty } from './table'
 //  있고, 화면·컴파일러는 그 표를 **읽기만** 한다.
 // =====================================================================
 
+/**
+ * 제목의 길이 상한.
+ * ★ 왜 상수인가 — 질문에 답해서 만드는 항목의 제목은 **질문 문장**이고 (`ANSWER_SLOTS`),
+ *   그 문장(최대 500자)을 자를 자리가 「몇 글자까지 되나」를 알아야 한다.
+ *   두 곳에 120 을 적으면 조용히 갈라진다.
+ */
+export const ITEM_TITLE_MAX = 120
+
 /** 모든 타입이 공유하는 필드. 서버가 채우는 것(project_id·status·revision)도 여기 있다. */
 const ItemBase = z.object({
   id: ItemId,
   project_id: z.uuid(),
-  title: z.string().min(2).max(120),
+  title: z.string().min(2).max(ITEM_TITLE_MAX),
   body: z.string().max(2000),
   status: z.enum(ITEM_STATUSES),
   scope: Scope,
@@ -199,6 +207,107 @@ export function parseContextItemDraft(input: unknown): ContextItemDraft {
 export function parseContextItemView(input: unknown): ContextItemView {
   return ContextItemView.parse(input) as ContextItemView
 }
+
+// ---------------------------------------------------------------------
+//  답변 한 문장 → 항목 하나가 되는 **자리 표** (SPEC §5 · §9 화면 4 · FINDINGS 105)
+//
+//  🔴 **여기에 LLM 이 없다.** 답변을 그 타입의 칸으로 **옮기기만** 한다 —
+//     서버가 문장을 지어내는 순간 그 항목은 사람이 하지 않은 말을 팀 규칙으로 배포한다.
+//
+//  ★ 왜 계약 패키지에 있나 — 읽는 쪽이 **셋**이다:
+//    ① `api.ts` 의 `AnswerQuestions.save_as` (요청이 고를 수 있는 값)
+//    ② 서버 라우트 (`POST /projects/{id}/questions` — 답을 이 표대로 옮긴다)
+//    ③ 화면 4 의 「무엇으로 저장할까요」 (`conflict-card.tsx` — 라벨을 그린다)
+//    셋 중 한 곳에만 두면 나머지 둘이 그 목록을 **베껴 적게** 되고, 베낀 목록은
+//    표가 바뀔 때 같이 안 바뀐다 (`ITEM_STATUS_EXCLUDE_REASON` 과 같은 판단).
+// ---------------------------------------------------------------------
+
+/**
+ * 🔴 **답변 한 줄의 길이 상한.**
+ *
+ * ★ 왜 계약의 `answer`(2000)보다 좁은가 — 답변이 가는 **목적지 칸**이 500자이기
+ *   때문이다 (`MissionData.statement`·`GoalData.outcome`·`PolicyData.rule`·
+ *   `ConstraintData.statement`). 여기서 막지 않으면 긴 답변이 파싱에서 터지고,
+ *   사람은 다 쓴 뒤에야 그걸 안다.
+ * ⚠ 이 숫자를 손으로 지키지 않는다 — `test/answer-slot.test.ts` 가 아래 표를 돌면서
+ *   **딱 이 길이의 답변이 모든 줄에서 통과하는지**를 잰다. 목적지 칸이 더 좁은 줄을
+ *   표에 더하면 그 시험이 빨개진다.
+ */
+export const ANSWER_MAX = 500
+
+/**
+ * 🔴 **답이 갈 수 있는 자리의 값 목록** (`AnswerQuestions.save_as` 로 직렬화된다 —
+ * 끝에만 더하고 중간을 지우지 마라).
+ *
+ * ⚠ **10종 전부가 여기 있지 않은 것은 실수가 아니다.** 기준은 하나다 —
+ *   「한 문장으로 그 타입의 **필수 칸이 전부 차는가**」. 안 차는 타입은 서버가 없는
+ *   값을 지어내야 한다: `roadmap` 은 `milestone_id`·`done_when`, `workflow` 는
+ *   `trigger`·`steps`, `architecture` 는 `component`, `domain` 은 `name`,
+ *   `adr` 는 `context`·`consequences`·`adr_status` 가 더 필요하다. 자유 문장을
+ *   그 칸들로 뜯는 것은 **§7.1 의 일**이고, 여기서 흉내 내면 근거를 지어내게 된다.
+ *   (`open_question` 은 다르다 — 답을 다시 질문으로 저장하는 것은 답이 아니다.)
+ */
+export const ANSWER_SLOT_KEYS = [
+  'mission', 'goal', 'constraint', 'policy_must', 'policy_should',
+] as const
+export type AnswerSlotKey = (typeof ANSWER_SLOT_KEYS)[number]
+
+/**
+ * 답이 갈 자리 한 줄.
+ * @property label 화면 4 의 「무엇으로 저장할까요」에 그려지는 문구
+ * @property data  답변 → 그 타입의 `data`. **답변에 없는 값을 넣지 마라.**
+ */
+export interface AnswerSlot<K extends ItemType = ItemType> {
+  readonly label: string
+  readonly type: K
+  readonly data: (answer: string) => z.input<(typeof ITEM_DATA)[K]>
+}
+
+/** 표의 한 줄이 자기 타입의 `data` 를 내는지 **쓰는 자리에서** 잰다. */
+const slot = <K extends ItemType>(row: AnswerSlot<K>): AnswerSlot<K> => row
+
+/**
+ * 🔴 **답변이 갈 자리의 정본 표.**
+ *
+ * ★ 새 자리를 더하는 절차 — 넷이고, 앞의 둘은 기계가 막아 준다:
+ *   ① `ANSWER_SLOT_KEYS` **끝에** 값 추가 (중간에 끼우지 마라 — 요청으로 직렬화된다)
+ *   ② 이 표에 한 줄  ← ①만 하면 여기서 타입 검사가 막힌다
+ *   ③ `packages/schema/test/answer-slot.test.ts` 는 고칠 것이 없다 — 표를 돌면서 잰다
+ *      (다만 「줄마다 결과가 다르다」를 재므로 **앞 줄과 같은 것을 내면 빨개진다**)
+ *   ④ 화면·라우트도 고칠 것이 없다 — 둘 다 이 표를 읽기만 한다
+ *
+ * ⚠ `policy` 가 두 줄인 이유는 `PolicyData.severity` 에 기본값이 없기 때문이다.
+ *   서버가 대신 고르면 그건 사람이 안 한 판단이다 — **사람이 고르게 갈라 놓는다.**
+ * ⚠ `enforcement: 'review'` 는 「사람이 리뷰에서 본다」다. 말로 답한 것을 hook 이
+ *   강제한다고 적으면 거짓이다 (`seed-questions.ts` 와 같은 판단).
+ */
+export const ANSWER_SLOTS = {
+  mission: slot({
+    label: '미션 — 이 프로젝트가 만드는 것',
+    type: 'mission',
+    data: (answer) => ({ statement: answer }),
+  }),
+  goal: slot({
+    label: '목표 — 이번에 끝내야 하는 것',
+    type: 'goal',
+    data: (answer) => ({ outcome: answer }),
+  }),
+  constraint: slot({
+    label: '제약 — 팀을 묶고 있는 것',
+    type: 'constraint',
+    data: (answer) => ({ statement: answer }),
+  }),
+  policy_must: slot({
+    label: '정책(반드시) — 어기면 안 되는 것',
+    type: 'policy',
+    data: (answer) => ({ rule: answer, severity: 'must', enforcement: 'review' }),
+  }),
+  policy_should: slot({
+    label: '정책(권장) — 되도록 지키는 것',
+    type: 'policy',
+    data: (answer) => ({ rule: answer, severity: 'should', enforcement: 'review' }),
+  }),
+} as const satisfies Record<AnswerSlotKey, AnswerSlot>
 
 // ---------------------------------------------------------------------
 //  서버측 AI(§7.1)가 내는 모양 — 초안에서 **근거만** chunk 기준으로 바꾼 것

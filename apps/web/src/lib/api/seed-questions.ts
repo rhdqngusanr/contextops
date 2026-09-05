@@ -1,6 +1,6 @@
-import { parseContextItemDraft, type ContextItemDraft, type ItemType } from '@contextops/schema'
+import { ANSWER_SLOTS, type ContextItemDraft, type ItemType } from '@contextops/schema'
 
-import { questionRef } from './conflict'
+import { answerDraft } from './answer'
 
 // =====================================================================
 //  🔴 씨앗 질문 10개 — 「문서가 없어도 시작할 수 있다」의 정본
@@ -19,6 +19,10 @@ import { questionRef } from './conflict'
 //    ① 아래 표 끝에 줄 하나 (`id`·`question`·`title`·`type`·`data`)
 //    ② `test/api-seed-questions.test.ts` 는 고칠 것이 없다 — 표를 돌면서 잰다
 //    ⚠ ①에서 `id` 와 `question` 은 **행으로 직렬화된다** (아래 주의를 읽어라).
+//    ⚠ `data` 는 **`ANSWER_SLOTS` 의 것을 쓴다** (`packages/schema`). 여기서 새로
+//      조립하지 마라 — 「답변이 어느 칸으로 가나」를 아는 표가 둘이 되면, 열린 질문
+//      쪽(`save_as`)과 이쪽이 조용히 다른 항목을 만든다 (FINDINGS 105).
+//      그 표에 없는 타입은 **한 문장으로 필수 칸이 안 차는 타입**이다 (아래 ⚠ 와 같은 이유).
 //
 //  🔴 **`question` 문장을 고치지 마라 — 행에 그대로 저장된다.**
 //     심긴 행과 이 표를 잇는 열쇠가 그 문장이다 (`conflicts` 에 씨앗 id 칸이 없다).
@@ -34,19 +38,6 @@ import { questionRef } from './conflict'
 //    둘 다 「그 타입이 요구하는 칸을 답변 하나로는 정직하게 채울 수 없다」가 이유다.
 // =====================================================================
 
-/**
- * 🔴 답변 한 줄의 길이 상한.
- *
- * ★ 왜 계약(`AnswerQuestions.answer` = 2000)보다 좁은가 — 답변이 가는 **목적지 칸**이
- *   500자이기 때문이다 (`MissionData.statement`·`GoalData.outcome`·`PolicyData.rule`·
- *   `ConstraintData.statement`). 여기서 막지 않으면 2000자 답변이 스키마 파싱에서
- *   터지고, 사람은 다 쓴 뒤에야 그걸 안다.
- * ⚠ 이 숫자를 손으로 지키지 않는다 — `test/api-seed-questions.test.ts` 가 표를 돌면서
- *   **딱 이 길이의 답변이 전부 통과하는지**를 잰다. 목적지 칸이 더 좁은 타입을
- *   표에 더하면 그 시험이 빨개진다.
- */
-export const SEED_ANSWER_MAX = 500
-
 /** 씨앗 질문 한 줄. `data` 는 답변을 그 타입의 칸으로 **옮기기만** 한다. */
 export interface SeedQuestion {
   /** 만들어질 항목의 `id` 가 된다 (`item_seed_…`). 직렬화된다 — 바꾸지 마라. */
@@ -60,13 +51,6 @@ export interface SeedQuestion {
   readonly data: (answer: string) => Record<string, unknown>
 }
 
-const P = (severity: 'must' | 'should') => (answer: string) => ({
-  rule: answer,
-  severity,
-  //  ⚠ `enforcement` 는 「무엇이 이 정책을 강제하나」다. 사람이 말로 답한 것을
-  //     hook 이 강제한다고 적으면 거짓이다 — 사람이 리뷰에서 본다가 사실이다.
-  enforcement: 'review' as const,
-})
 
 /** 🔴 열 개의 정본. 순서가 곧 화면 3 의 카드 순서다 (앞의 것이 답하기 쉬워야 한다). */
 export const SEED_QUESTIONS: readonly SeedQuestion[] = [
@@ -75,14 +59,14 @@ export const SEED_QUESTIONS: readonly SeedQuestion[] = [
     question: '이 프로젝트가 만드는 것은 무엇인가요?',
     title: '프로젝트가 만드는 것',
     type: 'mission',
-    data: (answer) => ({ statement: answer }),
+    data: ANSWER_SLOTS.mission.data,
   },
   {
     id: 'goal_quarter',
     question: '이번 분기에 반드시 끝내야 하는 것은 무엇인가요?',
     title: '이번 분기 목표',
     type: 'goal',
-    data: (answer) => ({ outcome: answer }),
+    data: ANSWER_SLOTS.goal.data,
   },
   {
     id: 'goal_done',
@@ -91,56 +75,56 @@ export const SEED_QUESTIONS: readonly SeedQuestion[] = [
     question: '이번 분기 목표가 끝났다고 무엇을 보고 판단하나요?',
     title: '완료 판정 기준',
     type: 'goal',
-    data: (answer) => ({ outcome: answer }),
+    data: ANSWER_SLOTS.goal.data,
   },
   {
     id: 'constraint_now',
     question: '지금 팀을 묶고 있는 제약은 무엇인가요? (기한·인원·예산)',
     title: '지금의 제약',
     type: 'constraint',
-    data: (answer) => ({ statement: answer }),
+    data: ANSWER_SLOTS.constraint.data,
   },
   {
     id: 'constraint_stack',
     question: '이미 쓰기로 정해진 기술·서비스는 무엇인가요?',
     title: '이미 정해진 기술',
     type: 'constraint',
-    data: (answer) => ({ statement: answer }),
+    data: ANSWER_SLOTS.constraint.data,
   },
   {
     id: 'constraint_out',
     question: '이번 분기에 손대지 않기로 한 것은 무엇인가요?',
     title: '이번 분기에 손대지 않는 것',
     type: 'constraint',
-    data: (answer) => ({ statement: answer }),
+    data: ANSWER_SLOTS.constraint.data,
   },
   {
     id: 'policy_never',
     question: '절대 하면 안 되는 것은 무엇인가요?',
     title: '절대 하면 안 되는 것',
     type: 'policy',
-    data: P('must'),
+    data: ANSWER_SLOTS.policy_must.data,
   },
   {
     id: 'policy_release',
     question: '배포 전에 반드시 지나야 하는 관문은 무엇인가요?',
     title: '배포 전 관문',
     type: 'policy',
-    data: P('must'),
+    data: ANSWER_SLOTS.policy_must.data,
   },
   {
     id: 'policy_review',
     question: '코드 리뷰에서 늘 지적되는 것은 무엇인가요?',
     title: '리뷰에서 늘 지적되는 것',
     type: 'policy',
-    data: P('should'),
+    data: ANSWER_SLOTS.policy_should.data,
   },
   {
     id: 'policy_newcomer',
     question: '새로 온 사람이 가장 자주 틀리는 것은 무엇인가요?',
     title: '새로 온 사람이 자주 틀리는 것',
     type: 'policy',
-    data: P('should'),
+    data: ANSWER_SLOTS.policy_should.data,
   },
 ]
 
@@ -156,39 +140,21 @@ export function seedQuestionOf(question: string): SeedQuestion | undefined {
 }
 
 /**
- * 🔴 **답변 → 항목 초안.** 계약(`ContextItemDraft`)으로 **파싱해서** 낸다 —
- * 표가 만든 것이라고 검사를 건너뛰면, 표에 줄을 잘못 더한 날 그 항목이 그대로 들어간다.
+ * 🔴 **씨앗 질문의 답 → 항목** — 자리를 이 표가 정한다.
  *
- * ⚠ `source_refs` 는 `manual` 하나다. 씨앗 질문은 가리킬 원문이 없고 **답변이 곧
- *   원문**이다 — 그 원문은 충돌 행의 `resolution.note` 에 남는다 (P7 의 끝점).
- *   여기에 `source_document` 를 지어 넣으면 아무 문서도 안 가리키는 근거가 된다.
- *   ⚠ 그 한 줄을 여기서 짓지 않는다 — `questionRef()` 하나다 (`lib/api/conflict.ts`).
- *   열린 질문에 초안을 실어 답하는 길도 같은 줄을 붙이므로, 여기 또 적으면 두 길의
- *   근거가 **모양만 다르고 뜻이 같은** 두 벌이 된다 (FINDINGS 56).
+ * ⚠ 짓는 것은 여기서 하지 않는다 — `answerDraft()` 하나다 (`answer.ts`).
+ *   열린 질문의 답도 같은 함수로 만들어진다 — 여기서 또 조립하면 근거 한 줄을
+ *   붙이는 일이 두 곳에서 갈라진다 (FINDINGS 56 이 그 자리였다).
  *
  * @returns 파싱에 실패하면 `undefined` (답변이 목적지 칸보다 길 때 — 부르는 쪽이 400 을 낸다)
  */
 export function seedDraft(q: SeedQuestion, answer: string): ContextItemDraft | undefined {
-  const parsed = parseContextItemDraftSafe({
+  return answerDraft({
     id: `item_seed_${q.id}`,
-    type: q.type,
     title: q.title,
-    body: answer,
-    scope: { kind: 'project' },
-    priority: 50,
-    tags: [],
-    //  사람이 직접 답한 문장이다 — 추측이 아니다.
-    confidence: 'high',
-    source_refs: [questionRef(q.question)],
+    type: q.type,
     data: q.data(answer),
+    question: q.question,
+    answer,
   })
-  return parsed
-}
-
-function parseContextItemDraftSafe(input: unknown): ContextItemDraft | undefined {
-  try {
-    return parseContextItemDraft(input)
-  } catch {
-    return undefined
-  }
 }

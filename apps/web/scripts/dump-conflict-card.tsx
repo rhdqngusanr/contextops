@@ -23,7 +23,7 @@ const { ConflictCard } = await import('../src/components/conflict-card')
 //  실행: pnpm --filter web exec tsx scripts/dump-conflict-card.tsx
 // =====================================================================
 
-const NOOP: ConflictCardHandlers = { onDraft: () => {}, onChoose: () => {}, onAnswer: () => {} }
+const NOOP: ConflictCardHandlers = { onDraft: () => {}, onSaveAs: () => {}, onChoose: () => {}, onAnswer: () => {} }
 
 const DOC_REF: SourceRef = {
   kind: 'source_document',
@@ -81,7 +81,7 @@ function row(kind: ConflictKind, over: Partial<ConflictRow> = {}): ConflictRow {
 function base(over: Partial<ConflictCardState>): ConflictCardState {
   return {
     conflict: row('doc_vs_code'), canDecide: true, a: item(), b: CODE_ITEM,
-    draft: '', busy: false, error: null, created: null, ...over,
+    draft: '', saveAs: '', busy: false, error: null, created: null, ...over,
   }
 }
 
@@ -115,6 +115,12 @@ const SHAPES: [string, Partial<ConflictCardState>][] = [
   ['⑪ 열린 질문 (원문을 가리킨다)', {
     conflict: row('open_question', { question: 'MQTT 를 선택한 이유가 있나요?' }), a: null, b: null,
   }],
+  //  🔴 자리를 고르기 **전/후** 를 나란히 낸다 — 그 두 줄이 사람에게 하는 약속이
+  //     서로 다르다 (기록만 / 항목 한 개). 하나만 찍으면 다른 하나는 아무도 못 본다.
+  ['⑪-B 열린 질문 — 자리를 골랐다 (정책(반드시))', {
+    conflict: row('open_question', { question: 'MQTT 를 선택한 이유가 있나요?' }),
+    a: null, b: null, draft: '기존 장비가 MQTT 만 지원해서 바꿀 수 없습니다.', saveAs: 'policy_must',
+  }],
   ['⑫ 씨앗 질문 (가리킬 것이 없다)', {
     conflict: row('seed_question', { question: '이 프로젝트가 만드는 것은 무엇인가요?' }), a: null, b: null,
   }],
@@ -135,18 +141,20 @@ const SHAPES: [string, Partial<ConflictCardState>][] = [
   ['⑮ member 가 본 탐지 카드 (결정은 owner 몫)', { canDecide: false }],
 ]
 
-const lines: string[] = ['화면 4 — 충돌 카드의 열다섯 모양 (마크업에서 글자만 뽑은 것)', '']
+const lines: string[] = ['화면 4 — 충돌 카드의 열여섯 모양 (마크업에서 글자만 뽑은 것)', '']
 for (const [what, over] of SHAPES) {
   lines.push(what)
   lines.push(`  ${text(renderToStaticMarkup(createElement(ConflictCard, { state: base(over), on: NOOP })))}`)
   lines.push('')
 }
 
-lines.push('충돌 종류 6종 — 표가 정하는 것 셋 (anchor · detected · byAi)')
+lines.push('충돌 종류 6종 — 표가 정하는 것 넷 (anchor · detected · byAi · answerSlot)')
 for (const [kind, rule] of Object.entries(CONFLICT_KIND_RULES)) {
   lines.push(`  ${kind.padEnd(14)} anchor=${rule.anchor.padEnd(9)} `
     + `물어보는 것=${rule.detected ? '결정 버튼 4개' : '답 칸'.padEnd(6)}  `
-    + `배지=${rule.byAi ? 'AI 제안' : '없음'}`)
+    + `배지=${(rule.byAi ? 'AI 제안' : '없음').padEnd(6)} `
+    //  🔴 답이 어디로 가나 — `ask` 인 줄만 「무엇으로 저장할까요」를 그린다 (FINDINGS 105).
+    + `답이 가는 곳=${rule.answerSlot}`)
 }
 
 process.stdout.write(`${lines.join('\n')}\n`)

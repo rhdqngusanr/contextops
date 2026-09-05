@@ -4,7 +4,7 @@ import {
   Question, RepoName, Scope, Semver, SourceRef, SOURCE_REFS_MAX,
 } from './common'
 import type { ItemStatus } from './common'
-import { ContextItemDraft } from './item'
+import { ANSWER_SLOT_KEYS } from './item'
 import { ContextItemsBatchDraft, MAX_DRAFT_ITEMS, ProgressEvent, Proposal, SyncReport } from './upload'
 
 // =====================================================================
@@ -233,6 +233,21 @@ export interface ConflictKindRule {
    *   (DESIGN_BRIEF §3 「AiBadge」).
    */
   readonly byAi: boolean
+  /**
+   * 🔴 **이 질문에 답하면 그 답이 어디로 가나** (SPEC §5 · FINDINGS 105).
+   *   - `seeded` → 자리가 **이미 정해져 있다.** 씨앗 질문 10장은 질문마다 타입·제목이
+   *     표에 적혀 있다 (`lib/api/seed-questions.ts`). 사람에게 더 물을 것이 없다.
+   *   - `ask`    → 자리를 **사람에게 묻는다.** §7.1 이 문서를 읽다 남긴 질문은 그 표에
+   *     없으므로, 화면 4 가 `ANSWER_SLOTS` 를 그려 고르게 하고 그 값이 `save_as` 로 온다.
+   *   - `none`   → 질문이 아니다 (탐지된 충돌은 답이 아니라 **선택**으로 정리한다).
+   *
+   * ★ 왜 축을 더했나 — 이 값이 없을 때 화면은 「이 카드에 자리를 물어야 하나」를
+   *   `kind === 'seed_question'` 으로 셌어야 한다. 종류가 늘면 그 `if` 를 찾아야 하고,
+   *   못 찾으면 **답 칸만 있고 항목이 안 생기는 카드**가 조용히 하나 는다 (FINDINGS 105).
+   * ⚠ `none` 인 줄은 정확히 `detected: true` 인 줄이다 — 둘이 갈라지지 않는지는
+   *   `test/scope-and-enums.test.ts` 가 잰다. 손으로 맞추지 마라.
+   */
+  readonly answerSlot: 'seeded' | 'ask' | 'none'
   /** 이 종류를 만드는 자리 한 줄. `detected` 가 `false` 인 줄이 특히 중요하다. */
   readonly madeBy: string
   /**
@@ -260,33 +275,33 @@ export interface ConflictKindRule {
  */
 export const CONFLICT_KIND_RULES = {
   contradiction: {
-    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, answerSlot: 'none', madeBy: '§7.2 탐지',
     hint: '양립할 수 없다 — 둘 다 지키면 모순이 되는 두 항목이다.',
   },
   stale: {
-    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, answerSlot: 'none', madeBy: '§7.2 탐지',
     hint: '한쪽의 날짜·버전이 다른 쪽에 의해 무효가 됐다. **어느 쪽이 맞는지는 판단하지 마라.**',
   },
   duplicate: {
-    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, answerSlot: 'none', madeBy: '§7.2 탐지',
     hint: '같은 개념을 두 항목이 각각 적었다.',
   },
   doc_vs_code: {
-    detected: true, anchor: 'items', needsB: true, byAi: true, madeBy: '§7.2 탐지',
+    detected: true, anchor: 'items', needsB: true, byAi: true, answerSlot: 'none', madeBy: '§7.2 탐지',
     hint: '문서에서 온 항목(origin=doc)과 코드에서 온 항목(origin=code)이 서로 다른 말을 한다.',
   },
   //  ⚠ 이 종류만 `detected: false` 이고 이 종류만 `anchor: 'document'` 다. §7.1 이
   //     문서를 읽다 「판단이 필요하다」고 남긴 질문이고, 두 항목이 어긋난 것이 아니라
   //     **한쪽도 아직 없는** 것이다 — 가리킬 항목이 없으니 원문 구간을 가리킨다.
   open_question: {
-    detected: false, anchor: 'document', needsB: false, byAi: true,
+    detected: false, anchor: 'document', needsB: false, byAi: true, answerSlot: 'ask',
     madeBy: '§7.1 문서 구조화의 `open_questions`',
     hint: '',
   },
   //  ⚠ 이 종류만 `anchor: 'none'` 이다. 프로젝트를 만드는 순간 심기 때문에 가리킬
   //     문서도 항목도 없다 — 답변이 곧 원문이고, 그 답변은 `resolution.note` 에 남는다.
   seed_question: {
-    detected: false, anchor: 'none', needsB: false, byAi: false,
+    detected: false, anchor: 'none', needsB: false, byAi: false, answerSlot: 'seeded',
     madeBy: '프로젝트를 만들 때 심는 씨앗 질문 (`lib/api/seed-questions.ts`)',
     hint: '',
   },
@@ -533,16 +548,24 @@ export const ResolveConflict = z.object({
 /**
  * `POST /projects/{id}/questions` — 질문 카드에 답한다 (SPEC §5 · §9 화면 4).
  *
- * ⚠ `draft` 는 optional 이다. SPEC 은 「답변 → 항목 생성」이라고만 적는데, 자유 문장을
- *   타입별 `data` 로 **구조화하는 것은 서버측 AI(§7.1)의 일**이고 그건 PLAN P3 다.
- *   그때까지 서버는 문장을 지어내지 않는다 — 초안이 오면 항목을 만들고, 안 오면
- *   답변만 기록하고 질문을 닫는다. **없는 것을 있는 척하지 않는 자리다.**
+ * 🔴 **`save_as` 는 「이 답을 무엇으로 저장할까요」다** (FINDINGS 105). 값의 정본은
+ *   `ANSWER_SLOTS` 이고, **서버가 그 표대로 답을 옮긴다** — 오는 것은 고른 자리의
+ *   이름뿐이고 항목 본문이 아니다.
+ *
+ * ★ 왜 초안(`ContextItemDraft`)을 통째로 받지 않나 — 그러면 타입별 `data` 를 조립하는
+ *   일이 화면으로 내려가고, 「답변이 어느 칸으로 가나」를 아는 표가 **두 곳**이 된다
+ *   (`AcceptJobItems` 가 후보의 id 만 받는 것과 같은 판단 · P7). 실제로 그 칸은
+ *   계약에만 있고 **보내는 제품 코드가 한 곳도 없었다** — 시험만 부르는 칸이었다.
+ * ⚠ 씨앗 질문에는 이 칸을 보내지 마라 — 자리가 표에 이미 있다
+ *   (`CONFLICT_KIND_RULES[kind].answerSlot` 이 `seeded` 인 종류). 서버가 400 을 낸다.
+ * ⚠ `save_as` 가 없으면 **답만 기록하고 질문을 닫는다.** 사람이 「기록만」을 고른
+ *   것이므로 없는 항목을 지어내지 않는다.
  */
 export const AnswerQuestions = z.object({
   answers: z.array(z.object({
     question_id: z.uuid(),
     answer: z.string().min(1).max(2000),
-    draft: ContextItemDraft.optional(),
+    save_as: z.enum(ANSWER_SLOT_KEYS).optional(),
   }).strict()).min(1).max(20),
 }).strict()
 
