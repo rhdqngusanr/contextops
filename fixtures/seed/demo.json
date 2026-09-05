@@ -1,0 +1,116 @@
+{
+  "_": [
+    "게스트 데모 테넌트가 **담고 있는 것** (SPEC §10.3).",
+    "어느 팀인가(이름·slug·게스트 sub)는 여기가 아니라 apps/web/src/lib/demo/tenant.ts 다 —",
+    "그 값들은 화면(배너)도 읽어야 해서 코드에 있어야 하고, 픽스처를 화면이 import 하면",
+    "데모 데이터가 배포 번들에 실린다.",
+    "항목·문서·로드맵은 여기 없다. 그건 fixtures/paylab-* 가 정본이고(§10.1),",
+    "심는 코드는 apps/web/scripts/seed.ts 하나다 — 베끼면 데모와 관통이 갈린다.",
+    "이 파일을 읽는 자리는 apps/web/scripts/demo-seed.ts 하나이고, 거기서 Zod 로 판다."
+  ],
+
+  "_members": "팀원. sub 는 auth_subject 이고 이메일은 sub 에서 만든다 — 사람 이메일을 픽스처에 적지 않는다.",
+  "members": [
+    { "sub": "demo-member-minseo", "name": "김민서", "role": "owner" },
+    { "sub": "demo-member-junho", "name": "이준호", "role": "member" },
+    { "sub": "demo-member-seoyeon", "name": "박서연", "role": "member" },
+    { "sub": "demo-member-doyun", "name": "최도윤", "role": "member" },
+    { "sub": "demo-member-haeun", "name": "정하은", "role": "member" }
+  ],
+
+  "_devices": [
+    "기기 12대 — applied 9 · outdated 2 · manual 1 (SPEC §10.3 · DESIGN_BRIEF §4 화면 9 의 예시 12행).",
+    "version 은 semver 를 적지 않고 'official'|'previous' 로 가리킨다 — 실제 semver 와 manifest_hash 는",
+    "심는 쪽이 **그때 발행한 버전에서** 가져온다. 여기 숫자를 적으면 발행이 늘 때 조용히 거짓이 된다.",
+    "report 가 null 이면 **한 번도 보고하지 않은 기기**다 (화면이 'unknown' 으로 그린다)."
+  ],
+  "devices": [
+    { "member": "demo-member-minseo", "name": "mac-minseo", "report": { "status": "applied", "version": "official", "hours_ago": 1 } },
+    { "member": "demo-member-minseo", "name": "win-minseo-desk", "report": { "status": "applied", "version": "official", "hours_ago": 5 } },
+    { "member": "demo-member-junho", "name": "mac-junho", "report": { "status": "applied", "version": "official", "hours_ago": 2 } },
+    { "member": "demo-member-junho", "name": "linux-junho-ci", "report": { "status": "applied", "version": "official", "hours_ago": 3 } },
+    { "member": "demo-member-seoyeon", "name": "mac-seoyeon", "report": { "status": "applied", "version": "official", "hours_ago": 6 } },
+    { "member": "demo-member-seoyeon", "name": "win-seoyeon", "report": { "status": "applied", "version": "official", "hours_ago": 20 } },
+    { "member": "demo-member-doyun", "name": "mac-doyun", "report": { "status": "applied", "version": "official", "hours_ago": 9 } },
+    { "member": "demo-member-doyun", "name": "win-doyun-lab", "report": { "status": "applied", "version": "official", "hours_ago": 14 } },
+    { "member": "demo-member-haeun", "name": "mac-haeun", "report": { "status": "applied", "version": "official", "hours_ago": 4 } },
+    { "member": "demo-member-doyun", "name": "win-meeting-room", "report": { "status": "outdated", "version": "previous", "hours_ago": 96 } },
+    { "member": "demo-member-haeun", "name": "mac-haeun-old", "report": { "status": "outdated", "version": "previous", "hours_ago": 120 } },
+    { "member": "demo-member-junho", "name": "win-junho-vm", "report": { "status": "manual", "version": "official", "hours_ago": 30 } }
+  ],
+
+  "_progress": [
+    "진행 보고 — 마일스톤은 paylab 의 PL-M1 하나뿐이다 (fixtures/paylab-docs/goals.md §4).",
+    "심는 쪽이 **발행된 Manifest 에 그 마일스톤이 실제로 있는지 재고**, 없으면 던진다 —",
+    "없는 마일스톤에 붙은 보고는 화면에서 '로드맵 외'로 조용히 새고 아무도 안 센다.",
+    "criterion 도 그 마일스톤의 done_when 에 **글자 그대로** 있어야 한다 (P7).",
+    "milestone_id 가 'none' 인 줄이 로드맵 외 작업이다."
+  ],
+  "progress": [
+    {
+      "device": "mac-minseo",
+      "milestone_id": "PL-M1",
+      "status": "criterion_done",
+      "criterion": "PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다",
+      "summary": "재시도 로직을 psp.client 한 곳으로 모았다",
+      "evidence": [{ "path": "src/psp/psp.client.ts", "start_line": 18, "end_line": 46 }],
+      "source": "agent",
+      "hours_ago": 52
+    },
+    {
+      "device": "mac-junho",
+      "milestone_id": "PL-M1",
+      "status": "criterion_done",
+      "criterion": "재시도 횟수와 간격이 설정값으로 빠져 있다",
+      "summary": "MAX_RETRY·RETRY_DELAY_MS 를 config 로 옮겼다",
+      "evidence": [{ "path": "src/config/config.service.ts", "start_line": 24 }],
+      "source": "agent",
+      "hours_ago": 30
+    },
+    {
+      "device": "mac-seoyeon",
+      "milestone_id": "PL-M1",
+      "status": "in_progress",
+      "summary": "환불 경로의 타임아웃을 훑는 중",
+      "evidence": [{ "path": "src/refund/refund.service.ts" }],
+      "source": "hook",
+      "hours_ago": 8
+    },
+    {
+      "device": "mac-doyun",
+      "milestone_id": "PL-M1",
+      "status": "in_progress",
+      "summary": "psp 클라이언트에 타임아웃 옵션을 붙였다",
+      "evidence": [{ "path": "src/psp/psp.client.ts", "start_line": 51 }],
+      "source": "agent",
+      "hours_ago": 5
+    },
+    {
+      "device": "mac-haeun",
+      "milestone_id": "PL-M1",
+      "status": "done_candidate",
+      "summary": "세 기준을 모두 채웠다고 본다 — 확인 부탁",
+      "evidence": [
+        { "path": "src/psp/psp.client.ts", "start_line": 18, "end_line": 46 },
+        { "path": "src/config/config.service.ts", "start_line": 24 }
+      ],
+      "source": "agent",
+      "hours_ago": 2
+    },
+    {
+      "device": "linux-junho-ci",
+      "milestone_id": "none",
+      "status": "none",
+      "summary": "로그 마스킹 유틸을 정리했다 — 어느 마일스톤도 아니다",
+      "evidence": [{ "path": "src/common/mask.ts" }],
+      "source": "hook",
+      "hours_ago": 11
+    }
+  ],
+
+  "_proposals": [
+    "제안은 여기 없다 — 대상 항목의 id(item_policy_retry 같은 것)가 코드(scripts/seed.ts)에만 있어서,",
+    "JSON 에 적으면 항목 표가 바뀔 때 아무도 안 세는 문자열이 남는다.",
+    "심는 자리는 apps/web/scripts/demo-seed.ts 의 DEMO_PROPOSALS 표다."
+  ]
+}

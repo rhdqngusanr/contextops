@@ -277,6 +277,21 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .main { flex: 1 1 auto; min-width: 0; padding: var(--sp-6); }
 .main-inner { max-width: var(--content-max); display: flex; flex-direction: column; gap: var(--sp-5); }
 
+/* 게스트 데모 배너 — 앱 화면 맨 위 한 줄 (DESIGN_BRIEF §4).
+   ⚠ accent 를 쓰지 않는다. 화면당 accent 는 **주요 액션 하나**이고, 배너는 액션이
+   아니라 「지금 무엇을 보고 있나」다 — accent 를 주면 화면의 진짜 액션과 다툰다. */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius);
+  background: var(--surface-hi);
+  color: var(--ink-3);
+  font-size: var(--fs-table);
+}
+
 /* 가운데 한 장짜리 화면 (로그인 · 팀/프로젝트 만들기) */
 .center {
   min-height: 100vh;

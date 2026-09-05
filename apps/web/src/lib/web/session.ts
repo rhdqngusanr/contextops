@@ -19,6 +19,15 @@ export type WebSession = {
   /** epoch 초. Supabase 의 `expires_at` 과 같은 단위다. */
   expires_at: number
   email?: string
+  /**
+   * 🔴 `/demo` 로 들어온 세션인가 — **배너를 그릴지 정하는 값이고, 권한이 아니다.**
+   *
+   * ★ 왜 화면에 두나 — 배너는 「지금 무엇을 보고 있나」를 말하는 글이라 화면의 일이다.
+   * ⚠ **이 값으로 무엇을 막지 마라.** 게스트가 못 바꾸는 것은 서버가 정한다
+   *   (`lib/api/auth.ts` 의 `ACTOR_RULES.writes`). localStorage 는 사람이 고칠 수 있고,
+   *   여기서 막는 것은 전부 우회된다 — 화면에서 막으면 「막았다」는 착각만 남는다.
+   */
+  guest?: boolean
 }
 
 function storage(): Storage | undefined {
@@ -43,7 +52,12 @@ export function readSession(): WebSession | null {
       clearSession()
       return null
     }
-    return { access_token: value.access_token, expires_at: value.expires_at, email: value.email }
+    return {
+      access_token: value.access_token,
+      expires_at: value.expires_at,
+      email: value.email,
+      guest: value.guest === true,
+    }
   } catch {
     return null
   }

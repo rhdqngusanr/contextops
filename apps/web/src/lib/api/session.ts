@@ -70,3 +70,28 @@ export function verifySessionJwt(token: string, now: Date): SessionClaims {
     name: typeof claims.name === 'string' ? claims.name : undefined,
   }
 }
+
+/**
+ * 🔴 **게스트 세션을 우리가 서명해서 내준다** (SPEC §9 「게스트 데모」).
+ *
+ * ★ 왜 같은 secret 인가 — 세션을 확인하는 자리를 하나로 두기 위해서다.
+ *   둘째 secret 을 두면 `verifySessionJwt` 가 두 갈래가 되고, 그 갈래 중 하나만
+ *   `alg`·`exp` 를 검사하는 날이 온다. 게스트 토큰이 진짜 사람의 것과 섞이지 않는 이유는
+ *   secret 이 달라서가 아니라 **`sub` 가 우리 `users` 표에만 있는 값**이라서다
+ *   (`lib/demo/tenant.ts` 의 `DEMO_GUEST_SUBJECT`).
+ *
+ * ⚠ `email` 을 싣지 않는다. 게스트에게는 없고, 없는 것을 지어내면 그 문자열이
+ *   `users` 행에 그대로 앉는다 (P1 과 같은 결의 이야기다).
+ * ⚠ 부르는 자리는 `POST /demo/session` 하나여야 한다 — 서명 함수가 여기저기서 불리면
+ *   「누가 게스트를 만들 수 있나」가 코드 전체로 흩어진다.
+ */
+export function signGuestJwt(sub: string, now: Date, ttlSec: number): { token: string; expiresAt: number } {
+  const secret = process.env[SECRET_ENV]
+  if (!secret) fail('INTERNAL', `${SECRET_ENV} 가 없다 — 게스트 세션을 만들 수 없다`)
+
+  const exp = Math.floor(now.getTime() / 1000) + ttlSec
+  const head = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')
+  const body = Buffer.from(JSON.stringify({ sub, exp })).toString('base64url')
+  const sig = createHmac('sha256', secret).update(`${head}.${body}`).digest('base64url')
+  return { token: `${head}.${body}.${sig}`, expiresAt: exp }
+}

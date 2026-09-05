@@ -65,6 +65,20 @@ export function resolveSlugs(
   return team && project ? { team, project } : null
 }
 
+/**
+ * 🔴 게스트 세션 하나를 받아 온다 (`POST /demo/session` · SPEC §9 「게스트 데모」).
+ * ⚠ 어디로 갈지는 **서버가 준 `entry_path`** 다 — 화면이 slug 를 조립하면 데모 주소가
+ *   두 곳에 적히고, 한쪽만 바뀌면 배너가 말하는 팀과 실제로 들어가는 팀이 갈린다.
+ */
+export function startGuestSession(): Promise<{
+  access_token: string
+  expires_at: number
+  entry_path: string
+}> {
+  //  ⚠ 본문이 없다. 이 문은 「누구인가」를 안 묻는다 — 그게 게스트의 정의다.
+  return post('/demo/session', {})
+}
+
 export function createTeam(body: { name: string; slug: string }): Promise<{ id: string; slug: string }> {
   return post('/teams', body)
 }

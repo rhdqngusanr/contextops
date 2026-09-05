@@ -3,6 +3,7 @@ import { ROLE_RANK, type TeamRole } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
 import { devices, users } from '../../db/schema'
+import { DEMO_GUEST_SUBJECT } from '../demo/tenant'
 import { fail } from './error'
 import { verifySessionJwt } from './session'
 import { TOKEN_PREFIX, hashToken } from './token'
@@ -19,20 +20,32 @@ import { TOKEN_PREFIX, hashToken } from './token'
 export type Actor =
   | { kind: 'user'; userId: string }
   | { kind: 'device'; userId: string; deviceId: string; projectId: string }
+  //  🔴 게스트 = `/demo` 로 들어온 사람. `users` 행은 시드가 만든 데모 팀의 member 다
+  //     (`lib/demo/tenant.ts`). 사람인 것은 맞지만 **아무것도 바꿀 수 없다.**
+  | { kind: 'guest'; userId: string }
 
 /**
- * 🔴 **주체별 권한 상한 표.**
+ * 🔴 **주체별 권한 표.** 두 축이다 — 「어느 등급까지 할 수 있나」와 「쓸 수 있나」.
  *
  * ★ 왜 있나 — 기기 토큰은 사람의 것이지만 **파일에 저장된 문자열**이다. 그 문자열을
  *   주운 사람이 승인·발행까지 할 수 있으면 토큰 하나가 팀 전체를 바꾼다.
  *   그래서 기기는 owner 인 사람의 토큰이라도 member 까지만 할 수 있다.
  *   플러그인이 하는 일(batch-draft·proposal·progress·sync)은 전부 member 다 (SPEC §5).
  *
- * ★ 새 주체를 더하면 여기 한 줄 — 라우트는 고칠 것이 없다.
+ * 🔴 **`writes` 축이 왜 등급이 아니라 따로 있나** — 「읽기 전용」을 등급 사다리
+ *   (`ROLE_RANK`)에 한 칸 더 파는 방법도 있었다. 그러면 **모든 GET 라우트가 요구 등급을
+ *   같이 낮춰야** 하고(지금은 전부 `member`), 서른 곳 중 한 곳만 안 낮추면 게스트가
+ *   그 화면에서만 빈손이 된다 — 반대로 한 곳을 잘못 낮추면 **P1 의 방어선에 구멍**이다.
+ *   축을 하나 더 두면 라우트는 한 줄도 안 고친다. 등급은 「무엇을 볼 수 있나」,
+ *   `writes` 는 「바꿀 수 있나」로 뜻이 갈리는 것이 맞다.
+ *
+ * ★ 새 주체: ①이 유니온 ②이 표 한 줄 ③`sessionActor`/`deviceActor` 중 어디서 나오나
+ *   ④`test/api-auth.test.ts` 의 「표의 세 주체」 시험. 라우트는 고칠 것이 없다.
  */
-export const ACTOR_MAX_ROLE: Record<Actor['kind'], TeamRole> = {
-  user: 'owner',
-  device: 'member',
+export const ACTOR_RULES: Record<Actor['kind'], { maxRole: TeamRole; writes: boolean }> = {
+  user: { maxRole: 'owner', writes: true },
+  device: { maxRole: 'member', writes: true },
+  guest: { maxRole: 'member', writes: false },
 }
 
 /**
@@ -68,8 +81,24 @@ async function deviceActor(db: Db, token: string, now: Date): Promise<Actor> {
   return { kind: 'device', userId: row.userId, deviceId: row.id, projectId: row.projectId }
 }
 
+/**
+ * 게스트 세션 — **행을 만들지 않고 찾기만 한다.**
+ * ★ 왜 upsert 가 아닌가 — 데모를 안 심은 배포에서도 세션이 통과하면 아무 팀에도 없는
+ *   유령 게스트가 생기고, 그 사람은 모든 화면에서 404 를 본다. 「데모가 없다」를
+ *   401 로 먼저 말하는 편이 정직하다.
+ */
+async function guestActor(db: Db, sub: string): Promise<Actor> {
+  const [row] = await db.select({ id: users.id }).from(users).where(eq(users.authSubject, sub)).limit(1)
+  if (!row) fail('UNAUTHORIZED', '데모 테넌트가 심어져 있지 않다')
+  return { kind: 'guest', userId: row.id }
+}
+
 async function sessionActor(db: Db, jwt: string, now: Date): Promise<Actor> {
   const claims = verifySessionJwt(jwt, now)
+  //  🔴 게스트인지는 **sub 하나로** 갈린다 (`lib/demo/tenant.ts` 의 주석).
+  //     이 갈래가 email 검사보다 위인 이유 — 게스트 토큰에는 email 이 없고, 있어서도 안 된다.
+  if (claims.sub === DEMO_GUEST_SUBJECT) return guestActor(db, claims.sub)
+
   const email = claims.email
   if (!email) fail('UNAUTHORIZED', '세션에 email 이 없다')
 
@@ -98,7 +127,16 @@ export async function resolveActor(db: Db, credential: string, now: Date): Promi
 
 /** 이 주체가 `role` 등급의 일을 할 수 있나 — 상한 표를 거쳐 판정한다. */
 export function actorCan(actor: Actor, role: TeamRole): boolean {
-  const cap = ROLE_RANK[ACTOR_MAX_ROLE[actor.kind]]
+  const cap = ROLE_RANK[ACTOR_RULES[actor.kind].maxRole]
   const rank = ROLE_RANK[role]
   return cap >= rank
+}
+
+/**
+ * 이 주체가 **무언가를 바꿀 수** 있나.
+ * ⚠ 부르는 자리는 `lib/api/route.ts` 하나다 — 라우트마다 부르면 새 라우트가
+ *   빠뜨리고, 빠뜨린 라우트는 게스트에게만 뚫린 문이 된다.
+ */
+export function actorWrites(actor: Actor): boolean {
+  return ACTOR_RULES[actor.kind].writes
 }

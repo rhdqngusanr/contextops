@@ -3,6 +3,8 @@
 import { use, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 
+import { DemoBanner } from '../../../../../components/demo-banner'
+
 // =====================================================================
 //  앱 화면의 뼈대 — 좌측 220px 내비 + 본문 최대 1200px (DESIGN_BRIEF §3 「레이아웃」)
 //
@@ -69,7 +71,13 @@ export default function ProjectLayout({
             글은 읽는 사람이 무엇을 보고 있는지 헷갈리게 만든다 (눈으로 확인하고 뺐다). */}
       </nav>
       <main className="main">
-        <div className="main-inner">{children}</div>
+        <div className="main-inner">
+          {/* ⚠ 게스트일 때만 그려진다 — 로그인한 사람에게는 아무것도 안 나온다.
+              앱 화면 **전부** 위에 있어야 해서 화면이 아니라 이 뼈대가 그린다
+              (화면마다 적으면 한 화면이 빠지고, 빠진 화면에서 403 이 고장으로 읽힌다). */}
+          <DemoBanner />
+          {children}
+        </div>
       </main>
     </div>
   )

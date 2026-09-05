@@ -640,24 +640,46 @@ const SEED_ANSWER = {
 } as const
 
 /**
+ * 씨앗이 앉을 팀·프로젝트의 이름과 주소.
+ * ★ 왜 인자인가 — **게스트 데모 테넌트가 둘째 사용자**다 (`lib/demo/tenant.ts`).
+ *   데이터는 같은 paylab 이고 사는 팀만 다르다. 씨앗을 한 벌 더 베끼면 그 순간
+ *   「데모에서 본 것」과 「관통이 잰 것」이 갈린다 — 이 파일이 존재하는 이유가 그거다.
+ * ⚠ 기본값이 지금까지의 값 그대로다. 관통·개발용 서버는 한 글자도 안 바뀐다.
+ */
+export type SeedTenant = {
+  teamName: string
+  teamSlug: string
+  projectName: string
+  projectSlug: string
+}
+
+const DEFAULT_TENANT: SeedTenant = {
+  teamName: 'Paylab', teamSlug: 'paylab', projectName: 'paylab-api', projectSlug: 'paylab-api',
+}
+
+/**
  * 팀 → 프로젝트 → 레포 → 문서 2개 → `paylabDrafts()` 전부 → 전부 `active`.
  * **발행은 하지 않는다** — 발행이 무엇을 하는지가 관통이 재는 것이고,
  * 여기서 미리 해 버리면 그 단계가 씨앗에 묻힌다.
  */
-export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
+export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_TENANT): Promise<SeedResult> {
   const owner = sessionJwt(ownerSub)
 
   const team = await dataOf(await createTeam(
-    req('POST', '/api/v1/teams', { auth: owner, body: { name: 'Paylab', slug: 'paylab' } }), params({}),
+    req('POST', '/api/v1/teams', { auth: owner, body: { name: tenant.teamName, slug: tenant.teamSlug } }), params({}),
   ))
   const teamId = team.id as string
 
   const project = await dataOf(await createProject(
-    req('POST', `/api/v1/teams/${teamId}/projects`, { auth: owner, body: { name: 'paylab-api', slug: 'paylab-api' } }),
+    req('POST', `/api/v1/teams/${teamId}/projects`, {
+      auth: owner, body: { name: tenant.projectName, slug: tenant.projectSlug },
+    }),
     params({ id: teamId }),
   ))
   const projectId = project.id as string
 
+  //  ⚠ 레포 이름은 테넌트와 무관하다 — 근거 태그에 그대로 실리는 **픽스처 저장소의 이름**이라
+  //    팀에 따라 바뀌면 태그가 없는 레포를 가리킨다 (P7).
   await createRepo(
     req('POST', `/api/v1/projects/${projectId}/repos`, { auth: owner, body: { name: 'paylab-api' } }),
     params({ id: projectId }),
@@ -711,9 +733,9 @@ export async function seedPaylab(ownerSub: string): Promise<SeedResult> {
   return {
     owner,
     teamId,
-    teamSlug: 'paylab',
+    teamSlug: tenant.teamSlug,
     projectId,
-    projectSlug: 'paylab-api',
+    projectSlug: tenant.projectSlug,
     goals,
     roadmap,
     rejected: batch.rejected as { index: number; issues: unknown[] }[],

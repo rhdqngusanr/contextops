@@ -9,7 +9,8 @@
     "start": "next start",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "dev:db": "tsx scripts/dev-server.ts"
+    "dev:db": "tsx scripts/dev-server.ts",
+    "demo:db": "tsx scripts/demo-server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

@@ -21,7 +21,7 @@ export const POST = route<{ id: string }>('POST /projects/{id}/versions/publish'
   const projectId = pathUuid(ctx.params.id, 'project id')
   ctx.note({ project_id: projectId })
 
-  //  🔴 owner 다. 기기 토큰은 owner 의 것이어도 member 까지라(`ACTOR_MAX_ROLE`)
+  //  🔴 owner 다. 기기 토큰은 owner 의 것이어도 member 까지라(`ACTOR_RULES`)
   //     여기서 막힌다 — 파일에 저장된 문자열 하나가 팀의 공식 버전을 바꾸지 못하게.
   await requireProject(ctx.db, actor, projectId, 'owner')
   const body = await parseBody(ctx.req, PublishVersion)

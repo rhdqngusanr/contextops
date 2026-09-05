@@ -372,6 +372,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | GET /projects/{id}/roadmap | member | → {context_version, milestones:[{milestone, paths, done_when:[{text, evidence_count, last_event}], conflicts, last_report_at, status, **confirmable**}], **off_roadmap**[], off_roadmap_total} — 🔴 **행은 마일스톤이다** (P5). `device_id`·`user_id` 를 여기서 집계하지 않는다. 마일스톤 목록의 정본은 **발행된 Manifest** 이고(`manifest.milestones`) 발행 전에는 `context_version:null` + 빈 목록이다. 🔴 **`confirmable` 은 「지금 확정할 수 있는 보고 하나」**(아직 확정 안 된 제일 최근 `done_candidate`)다 — `POST /progress/{id}/confirm` 은 보고 id 로 부르는데 그 id 를 내는 문이 없어서 화면 8 의 [완료 확인] 을 **만들 수가 없었다** (보고를 만든 것은 기기이고 그 응답은 사람의 브라우저에 안 온다). 목록으로 내지 않는다 — 여럿을 내면 「어느 것을 확정하나」를 화면이 고르게 되고 그 규칙이 서버와 갈린다. 🔴 **`off_roadmap` 은 지금 Manifest 의 마일스톤이 아닌 보고**(`milestone_id:'none'` 과 지난 Pack 에만 있던 마일스톤이 **한 규칙**에 걸린다)이고, `PROGRESS_STATUSES` 의 `none` 이 화면에 나타나는 유일한 자리다 — 없으면 그 보고는 어디에도 안 보인다. `OFF_ROADMAP_MAX` 로 자르고 자르기 전 수를 `off_roadmap_total` 로 같이 낸다. `last_event`·`confirmable` 이 싣는 칸은 화면 8 의 근거 드로어가 읽는 것뿐이다: `{id,status,summary,at,source,context_version,evidence,confirmed_at}` — 🔴 P1 로 `evidence` 는 **경로·줄·커밋만**이고 P5 로 `device_id`·`confirmed_by` 는 나가지 않는다 |
 | POST /progress/{id}/confirm | owner | → done 확정 |
 | POST /projects/{id}/ask | member | {question} → {answer, cited_item_ids[]} (§7.3, 예산 가드) |
+| POST /demo/session | **공개** | → `{access_token, expires_at, entry_path}` — 🔴 **인증 없이 부르는 유일한 쓰기 문**이다. 데모 팀·데모 프로젝트·게스트 `users` 행·그 소속이 **넷 다** 있을 때만 200 이고, 하나라도 없으면 `NOT_FOUND` 다 (「일단 토큰은 주고 화면에서 404 를 보게」 하면 심사위원이 보는 것은 빈 화면이고 원인은 화면에 안 적힌다). 행을 **만들지 않는다** — 게스트도 팀도 시드가 만든다. 응답에 이메일·사람 이름이 없다. ⚠ 빈도 제한이 없다: LLM 을 안 부르고 행을 안 만든다(서명 한 번). 돈이 드는 쪽은 아래 `/demo/ai-once` 이고 그건 `withBudget()` 이 센다 |
 | POST /demo/ai-once | 게스트 | {fixture:'paylab'|'bookstack'} → 충돌 카드 결과 (§7.4) |
 | GET /health | 공개 | {ok, db, version} |
 
@@ -529,7 +530,10 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 8 | `…/roadmap` | 마일스톤 행: done_when별 근거 수·마지막 보고·충돌·"완료 확인" · 로드맵 외 작업 · 근거 클릭 시 path:line·commit | Realtime |
 | 9 | `…/sync` | 팀원·기기별 버전/상태/마지막 보고 · 질의창(답변 + 인용 항목 칩) | Realtime |
 
-게스트 데모: `/demo` → 세션 쿠키로 `demo` 팀 read-only + `/demo/ai-once` 호출 가능. 데모 테넌트는 production DB의 별도 team_id, 시드 스크립트로 매일 03:00 리셋(Vercel Cron).
+게스트 데모: `/demo` → **게스트 세션 토큰**으로 `demo` 팀 read-only + `/demo/ai-once` 호출 가능. 데모 테넌트는 production DB의 별도 team_id, 시드 스크립트로 매일 03:00 리셋(Vercel Cron).
+- 🔴 **쿠키가 아니라 로그인과 같은 자리(세션 토큰)다.** 원래 SPEC 은 「세션 쿠키」였는데, 저장 자리를 하나 더 만들면 로그아웃이 한쪽만 지우고 `lib/web/api.ts` 의 `Authorization` 조립이 두 갈래가 된다. 게스트도 **진짜 세션으로 진짜 라우트**를 지난다 — 다른 것은 **바꿀 수 없다**는 것뿐이다.
+- 🔴 **읽기 전용은 등급이 아니라 「주체 종류」로 만든다** (`ACTOR_RULES` 의 `writes` 축 · `apps/web/src/lib/api/auth.ts`). 등급 사다리(`ROLE_RANK`)에 칸을 파면 **모든 GET 라우트가 요구 등급을 같이 낮춰야** 하고, 서른 곳 중 하나만 어긋나면 그게 P1 옆의 구멍이다. 막는 자리는 `lib/api/route.ts` 하나이고 기준은 **HTTP 안전 메서드**(GET·HEAD)다.
+- 게스트는 데모 팀의 **member** 로 앉는다. 그래서 owner 전용 화면 요소(로드맵 「완료 확인」)는 「owner 만 할 수 있습니다」로 정직하게 그려진다.
 
 ---
 
@@ -546,6 +550,8 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 
 ### 10.3 시드(`fixtures/seed/demo.json`)
 팀 1, 프로젝트 1(+B면 5), 항목 60, 버전 v1.0~v1.2, Proposal 6(approved 4/rejected 1/submitted 1), conflicts 3 resolved + 1 open, devices 12(applied 9/outdated 2/manual 1), progress_events 25(M1 done, M2 2/3, M3 0), 로드맵 외 2.
+- 🔴 **지금 실제로 심기는 것**(`apps/web/scripts/demo-seed.ts`): 팀원 5 + 게스트 1 · 항목 15 · 버전 v1.0.0→v1.1.0 · 제안 4(published 1/approved 1/rejected 1/submitted 1) · **devices 12(applied 9/outdated 2/manual 1)** · progress 6(로드맵 외 1). 항목 60·progress 25 는 paylab 픽스처(§10.1)가 그만큼을 안 가지고 있어서다 — **항목의 정본은 픽스처 하나**이고 데모용으로 따로 지어내지 않는다 (지어내면 데모에서 본 것과 관통이 잰 것이 갈린다).
+- ⚠ 이 파일이 담는 것은 **팀원·기기·보고·진행**뿐이다. 어느 팀인가(이름·slug·게스트 sub)는 `apps/web/src/lib/demo/tenant.ts` 에 있다 — 배너도 그 값을 읽어야 하는데 화면이 픽스처를 import 하면 데모 데이터가 배포 번들에 실린다. 제안은 대상 항목 id 가 코드에만 있어서 시드 스크립트의 표에 산다.
 
 ### 10.4 브라우저 터미널 재생
 `fixtures/replay/*.json`: `[{t_ms, text}]` 형식으로 실제 세션 녹화(`script` 명령 또는 수동 작성). 컴포넌트 `<TerminalReplay src>`가 타이핑 재생, 옆 패널에 같은 타임라인으로 Roadmap 갱신 애니메이션. 랜딩과 `/sync` 상단에 배치.

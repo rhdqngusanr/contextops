@@ -34,7 +34,7 @@ type TeamRow = {
 export const GET = route('GET /teams', async (ctx) => {
   const actor = await ctx.actor()
   //  기기 토큰은 프로젝트 안의 물건이다 — 팀 목록을 읽는 열쇠가 되면 토큰 하나로
-  //  팀 전체의 구조가 드러난다 (`ACTOR_MAX_ROLE` 과 같은 이유).
+  //  팀 전체의 구조가 드러난다 (`ACTOR_RULES` 과 같은 이유).
   if (actor.kind === 'device') fail('FORBIDDEN', '기기 토큰으로는 팀 목록을 볼 수 없다')
 
   const memberships = await ctx.db

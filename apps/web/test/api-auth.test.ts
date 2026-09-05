@@ -5,7 +5,7 @@ import { DeviceToken, ROLE_RANK, TEAM_ROLES } from '@contextops/schema'
 
 import { devices, teamMembers, users } from '../src/db/schema'
 import type { Db } from '../src/db/client'
-import { ACTOR_MAX_ROLE } from '../src/lib/api/auth'
+import { ACTOR_RULES } from '../src/lib/api/auth'
 import { TOKEN_PREFIX } from '../src/lib/api/token'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
@@ -263,8 +263,13 @@ describe('기기 토큰 (SPEC §11)', () => {
 })
 
 describe('권한 표가 실제로 판정을 바꾼다', () => {
-  it('ACTOR_MAX_ROLE 의 두 주체가 서로 다른 상한을 낸다', () => {
-    expect(ROLE_RANK[ACTOR_MAX_ROLE.user]).toBeGreaterThan(ROLE_RANK[ACTOR_MAX_ROLE.device])
+  it('ACTOR_RULES 의 세 주체가 서로 다른 답을 낸다 — 표가 장식이 아니다', () => {
+    //  등급 축: 사람 > 기기
+    expect(ROLE_RANK[ACTOR_RULES.user.maxRole]).toBeGreaterThan(ROLE_RANK[ACTOR_RULES.device.maxRole])
+    //  쓰기 축: 게스트만 못 쓴다. 이 축이 없으면 「읽기 전용」은 등급 사다리를 파야 한다.
+    expect(Object.entries(ACTOR_RULES).filter(([, r]) => !r.writes).map(([k]) => k)).toEqual(['guest'])
+    //  게스트와 기기는 **같은 등급**이다 — 다른 것은 쓰기뿐이다.
+    expect(ACTOR_RULES.guest.maxRole).toBe(ACTOR_RULES.device.maxRole)
   })
 
   it('ROLE_RANK 가 TEAM_ROLES 를 하나도 빠뜨리지 않는다', () => {

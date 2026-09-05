@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket'
 
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
+import { seedDemo } from './demo-seed'
 import { seedPaylab } from './seed'
 import { closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
 
@@ -40,9 +41,22 @@ export type SeededDemo = {
   item_count: number
 }
 
+/**
+ * 🔴 **게스트 데모 테넌트도 같이 심을까** (`DEV_SEED=demo`).
+ *
+ * ★ 왜 스위치 하나인가 — 데모 테넌트는 paylab 씨앗의 **위**에 얹히는 것이라(팀원·기기·
+ *   보고·제안), 서버를 하나 더 만들면 두 하네스가 같은 소켓·같은 포트 코드를 베끼게 된다.
+ * ⚠ 켜면 그만큼 느리다 (라우트를 수십 번 더 부른다). 화면 5·7 만 볼 때는 끄고 쓴다.
+ */
+const SEED_DEMO = process.env.DEV_SEED === 'demo'
+
 async function main(): Promise<void> {
   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
   const { pg } = await freshDb()
+
+  //  ⚠ 데모 테넌트는 **자기 팀**(slug `demo`)에 앉는다 — 아래 paylab 씨앗과 안 겹친다.
+  //    그래서 한 DB 에서 「로그인한 팀」과 「게스트가 보는 팀」을 나란히 볼 수 있다.
+  const demo = SEED_DEMO ? await seedDemo() : undefined
 
   const seed = await seedPaylab('dev-owner')
   //  화면 5 의 「버전 히스토리」와 화면 7 이 **볼 것이 있어야** 판정이 된다.
@@ -87,6 +101,14 @@ async function main(): Promise<void> {
   console.log(`  화면 3     : ${base}/import`)
   console.log(`  화면 5     : ${base}/context   (항목 ${info.item_count}개 · 공식 v${info.semver})`)
   console.log(`  화면 7     : ${base}/packs/${info.semver}`)
+  if (demo) {
+    console.log('')
+    console.log(`  게스트 데모: /demo   → ${demo.teamSlug}/${demo.projectSlug} `
+      + `(기기 ${demo.deviceCount} · 제안 ${demo.proposalCount} · 공식 v${demo.versions.official.semver})`)
+    console.log('             ⚠ 시크릿 창에서 열어라 — 로그인 세션이 있으면 배너가 안 뜬다')
+  } else {
+    console.log('  게스트 데모: DEV_SEED=demo 로 다시 띄우면 /demo 가 열린다')
+  }
   console.log('')
   console.log('  브라우저에 세션을 심는 길은 **진짜 로그인 경로**다:')
   console.log(`    /auth/callback?next=${encodeURIComponent(`${base}/context`)}#access_token=<토큰>&expires_in=3600`)
