@@ -16,8 +16,9 @@ import { readCallbackHash } from '../src/lib/web/auth'
 import {
   AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
   ITEM_STATUS_CHIP, ITEM_TYPE_ICON, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
-  PROPOSAL_OPERATION_CHIP, PROPOSAL_STATUS_CHIP, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
+  PROPOSAL_OPERATION_CHIP, PROPOSAL_STATUS_CHIP, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP, SYNC_MEANING,
 } from '../src/components/chips'
+import { SYNC_APPLY, SYNC_ORDER } from '../src/components/sync'
 import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 
 // =====================================================================
@@ -48,6 +49,24 @@ function assertLiveTable<K extends string>(
 describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게 보인다', () => {
   it('sync 5종 (SPEC §6)', () => {
     assertLiveTable('SYNC_CHIP', SYNC_STATUSES, SYNC_CHIP, (k) => `${SYNC_CHIP[k].icon}${SYNC_CHIP[k].label}`)
+  })
+
+  it('sync 5종의 **뜻** (SPEC §6) — 툴팁과 화면 9 각주가 같이 읽는다', () => {
+    assertLiveTable('SYNC_MEANING', SYNC_STATUSES, SYNC_MEANING, (k) => SYNC_MEANING[k])
+  })
+
+  it('sync 5종의 **차례** (DESIGN_BRIEF §4 화면 9 「outdated 먼저」)', () => {
+    assertLiveTable('SYNC_ORDER', SYNC_STATUSES, SYNC_ORDER, (k) => String(SYNC_ORDER[k]))
+  })
+
+  it('sync 5종의 **적용 방식** — 키는 enum 과 같고, 방식은 셋이다', () => {
+    expect(Object.keys(SYNC_APPLY).sort()).toEqual([...SYNC_STATUSES].sort())
+    //  ★ 여기만 ②(값이 전부 다르다)를 쓰지 않는다 — 방식은 셋(플러그인 · zip 수동 · 모름)
+    //    뿐이고 상태 다섯이 그 셋에 모인다. 「전부 달라야 한다」를 강요하면 없는 방식을
+    //    지어내게 된다. 대신 **갈려야 하는 자리**를 직접 잰다.
+    expect(new Set(Object.values(SYNC_APPLY)).size).toBe(3)
+    expect(SYNC_APPLY.manual).not.toBe(SYNC_APPLY.applied)
+    expect(SYNC_APPLY.unknown).not.toBe(SYNC_APPLY.applied)
   })
 
   it('항목 상태 4종 (SPEC §3)', () => {

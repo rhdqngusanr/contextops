@@ -45,6 +45,24 @@ export const SYNC_CHIP: Record<SyncStatus, ChipSpec> = {
   unknown: { icon: '?', label: '보고 없음', tone: 'neutral' },
 }
 
+/**
+ * 그 상태가 **무슨 뜻인가** — 정본은 SPEC §6 「동일성 판정(sync 보고 기준)」이다.
+ * 툴팁(`SyncChip`)과 화면 9 의 각주가 **같은 이 표**를 읽는다.
+ *
+ * ★ 왜 `SYNC_CHIP` 과 다른 표인가 — 칩의 `label` 은 **좁은 칸에 들어가는 이름**이고
+ *   이건 **문장**이다. 한 표로 합치면 표 안에 긴 글이 들어가거나, 각주가 이름만
+ *   나열해서 아무것도 설명하지 못한다.
+ * ⚠ 문장을 화면에 손으로 적지 마라 — DESIGN_BRIEF §4 화면 9 가 요구하는 툴팁과
+ *   각주가 갈리면, 같은 칩이 자리마다 다른 뜻으로 읽힌다.
+ */
+export const SYNC_MEANING: Record<SyncStatus, string> = {
+  applied: '마지막 보고 시점의 파일 해시가 공식 manifest와 모두 일치',
+  outdated: '로컬 버전이 공식보다 낮다',
+  modified: '버전은 같으나 파일이 로컬에서 고쳐졌다',
+  manual: 'zip을 손으로 풀어 적용했다',
+  unknown: '이 기기에서 아직 보고가 오지 않았다',
+}
+
 /** 항목 수명 4종 (SPEC §3). `active` 만 Pack 에 들어간다 — 그래서 ok 는 하나뿐이다. */
 export const ITEM_STATUS_CHIP: Record<ItemStatus, ChipSpec> = {
   draft: { icon: '·', label: '초안', tone: 'neutral' },
@@ -239,8 +257,10 @@ export function Chip({ spec, title }: { spec: ChipSpec; title?: string }) {
 }
 
 export function SyncChip({ status }: { status: SyncStatus }) {
-  //  ⚠ 툴팁 문구는 DESIGN_BRIEF §4 화면 9 가 정한 문장이다.
-  return <Chip spec={SYNC_CHIP[status]} title={status === 'applied' ? '마지막 보고 시점의 파일 해시가 공식 manifest와 모두 일치' : undefined} />
+  //  ⚠ 툴팁 문구는 DESIGN_BRIEF §4 화면 9 가 정한 문장이고, 정본은 `SYNC_MEANING` 이다.
+  //    (56바퀴까지는 `applied` 하나만 문장이 있었다 — 나머지 넷은 칩만 보고 뜻을 짐작해야
+  //    했다. 다섯 다 표에 있으니 자리마다 갈릴 곳이 없다.)
+  return <Chip spec={SYNC_CHIP[status]} title={SYNC_MEANING[status]} />
 }
 
 export function ItemStatusChip({ status }: { status: ItemStatus }) {

@@ -808,7 +808,10 @@ describe('🔴 sync-status — 보고 있는 기기와 없는 기기가 다른 �
     const status = await dataOf(await syncStatus(
       req('GET', `/api/v1/projects/${projectId}/sync-status`, { auth: owner }), params({ id: projectId }),
     ))
-    const devices = status.devices as { device_name: string; status: string; version: string | null }[]
+    const devices = status.devices as {
+      device_name: string; status: string; version: string | null
+      user: { id: string; name: string }
+    }[]
     const byName = Object.fromEntries(devices.map((d) => [d.device_name, d]))
 
     //  ★ 이 두 줄이 FINDINGS 16 이 요구한 「값을 바꾸면 결과가 갈린다」다.
@@ -817,6 +820,24 @@ describe('🔴 sync-status — 보고 있는 기기와 없는 기기가 다른 �
     expect(byName['win-조용함']?.version).toBeNull()
     //  `unknown` 은 5종에는 있고 기기가 보고할 수 있는 값에는 없다.
     expect(SYNC_STATUSES).toContain('unknown')
+
+    //  🔴 **사람의 이름이 같이 온다** (SPEC §5 의 `user` · FINDINGS 113). uuid 만 오면
+    //     화면 9 는 「팀원」 칸을 아예 만들 수 없다 — 뜻 없는 글자를 표에 그리게 되니까.
+    //     ★ 이름은 세션이 준 것이다 (`sessionJwt` 의 `name` = sub). uuid 가 아니다.
+    expect(byName['mac-보고함']?.user.name).toMatch(/^pub-owner-\d+$/)
+    expect(byName['mac-보고함']?.user.name).not.toBe(byName['mac-보고함']?.user.id)
+  })
+
+  it('🔴 이름만 온다 — 이메일은 응답에 없다 (`lib/api/user.ts` 가 내는 칸이 둘뿐이다)', async () => {
+    const { owner, projectId } = await seeded()
+    await deviceToken(owner, projectId, 'mac-노트북')
+    const status = await dataOf(await syncStatus(
+      req('GET', `/api/v1/projects/${projectId}/sync-status`, { auth: owner }), params({ id: projectId }),
+    ))
+    //  ★ 응답 전체를 문자열로 훑는다 — 어느 칸에 숨어 있어도 잡힌다.
+    expect(JSON.stringify(status)).not.toContain('@')
+    const [device] = status.devices as { user: Record<string, unknown> }[]
+    expect(Object.keys(device?.user ?? {}).sort()).toEqual(['id', 'name'])
   })
 
   it('기기가 unknown 을 자칭할 수 없다 — 계약이 거부한다', async () => {

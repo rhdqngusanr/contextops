@@ -1,5 +1,7 @@
 import type { SyncStatus } from '@contextops/schema'
 
+import type { UserRef } from './user'
+
 // =====================================================================
 //  동일성 판정 — 정본은 docs/SPEC.md §6 (「동일성 판정(sync 보고 기준)」).
 //
@@ -18,7 +20,8 @@ export const NO_REPORT_STATUS: SyncStatus = 'unknown'
 export type DeviceSyncRow = {
   device_id: string
   device_name: string
-  user_id: string
+  /** 🔴 uuid 가 아니라 **이름까지** 온다 (`lib/api/user.ts`). 화면 9 의 「팀원」 칸이 이것이다. */
+  user: UserRef
   /** 마지막 보고. 없으면 `undefined` — 그때가 `unknown` 이다. */
   last?: {
     status: SyncStatus
@@ -31,7 +34,7 @@ export type DeviceSyncRow = {
 export type DeviceSyncStatus = {
   device_id: string
   device_name: string
-  user_id: string
+  user: UserRef
   status: SyncStatus
   version: string | null
   manifest_hash: string | null
@@ -48,7 +51,7 @@ export function statusOfDevice(row: DeviceSyncRow): DeviceSyncStatus {
     return {
       device_id: row.device_id,
       device_name: row.device_name,
-      user_id: row.user_id,
+      user: row.user,
       status: NO_REPORT_STATUS,
       version: null,
       manifest_hash: null,
@@ -58,7 +61,7 @@ export function statusOfDevice(row: DeviceSyncRow): DeviceSyncStatus {
   return {
     device_id: row.device_id,
     device_name: row.device_name,
-    user_id: row.user_id,
+    user: row.user,
     status: row.last.status,
     version: row.last.version,
     manifest_hash: row.last.manifest_hash,

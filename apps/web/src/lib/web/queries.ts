@@ -2,7 +2,7 @@ import { ITEM_TYPES, SourceRef } from '@contextops/schema'
 import type {
   AiJobStatus, AnswerSlotKey, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
   ItemStatus, ItemType, Manifest, MilestoneStatus, ProgressEvidence, ProgressSource,
-  ProgressStatus, ProposalAction, ProposalItem, ProposalStatus, SourceDocumentKind, TeamRole,
+  ProgressStatus, ProposalAction, ProposalItem, ProposalStatus, SourceDocumentKind, SyncStatus, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, patch, post } from './api'
@@ -512,16 +512,19 @@ export function decideProposal(
 // ---------------------------------------------------------------------
 
 /**
- * Roadmap 을 다시 두드리는 간격 — SPEC §14 절삭 순서 8번의 「Realtime(폴링 10초)」가
- * 이 숫자다.
+ * SPEC §9 가 「Realtime」이라고 적은 두 화면(8 Roadmap · 9 Sync)이 스스로를 다시 읽는
+ * 간격 — SPEC §14 절삭 순서 8번의 「Realtime(폴링 10초)」가 이 숫자다.
  *
  * ★ 왜 job 의 2초(`JOB_POLL_MS`)보다 느린가 — 두드리는 것이 **끝나는 일이 아니다.**
- *   구조화 job 은 몇 초 뒤 끝나고 그때 멈추지만, 로드맵은 사람이 화면을 열어 둔 내내
- *   돈다. 촘촘히 치면 팀장이 하루 종일 열어 두는 화면 하나가 DB 를 계속 친다.
+ *   구조화 job 은 몇 초 뒤 끝나고 그때 멈추지만, 로드맵과 기기 표는 사람이 화면을 열어
+ *   둔 내내 돈다. 촘촘히 치면 팀장이 하루 종일 열어 두는 화면 하나가 DB 를 계속 친다.
+ * ★ 왜 화면별 이름이 아닌가 — **둘째 사용자가 생겼다** (화면 9 · 56바퀴까지는 화면 8
+ *   하나였다). 화면마다 상수를 따로 두면 한쪽만 고쳐지고, 그러면 같은 「Realtime」이
+ *   화면마다 다른 속도가 된다 (CLAUDE.md 「수치를 하드코딩하지 마라」).
  * ⚠ 이 숫자를 화면 안에 적지 마라 — 「실시간」을 흉내 내려고 어느 화면이 500ms 로
  *   내리는 날이 온다. 이 제품이 말할 수 있는 것은 늘 「마지막으로 본 것이 언제인가」다.
  */
-export const ROADMAP_POLL_MS = 10_000
+export const REALTIME_POLL_MS = 10_000
 
 /**
  * 진행 보고 한 건이 화면에 오는 모양 (roadmap 라우트의 `toEvent`).
@@ -579,4 +582,33 @@ export function fetchRoadmap(projectId: string): Promise<Roadmap> {
  */
 export function confirmProgress(eventId: string): Promise<ProgressEventView> {
   return post(`/progress/${eventId}/confirm`, {})
+}
+
+// ---------------------------------------------------------------------
+//  화면 9 — Sync (SPEC §5 sync-status · §6 동일성 판정 · §9 화면 9)
+// ---------------------------------------------------------------------
+
+/** 화면이 사람에 대해 아는 전부 — 서버의 `lib/api/user.ts` 와 같은 모양이다. */
+export type UserRef = { id: string; name: string }
+
+/**
+ * 기기 한 줄 (`GET /projects/{id}/sync-status`).
+ *
+ * 🔴 **`status` 를 화면이 다시 세지 않는다.** `unknown` 을 매기는 자리는 서버의
+ *   `statusOfDevice()` 하나다 (FINDINGS 16). 화면은 `reported_at === null` 을 보고
+ *   「보고 없음」이라고 **다시 판정하지 않는다** — 그러면 판정이 두 곳이 된다.
+ * ⚠ `manifest_hash` 는 마지막 보고가 대조한 해시다. 보고가 없으면 `null` 이다.
+ */
+export type DeviceSyncRow = {
+  device_id: string
+  device_name: string
+  user: UserRef
+  status: SyncStatus
+  version: string | null
+  manifest_hash: string | null
+  reported_at: string | null
+}
+
+export function fetchSyncStatus(projectId: string): Promise<{ devices: DeviceSyncRow[] }> {
+  return apiJson(`/projects/${projectId}/sync-status`)
 }

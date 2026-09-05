@@ -29,6 +29,9 @@ const TABS: { href: (base: string) => string; label: string; match: RegExp }[] =
   //  ⚠ Roadmap 은 **발행된 Pack 이 있어야** 행이 생긴다 (마일스톤의 정본이 Manifest 다).
   //    그래서 Pack Explorer 뒤다 — 차례가 일의 차례라는 위 규칙 그대로다.
   { href: (base) => `${base}/roadmap`, label: 'Roadmap', match: /\/roadmap$/ },
+  //  ⚠ Sync 가 마지막이다 — 발행한 Pack 이 **각 기기에 실제로 닿았나**를 보는 자리라
+  //    일의 차례에서 제일 끝이다 (발행 → 로드맵이 움직임 → 기기가 받아 감).
+  { href: (base) => `${base}/sync`, label: 'Sync', match: /\/sync$/ },
 ]
 
 export default function ProjectLayout({

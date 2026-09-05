@@ -1,9 +1,10 @@
 import { and, desc, eq, isNull } from 'drizzle-orm'
 
-import { contextVersions, devices, syncReports } from '../../../../../../db/schema'
+import { contextVersions, devices, syncReports, users } from '../../../../../../db/schema'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { pathUuid, route } from '../../../../../../lib/api/route'
 import { statusOfDevice } from '../../../../../../lib/api/sync'
+import { USER_REF_COLUMNS } from '../../../../../../lib/api/user'
 
 // =====================================================================
 //  `GET /projects/{id}/sync-status` — member (SPEC §5 · §6)
@@ -28,9 +29,15 @@ export const GET = route<{ id: string }>('GET /projects/{id}/sync-status', async
   await requireProject(ctx.db, actor, projectId, 'member')
 
   //  살아 있는 기기만 (취소된 토큰은 목록에서 뺀다 — 없어진 노트북이 영원히 빨간 줄로 남는다).
+  //  🔴 **사람을 같이 읽는다** — 화면 9 의 첫 칸이 「팀원」이고 (DESIGN_BRIEF §4 화면 9),
+  //     uuid 를 내면 화면은 그 칸을 **아예 만들 수 없다** (FINDINGS 113). 무엇이 나가는지는
+  //     `USER_REF_COLUMNS` 하나가 정한다 — 여기서 `users.email` 을 손으로 더하지 마라.
+  //  ⚠ `innerJoin` 이다: `devices.user_id` 는 NOT NULL FK 라 주인 없는 기기가 없다.
+  //    left 로 두면 있을 수 없는 갈래(`user:null`)를 화면이 그려야 한다.
   const deviceRows = await ctx.db
-    .select({ id: devices.id, name: devices.name, userId: devices.userId })
+    .select({ id: devices.id, name: devices.name, ...USER_REF_COLUMNS })
     .from(devices)
+    .innerJoin(users, eq(users.id, devices.userId))
     .where(and(eq(devices.projectId, projectId), isNull(devices.revokedAt)))
 
   const rows = await Promise.all(deviceRows.map(async (d) => {
@@ -51,7 +58,7 @@ export const GET = route<{ id: string }>('GET /projects/{id}/sync-status', async
     return statusOfDevice({
       device_id: d.id,
       device_name: d.name,
-      user_id: d.userId,
+      user: { id: d.user_id, name: d.user_name },
       last: last === undefined ? undefined : {
         status: last.status,
         version: last.semver,

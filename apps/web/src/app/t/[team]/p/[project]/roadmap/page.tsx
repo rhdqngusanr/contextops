@@ -3,7 +3,7 @@
 import { use, useState } from 'react'
 
 import {
-  ROADMAP_POLL_MS, confirmProgress, fetchRoadmap,
+  REALTIME_POLL_MS, confirmProgress, fetchRoadmap,
   type ProgressEventView, type ProjectRef,
 } from '../../../../../../lib/web/queries'
 import { usePolling } from '../../../../../../lib/web/use-async'
@@ -24,7 +24,7 @@ import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/s
 //  🔴 **「Realtime」은 폴링이다** (SPEC §14 절삭 순서 8 「Realtime(폴링 10초)」).
 //     ⚠ 화면 3·4 의 job 폴링과 **끝나는 조건이 다르다.** job 은 끝나면 멈추지만
 //       로드맵은 끝나는 일이 아니라서 화면을 열어 둔 내내 돈다 — 그래서 `again` 이
-//       늘 `ROADMAP_POLL_MS` 다. (실패하면 `usePolling` 이 스스로 멈춘다. 500 을 내는
+//       늘 `REALTIME_POLL_MS` 다. (실패하면 `usePolling` 이 스스로 멈춘다. 500 을 내는
 //       서버를 10초마다 계속 치면 화면 하나가 그 서버를 마저 쓰러뜨린다.)
 //
 //  ⚠ accent 가 이 화면에 하나도 없다. [완료 확인] 은 마일스톤마다 있어서
@@ -54,7 +54,7 @@ function RoadmapView({
   project: ProjectRef
   canConfirm: boolean
 }) {
-  const road = usePolling(() => fetchRoadmap(project.id), [project.id], () => ROADMAP_POLL_MS)
+  const road = usePolling(() => fetchRoadmap(project.id), [project.id], () => REALTIME_POLL_MS)
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [offOpen, setOffOpen] = useState(false)
@@ -89,7 +89,7 @@ function RoadmapView({
             있는지 안다. */}
         <p className="meta">
           마일스톤이 어디까지 왔는지는 각 기기가 보낸 <strong className="ink">마지막 보고</strong> 기준입니다.
-          이 화면은 {ROADMAP_POLL_MS / 1000}초마다 다시 읽습니다.
+          이 화면은 {REALTIME_POLL_MS / 1000}초마다 다시 읽습니다.
         </p>
       </header>
 
