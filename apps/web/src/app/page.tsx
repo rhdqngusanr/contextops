@@ -1,15 +1,14 @@
+import { Landing } from '../components/landing'
+
 // =====================================================================
-//  자리 표시 랜딩 (SPEC §9 화면 1 은 PLAN P4 둘째 행이다).
+//  `/` — 화면 1 랜딩 (SPEC §9 표 1행 · DESIGN_BRIEF §4 「화면 1」)
 //
-//  ★ 왜 빈 페이지라도 두나 — App Router 는 `app/page.tsx` 가 없으면 `/` 가 404 다.
-//    배포 확인(`/api/v1/health`)을 하러 온 사람이 첫 화면에서 404 를 보면
-//    「배포가 깨졌다」로 읽는다. **아직 없다는 것과 고장 난 것은 달라야 한다.**
+//  ★ 여기는 한 줄이다. 문구·표·모양은 전부 `components/landing.tsx` 에 산다 —
+//    시험이 그 표를 들여와 「Before/After 가 진짜 Pack 규칙과 같은가」를 재기 때문이다.
+//
+//  🔴 **정적이다.** `'use client'` 도 세션 읽기도 없다 (SPEC §9 표의 「상태」 칸).
+//     시크릿 창에서 여는 첫 화면이 로그인 상태에 따라 갈리면 GATE 3 이 두 모양이 된다.
 // =====================================================================
 export default function Home() {
-  return (
-    <main>
-      <h1>ContextOps</h1>
-      <p>API 는 <code>/api/v1</code> 아래에 있다. 상태 확인: <code>/api/v1/health</code></p>
-    </main>
-  )
+  return <Landing />
 }

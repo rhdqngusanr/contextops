@@ -370,7 +370,25 @@
       **진짜 게스트 토큰으로 진짜 라우트**를 부른다). 덤프가 시험이 못 잡은 것을 하나 잡았다:
       화면 9 의 「팀원」 칸에 **`demo-member-haeun` 같은 sub 가 그대로** 그려졌다 —
       `sessionActor()` 가 로그인마다 `users.name` 을 claims 로 덮기 때문이다.
-      → ③ 남은 것: **`/demo/ai-once`(P3 · FINDINGS 117) · 랜딩 v1 · production 시드(Cron)**.
+      → ③ **랜딩 v1 은 됐다** (59바퀴). `/` 가 **정적** 화면 1 이다 — 헤드라인 ·
+      Before/After · 왜 git 인가 3+1 · 3단계 · 신뢰 경계 표 · 설치 4줄 · 푸터.
+      accent 는 [샘플 팀으로 둘러보기] **하나**이고 `/demo` 로 간다. 로그인 화면의
+      「심사위원이신가요?」도 같은 `/demo` 다 (게스트 입구는 하나).
+      🔴 **Before/After 는 paylab 픽스처의 사실이다** — 문서 §3.1(5회 · 지수 백오프) 대
+      코드 `retry.ts:11`(3회 · 500ms), 그리고 After 의 답은 **게스트가 v1.1.0 에서 실제로 보는
+      `item_policy_retry` 의 그 줄**이다. 씨앗(v1.0.0)의 문장이 아니라 승인된 제안의 문장이라
+      `DEMO_PROPOSALS` 를 내보내 `test/web-landing.test.ts` 가 글자 그대로 대조한다 —
+      첫 화면과 앱이 다른 문장을 말하면 시험이 빨개진다.
+      🔴 **없는 것은 안 만들었다**: [2분 영상 보기](영상 없음 · P6) · 터미널 재생·스텝
+      썸네일(FINDINGS **123** · P5 첫 행) · GitHub/Known limitations 링크(**122** · 🙋 URL) ·
+      `npx contextops`(npm 에 없다 — 설치 줄은 SPEC §8.3 의 **실제 명령** 4줄이고 시험이
+      Skill 폴더와 CLI 파일의 존재를 센다).
+      웹 시험 **525** (CI test 층 실측 · 24 파일 · `web-landing` 27개). **눈으로 읽었다** — `docs/evidence/2026-09-06-landing/landing.txt`
+      (`scripts/dump-landing.tsx`). 덤프가 잡은 것: 머리글과 히어로에 [로그인]이 **둘** 서서
+      하나로 줄였다. ⚠ 브라우저 캡처는 없다 — 「스크롤 없이 A·B·C 가 보이나」는 사람 몫이다.
+      → ④ 남은 것: **GATE 3 을 사람이 시크릿 창에서 한 번 밟는다** (`pnpm --filter web demo:db`
+      → `http://localhost:3000/`) · `/demo/ai-once`(P3 · FINDINGS 117 · 🙋 Anthropic 키) ·
+      production 시드(Cron · **120** · P5 둘째 행).
       ⚠ 화면 9 의 **질의창(§7.3)은 안 만들었다** — 부르는 문(`POST …/ask`)이 0곳이고
       §14 **절삭 순서 1번**이다 (FINDINGS **117**). 누르면 아무 일도 안 하는 입력칸을
       두지 않았다. GATE 3 은 질의창 없이도 선다

@@ -29,6 +29,31 @@
 
 ## 다음에 고칠 것
 
+### 123. 랜딩의 **「어떻게 동작하나요」에 썸네일이 없고 터미널 재생(§10.4)이 없다**   [격차]
+- **증상**: DESIGN_BRIEF 화면 1 C-2 는 각 스텝 아래 **실제 화면 썸네일**, C-3 은 타이핑되는
+  터미널 + 같은 타임라인의 Roadmap 미니 패널을 적는데, 랜딩 v1 은 글 세 단이고 C-3 절은 없다.
+- **근거**: 59바퀴 직접 셈 — `apps/web/src/components/landing.tsx` 의 `HOW_IT_WORKS` 에 그림
+  칸이 없다 · `fixtures/replay/` 없음 · `<TerminalReplay>` 0곳 · 이 환경에 브라우저 캡처가 없다.
+- **정본**: `docs/DESIGN_BRIEF.md` §4 화면 1 C-2·C-3 · SPEC §10.4
+- **왜 고장이 아닌가**: 첫 화면(A·B·C)은 서고 `/demo` 로 들어간다. 빠진 것은 스크롤 아래 두 절이다.
+- **고칠 방향**: 터미널 재생 컴포넌트는 **PLAN P5 첫 행**이 만든다 — 그 바퀴에 랜딩 C-3 을
+  같이 넣는다 (`fixtures/replay/*.json` 의 `[{t_ms,text}]`). 썸네일은 production 캡처가 생긴
+  뒤다 (P5 둘째 행). ⚠ 캡처 없이 목업 그림을 넣지 마라 — 화면에 없는 것을 보여 주는 셈이다.
+- **상태**: 대기 (주인은 PLAN **P5 첫 행**)
+
+### 122. **랜딩 푸터에 GitHub · Known limitations 링크가 없다** — 공개 URL 이 없다   [구멍]
+- **증상**: DESIGN_BRIEF 화면 1 C-6 은 「푸터: 제출 팀명, GitHub 링크, Known limitations 링크」다.
+  지금 푸터는 `ContextOps · Wanted AI Championship 2026 출품작 · 서버 상태(/api/v1/health)` 뿐이다.
+  제출 팀명도 모른다.
+- **근거**: 59바퀴 직접 셈 — `grep -rn "github.com/" docs README.md plugin` → 우리 저장소 URL 0건 ·
+  `docs/KNOWN_LIMITATIONS.md` 는 있으나 앱이 서빙하지 않는다 · `landing.tsx` 의 `LANDING_FOOT`.
+- **정본**: `docs/DESIGN_BRIEF.md` §4 화면 1 C-6
+- **왜 고장이 아닌가**: 없는 링크를 안 걸었을 뿐이다 — 죽은 링크가 「고장」이다.
+- **고칠 방향**: 🙋 사람이 **공개 저장소 URL 과 제출 팀명**을 `INBOX.md` 에 적어 준다 →
+  `LANDING_FOOT` 에 두 줄. Known limitations 는 그 URL 의 `docs/KNOWN_LIMITATIONS.md` 로 건다
+  (앱에 페이지를 또 만들면 같은 문서가 두 곳이 된다).
+- **상태**: 대기 (🙋 URL · 주인은 PLAN **P6 둘째 행** README)
+
 ### 121. **게스트가 누른 버튼의 403 을 화면이 「팀 owner만」이라고 옮긴다**   [격차]
 - **증상**: 게스트는 데모 팀의 **member** 라, 화면은 member 가 할 수 있는 버튼(항목 승인 ·
   답변 저장 · 발행)을 **그린다.** 누르면 서버는 「읽기 전용으로 둘러보는 중이다」로 403 을

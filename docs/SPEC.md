@@ -534,6 +534,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 - 🔴 **쿠키가 아니라 로그인과 같은 자리(세션 토큰)다.** 원래 SPEC 은 「세션 쿠키」였는데, 저장 자리를 하나 더 만들면 로그아웃이 한쪽만 지우고 `lib/web/api.ts` 의 `Authorization` 조립이 두 갈래가 된다. 게스트도 **진짜 세션으로 진짜 라우트**를 지난다 — 다른 것은 **바꿀 수 없다**는 것뿐이다.
 - 🔴 **읽기 전용은 등급이 아니라 「주체 종류」로 만든다** (`ACTOR_RULES` 의 `writes` 축 · `apps/web/src/lib/api/auth.ts`). 등급 사다리(`ROLE_RANK`)에 칸을 파면 **모든 GET 라우트가 요구 등급을 같이 낮춰야** 하고, 서른 곳 중 하나만 어긋나면 그게 P1 옆의 구멍이다. 막는 자리는 `lib/api/route.ts` 하나이고 기준은 **HTTP 안전 메서드**(GET·HEAD)다.
 - 게스트는 데모 팀의 **member** 로 앉는다. 그래서 owner 전용 화면 요소(로드맵 「완료 확인」)는 「owner 만 할 수 있습니다」로 정직하게 그려진다.
+- 🔴 **랜딩(`/`)은 세션을 읽지 않는다** (표의 「정적」). `apps/web/src/components/landing.tsx` 는 문구 표와 JSX 뿐이고, `test/web-landing.test.ts` 가 클라이언트 코드 0줄 · accent 하나(`/demo`) · 죽은 링크 0 을 센다. Before/After 는 paylab 픽스처(§10.1 의 「의도된 어긋남」 첫째)이고, **After 의 답은 데모 v1.1.0 이 `item_policy_retry` 에 싣는 승인 제안의 문장과 글자 그대로 같다** (`scripts/demo-seed.ts` 의 `DEMO_PROPOSALS`) — 첫 화면과 앱이 다른 문장을 말하면 시험이 빨개진다. 설치 줄은 §8.3 의 실제 명령이다 (`npx contextops` 는 아직 없다).
 
 ---
 

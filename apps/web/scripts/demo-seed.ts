@@ -130,7 +130,10 @@ type DemoProposal = {
   note?: string
 }
 
-const DEMO_PROPOSALS: DemoProposal[] = [
+//  ⚠ 내보내는 이유는 하나다 — 랜딩의 After 답이 **이 표의 published 행**과 같은지
+//    `test/web-landing.test.ts` 가 잰다. 게스트가 v1.1.0 에서 보는 문장과 첫 화면의 문장이
+//    갈리면 그게 첫 화면의 거짓말이다. 제품 코드는 이 표를 읽지 않는다.
+export const DEMO_PROPOSALS: DemoProposal[] = [
   {
     author: 'demo-member-junho',
     title: '재시도 간격을 지수 백오프로',

@@ -1,0 +1,115 @@
+/* =====================================================================
+   화면 1 · 랜딩 — 이 화면에만 필요한 모양 (globals.css 의 「한 화면에만 필요한 모양은
+   그 화면 옆의 *.module.css 로 간다」).
+
+   ⚠ 색·간격·글꼴은 전부 `globals.css` 의 토큰이다. 여기에 숫자를 찍지 마라 —
+     `design-tokens.test.ts` 가 padding·margin·gap 의 px 리터럴을 막는다.
+   ⚠ 모바일은 랜딩만 390px 한 장이다 (DESIGN_BRIEF §6 4). 첫 화면의 두 열이
+     좁은 폭에서 한 열로 접힌다 — 접히지 않으면 Before/After 가 화면 밖으로 밀린다.
+   ===================================================================== */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-6);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { font-weight: 600; font-size: var(--fs-sub); }
+
+.main {
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--sp-7) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-7);
+}
+
+/* A + B — 좌 60% 헤드라인 · 우 40% Before/After (DESIGN_BRIEF 화면 1). */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--sp-7);
+  align-items: start;
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.title { font-size: var(--fs-hero); letter-spacing: -0.8px; line-height: 1.15; }
+.subtitle { font-size: var(--fs-sub); color: var(--ink-2); line-height: 1.7; }
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-4);
+}
+
+.compareCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+
+.prompt {
+  display: block;
+  font-size: var(--fs-table);
+  color: var(--accent-ink);
+  /* 프롬프트는 한 줄 명령이다 — 잘리면 질문이 무엇인지 모른다. 접어서 다 보여 준다. */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.threeUp, .steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+.steps { list-style: none; margin: 0; padding: 0; }
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+}
+
+.codeBlock { padding: var(--sp-4); }
+.pre { margin: 0; font-size: var(--fs-table); line-height: 1.8; }
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+}
+
+/* 좁은 폭 — 첫 화면이 한 열로, 카드 셋이 한 줄씩. */
+@media (max-width: 900px) {
+  .hero, .threeUp, .steps { grid-template-columns: 1fr; }
+  .main { padding: var(--sp-6) var(--sp-4); gap: var(--sp-6); }
+  .header, .foot { padding: var(--sp-3) var(--sp-4); }
+  .foot { flex-wrap: wrap; }
+}
