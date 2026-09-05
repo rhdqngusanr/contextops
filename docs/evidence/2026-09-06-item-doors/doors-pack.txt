@@ -1,0 +1,50 @@
+﻿{"kind":"request","request_id":"706e9157-6d6a-4791-90ca-5115bc6c5087","route":"POST /teams","method":"POST","status":201,"latency_ms":10,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606"}
+{"kind":"request","request_id":"a87051bc-38fe-47f4-b2a6-a44275421db3","route":"POST /teams/{id}/projects","method":"POST","status":201,"latency_ms":7,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"54805b4e-50c8-4b95-ad01-0264333661e9","route":"POST /projects/{id}/documents","method":"POST","status":201,"latency_ms":7,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"7d13bc1b-a0b9-4c40-bf0f-d6a9165ea350","route":"POST /projects/{id}/jobs/{jobId}/items","method":"POST","status":201,"latency_ms":5,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"6fd6f114-ea06-40fc-a89f-e5fa33480df4","route":"GET /projects/{id}/questions","method":"GET","status":200,"latency_ms":5,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"73050698-4450-4f7f-a9f8-a2ebbaf6a698","route":"POST /projects/{id}/questions","method":"POST","status":200,"latency_ms":8,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"4e809acb-d631-4e4c-ad78-59d236533cbd","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":6,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"7f9dec8c-4358-4946-9c78-c3f6b97cb75a","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"61a73d7a-ccfa-4489-8261-90e43505908d","route":"PATCH /projects/{id}/context-items/{itemId}","method":"PATCH","status":200,"latency_ms":5,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+{"kind":"request","request_id":"0d3d12f4-9173-4ad0-bc07-d7dc71e97656","route":"POST /projects/{id}/versions/publish","method":"POST","status":201,"latency_ms":12,"user_id":"e8f3ce13-259f-41dc-b467-dfeeb730d606","project_id":"8fcce51c-96c7-4e1b-a6ed-bb4b8864a9db"}
+화면만으로 만든 v1.0.0 — 항목 셋이 서로 **다른 문**으로 들어왔다 (FINDINGS 35)
+
+① 문서 1건을 올렸다 — §7.1 job db3af350 → succeeded
+② 문 C — 구조화 후보를 받아들였다: [{"index":0,"id":"item_doc_refund"}]
+③ 질문 스택에는 11장이 섞여 있다 — 씨앗 10장 + §7.1 이 남긴 열린 질문 1장
+     씨앗: 이 프로젝트가 만드는 것은 무엇인가요? (seed_question)
+     열린: 재시도 상한이 5회인가 3회인가? (open_question)
+④ 문 A — 씨앗 질문에 답했다 → item_seed_mission
+⑤ 문 B — 열린 질문에 **자리를 골라**(constraint) 답했다 → item_q_8815c8cf_0966_409d_afaa_cf82188378ee
+
+⑥ 셋 다 [승인] 을 눌렀다 (draft → active)
+⑦ 발행: v1.0.0 · 파일 2개
+
+===== .claude/rules/workflow.md =====
+# 작업 절차
+<!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. snapshot:08e99667 -->
+
+## ContextOps 진행 보고 (필수)
+작업을 마칠 때 이번 변경이 Roadmap 의 어느 마일스톤 done_when 에 해당하는지 판단하고 아래를 실행한다. 코드 본문은 전송되지 않는다.
+- 해당 있음: `node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" progress --milestone <ID> --criterion "<done_when 문장>" --evidence <path:start-end> [--evidence ...] --summary "<한 줄>"`
+- 해당 없음: `... progress --milestone none --summary "<한 줄>"`
+- 팀 정책·아키텍처·용어에 영향을 주는 변경이면 사용자에게 `/contextops:propose` 실행을 권한다. 직접 실행하지 않는다.
+
+
+===== CLAUDE.md =====
+# API — Team Context v1.0.0
+<!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. snapshot:08e99667 -->
+
+## Mission
+PSP 장애가 가맹점 결제로 번지지 않게 하는 결제 게이트웨이를 만듭니다. <!-- ctx:item_seed_mission rev:2 conf:high src:manual:이 프로젝트가 만드는 것은 무엇인가요? -->
+
+## Policies (must follow)
+- [must] 환불은 접수 후 24시간 안에 종결한다. · 강제: 리뷰에서 본다 <!-- ctx:item_doc_refund rev:2 conf:medium src:doc:5e0c81d2-cae0-49f3-9739-ecdb21d814ff#0-40 -->
+
+## Constraints
+- 재시도는 3회까지만 한다 — 그 뒤는 수동 처리다. <!-- ctx:item_q_8815c8cf_0966_409d_afaa_cf82188378ee rev:2 conf:high src:manual:재시도 상한이 5회인가 3회인가? -->
+
+> 상세 규칙은 .claude/rules/ 를 따른다.
+
+
