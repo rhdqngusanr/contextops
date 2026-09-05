@@ -1,5 +1,7 @@
 import { parseContextItemDraft, type ContextItemDraft, type ItemType } from '@contextops/schema'
 
+import { questionRef } from './conflict'
+
 // =====================================================================
 //  🔴 씨앗 질문 10개 — 「문서가 없어도 시작할 수 있다」의 정본
 //  (SPEC §9 화면 3 ③ · DESIGN_BRIEF §4 「화면 3」 3번 카드 · docs/PLAN.md P3 둘째 행)
@@ -160,6 +162,9 @@ export function seedQuestionOf(question: string): SeedQuestion | undefined {
  * ⚠ `source_refs` 는 `manual` 하나다. 씨앗 질문은 가리킬 원문이 없고 **답변이 곧
  *   원문**이다 — 그 원문은 충돌 행의 `resolution.note` 에 남는다 (P7 의 끝점).
  *   여기에 `source_document` 를 지어 넣으면 아무 문서도 안 가리키는 근거가 된다.
+ *   ⚠ 그 한 줄을 여기서 짓지 않는다 — `questionRef()` 하나다 (`lib/api/conflict.ts`).
+ *   열린 질문에 초안을 실어 답하는 길도 같은 줄을 붙이므로, 여기 또 적으면 두 길의
+ *   근거가 **모양만 다르고 뜻이 같은** 두 벌이 된다 (FINDINGS 56).
  *
  * @returns 파싱에 실패하면 `undefined` (답변이 목적지 칸보다 길 때 — 부르는 쪽이 400 을 낸다)
  */
@@ -174,7 +179,7 @@ export function seedDraft(q: SeedQuestion, answer: string): ContextItemDraft | u
     tags: [],
     //  사람이 직접 답한 문장이다 — 추측이 아니다.
     confidence: 'high',
-    source_refs: [{ kind: 'manual', note: q.question }],
+    source_refs: [questionRef(q.question)],
     data: q.data(answer),
   })
   return parsed

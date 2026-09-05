@@ -1,13 +1,13 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
-import { AnswerQuestions, ConflictQuery, QUESTION_CONFLICT_KINDS } from '@contextops/schema'
+import { AnswerQuestions, ConflictQuery, QUESTION_CONFLICT_KINDS, SOURCE_REFS_MAX } from '@contextops/schema'
 //  ⚠ 정밀한 초안 타입은 따로 온다 — 유니온 스키마의 `z.infer` 는 느슨하다 (item.ts 주석).
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
 import { conflicts } from '../../../../../../db/schema'
-import { CONFLICT_COLUMNS, toConflict } from '../../../../../../lib/api/conflict'
+import { CONFLICT_COLUMNS, questionRef, sameQuestionRef, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
-import { insertDrafts } from '../../../../../../lib/api/item'
+import { appendSourceRef, insertDrafts } from '../../../../../../lib/api/item'
 import { parseBody, parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 import { SEED_ANSWER_MAX, seedDraft, seedQuestionOf } from '../../../../../../lib/api/seed-questions'
 
@@ -23,7 +23,10 @@ import { SEED_ANSWER_MAX, seedDraft, seedQuestionOf } from '../../../../../../li
 //    ① `draft` 가 오면 그것을 만든다 (부르는 쪽이 구조를 안다).
 //    ② 씨앗 질문이면 **표가 정한 자리**로 답변을 그대로 옮긴다 (`seedDraft` · LLM 없음).
 //    ⚠ `open_question` 에는 ②가 없다 — 그 답변을 타입별 `data` 로 뜯는 것은 §7.1 의
-//      일이고, 여기서 흉내 내면 근거를 지어내게 된다 (FINDINGS 56 이 그 자리의 주인이다).
+//      일이고, 여기서 흉내 내면 근거를 지어내게 된다.
+//    🔴 **두 길 다 서버가 근거 한 줄을 더 붙인다** — `questionRef()` (P7 · FINDINGS 56).
+//      그게 없으면 ①로 들어온 항목은 부르는 쪽이 준 근거만 들고 있어서, 그 항목의 Pack
+//      줄에서 「사람이 어느 질문에 답한 것인가」로 갈 길이 없다.
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
@@ -82,19 +85,34 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
   //     아무 일도 안 일어났다」만 본다. 어느 답이 문제인지를 **먼저** 말한다.
   const drafts = new Map<string, Draft>()
   for (const answer of body.answers) {
+    const question = answerable.get(answer.question_id) ?? ''
+    let draft: Draft | undefined
     if (answer.draft) {
-      drafts.set(answer.question_id, answer.draft as Draft)
-      continue
+      draft = answer.draft as Draft
+    } else {
+      const seed = seedQuestionOf(question)
+      if (!seed) continue
+      draft = seedDraft(seed, answer.answer)
+      if (!draft) {
+        fail('VALIDATION_FAILED', `답변은 ${SEED_ANSWER_MAX}자까지입니다`, [
+          { path: 'answer', message: `${seed.question} — ${answer.answer.length}자` },
+        ])
+      }
     }
-    const seed = seedQuestionOf(answerable.get(answer.question_id) ?? '')
-    if (!seed) continue
-    const draft = seedDraft(seed, answer.answer)
-    if (!draft) {
-      fail('VALIDATION_FAILED', `답변은 ${SEED_ANSWER_MAX}자까지입니다`, [
-        { path: 'answer', message: `${seed.question} — ${answer.answer.length}자` },
+
+    //  🔴 **어느 길로 왔든 그 항목은 자기가 나온 질문을 근거로 든다** (P7 · FINDINGS 56).
+    //     씨앗 초안은 이미 같은 줄을 들고 있어서 여기서 겹치지 않는다 (`same` 이 잡는다) —
+    //     즉 이 세 줄은 **초안을 실어 보내는 길**을 위해 있다. 그 길의 근거는 부르는 쪽이
+    //     통째로 정하므로, 붙이지 않으면 Pack 줄에서 질문 카드로 갈 길이 없다.
+    //  ⚠ 질문이 물고 있는 `a_ref`(원문 구간)를 물려주지 않는 이유는 `questionRef()` 에 있다.
+    const ref = questionRef(question)
+    const refs = appendSourceRef(draft.source_refs, ref, sameQuestionRef(ref))
+    if (!refs) {
+      fail('VALIDATION_FAILED', `근거가 ${SOURCE_REFS_MAX}개라 어느 질문에서 나왔는지를 붙일 자리가 없다 — 근거를 하나 줄여라`, [
+        { path: 'draft.source_refs', message: answer.question_id },
       ])
     }
-    drafts.set(answer.question_id, draft)
+    drafts.set(answer.question_id, { ...draft, source_refs: refs })
   }
 
   const created: string[] = []

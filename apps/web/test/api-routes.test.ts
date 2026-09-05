@@ -3,7 +3,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, ContextItemView, QUESTION_CONFLICT_KINDS,
-  RESOLUTION_ITEM_OUTCOME, SOURCE_REFS_MAX,
+  MANUAL_NOTE_MAX, RESOLUTION_ITEM_OUTCOME, SOURCE_REFS_MAX,
   type ConflictChoice, type ConflictKind, type SourceRef,
 } from '@contextops/schema'
 
@@ -411,7 +411,7 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
    *    표에서 나오므로 여기서 손으로 골라 채우면 표가 바뀌는 순간 갈라진다 —
    *    표를 읽어서 채우면 새 종류가 늘어도 이 시험이 따라온다.
    */
-  async function seedConflict(projectId: string, kind: ConflictKind = 'doc_vs_code') {
+  async function seedConflict(projectId: string, kind: ConflictKind = 'doc_vs_code', question = '재시도 횟수는 3회인가 5회인가?') {
     const rule = CONFLICT_KIND_RULES[kind]
     const n = ++seq
     const a = rule.anchor === 'items' ? await seedItemFor(projectId, `item_a${n}`) : null
@@ -423,7 +423,7 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
       bItemId: b,
       aRef: rule.anchor === 'document' ? { kind: 'manual', note: '문서: 재시도 5회' } : null,
       severity: rule.detected ? 'high' : null,
-      question: '재시도 횟수는 3회인가 5회인가?',
+      question,
     }).returning({ id: conflicts.id })
     //  ⚠ 가리켜진 항목 이름을 같이 낸다 — 결정이 **어느 항목**을 바꿨는지 재려면 필요하다.
     return { id: row!.id, a, b }
@@ -661,6 +661,81 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
     ))
     //  답한 둘은 닫혔고, 아직 아무도 안 건드린 씨앗 질문 10장만 열려 있다.
     expect(still.questions).toHaveLength(SEED_QUESTIONS.length)
+  })
+
+  //  -------------------------------------------------------------------
+  //  🔴 초안을 실어 보내는 길의 근거 — FINDINGS 56 (P7)
+  //
+  //  ★ 왜 세 개인가 — 「붙는다」만 재면 **자리가 없을 때**와 **문장이 길 때** 서버가
+  //    무엇을 하는지가 안 잠긴다. 그 둘이 실패하면 사람은 500 을 본다.
+  //  ⚠ 기대의 출처는 표가 아니라 **이 시험이 심은 질문 문장**이다 — 표에서 파생시키면
+  //    붙이는 코드와 기대가 같이 뒤집혀 아무것도 안 잰다 (FINDINGS 103).
+  //  -------------------------------------------------------------------
+  it('초안을 실어 답해도 그 항목은 **자기가 나온 질문**을 근거로 든다 (P7)', async () => {
+    const { owner, projectId } = await seed()
+    const question = '환불은 며칠 안에 되는가?'
+    const { id } = await seedConflict(projectId, 'open_question', question)
+
+    const res = await answerQuestions(req('POST', `/api/v1/projects/${projectId}/questions`, {
+      auth: owner,
+      body: { answers: [{ question_id: id, answer: '7일 안에 된다.', draft: draft('item_refund_days', 'policy') }] },
+    }), params({ id: projectId }))
+    expect(res.status).toBe(200)
+
+    const [rev] = await db.select().from(contextItemRevisions)
+    //  부르는 쪽이 준 근거는 **그대로 남고**, 질문 한 줄이 뒤에 붙는다.
+    expect(rev!.sourceRefs).toEqual([
+      { kind: 'repository_path', repo: 'paylab-api', path: 'src/payment/retry.ts', start_line: 14 },
+      { kind: 'manual', note: question },
+    ])
+  })
+
+  it('근거가 가득 차 있으면 400 이고 **질문이 안 닫힌다**', async () => {
+    const { owner, projectId } = await seed()
+    const { id } = await seedConflict(projectId, 'open_question')
+    const full = Array.from({ length: SOURCE_REFS_MAX }, (_, i) => (
+      { kind: 'repository_path', repo: 'paylab-api', path: `src/payment/f${i}.ts` }
+    ))
+
+    const res = await answerQuestions(req('POST', `/api/v1/projects/${projectId}/questions`, {
+      auth: owner,
+      body: {
+        answers: [{
+          question_id: id,
+          answer: '가득 찼다.',
+          draft: draft('item_no_room', 'policy', { source_refs: full }),
+        }],
+      },
+    }), params({ id: projectId }))
+
+    expect(res.status).toBe(400)
+    expect((await errorOf(res)).code).toBe('VALIDATION_FAILED')
+    //  근거를 조용히 하나 버리고 넣지 않는다 — 그러면 그 항목만 사슬이 한 칸 짧다.
+    expect(await db.select().from(contextItems)).toHaveLength(0)
+    const open = await dataOf(await listQuestions(
+      req('GET', `/api/v1/projects/${projectId}/questions?status=open`, { auth: owner }),
+      params({ id: projectId }),
+    ))
+    const openIds = (open.questions as { id: string }[]).map((q) => q.id)
+    expect(openIds).toContain(id)
+  })
+
+  it('질문이 note 상한보다 길면 **머리를 남기고 잘린다** — 500 이 아니다', async () => {
+    const { owner, projectId } = await seed()
+    const question = `환불 규칙: ${'가'.repeat(300)}?`
+    const { id } = await seedConflict(projectId, 'open_question', question)
+
+    const res = await answerQuestions(req('POST', `/api/v1/projects/${projectId}/questions`, {
+      auth: owner,
+      body: { answers: [{ question_id: id, answer: '7일.', draft: draft('item_long_q', 'policy') }] },
+    }), params({ id: projectId }))
+    expect(res.status).toBe(200)
+
+    const [rev] = await db.select().from(contextItemRevisions)
+    const note = (rev!.sourceRefs.at(-1) as { kind: 'manual'; note: string }).note
+    expect(note).toHaveLength(MANUAL_NOTE_MAX)
+    expect(note.endsWith('…')).toBe(true)
+    expect(question.startsWith(note.slice(0, -1))).toBe(true)
   })
 
   it('남의 프로젝트 질문이 섞이면 하나도 반영하지 않는다', async () => {

@@ -147,6 +147,17 @@ export type Scope = z.infer<typeof Scope>
 // ---------------------------------------------------------------------
 
 /**
+ * 🔴 `{kind:'manual'}` 근거 한 줄의 길이 상한. **이 값은 여기 한 곳에만 산다.**
+ *
+ * ★ 왜 상수인가 — 서버가 `manual` 근거를 **지어 붙이는** 자리가 셋이다: 충돌 정리
+ *   (`conflicts/{id}/resolve`) · 씨앗 질문 답변 · 열린 질문 답변(`questions` 라우트).
+ *   그 자리들은 사람이 쓴 문장(질문·메모)을 note 로 옮기므로 **상한에 걸릴 수 있다.**
+ *   숫자를 그 자리마다 또 적으면 한쪽만 고쳐지고, 안 고쳐진 쪽은 파싱에서 터진다
+ *   (사람 눈에는 500 으로 보인다).
+ */
+export const MANUAL_NOTE_MAX = 200
+
+/**
  * 🔴 근거 종류의 정본 표. **새 종류를 더하는 절차**:
  *   ① `SOURCE_REF_KINDS` 끝에 값 추가 (중간에 끼우지 마라 — 직렬화된다)
  *   ② 이 표에 한 줄 (`.strict()` 필수 — 그게 P1 방어선이다)
@@ -181,7 +192,7 @@ export const SOURCE_REF = {
 
   manual: z.object({
     kind: z.literal('manual'),
-    note: z.string().min(1).max(200),
+    note: z.string().min(1).max(MANUAL_NOTE_MAX),
   }).strict(),
 } as const satisfies Record<SourceRefKind, z.ZodObject>
 

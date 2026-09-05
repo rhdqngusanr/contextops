@@ -1,7 +1,7 @@
 import type {
   ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, SourceRef,
 } from '@contextops/schema'
-import { CONFLICT_KIND_RULES } from '@contextops/schema'
+import { CONFLICT_KIND_RULES, MANUAL_NOTE_MAX } from '@contextops/schema'
 
 import { conflicts } from '../../db/schema'
 
@@ -47,6 +47,35 @@ export const RESOLUTION_OUTCOME: Record<ConflictChoice, ConflictStatus> = {
  */
 export function resolutionNote(conflictId: string, choice: ConflictChoice): string {
   return `충돌 정리 — ${conflictId} · 선택 ${choice}`
+}
+
+/**
+ * 🔴 **질문에 답해서 만들어진 항목이 그 질문과 이어지는 근거 한 줄** (P7 · FINDINGS 56).
+ *
+ * ★ 왜 필요한가 — 답변으로 항목이 생기는 길은 둘인데(씨앗 질문 · 초안을 실어 보내는
+ *   열린 질문) **뒤의 길은 근거를 부르는 쪽이 통째로 정했다.** 그 항목의 Pack 줄에서
+ *   「이 문장은 어디서 왔나」를 물으면 사람이 답한 질문 카드로 갈 길이 없었다.
+ *   지금은 서버가 이 한 줄을 붙여서 **어느 길로 왔든 질문까지 간다.**
+ *
+ * 🔴 **질문의 `a_ref`(원문 구간)를 물려주지 마라** — FINDINGS 56 이 그 길을 ①로 적었지만
+ *   그건 §7.1 이 문서를 읽다 **질문을 남긴 자리**이지 답이 적혀 있던 자리가 아니다.
+ *   사람이 머리로 쓴 문장에 문서 구간을 근거로 달면 **원문에 없는 문장이 원문을 근거로
+ *   배포된다** — SPEC §5 `AcceptJobItems` 가 「본문을 같이 받지 않는」 이유와 같은 고장이다.
+ *   답의 출처는 **그 질문에 답한 사람**이고, 질문·답·누가·언제는 충돌 행에 전부 남는다.
+ *
+ * ⚠ 문장이 상한을 넘으면 **머리를 남기고 자른다** (`…`). 자르는 것이 안전한 이유는
+ *   이 note 가 근거 **자체**가 아니라 질문 카드를 가리키는 말이기 때문이다 — 전문과
+ *   답변은 `conflicts` 행에 그대로 있다. 씨앗 질문 10장은 상한 안이라 안 잘린다
+ *   (`test/api-seed-questions.test.ts` 가 잰다).
+ */
+export function questionRef(question: string): SourceRef {
+  const note = question.length <= MANUAL_NOTE_MAX ? question : `${question.slice(0, MANUAL_NOTE_MAX - 1)}…`
+  return { kind: 'manual', note }
+}
+
+/** 같은 근거가 이미 있나 — `appendSourceRef` 에 준다. 두 벌이 되면 태그만 길어진다. */
+export function sameQuestionRef(ref: SourceRef): (r: SourceRef) => boolean {
+  return (r) => r.kind === 'manual' && ref.kind === 'manual' && r.note === ref.note
 }
 
 /**

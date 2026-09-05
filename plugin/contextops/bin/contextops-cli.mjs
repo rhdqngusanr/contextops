@@ -19002,6 +19002,7 @@ var Scope = external_exports.object({
   (s) => s.kind === "project" || s.value !== void 0,
   { message: "domain\xB7path scope \uB294 value \uAC00 \uD544\uC694\uD558\uB2E4", path: ["value"] }
 );
+var MANUAL_NOTE_MAX = 200;
 var SOURCE_REF = {
   source_document: external_exports.object({
     kind: external_exports.literal("source_document"),
@@ -19024,7 +19025,7 @@ var SOURCE_REF = {
   }).strict(),
   manual: external_exports.object({
     kind: external_exports.literal("manual"),
-    note: external_exports.string().min(1).max(200)
+    note: external_exports.string().min(1).max(MANUAL_NOTE_MAX)
   }).strict()
 };
 var SourceRef = external_exports.discriminatedUnion("kind", nonEmpty(SOURCE_REF_KINDS.map((k) => SOURCE_REF[k])));
