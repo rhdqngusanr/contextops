@@ -5,11 +5,79 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 64바퀴 · `(아래 커밋)`_
+_마지막 갱신: 2026-09-06 · 루프 65바퀴 · 코드 `8d29737` · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴는 둘을 했다.** ① 64바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** P1 근거 문서 작업을 같은 트리에서
+전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`0018ce9`) — 58·59·60·61·63·64 **여섯 바퀴**다 (아래 「밟은 함정」).
+② 64바퀴가 다음으로 지목한 **FINDINGS 125** — scan 단계의 「env 값 0건」 검사가 **잰 값이 0개**였던 것 — 를 닫았다
+(`8d29737`). 주인은 `docs/PLAN.md` **P5 둘째 행**(보안 캡처 증거)이고 그 행의 ③ 줄로 적었다. 관통 7단계 초록 · 고장 0.
+그 행의 나머지(Vercel 연결 · 첫 리셋 · 네트워크 탭 캡처 · fresh install)는 🙋 다.
+
+🔴 **잰 것 — scan 단계의 P1 증언이 이제 실제로 무언가를 잰다. 그리고 두 단계가 같은 값을 심는다.**
+
+| | 전 | 후 |
+|---|---|---|
+| scan 단계 「env 값 0건」 | **잰 값 0개** — 픽스처 `.env.example` 의 값만 찾았고 그 파일은 값이 0건이어야 한다(`fixtures.mjs` ③) | 픽스처를 **임시 사본**(`mkdtemp`)에 복사 → 값이 든 `.env` 를 심고 → 그 사본을 훑는다. **잰 값 2개 · 0건** · 0개면 FAIL |
+| 스캐너가 `.env` 를 **열어 키만** 꺼냈다는 증거 (scan 쪽) | 안 잼 | `.env` 에만 있는 `SENTRY_DSN` 이 `env_keys` 에 **있다** — env 키 14 → 15 · 제외 1 → 2종 (`.env` · `.env.example` 둘 다 「키 이름만 읽었다」) |
+| 심는 값의 정본 | payload 스크립트 안의 표 하나 | `tools/walkthrough-stage.ts` 의 `PLANTED_ENV` · `plantEnv(repoDir)` — 둘째 사용자가 생겨 올렸다. 두 단계가 **같은 값**을 심고 각자 「내 산출물에 없다」를 잰다 |
+| 값 8자 하한 | 두 스크립트에 숫자 `8` | `ENV_VALUE_MIN_CHARS` 한 곳 |
+| `scan.json` 의 `repo` | 폴더 이름 (사본이면 난수) | `--repo-name paylab-api` 로 고정 — 증거 문서에 복사한 것과 어긋나지 않게 |
+| 음성 확인 | — | `values` 를 빈 배열로 바꾼 사본을 돌리면 **exit 1** 「env 값을 하나도 안 쟀다」 |
+| scan 단계 검사 · 관통 | 49 · 880 | **50 · 881** |
+| `p1-payload.md` | §3·§4·§7 에 「scan 은 아직 0개」 ⚠ 셋 | ⚠ 0 · §4 표가 실측(잰 값 2 · 키 15 · 제외 2) · 산출물 둘 다시 복사 |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`8d29737`) |
+
+🔴 **「표를 둘이 따로 들면 갈라진다」를 이번엔 미리 막았다.** 64바퀴가 payload 스크립트 안에 둔 `PLANTED_ENV` 를 scan
+스크립트에 **베끼면** 당장은 돌지만, 누가 한쪽 값을 바꾼 날부터 두 단계의 「이 값을 안 나른다」는 서로 다른 값에 대한 증언이
+된다. 둘째 사용자가 생긴 순간이 정본으로 올릴 때다 (CLAUDE.md 「둘째 사용자가 생기면 그때 정본으로 올린다」). `packages/schema`
+가 아니라 `tools/` 에 둔 이유는 그 파일 머리에 있다 — 개발 도구의 계약이지 제품의 계약이 아니다.
+
+🔴 **scan 단계는 여전히 `openStage()` 를 안 쓴다.** 산출물이 CLI 가 쓰는 `ScanResult` 라 `checks` 배열을 담을 자리가 없고,
+관통은 stdout 의 「검사 N개」 줄을 센다 (`walkthrough.ps1` 의 `count_log`). 그래서 이 단계의 실패 사유는 산출물이 아니라
+**로그**에만 남는다 — 사람이 읽는 증거로 굳힐 때 payload 단계처럼 `sent` 를 남길 수 없다. 바꾸려면 산출물을 둘로
+(`walkthrough-scan.json` = 단계 산출물 · `scan.json` 은 그 안이나 옆에) 나눠야 하는데, 지금 그 둘째 사용자는 없다 — 적어만 둔다.
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-p1-payload/walkthrough-scan.json`: `repo: "paylab-api"` · `files` 48개 전부
+`{path, language}` 두 칸 · `summary.env_keys` 15개에 `SENTRY_DSN` 이 있고 · `excluded` 두 줄이 `.env` 와 `.env.example` 을
+각각 「키 이름만 읽었다 — 값은 안 읽는다」로 적는다 · 파일 안에 `PLANTED` **0건** (`grep -c`). scan 로그의 마지막 줄은
+「코드 본문 0건 · env 값 0건 (잰 값 2개 · 심은 키 2개 산출물에 있음) (P1)」이다 — 잰 수가 로그에 있다.
+
+**다음 바퀴의 일 — FINDINGS 122**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **122 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS)
+이고, 그 행에서 루프가 할 수 있는 조각이 **README 본문**이다. P5 둘째 행의 남은 것은 전부 🙋(계정)이고, P6 첫 행(2분 영상 ·
+슬라이드 · 리허설)은 발표자와 production URL 이 있어야 재료가 된다. 122 의 🙋 URL(GitHub · Known limitations 링크)은 그대로
+🙋 로 두되, **README 와 KNOWN_LIMITATIONS 의 본문**은 URL 없이도 쓸 수 있다 — 링크는 자리만 만들고 값은 사람이 꽂는다.
+
+> **README 를 쓰는 법** — `docs/SPEC.md` §16(제출서 초안)·§17(Known Limitations)과 랜딩(`apps/web/src/components/landing.tsx`)의 문장이 재료다.
+> 랜딩과 README 가 서로 다른 말을 하면 안 된다 — 한쪽을 정본으로 하고 다른 쪽은 그것을 읽게 하든지, 시험이 대조하게 해라.
+> KNOWN_LIMITATIONS 에는 `docs/evidence/2026-09-06-p1-payload/p1-payload.md` §7 의 두 줄(배포에서 찍은 것이 아니다 ·
+> `body` 에 사람이 코드를 붙여 넣으면 계약은 못 막는다)이 들어간다. ⚠ 만들기 전에 **코드에서 그 이름을 찾아라.**
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). P5 둘째 행의 코드 쪽은 다 됐다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+
+---
+
+
+### 지난 바퀴 (64) — P1 근거 문서 · payload 단계의 env 값 검사 (PLAN P5 둘째 행 ② · `0018ce9`)
+
+> ⚠ 64바퀴도 CI GREEN 까지 가고 STATUS·PLAN·FINDINGS 를 다 쓴 뒤 **커밋하지 못한 채** 끝났다 — 58·59·60·61·63 에
+> 이어 **여섯 번째**다. 65바퀴가 같은 트리에서 전 층 CI(GREEN · 880)를 다시 돌려 그대로 올렸다 (`0018ce9`).
+> payload 스크립트가 지난 CI 결과(05:32)보다 **뒤에**(05:33) 고쳐져 있어서 그 CI 를 믿지 않고 다시 돌렸다.
 
 **이번 바퀴는 둘을 했다.** ① 63바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 데모 리셋 작업을 같은 트리에서
 전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`f15c650`) — 58·59·60·61·63 **다섯 바퀴**다 (아래 「밟은 함정」).
@@ -28,7 +96,7 @@ _마지막 갱신: 2026-09-06 · 루프 64바퀴 · `(아래 커밋)`_
 | 스캐너가 `.env` 를 열어 **키만** 꺼냈다는 증거 | 없음 (`.env.example` 의 키가 나갔다는 것만) | `.env` 에만 있는 `SENTRY_DSN` 이 body 에 있다 — env 키 14 → 15 |
 | Memory · transcript 를 읽는 플러그인 코드 | 셈 안 함 | `transcript` · `.claude/projects` · `memory` 를 `grep -rni` → **0곳** (문서 §6) |
 | payload 단계 검사 | 10 | 10 (둘을 갈아 끼웠다 — 수는 같다 · 재는 것이 달라졌다) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`(아래 커밋)`) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`0018ce9`) |
 
 🔴 **「정의만 있고 아무 일도 안 하는 검사」를 관통 안에서 찾았다 (④2-B).** 「env 값이 payload 에 0건 (P1)」은 63바퀴 내내
 초록이었는데 **잰 값이 0개**였다. 두 게이트가 서로를 무효화한 것이다 — fixtures.mjs ③ 은 픽스처에 값을 금지하고(옳다),
@@ -45,14 +113,7 @@ scan 단계의 env 검사는 아직 0개 · `body` 한 줄에 사람이 코드�
 `.env (키 이름만 읽었다 — 값은 안 읽는다)` 라고 스스로 말한다. progress 는 경로·줄만, proposals 는 근거 경로·줄만.
 심은 값 두 개(`sk_live_PLANTED…` · `https://PLANTED…`)는 세 body 어디에도 없다.
 
-**다음 바퀴의 일 — FINDINGS 125**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 125** → 65바퀴가 닫았다 (`8d29737`).
 
 🔴 **125 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P5 둘째 행**(지금 열려 있는 맨 위 행 중 루프가
 할 수 있는 것)이고, 이 바퀴가 그 행에서 만든 증거 문서의 §4 가 「아직 잰 값 0개」라고 적어 둔 그 줄이다. ④3 ②의
@@ -307,62 +368,6 @@ store 는 그럴 자리가 없다. 항목 시각은 **Manifest 의 `generated_at
 
 **그 바퀴가 다음으로 지목한 것**: PLAN P5 첫 행의 남은 두 조각(AGENTS/cursor · 터미널 재생) 중 하나.
 61바퀴가 AGENTS/cursor 를, 62바퀴가 터미널 재생을 했다 — 그 행이 닫혔다.
-
-
-
-### 지난 바퀴 (59) — 랜딩 v1 · 화면 1 (PLAN P4 둘째 행 ③ · `8d30558`)
-
-> ⚠ 59바퀴도 CI GREEN 까지 확인하고 **커밋 전에 끝났다** — 58바퀴와 같은 일이 **두 바퀴
-> 연속**이다. 60바퀴가 같은 트리에서 CI 를 다시 돌려(GREEN) 그대로 올렸다. 그래서 해시가
-> 60바퀴의 것이다. 두 번째라 규칙으로 올렸다 — 아래 「밟은 함정」 첫 줄.
-
-**59바퀴는 둘을 했다.** ① 58바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 게스트 데모
-작업을 같은 트리에서 CI 를 다시 돌려(GREEN) 그대로 올렸다 (`7510e07`). ② `docs/PLAN.md`
-**P4 둘째 행의 마지막 조각 — 랜딩 v1** 을 만들었다. 이제 `/` 를 열면 첫 화면이 있고,
-[샘플 팀으로 둘러보기] 하나로 `/demo` 에 들어간다.
-
-🔴 **잰 것 — 심사위원이 `/` 를 열면 볼 것이 있다.**
-
-| | 전 | 후 |
-|---|---|---|
-| `/` | 자리 표시 (제목 + `/api/v1/health` 안내) | 화면 1 — 헤드라인 · Before/After · 왜 git 인가 3+1 · 3단계 · 신뢰 경계 표 · 설치 4줄 · 푸터 |
-| accent | — | **하나** (`btn-primary` 1개 · `/demo`) |
-| `<button>` · `href="#"` | — | **0 · 0** (누르면 아무 일도 안 하는 것이 없다) |
-| 세션을 읽는 코드 | — | **0줄** (`'use client'` 0 · `readSession` 0 — 시험이 주석을 빼고 센다) |
-| Before/After 의 근거 | 목업(북스택) | **paylab** — 문서 §3.1 vs `retry.ts:11` · After = 데모 v1.1.0 의 `item_policy_retry` 그 줄 |
-| 로그인 화면 「심사위원이신가요?」 | 「준비 중」 | `/demo` 링크 |
-| 웹 시험 | 58바퀴 기록 505 | **525** (CI test 층 실측 · 24 파일 · `web-landing` +27) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN |
-
-🔴 **After 의 답은 씨앗(v1.0.0)이 아니라 승인된 제안(v1.1.0)의 문장이다.** 처음엔 씨앗
-`paylabDrafts()` 의 `data.rule` 을 적고 시험까지 초록이었다. 그런데 `demo-seed.ts` 를 읽으니
-v1.1.0 은 **바로 그 항목**을 제안이 고친 판이다 — 게스트가 `/demo` 에서 여는 판의 문장은
-「0.5s·1s·2s·4s·8s · 타임아웃과 5xx 만」이지 씨앗의 문장이 아니다. 첫 화면이 앱과 다른
-문장을 말하는 걸 시험이 초록으로 통과시킨 셈이라, `DEMO_PROPOSALS` 를 내보내 **published
-행의 `data.rule` 과 글자 그대로** 대조하게 바꿨다. ★ 「시험이 초록」이 「맞다」가 아닌
-사례가 이번 바퀴에도 하나 나왔다 — 정본이 둘(씨앗·제안)이면 **어느 쪽이 화면에 서는지**를 먼저 물어라.
-
-🔴 **없는 명령을 적지 않았다.** DESIGN_BRIEF 는 `npx contextops setup` 한 줄을 적지만
-npm 에 그런 패키지가 없다. 설치 줄은 SPEC §8.3 과 `docs/evidence/2026-09-03-plugin` 이 실제로
-찍은 네 줄이고, 시험이 `/contextops:<x>` 마다 `plugin/contextops/skills/<x>/SKILL.md` 와
-`bin/contextops-cli.mjs` 의 존재를 센다. `<marketplace>` 는 `setup` 이 찍는 안내와 같은 빈칸이다 —
-공개 URL 이 생기면 채운다 (FINDINGS 122).
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-landing/landing.txt` (`scripts/dump-landing.tsx` ·
-Node 가 `.css` 를 몰라 loader 훅으로 빈 모듈을 끼운다). 덤프가 잡은 것: 머리글과 히어로에
-[로그인] 이 **둘** 서 있었다 → 히어로는 [샘플 팀으로 둘러보기] 하나로. 설치 블록이 한 줄로
-뭉쳐 보였다 → `<pre>` 안에 진짜 개행.
-⚠ **브라우저 캡처는 없다.** 「스크롤 없이 A·B·C 가 보이나」·「390px 에서 한 열로 접히나」는
-아래 「눈 판정 대기」다.
-
-🔴 **재다가 둘 나왔다** — **123** 스텝 썸네일·터미널 재생(§10.4)이 없다(주인 P5 첫 행) ·
-**122** 푸터의 GitHub·Known limitations 링크가 없다(공개 URL 🙋).
-121(게스트 403 문구)은 이 행의 몫인데 이번 바퀴에 **못 했다** — 다음에 데모를 만지는 바퀴가 닫는다.
-
-**그 바퀴가 다음으로 지목한 것**: PLAN P5 첫 행 — 셋 중 하나. 60바퀴가 그중 **Pack zip** 을 했다.
-
-
-
 
 
 
@@ -877,7 +882,7 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 |---|---|---|
 | Supabase 프로젝트 생성 · `DATABASE_URL` · **`SUPABASE_JWT_SECRET`** | 계정·결제가 필요하다 | **🔴 지금.** 코드는 다 됐다 — 값만 꽂으면 P1 첫 행이 닫히고 실제 로그인이 돈다. 필요한 값은 `apps/web/.env.example` 에 전부 있다 |
 | Anthropic API 키 (서버측 AI 용, 종량제) | 키 발급은 사람이 | P3 시작할 때 |
-| Vercel 프로젝트 연결 · 환경변수 (**Root Directory `apps/web`** · `CRON_SECRET` · `SUPABASE_JWT_SECRET` · `DATABASE_URL`) → 첫 리셋 한 번 (`curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset`) → `/demo` 가 열리나 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처 한 장(P1 증거의 나머지 절반 · `docs/evidence/2026-09-06-p1-payload/` 옆에) | 계정 연결이 필요하다 | **🔴 지금.** 코드 쪽(Cron · 리셋 문 · `vercel.json`)은 63바퀴에, P1 증거의 코드 쪽은 64바퀴에 다 됐다 — 값만 꽂으면 데모가 production 에서 매일 03:00 KST 에 다시 선다 |
+| Vercel 프로젝트 연결 · 환경변수 (**Root Directory `apps/web`** · `CRON_SECRET` · `SUPABASE_JWT_SECRET` · `DATABASE_URL`) → 첫 리셋 한 번 (`curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset`) → `/demo` 가 열리나 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처 한 장(P1 증거의 나머지 절반 · `docs/evidence/2026-09-06-p1-payload/` 옆에) | 계정 연결이 필요하다 | **🔴 지금.** 코드 쪽(Cron · 리셋 문 · `vercel.json`)은 63바퀴에, P1 증거의 코드 쪽은 64·65바퀴에 다 됐다 — 값만 꽂으면 데모가 production 에서 매일 03:00 KST 에 다시 선다 |
 | 실데이터 픽스처(`brain`) 공개 가능 여부 판단 | 제품 결정이다 | P5 (안 되면 paylab 만 · SPEC §14 절삭 6번) |
 
 ⚠ 루프는 위 항목을 **추측으로 진행하지 않는다.** 값은 `.env.local` 에만 산다 (P1).
@@ -893,7 +898,11 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
   `.env.example` 의 값을 찾았는데, 다른 게이트(`fixtures.mjs` ③)가 그 파일에 값을 **금지**한다 — 두 게이트가
   서로를 무효화해 검사가 63바퀴 내내 0개를 재고 OK 를 찍었다 (FINDINGS 124 · 125). **「N 개를 재어 0건」처럼
   잰 수를 detail 에 찍고, 0개면 FAIL 로 만들어라.** 로그에 OK 만 찍히는 검사는 눈으로 절대 못 잡는다.
-- 🔴 **다섯 바퀴(58·59·60·61·63) CI GREEN 까지 가고 커밋 없이 끝났다.** 63 은 STATUS·PLAN·FINDINGS 까지 다 쓴 뒤
+- 🔴 **PowerShell 도구의 작업 폴더가 바퀴 도중에 옮겨진다 — `-File tools/ci.ps1` 이 「does not exist」로 안 돌았는데 종료 코드는 0 이었다.**
+  배경 실행이라 결과 줄만 보면 성공처럼 보인다. CI 는 **절대 경로**(`C:\dev\hackathon\tools\ci.ps1`)로 부르고, 결과는 종료 코드가
+  아니라 출력의 `=> GREEN` 줄과 `.ci/result` 의 시각으로 확인해라 (65바퀴).
+- 🔴 **여섯 바퀴(58·59·60·61·63·64) CI GREEN 까지 가고 커밋 없이 끝났다.** 64 는 커밋 메시지(`.ci/commit-64.txt`)까지 써 두고
+  끝났다 — 65 가 그 메시지 그대로 올렸다. **CI GREEN 이면 STATUS 를 쓰기 전에 커밋해라.** 63 은 STATUS·PLAN·FINDINGS 까지 다 쓴 뒤
   끝났다. 그리고 63 의 함정 메모(「손으로 옮겼다」)는 **옮겨지지 않은 채**였다 — 적은 것과 디스크가 달랐다.
   **적기 전에 `ls` 로 한 번 봐라.** 64 는 CI GREEN 직후 코드·PLAN·FINDINGS 를 첫 커밋으로, STATUS 를 둘째로 했다.
 - **`new Date().toISOString().slice(0, 10)` 은 UTC 날짜다.** KST 새벽에 돌린 덤프가 `docs/evidence/`

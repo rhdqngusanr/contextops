@@ -29,7 +29,7 @@
 
 ## 다음에 고칠 것
 
-### 125. **scan 단계의 「env 값 0건」 검사가 잰 값이 0개다** — 픽스처 규칙이 값을 금지한다   [구멍]
+### 125. ✅ **scan 단계의 「env 값 0건」 검사가 잰 값이 0개다** — 픽스처 규칙이 값을 금지한다   [구멍]
 - **증상**: `plugin/contextops/scripts/walkthrough-scan.ts` 는 픽스처 `.env.example` 의 **값**이 `scan.json` 에
   없는지 재는데, 그 파일은 `tools/fixtures.mjs` ③(「.env.example 에 값이 0건」)이 **값을 금지**한다. 그래서
   `envLeaked` 는 늘 빈 배열이고 검사는 **아무것도 안 재고** 초록이다 (124 와 같은 종류 · 다른 단계).
@@ -41,7 +41,12 @@
 - **고칠 방향**: 124 와 같게 — 픽스처를 임시 폴더에 복사해 값이 든 `.env` 를 심고 `scan --dir <임시>` 로 돌린 뒤,
   심은 값이 산출물에 없고 키는 있는지 본다. **잰 값이 0개면 FAIL.** ⚠ 픽스처 `.env.example` 에 값을 넣는 쪽은
   고르지 마라 — fixtures.mjs ③ 이 그걸 막는 이유(저장소에 secret 을 들이지 않는다)가 맞다.
-- **상태**: 대기 (주인은 PLAN **P5 둘째 행** 「보안 캡처 증거」 — `docs/evidence/2026-09-06-p1-payload/p1-payload.md` §4·§7 이 이 구멍을 적어 두고 있다)
+- **상태**: ✅ `8d29737` (65바퀴) — 관통이 픽스처를 임시 사본(`mkdtemp`)에 복사하고 값이 든 `.env` 를 심은 뒤 그 사본을
+  `scan --dir <사본> --repo-name paylab-api` 로 훑는다. 심는 값의 정본은 **`tools/walkthrough-stage.ts` 의 `PLANTED_ENV` ·
+  `plantEnv()`** 하나로 올렸다(둘째 사용자가 생겨서 — payload 단계도 그것을 쓴다 · 8자 하한도 상수 한 곳). 검사 셋: 파일마다
+  가장 긴 줄 0건 · 심은 값 0건(**잰 값 0개면 FAIL** · 실측 2개) · 심은 `.env` 에만 있는 `SENTRY_DSN` 이 `env_keys` 에 **있음**
+  (14 → 15 · 제외 1 → 2종). 음성 확인: values 를 빈 배열로 바꾼 사본 → exit 1 「env 값을 하나도 안 쟀다」. scan 단계 49 → 50 ·
+  관통 880 → 881. `p1-payload.md` §3·§4·§7 의 ⚠ 줄을 지우고 산출물 둘을 다시 복사했다.
 
 ### 124. ✅ **payload 단계의 「env 값 0건」 검사가 잰 값이 0개였다**   [구멍]
 - **증상**: `apps/web/scripts/walkthrough-payload.ts` 의 「env 값이 payload 에 0건 (P1)」은 픽스처 `.env.example` 의
