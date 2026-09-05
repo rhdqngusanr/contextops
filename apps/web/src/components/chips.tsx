@@ -1,9 +1,10 @@
 import {
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
-  ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, SOURCE_DOCUMENT_KINDS, SYNC_STATUSES,
+  ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, PROPOSAL_OPERATIONS, PROPOSAL_STATUSES,
+  SOURCE_DOCUMENT_KINDS, SYNC_STATUSES,
   type AiJobStatus, type Confidence, type ConflictKind, type ConflictSeverity, type ItemStatus,
-  type ItemType, type MilestoneStatus, type ProgressSource, type SourceDocumentKind,
-  type SyncStatus,
+  type ItemType, type MilestoneStatus, type ProgressSource, type ProposalOperation,
+  type ProposalStatus, type SourceDocumentKind, type SyncStatus,
 } from '@contextops/schema'
 
 // =====================================================================
@@ -124,6 +125,37 @@ export const MILESTONE_CHIP: Record<MilestoneStatus, ChipSpec> = {
   done: { icon: '✓', label: '완료', tone: 'ok' },
 }
 
+/**
+ * 제안 수명 5종 (SPEC §2 · §5 · DESIGN_BRIEF §4 화면 6 「상태 chip」).
+ *
+ * 🔴 **`approved` 와 `published` 가 화면에서 달라야 한다.** 승인은 「다음 발행에
+ *    들어간다」는 약속일 뿐이고, 그 제안이 실제로 팀에 배포된 것은 발행이 끝난
+ *    뒤다 (§2.1 7단계가 `published` 를 찍는다). 둘이 같아 보이면 사람은 승인만
+ *    하고 발행을 안 한 채 「배포됐다」고 읽는다.
+ * ⚠ `draft` 는 아직 아무도 안 낸 것이다 — 그래서 ok 가 아니라 neutral 이다.
+ */
+export const PROPOSAL_STATUS_CHIP: Record<ProposalStatus, ChipSpec> = {
+  draft: { icon: '·', label: '초안', tone: 'neutral' },
+  submitted: { icon: '◷', label: '승인 대기', tone: 'warn' },
+  approved: { icon: '✓', label: '승인됨 · 발행 대기', tone: 'ok' },
+  rejected: { icon: '✕', label: '거절됨', tone: 'bad' },
+  published: { icon: '⇧', label: '발행됨', tone: 'ok' },
+}
+
+/**
+ * 제안 항목의 연산 3종 (SPEC §3 `PROPOSAL_OPERATIONS` · DESIGN_BRIEF §4 화면 6
+ * 「operation 배지」).
+ *
+ * ⚠ 셋이 **요구하는 것이 다르다** — `add` 는 초안이, `update`·`deprecate` 는 대상이
+ *   있어야 한다 (`ProposalItem` 의 refine). 그래서 화면도 셋에 다른 것을 그린다:
+ *   `add` 는 before 가 없고, `deprecate` 는 after 가 없다.
+ */
+export const PROPOSAL_OPERATION_CHIP: Record<ProposalOperation, ChipSpec> = {
+  add: { icon: '+', label: '항목 추가', tone: 'ok' },
+  update: { icon: '±', label: '항목 수정', tone: 'warn' },
+  deprecate: { icon: '⊘', label: '항목 폐기', tone: 'bad' },
+}
+
 /** 항목 타입 10종의 표 아이콘 (SPEC §3 · DESIGN_BRIEF §4 화면 5 「타입 아이콘」). */
 export const ITEM_TYPE_ICON: Record<ItemType, string> = {
   mission: '◆',
@@ -185,6 +217,8 @@ export const CHIP_TABLES = {
   conflict_kind: { keys: CONFLICT_KINDS, table: CONFLICT_KIND_CHIP },
   conflict_severity: { keys: CONFLICT_SEVERITIES, table: CONFLICT_SEVERITY_CHIP },
   milestone: { keys: MILESTONE_STATUSES, table: MILESTONE_CHIP },
+  proposal_status: { keys: PROPOSAL_STATUSES, table: PROPOSAL_STATUS_CHIP },
+  proposal_operation: { keys: PROPOSAL_OPERATIONS, table: PROPOSAL_OPERATION_CHIP },
 } as const
 
 export const ITEM_TYPE_KEYS = ITEM_TYPES
@@ -231,6 +265,14 @@ export function ConflictSeverityChip({ severity }: { severity: ConflictSeverity 
 
 export function MilestoneChip({ status }: { status: MilestoneStatus }) {
   return <Chip spec={MILESTONE_CHIP[status]} />
+}
+
+export function ProposalStatusChip({ status }: { status: ProposalStatus }) {
+  return <Chip spec={PROPOSAL_STATUS_CHIP[status]} title={status} />
+}
+
+export function ProposalOperationChip({ operation }: { operation: ProposalOperation }) {
+  return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={operation} />
 }
 
 export function TypeIcon({ type }: { type: ItemType }) {

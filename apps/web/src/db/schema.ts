@@ -48,6 +48,7 @@ import {
   PACK_TARGETS,
   PROGRESS_SOURCES,
   PROGRESS_STATUSES,
+  PROPOSAL_STATUSES,
   REPORTABLE_SYNC_STATUSES,
   SOURCE_DOCUMENT_KINDS,
   type ScanSummary,
@@ -89,9 +90,6 @@ export const TEAM_MEMBER_STATUSES = ['active', 'invited'] as const
  */
 export const REVISION_ORIGINS = ['doc', 'code', 'manual', 'proposal'] as const
 export type RevisionOrigin = (typeof REVISION_ORIGINS)[number]
-/** Proposal 수명 5종 (SPEC §2 · §5). `published` 는 발행 트랜잭션이 마지막에 찍는다 (§2.1 7단계). */
-export const PROPOSAL_STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'published'] as const
-
 /** 수명 한 칸이 「어느 칸을 채우고 있어야 하는가」. */
 export interface AiJobStatusRule {
   /** 누군가 집어 갔나 (`started_at` 이 찼나). */
@@ -122,7 +120,8 @@ export const AI_JOB_STATUS_RULES: Record<AiJobStatus, AiJobStatusRule> = {
 }
 
 //  ⚠ `TEAM_ROLES`·`SOURCE_DOCUMENT_KINDS`·`CONFLICT_KINDS`·`CONFLICT_STATUSES`·
-//    **`AI_JOB_STATUSES`** 는 여기 있었지만 **화면·계약이 그 값을 쓰게 되면서**
+//    **`AI_JOB_STATUSES`**·**`PROPOSAL_STATUSES`** 는 여기 있었지만
+//    **화면·계약이 그 값을 쓰게 되면서**
 //    `@contextops/schema` 로 올라갔다 (위 주석의 「둘째 사용자」 규칙).
 //    이제 아래 `pgEnum` 이 그 표를 읽기만 한다.
 //    ⚠ 수명 **규칙**(`AI_JOB_STATUS_RULES`)은 안 올라갔다 — 그 표는 CHECK 제약을

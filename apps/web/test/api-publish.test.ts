@@ -14,6 +14,7 @@ import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/rout
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { PATCH as updateItem } from '../src/app/api/v1/projects/[id]/context-items/[itemId]/route'
 import { GET as listProposals, POST as createProposal } from '../src/app/api/v1/projects/[id]/proposals/route'
+import { GET as getProposal } from '../src/app/api/v1/proposals/[id]/route'
 import { POST as submitProposal } from '../src/app/api/v1/proposals/[id]/submit/route'
 import { POST as approveProposal } from '../src/app/api/v1/proposals/[id]/approve/route'
 import { POST as rejectProposal } from '../src/app/api/v1/proposals/[id]/reject/route'
@@ -556,9 +557,85 @@ describe('제안 — 표 하나가 누가·언제·무엇으로를 정한다', (
     const b = await aProposal()
     await submitProposal(req('POST', `/api/v1/proposals/${b.proposalId}/submit`, { auth: b.owner }), params({ id: b.proposalId }))
     const rejected = await dataOf(await rejectProposal(
-      req('POST', `/api/v1/proposals/${b.proposalId}/reject`, { auth: b.owner }), params({ id: b.proposalId }),
+      req('POST', `/api/v1/proposals/${b.proposalId}/reject`, { auth: b.owner, body: { note: '근거가 한 건뿐이다' } }),
+      params({ id: b.proposalId }),
     ))
     expect(rejected.status).toBe('rejected')
+    expect(rejected.decision_note).toBe('근거가 한 건뿐이다')
+  })
+
+  it('🔴 사유 없는 거절은 400 이다 (`PROPOSAL_DECISIONS.reject.noteRequired`)', async () => {
+    const { owner, proposalId } = await aProposal()
+    await submitProposal(req('POST', `/api/v1/proposals/${proposalId}/submit`, { auth: owner }), params({ id: proposalId }))
+
+    //  ★ 화면만 막으면 플러그인·CLI 로 사유 없는 거절이 들어오고, 그때 제안을 쓴 사람은
+    //    무엇을 고쳐야 하는지 알 자리가 없다 (제안은 되돌아오지 않고 새로 쓴다).
+    const empty = await rejectProposal(
+      req('POST', `/api/v1/proposals/${proposalId}/reject`, { auth: owner, body: { note: '   ' } }),
+      params({ id: proposalId }),
+    )
+    expect(empty.status).toBe(400)
+    const none = await rejectProposal(
+      req('POST', `/api/v1/proposals/${proposalId}/reject`, { auth: owner }), params({ id: proposalId }),
+    )
+    expect(none.status).toBe(400)
+    expect((await errorOf(none)).message).toContain('사유')
+
+    //  승인은 사유가 없어도 된다 — 표의 칸이 그렇게 갈려 있다.
+    const ok = await approveProposal(
+      req('POST', `/api/v1/proposals/${proposalId}/approve`, { auth: owner }), params({ id: proposalId }),
+    )
+    expect(ok.status).toBe(200)
+  })
+
+  it('🔴 `GET /proposals/{id}` 가 제안 한 장과 **대상 항목의 지금 모습**을 같이 낸다', async () => {
+    const { owner, projectId } = await seeded()
+    const base = await dataOf(await publishFirst(owner, projectId))
+    //  손에 있는 항목 하나를 고치는 제안이다 — 그 항목이 diff 의 before 가 된다.
+    const [existing] = await db.select({ id: contextItems.publicId }).from(contextItems)
+      .where(eq(contextItems.projectId, projectId)).orderBy(contextItems.publicId)
+    const proposal = await dataOf(await createProposal(req('POST', `/api/v1/projects/${projectId}/proposals`, {
+      auth: owner,
+      body: {
+        title: '있는 것 하나를 고치고 없는 것 하나를 고친다',
+        summary: '',
+        base_version_id: base.id,
+        items: [
+          {
+            operation: 'update', target_item_id: existing!.id,
+            evidence: [{ kind: 'manual', note: '근거' }], reason: '고친다',
+          },
+          {
+            operation: 'update', target_item_id: 'item_gone_away',
+            evidence: [{ kind: 'manual', note: '근거' }], reason: '대상이 없다',
+          },
+        ],
+        relates_to: [],
+        client_request_id: randomUUID(),
+      },
+    }), params({ id: projectId })))
+
+    const got = await dataOf(await getProposal(
+      req('GET', `/api/v1/proposals/${proposal.id}`, { auth: owner }), params({ id: proposal.id as string }),
+    ))
+    expect(got.id).toBe(proposal.id)
+    const targets = got.targets as { id: string; body: string; revision: number }[]
+    //  🔴 **없는 대상은 안 실린다** — 빈 항목을 지어내면 update 가 add 처럼 보인다.
+    expect(targets.map((t) => t.id)).toEqual([existing!.id])
+    expect(typeof targets[0]!.body).toBe('string')
+    expect(targets[0]!.revision).toBeGreaterThan(0)
+  })
+
+  it('없는 제안과 남의 제안은 같은 404 다 (존재를 캐낼 수 없다)', async () => {
+    const { owner, proposalId } = await aProposal()
+    const stranger = sessionJwt('stranger@example.com')
+
+    expect((await getProposal(
+      req('GET', `/api/v1/proposals/${randomUUID()}`, { auth: owner }), params({ id: randomUUID() }),
+    )).status).toBe(404)
+    expect((await getProposal(
+      req('GET', `/api/v1/proposals/${proposalId}`, { auth: stranger }), params({ id: proposalId }),
+    )).status).toBe(404)
   })
 
   it('🔴 rejected 제안의 항목은 Pack 에 들어가지 않는다', async () => {
@@ -567,7 +644,10 @@ describe('제안 — 표 하나가 누가·언제·무엇으로를 정한다', (
       req('GET', `/api/v1/projects/${projectId}/versions`, { auth: owner }), params({ id: projectId }),
     ))
     await submitProposal(req('POST', `/api/v1/proposals/${proposalId}/submit`, { auth: owner }), params({ id: proposalId }))
-    await rejectProposal(req('POST', `/api/v1/proposals/${proposalId}/reject`, { auth: owner }), params({ id: proposalId }))
+    await rejectProposal(
+      req('POST', `/api/v1/proposals/${proposalId}/reject`, { auth: owner, body: { note: '아직 이르다' } }),
+      params({ id: proposalId }),
+    )
 
     const res = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
       auth: owner, body: { semver: '1.1.0', base_version_id: base.official_version_id },

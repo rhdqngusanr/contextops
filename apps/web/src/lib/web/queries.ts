@@ -2,7 +2,7 @@ import { ITEM_TYPES, SourceRef } from '@contextops/schema'
 import type {
   AiJobStatus, AnswerSlotKey, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
   ItemStatus, ItemType, Manifest, MilestoneStatus, ProgressEvidence, ProgressSource,
-  ProgressStatus, SourceDocumentKind, TeamRole,
+  ProgressStatus, ProposalAction, ProposalItem, ProposalStatus, SourceDocumentKind, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, patch, post } from './api'
@@ -433,6 +433,78 @@ export function resolveConflict(
   body: { choice: ConflictChoice; note?: string },
 ): Promise<ConflictCard> {
   return post(`/conflicts/${conflictId}/resolve`, body)
+}
+
+// ---------------------------------------------------------------------
+//  화면 6 — Proposals (SPEC §5 proposals · §9 화면 6)
+// ---------------------------------------------------------------------
+
+/**
+ * 제안 한 장이 화면에 오는 모양 — `toProposal()` 이 내는 칸 그대로다
+ * (`lib/api/proposal.ts` 의 `PROPOSAL_COLUMNS`).
+ *
+ * ⚠ `author_id`·`decided_by` 는 **uuid 뿐이고 이름을 내는 문이 없다** — 화면은 그래서
+ *   사람 칸을 그리지 않는다 (DESIGN_BRIEF §4 화면 6 의 「작성자」 칸이 아직 없는 이유 ·
+ *   FINDINGS 에 적었다). uuid 를 그리면 아무 뜻도 없는 글자가 표에 남는다.
+ * ⚠ `base_version_id` 는 nullable 이다 — 첫 발행 전의 제안이 있을 수 있다.
+ */
+export type ProposalRow = {
+  id: string
+  project_id: string
+  author_id: string | null
+  status: ProposalStatus
+  title: string
+  summary: string
+  base_version_id: string | null
+  items: ProposalItem[]
+  relates_to: string[]
+  client_request_id: string
+  decided_by: string | null
+  decided_at: string | null
+  decision_note: string | null
+  created_at: string
+}
+
+/**
+ * 🔴 **상세가 목록보다 한 칸 더 든다 — `targets`**(`GET /proposals/{id}`).
+ * 그 칸이 diff 의 **before** 다: `target_item_id` 가 가리키는 **지금 항목**이고,
+ * 없는 대상은 아예 안 실린다 (화면이 「대상 항목을 찾을 수 없습니다」라고 말한다).
+ */
+export type ProposalDetail = ProposalRow & { targets: ContextItemView[] }
+
+export function fetchProposals(
+  projectId: string,
+  query: { limit?: number } = {},
+): Promise<{ proposals: ProposalRow[]; limit: number; offset: number }> {
+  const q = new URLSearchParams()
+  if (query.limit !== undefined) q.set('limit', String(query.limit))
+  const tail = q.toString()
+  return apiJson(`/projects/${projectId}/proposals${tail ? `?${tail}` : ''}`)
+}
+
+/**
+ * 제안 한 장 + 그 제안이 건드리는 항목의 지금 모습.
+ * ⚠ 목록에서 골라 쓰지 마라 — 목록은 `?limit=50` 이라 51번째 제안의 상세를 못 연다.
+ *   주소가 가리키는 것이 목록의 어느 쪽에 있느냐로 정해지면 그건 주소가 아니다.
+ */
+export function fetchProposal(proposalId: string): Promise<ProposalDetail> {
+  return apiJson(`/proposals/${proposalId}`)
+}
+
+/**
+ * 🔴 **제안에 사람이 내리는 결정** (`POST /proposals/{id}/submit|approve|reject`).
+ *
+ * ⚠ 어떤 결정을 **지금 쓸 수 있나**는 화면이 정하지 않는다 — `PROPOSAL_DECISIONS`
+ *   (`@contextops/schema`) 한 표가 「어떤 상태에서 · 누가 · 사유가 필요한가」를 전부
+ *   말하고, 화면도 서버도 그것을 읽는다. 여기서 조건을 다시 적으면 둘이 갈리고,
+ *   **느슨한 쪽이 이긴다** (화면이 그린 버튼이 400 을 받는다).
+ */
+export function decideProposal(
+  proposalId: string,
+  action: ProposalAction,
+  note?: string,
+): Promise<ProposalRow> {
+  return post(`/proposals/${proposalId}/${action}`, note === undefined ? {} : { note })
 }
 
 // ---------------------------------------------------------------------

@@ -196,6 +196,62 @@ export type ConflictStatus = (typeof CONFLICT_STATUSES)[number]
 export const CONFLICT_CHOICES = ['a', 'b', 'both', 'dismiss'] as const
 export type ConflictChoice = (typeof CONFLICT_CHOICES)[number]
 
+/**
+ * Proposal 수명 5종 (SPEC §2 · §5 · §9 화면 6).
+ *
+ * ★ 왜 여기로 올라왔나 — **둘째 사용자가 생겼다.** `apps/web/src/db/schema.ts` 에
+ *   있을 때 소비처는 DB 하나였는데, 화면 6 이 이 값마다 다른 칩을 그리게 되면서
+ *   화면도 `Record<ProposalStatus, …>` 를 갖게 됐다 (`components/chips.tsx` 의
+ *   `PROPOSAL_STATUS_CHIP`). `AI_JOB_STATUSES`·`MILESTONE_STATUSES` 가 올라온 것과
+ *   같은 이유다 — 표의 키를 화면이 손으로 적으면 상태가 늘 때 조용히 하나가 빠진다.
+ * 🔴 `published` 는 사람이 누르는 값이 아니다 — **발행 트랜잭션이 마지막에 찍는다**
+ *   (§2.1 7단계). 그래서 아래 `PROPOSAL_DECISIONS` 에 그 행이 없다.
+ * ⚠ 직렬화된다 (`proposal_status` pgEnum) — 끝에만 더하고 중간을 지우지 마라.
+ */
+export const PROPOSAL_STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'published'] as const
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number]
+
+/** 제안에 사람이 내리는 결정 3종 (SPEC §5 `POST /proposals/{id}/submit|approve|reject`). */
+export const PROPOSAL_ACTIONS = ['submit', 'approve', 'reject'] as const
+export type ProposalAction = (typeof PROPOSAL_ACTIONS)[number]
+
+export interface ProposalDecisionRule {
+  /** 이 상태의 제안에만 쓸 수 있다. */
+  readonly from: ProposalStatus
+  /** 누르고 나면 이 상태가 된다. */
+  readonly to: ProposalStatus
+  /** 그 팀에서 필요한 **최소** 등급. */
+  readonly role: TeamRole
+  /** `author` = 제안을 쓴 사람만 · `anyone` = 등급만 맞으면 된다. */
+  readonly by: 'author' | 'anyone'
+  /** 🔴 사유가 **필수**인가 (DESIGN_BRIEF §4 화면 6 「거절(사유 필수)」). */
+  readonly noteRequired: boolean
+}
+
+/**
+ * 🔴 **결정 → 무엇이 필요하고 무엇이 되나**의 정본 표 (SPEC §5).
+ *
+ * ★ 왜 계약으로 올라왔나 — **둘째 사용자가 생겼다.** 서버(`lib/api/proposal.ts` 의
+ *   `decide()`)만 읽을 때는 `apps/web` 안에 있어도 됐지만, 화면 6 이 「지금 이 제안에
+ *   어떤 버튼을 그릴 수 있나」를 물으면서 같은 판단을 하게 됐다. 화면이 그 조건을
+ *   손으로 다시 적으면 둘이 갈리고, **느슨한 쪽이 이긴다** — 화면이 [승인] 을 그리는데
+ *   서버가 400 을 내거나, 반대로 서버가 받는 것을 화면이 못 그린다.
+ * ⚠ 화면은 이 표를 **읽기만** 한다. 여기 없는 조건(예: 「내 제안은 내가 승인 못 한다」)을
+ *   화면에 따로 적지 마라 — 필요하면 이 표에 칸을 더해라.
+ * ★ 결정을 더하는 절차: ① `PROPOSAL_ACTIONS` **끝에** 값 ② 이 표에 한 줄
+ *   ③ `apps/web` 의 그 이름 폴더에 `route.ts` 한 줄(`decisionRoute('withdraw')`)
+ *   ④ 화면 6 의 버튼은 표를 읽으므로 **고칠 것이 없다.**
+ */
+export const PROPOSAL_DECISIONS: Record<ProposalAction, ProposalDecisionRule> = {
+  submit: { from: 'draft', to: 'submitted', role: 'member', by: 'author', noteRequired: false },
+  //  ⚠ `approve`·`reject` 가 owner 인 것이 이 제품의 승인 절차 전부다. 여기를 member 로
+  //    낮추면 「승인 이후 파이프라인」(P4)이 지키는 것이 없어진다.
+  approve: { from: 'submitted', to: 'approved', role: 'owner', by: 'anyone', noteRequired: false },
+  //  🔴 거절만 사유가 필수다 — 거절당한 사람이 **무엇을 고쳐야 하는지**를 알 수 있는
+  //     자리가 이 한 칸뿐이다 (제안은 되돌아오지 않고 새로 쓴다).
+  reject: { from: 'submitted', to: 'rejected', role: 'owner', by: 'anyone', noteRequired: true },
+}
+
 // ---------------------------------------------------------------------
 //  §7.2 충돌 탐지가 내는 모양 — 종류별로 갈리는 것은 **아래 표 하나**에만 있다
 //
@@ -629,8 +685,14 @@ export const ContextItemsBatchDraftEnvelope = ContextItemsBatchDraft.extend({
  *   경로가 말하지 상태 필드가 말하지 않는다. body 에 `status` 를 두면 `/approve` 로
  *   `rejected` 를 보낼 수 있게 되고, 그러면 경로가 거짓말한다.
  */
+/**
+ * 결정 사유의 상한. **화면 6 의 사유 칸이 이 값을 읽는다** — 숫자가 두 곳에 있으면
+ * 화면은 600자를 받고 서버는 400 을 내는 자리가 생긴다 (`RESOLUTION_NOTE_MAX` 와 같다).
+ */
+export const PROPOSAL_NOTE_MAX = 500
+
 export const ProposalDecision = z.object({
-  note: z.string().max(500).optional(),
+  note: z.string().max(PROPOSAL_NOTE_MAX).optional(),
 }).strict()
 
 /**

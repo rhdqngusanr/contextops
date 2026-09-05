@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { ProposalDecision, type TeamRole } from '@contextops/schema'
+import { PROPOSAL_DECISIONS, ProposalDecision, type ProposalAction } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
-import { proposals, PROPOSAL_STATUSES } from '../../db/schema'
+import { proposals } from '../../db/schema'
 import type { Actor } from './auth'
 import { fail } from './error'
 import { requireProject } from './guard'
@@ -14,33 +14,16 @@ import { parseBody, pathUuid, route } from './route'
 //  ★ 왜 표 하나인가 — 세 라우트가 각자 「지금 상태가 X 인가」「이 사람이 owner 인가」를
 //    적으면 셋의 조건이 갈라진다. 갈라진 쪽이 느슨하면 **작성자가 자기 제안을 승인**할
 //    수 있게 되고, 그건 한 줄이 빠진 것처럼 보이지 않는다.
-//    여기 표를 읽기만 하면 세 라우트는 각각 **한 줄**이다.
+//    그 표를 읽기만 하면 세 라우트는 각각 **한 줄**이다.
 //
-//  ★ 새 결정을 더하는 절차: ① 아래 표에 한 줄 ② 그 이름의 폴더에 `route.ts` 한 줄
+//  🔴 **그 표는 이제 `@contextops/schema` 의 `PROPOSAL_DECISIONS` 다** —
+//     화면 6 이 「지금 이 제안에 어떤 버튼을 그릴 수 있나」를 물으면서 **둘째 사용자**가
+//     됐다 (CLAUDE.md 「둘째가 생기면 그때 정본으로 올린다」). 여기서는 읽기만 한다.
+//
+//  ★ 새 결정을 더하는 절차: ① `packages/schema` 의 `PROPOSAL_ACTIONS`·
+//     `PROPOSAL_DECISIONS` 에 한 줄 ② 그 이름의 폴더에 `route.ts` 한 줄
 //     (`export const POST = decisionRoute('withdraw')`) ③ 시험에 한 줄.
-//     상태 값 자체를 더하려면 `db/schema.ts` 의 `PROPOSAL_STATUSES` 가 먼저다.
 // =====================================================================
-
-export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number]
-export type ProposalAction = 'submit' | 'approve' | 'reject'
-
-/**
- * 🔴 **결정 → 무엇이 필요하고 무엇이 되나**의 정본 표.
- *
- * `by`: `author` = 제안을 쓴 사람만 · `role` = 그 팀에서 필요한 최소 등급.
- * ⚠ `approve`·`reject` 가 owner 인 것이 이 제품의 승인 절차 전부다. 여기를 member 로
- *   낮추면 「승인 이후 파이프라인」(P4)이 지키는 것이 없어진다.
- */
-export const PROPOSAL_DECISIONS: Record<ProposalAction, {
-  from: ProposalStatus
-  to: ProposalStatus
-  role: TeamRole
-  by: 'author' | 'anyone'
-}> = {
-  submit: { from: 'draft', to: 'submitted', role: 'member', by: 'author' },
-  approve: { from: 'submitted', to: 'approved', role: 'owner', by: 'anyone' },
-  reject: { from: 'submitted', to: 'rejected', role: 'owner', by: 'anyone' },
-}
 
 /** `select({...})` 에 그대로 펴 넣는다 — 응답의 필드가 라우트마다 갈리지 않게. */
 export const PROPOSAL_COLUMNS = {
@@ -101,6 +84,12 @@ export async function decide(args: {
   }
   if (row.status !== rule.from) {
     fail('VALIDATION_FAILED', `${rule.from} 상태의 제안만 ${args.action} 할 수 있다 (지금은 ${row.status})`)
+  }
+  //  🔴 사유가 필수인 결정(거절)은 **서버가 막는다.** 화면만 막으면 플러그인·CLI 로
+  //     사유 없는 거절이 들어오고, 그때 제안을 쓴 사람은 무엇을 고쳐야 하는지 알 자리가
+  //     아예 없다 (제안은 되돌아오지 않고 새로 쓴다). 조건의 정본은 표 한 칸이다.
+  if (rule.noteRequired && (args.note === undefined || args.note.trim() === '')) {
+    fail('VALIDATION_FAILED', `${args.action} 에는 사유가 필요하다`)
   }
 
   const [updated] = await args.db

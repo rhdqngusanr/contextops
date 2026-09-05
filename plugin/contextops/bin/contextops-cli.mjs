@@ -19453,8 +19453,9 @@ var AcceptJobItems = external_exports.object({
 var ContextItemsBatchDraftEnvelope = ContextItemsBatchDraft.extend({
   items: external_exports.array(external_exports.unknown()).min(1).max(50)
 }).strict();
+var PROPOSAL_NOTE_MAX = 500;
 var ProposalDecision = external_exports.object({
-  note: external_exports.string().max(500).optional()
+  note: external_exports.string().max(PROPOSAL_NOTE_MAX).optional()
 }).strict();
 var PublishVersion = external_exports.object({
   semver: Semver,

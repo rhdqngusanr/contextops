@@ -20,6 +20,9 @@ const TABS: { href: (base: string) => string; label: string; match: RegExp }[] =
   //  ⚠ 정리가 Context 앞이다 — 결정을 끝낸 것만 발행으로 간다 (SPEC §9 화면 4 → 5).
   { href: (base) => `${base}/review`, label: '정리', match: /\/review$/ },
   { href: (base) => `${base}/context`, label: 'Context', match: /\/context$/ },
+  //  ⚠ 제안은 Context 뒤다 — 승인된 제안은 **발행 트랜잭션 안에서** 항목이 되므로
+  //    (SPEC §2.1 2단계), 사람은 지금 항목을 본 다음에 「무엇이 바뀌나」를 읽는다.
+  { href: (base) => `${base}/proposals`, label: '제안', match: /\/proposals(\/|$)/ },
   //  ⚠ Pack Explorer 는 버전 하나를 가리켜야 열린다. 목록에서는 「최신」으로 보낸다 —
   //    `latest` 는 semver 가 아니라 화면이 versions 를 읽어 고르는 자리다.
   { href: (base) => `${base}/packs`, label: 'Pack Explorer', match: /\/packs(\/|$)/ },

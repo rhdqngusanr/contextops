@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CommitSha, ItemId, MilestoneId, RepoName, RepoPath, Sha256, SourceRef } from './common'
-import { ContextItemDraft } from './item'
+import { ContextItemDraft, type ContextItemDraft as ContextItemDraftType } from './item'
 
 // =====================================================================
 //  업로드 payload allowlist (docs/SPEC.md §3.1 · 원칙 P1)
@@ -171,6 +171,13 @@ export const SyncReport = z.object({
 
 export type ScanSummary = z.infer<typeof ScanSummary>
 export type Proposal = z.infer<typeof Proposal>
+//  ⚠ 항목 한 칸의 타입도 같이 내보낸다 — 화면 6 이 제안의 항목마다 카드를 그리는데,
+//    그 모양(`{operation, target_item_id?, draft?, evidence, reason}`)을 손으로 다시
+//    적으면 계약이 넓어질 때 화면만 조용히 갈라진다 (`ProgressEvidence` 와 같은 이유).
+//  🔴 `draft` 만 손으로 갈아 끼운다 — `ContextItemDraft` 는 타입별로 `data` 가 갈리는
+//     **공개 타입**이 따로 있고 (`item.ts` 의 mapped type), zod 추론만 쓰면 그 칸이
+//     `{}` 로 뭉개져서 화면이 `draft.body` 한 글자도 못 읽는다.
+export type ProposalItem = Omit<z.infer<typeof ProposalItem>, 'draft'> & { draft?: ContextItemDraftType }
 export type ProgressEvent = z.infer<typeof ProgressEvent>
 //  ⚠ 근거 한 칸의 타입도 같이 내보낸다 — 화면 8 이 그 모양을 손으로 다시 적으면
 //    (`{path, start_line?…}`) 계약이 넓어질 때 화면만 조용히 갈라진다.

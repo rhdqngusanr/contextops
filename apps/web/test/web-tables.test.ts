@@ -3,8 +3,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ERROR_CODES,
-  ITEM_STATUSES, ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, SOURCE_DOCUMENT_KINDS,
-  SOURCE_REF_KINDS, SYNC_STATUSES, type ErrorCode, type SourceRef,
+  ITEM_STATUSES, ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, PROPOSAL_OPERATIONS,
+  PROPOSAL_STATUSES, SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES,
+  type ErrorCode, type SourceRef,
 } from '@contextops/schema'
 
 import { ERROR_HINT, hintFor } from '../src/lib/web/api'
@@ -15,7 +16,7 @@ import { readCallbackHash } from '../src/lib/web/auth'
 import {
   AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
   ITEM_STATUS_CHIP, ITEM_TYPE_ICON, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
-  SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
+  PROPOSAL_OPERATION_CHIP, PROPOSAL_STATUS_CHIP, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
 } from '../src/components/chips'
 import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 
@@ -79,6 +80,20 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
     expect(MILESTONE_CHIP.done.tone).toBe('ok')
   })
 
+  it('제안 수명 5종 (SPEC §2 · DESIGN_BRIEF §4 화면 6 상태 chip)', () => {
+    assertLiveTable('PROPOSAL_STATUS_CHIP', PROPOSAL_STATUSES, PROPOSAL_STATUS_CHIP,
+      (k) => `${PROPOSAL_STATUS_CHIP[k].icon}${PROPOSAL_STATUS_CHIP[k].label}`)
+    //  🔴 승인은 「다음 발행에 들어간다」는 약속일 뿐이고, 팀에 배포된 것은 발행 뒤다
+    //     (§2.1 7단계). 둘이 같아 보이면 승인만 하고 발행을 안 한 채 「배포됐다」로 읽는다.
+    expect(PROPOSAL_STATUS_CHIP.approved.label, 'approved 와 published 가 같은 말로 보인다')
+      .not.toBe(PROPOSAL_STATUS_CHIP.published.label)
+  })
+
+  it('제안 연산 3종 (SPEC §3 `PROPOSAL_OPERATIONS` · 화면 6 operation 배지)', () => {
+    assertLiveTable('PROPOSAL_OPERATION_CHIP', PROPOSAL_OPERATIONS, PROPOSAL_OPERATION_CHIP,
+      (k) => `${PROPOSAL_OPERATION_CHIP[k].icon}${PROPOSAL_OPERATION_CHIP[k].label}`)
+  })
+
   it('진행 보고 주체 3종 (SPEC §3 `PROGRESS_SOURCES` · 화면 8 드로어)', () => {
     assertLiveTable('PROGRESS_SOURCE_LABEL', PROGRESS_SOURCES, PROGRESS_SOURCE_LABEL,
       (k) => PROGRESS_SOURCE_LABEL[k])
@@ -98,7 +113,7 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
   it('🔴 상태를 색만으로 구분하지 않는다 — 아이콘과 라벨이 항상 있다 (DESIGN_BRIEF §3)', () => {
     for (const table of [
       SYNC_CHIP, ITEM_STATUS_CHIP, CONFIDENCE_CHIP, AI_JOB_STATUS_CHIP,
-      CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
+      CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP, PROPOSAL_STATUS_CHIP, PROPOSAL_OPERATION_CHIP,
     ]) {
       for (const [key, spec] of Object.entries(table) as [string, { icon: string; label: string }][]) {
         expect(spec.icon.length, `${key}: 아이콘이 없다`).toBeGreaterThan(0)
