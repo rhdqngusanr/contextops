@@ -1,7 +1,8 @@
 import { ITEM_TYPES, SourceRef } from '@contextops/schema'
 import type {
   AiJobStatus, AnswerSlotKey, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
-  ItemStatus, ItemType, Manifest, SourceDocumentKind, TeamRole,
+  ItemStatus, ItemType, Manifest, MilestoneStatus, ProgressEvidence, ProgressSource,
+  ProgressStatus, SourceDocumentKind, TeamRole,
 } from '@contextops/schema'
 
 import { apiJson, apiText, patch, post } from './api'
@@ -432,4 +433,78 @@ export function resolveConflict(
   body: { choice: ConflictChoice; note?: string },
 ): Promise<ConflictCard> {
   return post(`/conflicts/${conflictId}/resolve`, body)
+}
+
+// ---------------------------------------------------------------------
+//  화면 8 — Roadmap (SPEC §5 roadmap · progress/confirm · §9 화면 8)
+// ---------------------------------------------------------------------
+
+/**
+ * Roadmap 을 다시 두드리는 간격 — SPEC §14 절삭 순서 8번의 「Realtime(폴링 10초)」가
+ * 이 숫자다.
+ *
+ * ★ 왜 job 의 2초(`JOB_POLL_MS`)보다 느린가 — 두드리는 것이 **끝나는 일이 아니다.**
+ *   구조화 job 은 몇 초 뒤 끝나고 그때 멈추지만, 로드맵은 사람이 화면을 열어 둔 내내
+ *   돈다. 촘촘히 치면 팀장이 하루 종일 열어 두는 화면 하나가 DB 를 계속 친다.
+ * ⚠ 이 숫자를 화면 안에 적지 마라 — 「실시간」을 흉내 내려고 어느 화면이 500ms 로
+ *   내리는 날이 온다. 이 제품이 말할 수 있는 것은 늘 「마지막으로 본 것이 언제인가」다.
+ */
+export const ROADMAP_POLL_MS = 10_000
+
+/**
+ * 진행 보고 한 건이 화면에 오는 모양 (roadmap 라우트의 `toEvent`).
+ *
+ * 🔴 **`device_id`·`confirmed_by` 가 없다** (P5). 서버가 안 싣는다 — 여기에 칸을 만들면
+ *   다음 사람이 서버에 그 칸을 더하게 되고, 그 순간 이 화면은 감시 도구가 된다.
+ */
+export type ProgressEventView = {
+  id: string
+  status: ProgressStatus
+  summary: string
+  at: string
+  source: ProgressSource
+  context_version: string
+  /** 🔴 P1 — 경로·줄·커밋뿐이다. 코드 본문은 서버에 없다. */
+  evidence: ProgressEvidence[]
+  confirmed_at: string | null
+}
+
+/** 마일스톤 한 줄 — **행이 마일스톤이다** (P5). 사람이 행이 되면 이 제품은 실패다. */
+export type RoadmapMilestone = {
+  milestone: string
+  paths: string[]
+  done_when: { text: string; evidence_count: number; last_event: ProgressEventView | null }[]
+  /** 프로젝트 단위의 열린 충돌 수 — 아직 마일스톤별로 못 센다 (라우트 주석). */
+  conflicts: number
+  last_report_at: string | null
+  status: MilestoneStatus
+  /**
+   * 🔴 **지금 [완료 확인] 을 누를 수 있는 보고 하나.** `null` 이면 그 버튼이 없다 —
+   * 「확정할 것이 없다」와 「권한이 없다」는 화면에서 다르게 보여야 한다.
+   */
+  confirmable: ProgressEventView | null
+}
+
+export type Roadmap = {
+  /** 발행 전에는 `null` 이다 — 「마일스톤이 0개인 프로젝트」와 구별된다. */
+  context_version: string | null
+  milestones: RoadmapMilestone[]
+  /** 지금 Manifest 의 마일스톤이 아닌 보고 (`status:'none'` 포함 · 상한 있음). */
+  off_roadmap: ProgressEventView[]
+  /** 자르기 **전**의 수. 화면은 이 둘을 비교해 「N건 중 M건만 보임」을 말한다. */
+  off_roadmap_total: number
+}
+
+export function fetchRoadmap(projectId: string): Promise<Roadmap> {
+  return apiJson(`/projects/${projectId}/roadmap`)
+}
+
+/**
+ * 🔴 **「agent 는 스스로 완료를 선언하지 못한다」의 사람 쪽 절반** (owner 만 · SPEC §5).
+ * ⚠ 경로가 `/progress/{id}/confirm` 이다 — 프로젝트 밑이 아니다 (보고 id 가 전역 uuid).
+ * ⚠ `done_candidate` 가 아닌 보고를 보내면 400 이다. 그래서 화면은 서버가 준
+ *   `confirmable` 이 있을 때만 버튼을 그린다 — 화면이 상태를 다시 세지 않는다.
+ */
+export function confirmProgress(eventId: string): Promise<ProgressEventView> {
+  return post(`/progress/${eventId}/confirm`, {})
 }

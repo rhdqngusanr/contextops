@@ -172,5 +172,8 @@ export const SyncReport = z.object({
 export type ScanSummary = z.infer<typeof ScanSummary>
 export type Proposal = z.infer<typeof Proposal>
 export type ProgressEvent = z.infer<typeof ProgressEvent>
+//  ⚠ 근거 한 칸의 타입도 같이 내보낸다 — 화면 8 이 그 모양을 손으로 다시 적으면
+//    (`{path, start_line?…}`) 계약이 넓어질 때 화면만 조용히 갈라진다.
+export type ProgressEvidence = z.infer<typeof ProgressEvidence>
 export type SyncReport = z.infer<typeof SyncReport>
 export type ContextItemsBatchDraft = z.infer<typeof ContextItemsBatchDraft>

@@ -1,4 +1,4 @@
-import type { ProgressStatus } from '@contextops/schema'
+import { type MilestoneStatus, type ProgressStatus } from '@contextops/schema'
 
 import { progressEvents } from '../../db/schema'
 
@@ -38,9 +38,18 @@ export function toProgressEvent(row: ProgressRow): Record<string, unknown> {
   return out
 }
 
-/** 마일스톤 한 줄이 화면에서 가질 수 있는 상태 4종. */
-export const MILESTONE_STATUSES = ['not_started', 'in_progress', 'done_candidate', 'done'] as const
-export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number]
+//  ⚠ 마일스톤 상태 4종(`MILESTONE_STATUSES`)은 **`packages/schema` 가 정본**이다 —
+//    화면 8 이 그 값마다 칩을 그리면서 둘째 사용자가 생겼다. 여기서 다시 적지 마라.
+
+/**
+ * 화면 8 하단 「로드맵 외 작업」이 한 번에 싣는 보고의 상한 (SPEC §5 roadmap).
+ *
+ * ★ 왜 상수인가 — 이 목록의 길이는 **agent 가 정한다**(`POST /progress` 를 부르는 것이
+ *   Stop 훅과 agent 다). 상한이 없으면 응답이 보고 수만큼 커지고, 그 화면은 10초마다
+ *   자신을 다시 읽는다 (`ROADMAP_POLL_MS`).
+ * ⚠ 화면에 숫자를 또 적지 마라 — 잘렸는지는 서버가 `off_roadmap_total` 로 말한다.
+ */
+export const OFF_ROADMAP_MAX = 20
 
 /**
  * 🔴 **진행 보고 상태 4종이 마일스톤 상태로 어떻게 접히나**의 정본 표

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { PROGRESS_STATUSES, type ProgressStatus } from '@contextops/schema'
+import { MILESTONE_STATUSES, PROGRESS_STATUSES, type ProgressStatus } from '@contextops/schema'
 
-import { MILESTONE_STATUSES, PROGRESS_EFFECT, rollupMilestone } from '../src/lib/api/progress'
+import { PROGRESS_EFFECT, rollupMilestone } from '../src/lib/api/progress'
 
 // =====================================================================
 //  🔴 진행 상태 4종이 **정의만 있고 아무 일도 안 하는** 자리가 되지 않게 잠근다

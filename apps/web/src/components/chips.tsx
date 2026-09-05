@@ -1,8 +1,9 @@
 import {
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
-  ITEM_TYPES, SOURCE_DOCUMENT_KINDS, SYNC_STATUSES, type AiJobStatus, type Confidence,
-  type ConflictKind, type ConflictSeverity, type ItemStatus, type ItemType,
-  type SourceDocumentKind, type SyncStatus,
+  ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, SOURCE_DOCUMENT_KINDS, SYNC_STATUSES,
+  type AiJobStatus, type Confidence, type ConflictKind, type ConflictSeverity, type ItemStatus,
+  type ItemType, type MilestoneStatus, type ProgressSource, type SourceDocumentKind,
+  type SyncStatus,
 } from '@contextops/schema'
 
 // =====================================================================
@@ -12,7 +13,7 @@ import {
 //     ★ 왜 — 색각 이상뿐 아니라 발표 영상·인쇄된 심사 자료에서 색이 뭉갠다.
 //     그래서 아래 표의 행에는 색(`tone`)만 있는 칸이 없다.
 //
-//  🔴 **표가 여덟이고, 여덟 다 스키마의 enum 을 키로 잡는다** (`Record<ItemType, …>`).
+//  🔴 **표가 열이고, 열 다 스키마의 enum 을 키로 잡는다** (`Record<ItemType, …>`).
 //     ★ 왜 이 모양인가 — 화면에 `switch (type)` 을 흩으면 타입이 늘 때 화면을 고쳐야
 //       하고, 반드시 한 곳을 빠뜨린다. 여기서는 enum 에 값을 더하면 **타입 검사가
 //       막고**, `test/web-tables.test.ts` 가 「표의 키가 enum 과 다르다」로 다시 막는다.
@@ -105,6 +106,24 @@ export const CONFLICT_SEVERITY_CHIP: Record<ConflictSeverity, ChipSpec> = {
   low: { icon: '▽', label: '심각도 낮음', tone: 'neutral' },
 }
 
+/**
+ * 마일스톤 상태 4종 (SPEC §5 roadmap · DESIGN_BRIEF §4 화면 8 「상태 chip」 · P5).
+ *
+ * 🔴 **`done_candidate` 와 `done` 이 화면에서 반드시 달라 보여야 한다.** 그 둘의 차이가
+ *    이 제품의 약속 하나를 통째로 들고 있다 — 「agent 는 스스로 완료를 선언하지
+ *    못한다」. 보고가 아무리 쌓여도 `완료 확인 대기` 까지고, `완료` 는 owner 가
+ *    [완료 확인] 을 눌러야 붙는다 (`POST /progress/{id}/confirm`).
+ *    그래서 앞엣것은 warn(사람이 할 일이 남았다)이고 뒤엣것만 ok 다.
+ * ⚠ 「보고 없음」을 여기 다섯째 행으로 만들지 마라 — 그건 마일스톤의 상태가 아니라
+ *   `last_report_at` 이 `null` 인 것이고, 화면은 그 칸을 따로 그린다 (`RoadmapRow`).
+ */
+export const MILESTONE_CHIP: Record<MilestoneStatus, ChipSpec> = {
+  not_started: { icon: '○', label: '시작 전', tone: 'neutral' },
+  in_progress: { icon: '◐', label: '진행 중', tone: 'neutral' },
+  done_candidate: { icon: '◷', label: '완료 확인 대기', tone: 'warn' },
+  done: { icon: '✓', label: '완료', tone: 'ok' },
+}
+
 /** 항목 타입 10종의 표 아이콘 (SPEC §3 · DESIGN_BRIEF §4 화면 5 「타입 아이콘」). */
 export const ITEM_TYPE_ICON: Record<ItemType, string> = {
   mission: '◆',
@@ -141,6 +160,22 @@ export const SOURCE_DOCUMENT_KIND_LABEL: Record<SourceDocumentKind, string> = {
   wiki: '위키 문서',
 }
 
+/**
+ * 진행 보고를 만든 주체 3종 (SPEC §3 `PROGRESS_SOURCES` · DESIGN_BRIEF §4 화면 8
+ * 「드로어: … source(agent/hook)」).
+ *
+ * 🔴 **여기가 신뢰 경계를 읽는 자리다.** 같은 「근거 2건」이라도 그것을 적은 것이
+ *    Claude 인지(`agent`) 세션이 끝날 때 훅이 자동으로 적은 것인지(`hook`) 사람이
+ *    손으로 적은 것인지(`manual`)에 따라 사람이 얼마나 믿을지가 다르다.
+ * ⚠ **사람 이름을 여기 붙이지 마라** (P5). 이 표가 답하는 것은 「누가」가 아니라
+ *   「무엇이」다 — 보고 행의 `device_id` 는 응답에 실리지도 않는다 (roadmap 라우트).
+ */
+export const PROGRESS_SOURCE_LABEL: Record<ProgressSource, string> = {
+  agent: 'Claude 가 보고',
+  hook: '세션 종료 훅이 보고',
+  manual: '사람이 적음',
+}
+
 /** 표를 늘릴 때 빠진 키를 시험이 셀 수 있게 목록도 같이 내보낸다. */
 export const CHIP_TABLES = {
   sync: { keys: SYNC_STATUSES, table: SYNC_CHIP },
@@ -149,9 +184,11 @@ export const CHIP_TABLES = {
   ai_job_status: { keys: AI_JOB_STATUSES, table: AI_JOB_STATUS_CHIP },
   conflict_kind: { keys: CONFLICT_KINDS, table: CONFLICT_KIND_CHIP },
   conflict_severity: { keys: CONFLICT_SEVERITIES, table: CONFLICT_SEVERITY_CHIP },
+  milestone: { keys: MILESTONE_STATUSES, table: MILESTONE_CHIP },
 } as const
 
 export const ITEM_TYPE_KEYS = ITEM_TYPES
+export const PROGRESS_SOURCE_KEYS = PROGRESS_SOURCES
 export const SOURCE_DOCUMENT_KIND_KEYS = SOURCE_DOCUMENT_KINDS
 
 // ---------------------------------------------------------------------
@@ -190,6 +227,10 @@ export function ConflictKindChip({ kind }: { kind: ConflictKind }) {
 
 export function ConflictSeverityChip({ severity }: { severity: ConflictSeverity }) {
   return <Chip spec={CONFLICT_SEVERITY_CHIP[severity]} />
+}
+
+export function MilestoneChip({ status }: { status: MilestoneStatus }) {
+  return <Chip spec={MILESTONE_CHIP[status]} />
 }
 
 export function TypeIcon({ type }: { type: ItemType }) {

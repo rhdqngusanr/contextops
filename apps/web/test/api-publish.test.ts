@@ -874,6 +874,80 @@ describe('progress — 멱등하고, done 은 사람만 찍는다', () => {
   it('발행 전 roadmap 은 빈 목록이고 context_version 이 null 이다', async () => {
     const { owner, projectId } = await seeded()
     const data = await dataOf(await roadmap(req('GET', `/api/v1/projects/${projectId}/roadmap`, { auth: owner }), params({ id: projectId })))
-    expect(data).toEqual({ context_version: null, milestones: [] })
+    //  ⚠ 칸이 갈래마다 다르면 화면이 `off_roadmap_total` 을 `undefined` 로 받는다.
+    expect(data).toEqual({ context_version: null, milestones: [], off_roadmap: [], off_roadmap_total: 0 })
+  })
+
+  it('🔴 roadmap 이 **확정할 보고 하나**를 낸다 — 없으면 화면에 [완료 확인] 이 있을 수 없다', async () => {
+    const { owner, projectId } = await seeded()
+    await publishFirst(owner, projectId)
+    const { token } = await deviceToken(owner, projectId)
+    const post = (body: Record<string, unknown>) =>
+      postProgress(req('POST', `/api/v1/projects/${projectId}/progress`, { auth: token, body }), params({ id: projectId }))
+    const read = async () => {
+      const data = await dataOf(await roadmap(req('GET', `/api/v1/projects/${projectId}/roadmap`, { auth: owner }), params({ id: projectId })))
+      return (data.milestones as { status: string; confirmable: { id: string; summary: string } | null }[])[0]
+    }
+
+    //  ① `criterion_done` 만으로는 확정할 것이 없다 — 버튼이 없어야 하는 상태다.
+    await post(event())
+    expect((await read())?.confirmable).toBeNull()
+
+    //  ② `done_candidate` 가 오면 그 보고 하나가 나온다.
+    await post(event({ status: 'done_candidate', summary: '재시도 정책을 다 지켰다' }))
+    const waiting = await read()
+    expect(waiting?.status).toBe('done_candidate')
+    expect(waiting?.confirmable?.summary).toBe('재시도 정책을 다 지켰다')
+
+    //  ③ 확정하면 사라진다 — 이미 확정된 것을 또 확정하면 400 이라, 남으면 그 버튼은 고장이다.
+    await confirmProgress(
+      req('POST', `/api/v1/progress/${waiting?.confirmable?.id}/confirm`, { auth: owner }),
+      params({ id: waiting?.confirmable?.id as string }),
+    )
+    const after = await read()
+    expect(after?.status).toBe('done')
+    expect(after?.confirmable).toBeNull()
+  })
+
+  it('🔴 어느 마일스톤도 아닌 보고가 `off_roadmap` 으로 나온다 (`status:"none"` 의 유일한 소비처)', async () => {
+    const { owner, projectId } = await seeded()
+    await publishFirst(owner, projectId)
+    const { token } = await deviceToken(owner, projectId)
+
+    await postProgress(req('POST', `/api/v1/projects/${projectId}/progress`, {
+      auth: token,
+      body: event({ milestone_id: 'none', status: 'none', criterion: undefined, summary: '로그인 리팩터링' }),
+    }), params({ id: projectId }))
+    //  지난 Pack 에만 있던 마일스톤도 **같은 규칙**에 걸린다 — 갈래가 둘이면 뒤엣것이 샌다.
+    await postProgress(req('POST', `/api/v1/projects/${projectId}/progress`, {
+      auth: token,
+      body: event({ milestone_id: 'PL-M9', summary: '없어진 마일스톤에 보고' }),
+    }), params({ id: projectId }))
+
+    const data = await dataOf(await roadmap(req('GET', `/api/v1/projects/${projectId}/roadmap`, { auth: owner }), params({ id: projectId })))
+    const off = data.off_roadmap as { summary: string }[]
+    expect(data.off_roadmap_total).toBe(2)
+    expect(off.map((e) => e.summary).sort()).toEqual(['로그인 리팩터링', '없어진 마일스톤에 보고'])
+    //  ⚠ 마일스톤 행에는 안 붙는다 — 붙으면 근거 수가 남의 것으로 부푼다.
+    const rows = data.milestones as { done_when: { evidence_count: number }[] }[]
+    expect(rows[0]?.done_when.map((d) => d.evidence_count)).toEqual([0, 0])
+  })
+
+  it('🔴 P1·P5 — 보고가 화면으로 나갈 때 근거는 경로·줄뿐이고 사람·기기는 안 나간다', async () => {
+    const { owner, projectId } = await seeded()
+    await publishFirst(owner, projectId)
+    const { token } = await deviceToken(owner, projectId)
+    await postProgress(req('POST', `/api/v1/projects/${projectId}/progress`, { auth: token, body: event() }), params({ id: projectId }))
+
+    const data = await dataOf(await roadmap(req('GET', `/api/v1/projects/${projectId}/roadmap`, { auth: owner }), params({ id: projectId })))
+    const last = (data.milestones as { done_when: { last_event: Record<string, unknown> | null }[] }[])[0]?.done_when[0]?.last_event
+    //  화면 8 의 드로어가 읽는 칸들 — 하나라도 없으면 근거를 못 펼친다 (DESIGN_BRIEF §4).
+    expect(last?.source).toBe('agent')
+    expect(last?.context_version).toBe('1.0.0')
+    expect(last?.evidence).toEqual([{ path: 'src/payment/retry.ts', start_line: 14 }])
+    expect(last?.confirmed_at).toBeNull()
+    //  🔴 P5 — 사람도 기기도 응답에 없다.
+    expect(JSON.stringify(data)).not.toContain('device_id')
+    expect(JSON.stringify(data)).not.toContain('confirmed_by')
   })
 })

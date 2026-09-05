@@ -4,7 +4,6 @@ import { hintFor } from '../lib/web/api'
 import type { AiJobSummary } from '../lib/web/queries'
 import { sinceText } from '../lib/web/time'
 import { AiJobStatusChip } from './chips'
-import styles from './job-progress.module.css'
 
 // =====================================================================
 //  도는 AI job 한 장을 그리는 자리 (SPEC §9 화면 3 · §2 `ai_jobs`)
@@ -96,14 +95,14 @@ export function JobBar({ job }: { job: AiJobSummary }) {
   return (
     <div className="col-tight">
       <div
-        className={styles.bar}
+        className="bar"
         role="progressbar"
         aria-valuenow={done}
         aria-valuemin={0}
         aria-valuemax={total}
         aria-label={`${total}${unit} 중 ${done}`}
       >
-        <div className={styles.fill} style={{ width: `${pct}%` }} />
+        <div className="bar-fill" style={{ width: `${pct}%` }} />
       </div>
       <span className="meta mono">{total}{unit} 중 {done} · {pct}%</span>
     </div>

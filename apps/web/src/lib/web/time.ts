@@ -56,3 +56,29 @@ export function sinceText(iso: string, now: Date = new Date()): string {
   }
   return JUST_NOW
 }
+
+/**
+ * 「N주 이상 보고 없음」의 잣대 — 화면 8 상단 요약 타일 (DESIGN_BRIEF §4 화면 8).
+ *
+ * ★ 왜 상수인가 — 이 수는 화면 두 곳에서 쓰인다(타일의 수 · 행 옆의 경고). 화면 안에
+ *   숫자를 적으면 한쪽만 고쳐지고, 그러면 「3주 이상 1건」이라고 써 놓고 그 1건이
+ *   어느 행인지 표시가 안 되는 화면이 된다.
+ * ⚠ 이건 **서버의 판정이 아니다.** job 의 `stalled` 와 달리 서버가 재지 않으므로
+ *   화면이 잰다 — 그래도 되는 이유는 잣대가 3주라서 시계 어긋남이 뜻을 안 바꾸기
+ *   때문이다 (job 은 초 단위라 서버가 잰다 · `AI_JOB_RUNNERS`).
+ */
+export const STALE_REPORT_DAYS = 21
+
+/**
+ * 마지막 보고가 `STALE_REPORT_DAYS` 보다 오래됐나.
+ *
+ * ⚠ **보고가 하나도 없는 것(`null`)은 「오래됨」이 아니다** — 「아직 시작 안 함」이다.
+ *   둘을 한 수에 합치면 「3주 이상 보고 없음 3」이 사실은 「아직 아무도 손 안 댐 3」이
+ *   되고, 팀장은 없는 문제를 본다.
+ */
+export function isStaleReport(iso: string | null, now: Date = new Date()): boolean {
+  if (iso === null) return false
+  const elapsed = (now.getTime() - Date.parse(iso)) / 1000
+  if (!Number.isFinite(elapsed)) return false
+  return elapsed >= STALE_REPORT_DAYS * 86400
+}

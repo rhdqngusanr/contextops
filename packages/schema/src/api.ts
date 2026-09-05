@@ -155,6 +155,24 @@ export const AI_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as c
 export type AiJobStatus = (typeof AI_JOB_STATUSES)[number]
 
 /**
+ * 마일스톤 한 줄이 화면에서 가질 수 있는 상태 4종 (SPEC §5 roadmap · §9 화면 8 · P5).
+ *
+ * ★ 왜 여기로 올라왔나 — **둘째 사용자가 생겼다.** `apps/web/src/lib/api/progress.ts`
+ *   에 있을 때 소비처는 `rollupMilestone()` 하나였는데, 화면 8 이 이 값마다 다른 칩을
+ *   그리게 되면서 화면도 `Record<MilestoneStatus, …>` 를 갖게 됐다
+ *   (`components/chips.tsx` 의 `MILESTONE_CHIP`). 그 표의 키를 화면이 손으로 적으면
+ *   상태가 늘 때 조용히 하나가 빠진다 — `AI_JOB_STATUSES` 가 올라온 것과 같은 이유다.
+ * ⚠ 화면은 이 목록을 **읽기만** 한다. 「무엇이 이 상태로 접히나」는 여전히 서버 전용
+ *   표(`PROGRESS_EFFECT`)이고 여기로 올리지 않는다 — 그건 응답으로 나가는 값이 아니다.
+ * 🔴 `done` 은 **보고로는 될 수 없다.** owner 가 `POST /progress/{id}/confirm` 을
+ *   눌러야 한다 — 그게 「agent 가 스스로 완료를 선언하지 못한다」의 전부다.
+ * ⚠ 직렬화되지는 않지만(DB enum 이 아니다) 응답으로 나간다 — 화면이 모르는 값이
+ *   생기지 않게 끝에만 더해라.
+ */
+export const MILESTONE_STATUSES = ['not_started', 'in_progress', 'done_candidate', 'done'] as const
+export type MilestoneStatus = (typeof MILESTONE_STATUSES)[number]
+
+/**
  * 충돌 종류 6종 (SPEC §2 · §7.2).
  *
  * ⚠ 뒤의 **둘은 「사람에게 묻는 것」**이고 탐지가 만들지 않는다 (`detected: false`).

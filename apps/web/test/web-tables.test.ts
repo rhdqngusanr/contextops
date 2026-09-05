@@ -3,18 +3,19 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ERROR_CODES,
-  ITEM_STATUSES, ITEM_TYPES, SOURCE_DOCUMENT_KINDS, SOURCE_REF_KINDS, SYNC_STATUSES,
-  type ErrorCode, type SourceRef,
+  ITEM_STATUSES, ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, SOURCE_DOCUMENT_KINDS,
+  SOURCE_REF_KINDS, SYNC_STATUSES, type ErrorCode, type SourceRef,
 } from '@contextops/schema'
 
 import { ERROR_HINT, hintFor } from '../src/lib/web/api'
-import { JUST_NOW, dateText, sinceText } from '../src/lib/web/time'
+import { JUST_NOW, STALE_REPORT_DAYS, dateText, isStaleReport, sinceText } from '../src/lib/web/time'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver } from '../src/lib/web/semver'
 import { toSlug } from '../src/lib/web/slug'
 import { readCallbackHash } from '../src/lib/web/auth'
 import {
   AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
-  ITEM_STATUS_CHIP, ITEM_TYPE_ICON, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
+  ITEM_STATUS_CHIP, ITEM_TYPE_ICON, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
+  SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP,
 } from '../src/components/chips'
 import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 
@@ -66,6 +67,21 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
   it('충돌 종류 6종 (SPEC §7.2 · DESIGN_BRIEF §4 화면 4 필터 칩)', () => {
     assertLiveTable('CONFLICT_KIND_CHIP', CONFLICT_KINDS, CONFLICT_KIND_CHIP,
       (k) => `${CONFLICT_KIND_CHIP[k].icon}${CONFLICT_KIND_CHIP[k].label}`)
+  })
+
+  it('마일스톤 상태 4종 (SPEC §5 roadmap · DESIGN_BRIEF §4 화면 8)', () => {
+    assertLiveTable('MILESTONE_CHIP', MILESTONE_STATUSES, MILESTONE_CHIP,
+      (k) => `${MILESTONE_CHIP[k].icon}${MILESTONE_CHIP[k].label}`)
+    //  🔴 `done_candidate` 와 `done` 의 차이가 이 제품의 약속 하나를 통째로 들고 있다 —
+    //     「agent 는 스스로 완료를 선언하지 못한다」. 확정 전에는 사람이 할 일이 남았다.
+    expect(MILESTONE_CHIP.done_candidate.tone, 'done_candidate 가 ok 로 보이면 확정이 끝난 것처럼 읽힌다')
+      .toBe('warn')
+    expect(MILESTONE_CHIP.done.tone).toBe('ok')
+  })
+
+  it('진행 보고 주체 3종 (SPEC §3 `PROGRESS_SOURCES` · 화면 8 드로어)', () => {
+    assertLiveTable('PROGRESS_SOURCE_LABEL', PROGRESS_SOURCES, PROGRESS_SOURCE_LABEL,
+      (k) => PROGRESS_SOURCE_LABEL[k])
   })
 
   it('🔴 충돌 심각도 3단계가 confidence 3단계와 **다르게 보인다** (같은 화면에 같이 뜬다)', () => {
@@ -283,6 +299,18 @@ describe('🔴 「마지막 보고: 8분 전」 (DESIGN_BRIEF §2-3 — 「실�
 
   it('읽을 수 없는 시각에 NaN 을 그리지 않는다', () => {
     expect(sinceText('어제', now)).toBe(JUST_NOW)
+  })
+
+  it(`🔴 「${STALE_REPORT_DAYS}일 이상 보고 없음」의 잣대가 하루 차이로 갈린다 (화면 8 타일)`, () => {
+    expect(isStaleReport(ago((STALE_REPORT_DAYS - 1) * 86400), now)).toBe(false)
+    expect(isStaleReport(ago(STALE_REPORT_DAYS * 86400), now)).toBe(true)
+  })
+
+  it('🔴 **보고가 한 번도 없는 것은 「오래됨」이 아니다** — 늦은 게 아니라 시작 전이다', () => {
+    //  ⚠ 둘을 한 수에 합치면 「3주 이상 보고 없음 3」이 사실은 「아직 아무도 손 안 댐 3」이
+    //    되고, 팀장은 없는 문제를 본다.
+    expect(isStaleReport(null, now)).toBe(false)
+    expect(isStaleReport('어제', now)).toBe(false)
   })
 })
 

@@ -23,6 +23,9 @@ const TABS: { href: (base: string) => string; label: string; match: RegExp }[] =
   //  ⚠ Pack Explorer 는 버전 하나를 가리켜야 열린다. 목록에서는 「최신」으로 보낸다 —
   //    `latest` 는 semver 가 아니라 화면이 versions 를 읽어 고르는 자리다.
   { href: (base) => `${base}/packs`, label: 'Pack Explorer', match: /\/packs(\/|$)/ },
+  //  ⚠ Roadmap 은 **발행된 Pack 이 있어야** 행이 생긴다 (마일스톤의 정본이 Manifest 다).
+  //    그래서 Pack Explorer 뒤다 — 차례가 일의 차례라는 위 규칙 그대로다.
+  { href: (base) => `${base}/roadmap`, label: 'Roadmap', match: /\/roadmap$/ },
 ]
 
 export default function ProjectLayout({

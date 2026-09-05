@@ -360,6 +360,27 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 /* 본문은 줄바꿈을 지킨다 — 잘린 문장이 없는지 눈으로 봐야 한다 (loop/PROMPT.md ⑦3층) */
 .pack-linetext { white-space: pre-wrap; word-break: break-word; }
 
+/* ── 진행 막대 — AI job(화면 3·4) 과 마일스톤(화면 8) 이 같이 쓴다 ────────────
+   ★ 왜 `globals.css` 로 올라왔나 — `job-progress.module.css` 에 있을 때 사용자가
+     하나였고, 그 파일의 주석이 「화면 8 의 마일스톤 진행 바가 같은 모양을 쓰게 되면
+     그때 올린다」고 예고했다. **둘째 사용자가 왔다** (CLAUDE.md 「경계에만 인터페이스」).
+   ⚠ 채움에 `--accent` 를 쓰지 않는다. accent 는 **화면당 주요 액션 하나**의 것이고,
+     막대까지 그 색이면 눈이 어디를 눌러야 하는지 잃는다 (DESIGN_BRIEF §3). */
+.bar {
+  height: var(--sp-2);
+  background: var(--surface-hi);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent-ink);
+  /* 걸음마다 갱신된다 — 튀지 않게 한 걸음만큼 미끄러진다. */
+  transition: width 0.3s ease-out;
+}
+
 /* 파일 트리의 한 줄 — 경로는 240px 안에서 **접어서 다 보여 준다.**
    ⚠ `.btn` 의 `white-space: nowrap` 을 여기서만 푼다. 경로가 잘리면 어느 파일인지
      알 수 없고, 그러면 트리가 아무 일도 안 하는 목록이 된다 (눈으로 확인했다). */
