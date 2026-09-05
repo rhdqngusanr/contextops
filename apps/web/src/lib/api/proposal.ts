@@ -2,11 +2,12 @@ import { eq } from 'drizzle-orm'
 import { PROPOSAL_DECISIONS, ProposalDecision, type ProposalAction } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
-import { proposals } from '../../db/schema'
+import { proposals, users } from '../../db/schema'
 import type { Actor } from './auth'
 import { fail } from './error'
 import { requireProject } from './guard'
 import { parseBody, pathUuid, route } from './route'
+import { USER_REF_COLUMNS, userRefOf } from './user'
 
 // =====================================================================
 //  Proposal 의 수명 (SPEC §2 · §5 `POST /proposals/{id}/submit|approve|reject`)
@@ -47,6 +48,20 @@ type ProposalRow = {
   [K in keyof typeof PROPOSAL_COLUMNS]: unknown
 }
 
+/**
+ * **사람이 읽는** 제안 (목록·상세) — 제안의 칸 + 작성자의 **이름** (FINDINGS 113).
+ *
+ * ★ 왜 쓰기 라우트(`POST`·결정)와 나뉘나 — `insert().returning()` 은 join 을 못 한다.
+ *   그리고 쓰는 쪽의 응답을 표에 그리는 화면이 없다 (제안을 올린 것은 기기다).
+ *   읽는 문에만 이름을 붙이면 「누가 냈나」가 필요한 자리에만 정확히 온다.
+ * ⚠ `author` 는 **`author_id` 를 대신한다** — 둘 다 실으면 같은 사람이 두 칸에 앉고,
+ *   화면은 어느 쪽을 읽어야 하는지 고르게 된다.
+ */
+export const PROPOSAL_READ_COLUMNS = { ...PROPOSAL_COLUMNS, ...USER_REF_COLUMNS } as const
+
+/** 읽는 문이 `proposals` 에 붙이는 join — `author_id` 가 nullable 이라 **left** 다. */
+export const PROPOSAL_AUTHOR_JOIN = eq(users.id, proposals.authorId)
+
 /** 시각을 ISO 문자열로 바꾼다 — `Date` 를 그대로 실으면 JSON 이 로캘을 탄다. */
 export function toProposal(row: ProposalRow): Record<string, unknown> {
   const out: Record<string, unknown> = { ...row }
@@ -55,6 +70,21 @@ export function toProposal(row: ProposalRow): Record<string, unknown> {
     out[key] = value instanceof Date ? value.toISOString() : value
   }
   return out
+}
+
+/**
+ * `toProposal` + 작성자 한 칸. `user_id`·`user_name` 두 칸은 **접어서 지운다** —
+ * 남겨 두면 응답에 사람이 세 번(`author_id`·`user_id`·`author.id`) 나온다.
+ */
+export function toProposalWithAuthor(
+  row: ProposalRow & { user_id: unknown; user_name: unknown },
+): Record<string, unknown> {
+  const { user_id, user_name, author_id: _dropped, ...rest } = row
+  return {
+    ...toProposal(rest as ProposalRow),
+    //  ⚠ 못 찾으면 `null` 이다 — 화면이 「기기」·「—」 중 무엇을 그릴지 스스로 정한다.
+    author: userRefOf({ user_id: user_id as string | null, user_name: user_name as string | null }),
+  }
 }
 
 /**

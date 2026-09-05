@@ -626,6 +626,31 @@ describe('제안 — 표 하나가 누가·언제·무엇으로를 정한다', (
     expect(targets[0]!.revision).toBeGreaterThan(0)
   })
 
+  it('🔴 목록과 상세가 **작성자의 이름**을 낸다 — uuid 만 오면 표에 칸을 못 만든다 (FINDINGS 113)', async () => {
+    const { owner, projectId, proposalId } = await aProposal()
+
+    const list = await dataOf(await listProposals(
+      req('GET', `/api/v1/projects/${projectId}/proposals`, { auth: owner }), params({ id: projectId }),
+    ))
+    const [listed] = list.proposals as { author: { id: string; name: string } | null }[]
+    expect(listed?.author?.name).toMatch(/^pub-owner-\d+$/)
+
+    const got = await dataOf(await getProposal(
+      req('GET', `/api/v1/proposals/${proposalId}`, { auth: owner }), params({ id: proposalId }),
+    ))
+    //  ⚠ 상세가 목록보다 좁으면 목록에서 보이던 작성자가 열자마자 사라진다.
+    expect((got.author as { name: string }).name).toBe(listed?.author?.name)
+
+    //  🔴 `author_id`(uuid)·`user_id`·`user_name` 은 **안 나간다** — 같은 사람이 세 칸에
+    //     앉으면 화면이 어느 것을 읽어야 하는지 고르게 된다 (`toProposalWithAuthor`).
+    for (const dropped of ['author_id', 'user_id', 'user_name']) {
+      expect(Object.keys(got), `${dropped} 가 아직 나간다`).not.toContain(dropped)
+      expect(Object.keys(listed ?? {}), `${dropped} 가 아직 나간다`).not.toContain(dropped)
+    }
+    //  🔴 이메일은 어느 칸에도 없다 (`lib/api/user.ts` 가 내는 칸이 둘뿐이다).
+    expect(JSON.stringify(list)).not.toContain('@')
+  })
+
   it('없는 제안과 남의 제안은 같은 404 다 (존재를 캐낼 수 없다)', async () => {
     const { owner, proposalId } = await aProposal()
     const stranger = sessionJwt('stranger@example.com')

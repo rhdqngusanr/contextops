@@ -440,18 +440,20 @@ export function resolveConflict(
 // ---------------------------------------------------------------------
 
 /**
- * 제안 한 장이 화면에 오는 모양 — `toProposal()` 이 내는 칸 그대로다
- * (`lib/api/proposal.ts` 의 `PROPOSAL_COLUMNS`).
+ * 제안 한 장이 화면에 오는 모양 — 읽는 문이 내는 칸 그대로다
+ * (`lib/api/proposal.ts` 의 `PROPOSAL_READ_COLUMNS` · `toProposalWithAuthor()`).
  *
- * ⚠ `author_id`·`decided_by` 는 **uuid 뿐이고 이름을 내는 문이 없다** — 화면은 그래서
- *   사람 칸을 그리지 않는다 (DESIGN_BRIEF §4 화면 6 의 「작성자」 칸이 아직 없는 이유 ·
- *   FINDINGS 에 적었다). uuid 를 그리면 아무 뜻도 없는 글자가 표에 남는다.
+ * 🔴 **`author` 는 이름까지 온다** (FINDINGS 113). `author_id`(uuid) 를 대신한다 —
+ *   둘 다 실으면 같은 사람이 두 칸에 앉고 화면이 어느 쪽을 읽을지 고르게 된다.
+ *   ⚠ `null` 일 수 있다 (탈퇴·주인 없는 제안). 그때 화면은 uuid 를 대신 그리지 않는다.
+ * ⚠ `decided_by` 는 아직 uuid 뿐이다 — 결정한 사람의 이름을 그리는 자리가 화면에
+ *   없어서 문을 넓히지 않았다. 필요해지면 `USER_REF_COLUMNS` 를 한 번 더 join 한다.
  * ⚠ `base_version_id` 는 nullable 이다 — 첫 발행 전의 제안이 있을 수 있다.
  */
 export type ProposalRow = {
   id: string
   project_id: string
-  author_id: string | null
+  author: UserRef | null
   status: ProposalStatus
   title: string
   summary: string

@@ -70,7 +70,7 @@ function row(over: Partial<ProposalRow> = {}): ProposalRow {
   return {
     id: '00000000-0000-4000-8000-0000000000a1',
     project_id: '00000000-0000-4000-8000-0000000000c1',
-    author_id: '00000000-0000-4000-8000-0000000000d1',
+    author: { id: '00000000-0000-4000-8000-0000000000d1', name: '박제안' },
     status: 'submitted',
     title: '재시도 정책을 코드에 맞춘다',
     summary: '문서는 5회인데 코드가 3회다.',

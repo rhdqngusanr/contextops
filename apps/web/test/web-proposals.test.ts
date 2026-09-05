@@ -43,7 +43,7 @@ function row(overrides: Partial<ProposalRow> = {}): ProposalRow {
   return {
     id: PROPOSAL_ID,
     project_id: '00000000-0000-4000-8000-0000000000c1',
-    author_id: '00000000-0000-4000-8000-0000000000d1',
+    author: { id: '00000000-0000-4000-8000-0000000000d1', name: '박제안' },
     status: 'submitted',
     title: '재시도 정책을 코드에 맞춘다',
     summary: '문서는 5회인데 코드가 3회다.',
@@ -381,10 +381,24 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
     for (const status of PROPOSAL_STATUSES) expect(markup).toContain(PROPOSAL_STATUS_CHIP[status].label)
   })
 
-  it('🔴 사람 uuid 를 표에 그리지 않는다 — 이름을 내는 문이 없다', () => {
+  it('🔴 작성자를 **이름으로** 그린다 — uuid 는 표에 없다 (FINDINGS 113)', () => {
+    //  ★ 57바퀴까지 이 시험은 「작성자 칸이 **없다**」를 잠그고 있었다. 이름을 내는 문이
+    //    없었기 때문이다 (`lib/api/user.ts` 가 생기면서 뒤집혔다). 뒤집을 때 uuid 를
+    //    안 그린다는 절반은 **그대로 둔다** — 그게 이 칸이 없던 이유였다.
     const markup = html(createElement(ProposalTable, { proposals: [row()], hrefOf: href, emptyMessage: '없다' }))
+    expect(markup).toContain('작성자')
+    expect(markup).toContain('박제안')
     expect(markup).not.toContain('00000000-0000-4000-8000-0000000000d1')
-    expect(markup).not.toContain('작성자')
+  })
+
+  it('🔴 주인 없는 제안의 이름을 지어내지 않는다 — 「—」다', () => {
+    const markup = html(createElement(ProposalTable, {
+      proposals: [row({ author: null })], hrefOf: href, emptyMessage: '없다',
+    }))
+    expect(markup).toContain('작성자')
+    expect(markup).not.toContain('박제안')
+    //  「알 수 없음」·「(삭제된 사용자)」 같은 말을 서버도 화면도 지어내지 않는다.
+    expect(markup).not.toContain('알 수 없')
   })
 
   it('항목 수와 올라온 날을 센다', () => {

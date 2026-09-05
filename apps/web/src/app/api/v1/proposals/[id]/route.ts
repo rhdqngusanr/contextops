@@ -1,10 +1,12 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 
-import { contextItemRevisions, contextItems, proposals } from '../../../../../db/schema'
+import { contextItemRevisions, contextItems, proposals, users } from '../../../../../db/schema'
 import { fail } from '../../../../../lib/api/error'
 import { requireProject } from '../../../../../lib/api/guard'
 import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItemView } from '../../../../../lib/api/item'
-import { PROPOSAL_COLUMNS, toProposal } from '../../../../../lib/api/proposal'
+import {
+  PROPOSAL_AUTHOR_JOIN, PROPOSAL_READ_COLUMNS, toProposalWithAuthor,
+} from '../../../../../lib/api/proposal'
 import { pathUuid, route } from '../../../../../lib/api/route'
 
 // =====================================================================
@@ -37,9 +39,12 @@ export const GET = route<{ id: string }>('GET /proposals/{id}', async (ctx) => {
   const actor = await ctx.actor()
   const proposalId = pathUuid(ctx.params.id, 'proposal id')
 
+  //  ⚠ 목록과 **같은 칸**을 낸다 (`PROPOSAL_READ_COLUMNS`) — 상세만 좁으면 목록에서
+  //    보이던 작성자가 열자마자 사라진다.
   const [row] = await ctx.db
-    .select(PROPOSAL_COLUMNS)
+    .select(PROPOSAL_READ_COLUMNS)
     .from(proposals)
+    .leftJoin(users, PROPOSAL_AUTHOR_JOIN)
     .where(eq(proposals.id, proposalId))
     .limit(1)
   if (!row) fail('NOT_FOUND', '제안을 찾을 수 없다')
@@ -62,5 +67,5 @@ export const GET = route<{ id: string }>('GET /proposals/{id}', async (ctx) => {
     //    (항목 목록 라우트가 `public_id` 순인 것과 같은 이유).
     .orderBy(asc(contextItems.publicId))
 
-  return ctx.ok({ ...toProposal(row), targets: targets.map(toContextItemView) })
+  return ctx.ok({ ...toProposalWithAuthor(row), targets: targets.map(toContextItemView) })
 })

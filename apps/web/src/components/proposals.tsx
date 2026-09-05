@@ -22,10 +22,11 @@ import { EvidenceList } from './evidence'
 //     서버가 같은 판단을 그 표로 하고 있어서, 둘이 갈리면 **화면이 그린 버튼이 400 을
 //     받는다.** 결정이 하나 늘어도 이 파일은 고칠 것이 없다.
 //
-//  🔴 **없는 것을 그리지 않는다.** 「작성자」 칸이 없는 이유는 **이름을 내는 문이 없어서**다
-//     (응답에 있는 것은 `author_id` uuid 뿐이다). uuid 를 표에 그리면 아무 뜻도 없는
-//     글자가 남고, 사람은 그걸 「누군가」로 읽는다. FINDINGS 에 적어 두고 문이 생기면
-//     그때 칸을 만든다.
+//  🔴 **「작성자」 칸은 문이 생긴 뒤에 만들었다** (FINDINGS 113 · `lib/api/user.ts`).
+//     56바퀴까지 이 칸이 없었던 이유는 응답에 `author_id`(uuid) 뿐이어서다 — uuid 를
+//     표에 그리면 아무 뜻도 없는 글자가 남고, 사람은 그걸 「누군가」로 읽는다.
+//     ⚠ 지금도 `author` 가 `null` 이면 이름을 **지어내지 않는다** (「—」다).
+//     ⚠ P5 와 헷갈리지 마라 — 금지된 것은 개인 생산성 점수·순위지 「누가 냈나」가 아니다.
 //
 //  ⚠ 항목별 [승인]/[거절] 도 없다 — 서버의 결정은 **제안 한 장 단위**이고
 //    (`proposals.status` 한 칸), 항목마다 상태를 담을 자리가 없다. DESIGN_BRIEF §4 는
@@ -60,6 +61,7 @@ export function ProposalTable({
           <tr>
             <th>상태</th>
             <th>제목</th>
+            <th>작성자</th>
             <th>관련 마일스톤</th>
             <th>항목</th>
             <th>올라온 날</th>
@@ -71,6 +73,12 @@ export function ProposalTable({
             <tr key={p.id}>
               <td><ProposalStatusChip status={p.status} /></td>
               <td className="ink">{p.title}</td>
+              {/* 🔴 없는 이름을 지어내지 않는다 — 주인 없는 제안(탈퇴·기기)이 있다. */}
+              <td>
+                {p.author === null
+                  ? <span aria-hidden="true" className="ink-4">—</span>
+                  : p.author.name}
+              </td>
               <td>
                 {p.relates_to.length === 0
                   ? <span aria-hidden="true" className="ink-4">—</span>
