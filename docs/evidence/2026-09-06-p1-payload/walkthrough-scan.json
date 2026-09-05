@@ -223,6 +223,7 @@
       "PSP_B_BASE_URL",
       "PSP_B_MERCHANT_ID",
       "PSP_B_WEBHOOK_SECRET",
+      "SENTRY_DSN",
       "SETTLEMENT_CRON",
       "SETTLEMENT_TIMEZONE"
     ],
@@ -244,6 +245,7 @@
       "typescript"
     ],
     "excluded": [
+      ".env (키 이름만 읽었다 — 값은 안 읽는다)",
       ".env.example (키 이름만 읽었다 — 값은 안 읽는다)"
     ]
   }

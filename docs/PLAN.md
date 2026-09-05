@@ -435,7 +435,10 @@
       산출물 `sent` 그대로) · 계약 밖 키는 exit 2 · 요청 0건 · 48파일 본문 0건 · 심은 env 값 2개 0건 · 토큰 0건 ·
       서버 로그 필드표 · Memory/transcript 읽는 코드 0곳. 🔴 고친 것: payload 단계의 env 값 검사가 **잰 값이 0개**
       였다(픽스처 `.env.example` 은 값이 0건이어야 해서) → 관통이 임시 저장소에 값을 심고, 0개면 FAIL.
-      ⚠ scan 단계의 같은 구멍은 FINDINGS 125 (대기) · 브라우저 네트워크 탭 캡처는 🙋 배포 뒤.
+      → ③ **scan 단계의 같은 구멍도 닫았다** (65바퀴 · FINDINGS 125 닫음). 관통이 픽스처를 임시 사본에 복사해
+      값이 든 `.env` 를 심고 그 사본을 훑는다 — 심는 값의 정본은 `tools/walkthrough-stage.ts` 의 `PLANTED_ENV`
+      하나(payload 단계와 같은 값). 잰 값 2개 · 0건 · 심은 키가 `env_keys` 에 있음(14 → 15) · **잰 값 0개면 FAIL**.
+      scan 단계 49 → 50검사. 브라우저 네트워크 탭 캡처는 🙋 배포 뒤.
       🙋 **남은 것은 전부 계정이 필요하다** — Vercel 연결(Root Directory `apps/web` ·
       `CRON_SECRET`·`SUPABASE_JWT_SECRET`·`DATABASE_URL`) → 첫 리셋을 손으로 한 번
       (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → `/demo` 가

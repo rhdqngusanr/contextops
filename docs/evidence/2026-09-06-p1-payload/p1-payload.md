@@ -1,6 +1,6 @@
 # P1 근거 — 서버는 코드 본문·secret·개인 Memory·대화 transcript 를 받지 않는다
 
-> 루프 64바퀴 · PLAN P5 둘째 행 「보안 캡처 증거」의 코드 쪽 절반.
+> 루프 64바퀴 (scan 단계 §4 는 65바퀴) · PLAN P5 둘째 행 「보안 캡처 증거」의 코드 쪽 절반.
 > **관통(`tools/walkthrough.ps1`)이 매번 재는 것**을 사람이 읽는 표로 굳힌 것이다 — 손으로 쓴 수는 없다.
 > 옆의 `walkthrough-payload.json` · `walkthrough-scan.json` 은 그 관통이 남긴 산출물을 **그대로 복사**한 것
 > (`.ci/` 는 관통마다 지워져서 밖으로 옮겼다 — CLAUDE.md).
@@ -66,19 +66,22 @@ Memory·transcript 를 담을 칸이 없고, 계약에 없는 키를 넣으면 �
 🔴 **64바퀴가 고친 것 (FINDINGS 124)** — 「env 값이 payload 에 0건」은 63바퀴까지 `.env.example` 의 값만 재고 있었는데,
 그 파일은 **값이 0건이어야 한다**(`tools/fixtures.mjs` ③ 이 잠근다). 즉 이 검사는 **잰 값이 0개**인 채로 초록이었다 —
 「정의만 있고 아무 일도 안 하는 검사」(loop/PROMPT.md ④2-B). 이제 관통이 값을 심고, 잰 값이 0개면 빨개진다.
-⚠ scan 단계(`plugin/contextops/scripts/walkthrough-scan.ts`)의 같은 검사는 **아직 잰 값이 0개다** — FINDINGS 125.
+scan 단계의 같은 구멍은 65바퀴가 닫았다 (FINDINGS 125 · §4). 심는 값의 정본은 `tools/walkthrough-stage.ts` 의
+`PLANTED_ENV` 하나다 — 두 단계가 **같은 값**을 심고, 각자 「그 값이 내 산출물에 없다」를 잰다.
 
-## 4. 스캔 산출물 — 경로와 이름만 (scan 단계 49검사 · `walkthrough-scan.json`)
+## 4. 스캔 산출물 — 경로와 이름만 (scan 단계 50검사 · `walkthrough-scan.json`)
 
 `contextops scan` 이 저장소에서 여는 파일은 **둘뿐**이다 — 의존성 매니페스트(이름만) · `.env*`(키 이름만). 나머지 파일은
 **경로만** 센다 (`src/cli/scan.ts` 머리). 산출물 `scan.json` 은 로컬 캐시(`.contextops/cache/`)이고 서버로는 그 **요약**만 간다 (§2).
+관통은 픽스처를 **임시 사본**에 복사하고 값이 든 `.env` 를 심은 뒤 그 사본을 훑는다 (`scripts/walkthrough-scan.ts`).
 
 | 잰 것 | 결과 |
 |---|---|
 | 파일 48개 각각의 가장 긴 줄이 `scan.json` 에 있나 | 0건 |
-| `.env.example` 의 값이 `scan.json` 에 있나 | 0건 (⚠ 잰 값 0개 — FINDINGS 125) |
+| 심은 `.env` 의 값 2개(`PSP_A_API_KEY` · `SENTRY_DSN`) + `.env.example` 의 값이 `scan.json` 에 있나 — **잰 값이 0개면 FAIL** | **잰 값 2개 · 0건** |
+| 심은 `.env` 에만 있는 키 `SENTRY_DSN` 이 `env_keys` 에 있나 — 스캐너가 그 파일을 **열어 키만 꺼냈다**는 증거 | 있음 (env 키 14 → **15**) |
 | 산출물 모양 | `{repo, files[{path, language}], summary{…}}` — 본문 칸 없음 (`ScanResult` 계약) |
-| 제외 목록 | `.env.example (키 이름만 읽었다 — 값은 안 읽는다)` |
+| 제외 목록 | `.env (키 이름만 읽었다 — 값은 안 읽는다)` · `.env.example (키 이름만 읽었다 — 값은 안 읽는다)` |
 
 ## 5. 서버 쪽 자물쇠 — 받아도 남기지 않는다
 
@@ -100,7 +103,6 @@ Claude Code 의 훅 payload 에서 쓰는 것은 `session_id` 하나다 (같은 
 
 - **배포에서 찍은 것이 아니다.** 소켓은 진짜지만 서버는 관통이 띄운 짧은 것이고 DB 는 PGlite 다. Vercel 의 함수 로그가
   실제로 `log.ts` 의 필드만 남기는지는 🙋 배포 뒤 첫 요청에서 본다.
-- **scan 단계의 env 값 검사는 아직 잰 값이 0개다** (FINDINGS 125). payload 단계는 고쳤다.
 - **`upload-draft` 의 `body` 는 사람(또는 init Skill)이 쓴 한 줄 문장이다.** 거기에 사람이 코드를 붙여 넣으면 계약은 못 막는다
   (2,000자 상한만 있다 — SPEC §3.1). Skill 의 규칙이 「본문에 코드를 붙이지 마라」이고, 관통은 「규칙대로 썼을 때 파이프라인이
   본문을 안 나른다」를 잰다. 붙여 넣은 코드를 서버가 거절하는 검사는 없다 — KNOWN_LIMITATIONS 에 적을 후보다.
@@ -110,4 +112,5 @@ Claude Code 의 훅 payload 에서 쓰는 것은 `session_id` 하나다 (같은 
 ```
 powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1     # 7단계 · scan·payload·sync 가 위를 다시 잰다
 pnpm --filter web exec tsx scripts/walkthrough-payload.ts          # payload 단계만 (.ci/walkthrough-payload.json)
+pnpm --filter @contextops/plugin exec tsx scripts/walkthrough-scan.ts   # scan 단계만 (.ci/walkthrough-scan.json)
 ```

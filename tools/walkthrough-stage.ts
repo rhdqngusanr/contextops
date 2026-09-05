@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -78,4 +78,59 @@ export function openStage(name: string): WalkthroughStage {
       return 0
     },
   }
+}
+
+// =====================================================================
+//  관통이 임시 저장소에 심는 **값이 든 `.env`** — secret 유출 검사가 실제로 무언가를 재게
+//  (FINDINGS 124 · 125)
+//
+//  ★ 왜 — 픽스처의 `.env.example` 은 **값이 0건**이어야 한다 (`tools/fixtures.mjs` ③ 이
+//    잠근다 · 저장소에 secret 을 들이지 않는다). 그래서 그 파일의 값만 재던 예전 검사는
+//    **잰 값이 0개**인 채로 63바퀴 내내 초록이었다 — 두 게이트가 서로를 무효화했다.
+//    값은 관통이 **임시 사본**에 심고(픽스처는 그대로), 심은 값이 산출물 어디에도 없고
+//    **키 이름은** 나갔는지 둘 다 본다.
+//  ★ 왜 여기 있나 — scan 단계와 payload 단계가 **같은 값**을 심어야 한다. 표를 둘이 따로
+//    들면 한쪽만 고쳐지고, 그 순간 「스캐너가 이 값을 안 나른다」는 두 단계의 증언이 서로
+//    다른 값에 대한 것이 된다.
+//  ⚠ 값은 진짜 secret 처럼 길고 유일하게 — 우연히 겹칠 수 없는 글자로.
+// =====================================================================
+
+export const PLANTED_ENV: Readonly<Record<string, string>> = {
+  //  `.env.example` 에도 있는 키 — 값만 심는다
+  PSP_A_API_KEY: 'sk_live_PLANTED_paylab_walkthrough_secret_7f3a9c1e',
+  //  `.env` 에만 있는 키 — 스캐너가 이 파일을 실제로 열어 키만 꺼냈다는 증거
+  SENTRY_DSN: 'https://PLANTED_walkthrough_dsn_4b8d2e6f@o0.ingest.sentry.io/0',
+}
+
+/** 이보다 짧은 env 값은 재지 않는다 — `0` · `true` 같은 값은 어디에나 우연히 있다. */
+const ENV_VALUE_MIN_CHARS = 8
+
+export type PlantedEnv = {
+  /** 심은 키 이름 — 산출물에 **있어야** 한다 (SPEC §3.1 · 키 이름은 나가도 된다). */
+  keys: string[]
+  /** 산출물에 **없어야** 하는 값 전부 — 심은 값 + `.env.example` 의 값(있다면). */
+  values: string[]
+}
+
+/**
+ * 임시 저장소 `repoDir` 에 값이 든 `.env` 를 쓰고, 잴 값·키를 돌려준다.
+ * ⚠ 부르는 쪽은 `values.length === 0` 을 **FAIL** 로 다뤄라 — 「잴 것이 없어서 초록」이
+ *   이 표가 생긴 고장 그 자체다.
+ */
+export function plantEnv(repoDir: string): PlantedEnv {
+  writeFileSync(
+    join(repoDir, '.env'),
+    `${Object.entries(PLANTED_ENV).map(([k, v]) => `${k}=${v}`).join('\n')}\n`,
+    'utf8',
+  )
+  let values = Object.values(PLANTED_ENV)
+  try {
+    values = values.concat(readFileSync(join(repoDir, '.env.example'), 'utf8')
+      .split('\n')
+      .map((line) => line.split('=').slice(1).join('=').trim())
+      .filter((value) => value.length >= ENV_VALUE_MIN_CHARS))
+  } catch {
+    /* 픽스처에 .env.example 이 없으면 심은 값만 잰다 */
+  }
+  return { keys: Object.keys(PLANTED_ENV), values }
 }
