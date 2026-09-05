@@ -449,6 +449,16 @@
 - [ ] **2분 영상 · 슬라이드 · 리허설**
 - [ ] **제출서 · README · KNOWN_LIMITATIONS**
       **완료 기준**: 제출 가능
+      → ① **README · KNOWN_LIMITATIONS 의 본문은 됐다** (66바퀴 `0dc2e93` · FINDINGS 122 의 본문 쪽). README 는
+      「이 저장소에는 루프와 명세만 있다」던 옛 문장을 지우고 **지금 도는 것**을 적었다 — 신뢰 경계 7줄에
+      「무엇이 잰다」 칸 · Before/After(랜딩 표와 글자 그대로) · 설치 4줄 · CLI 8 · 검사 층 · 저장소 지도.
+      KNOWN_LIMITATIONS 는 줄마다 코드에서 이름을 찾아 다시 썼고, P1 근거 문서 §7 의 두 줄에 코드에서 확인한
+      것(production 없음 · `npx` 없음 · `ask`·`demo` 문 없음 · 데모 15개 · zip 드롭존 없음 · `manual` 보고 없음 ·
+      manifest 서명 없음 · e2e 없음 · 게스트 403 문구)을 더했다. `apps/web/test/readme.test.ts` 가
+      README ↔ 랜딩 표(문장 글자 그대로) · README 가 가리키는 경로 전부 실존 · KNOWN_LIMITATIONS 가 단
+      FINDINGS 번호가 전부 **대기**인지를 잰다 — 닫힌 것을 한계라고 적으면 빨개진다.
+      → 남은 것: **제출서**(FINDINGS 126 · 루프가 할 수 있다) · 🙋 공개 저장소 URL · 제출 팀명 (FINDINGS 122) ·
+      🙋 영상 링크 (첫 행이 끝나야).
 
 ---
 

@@ -15,6 +15,62 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (60) — Pack zip · GET …/packs/{semver}/zip (PLAN P5 첫 행 ① · `8faad6a`)
+
+
+**60바퀴는 둘을 했다.** ① 59바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 랜딩 v1 을
+같은 트리에서 CI 를 다시 돌려(GREEN) 그대로 올렸다 (`8d30558`) — **58바퀴에 이어 두 바퀴
+연속**이다 (아래 「밟은 함정」). ② `docs/PLAN.md` **P5 첫 행의 한 조각 — Pack zip** 을 만들었다.
+셋 중 이걸 고른 이유: 절삭 순서에서 제일 늦게 잘리고(5번), 화면 9 의 `manual`(zip 수동 적용)이
+가리키는 실체가 **없는 채로 화면에 서 있었다** (FINDINGS 69 · 105-B).
+
+🔴 **잰 것 — Pack 을 손으로 받는 길이 생겼고, 그 zip 은 플러그인이 받는 것과 같다.**
+
+| | 전 | 후 |
+|---|---|---|
+| `GET …/packs/{semver}/zip` | **0곳** (SPEC §5 에만) | 라우트 · `application/zip` · ETag=manifest_hash · 불변 캐시 · 304 |
+| zip 을 만드는 코드 | — | `lib/api/zip.ts` — 압축 없음(store) · CRC-32 · **라이브러리 0** |
+| zip 안의 `.contextops/manifest.json` | — | 플러그인 `sync` 가 쓰는 자리·모양 **글자 그대로** (Zod 순서) |
+| 화면 7 상단 우측 | 「아직 없다」 주석 | [Pack 다운로드 (.zip)] · 「이 Pack을 받은 기기 N / M」 |
+| 「받았다」의 기준 | — | `countReceived` — manifest_hash 하나 (화면 9 와 같은 문·같은 표) |
+| 관통 publish 검사 | 28 | **31** (되읽기 · sha256/CRC · **두 번 받아 byte 같음**) |
+| 독립 도구로 열었다 | — | `unzip -t` → 7 files OK (`docs/evidence/2026-09-06-zip/zip.txt`) |
+| 웹 시험 | 525 | **536** (`api-pack-zip` +11) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN |
+
+🔴 **라이브러리를 안 쓰고 압축도 안 한다 — P4 의 연장이다.** 필요한 것은 작은 Markdown
+몇십 개를 담는 것뿐이고, deflate 는 라이브러리 버전이 바뀌면 바이트가 바뀔 수 있다.
+store 는 그럴 자리가 없다. 항목 시각은 **Manifest 의 `generated_at`** 이다 — `now` 를 적으면
+같은 버전을 두 번 받을 때 바이트가 달라진다. 그래서 ETag 를 `manifest_hash` 로 둘 수 있고
+`{semver}` 와 같은 1년 캐시다. 파일 이름은 **서버가** 정한다 (`content-disposition` ·
+`<slug>-v<semver>.zip`) — 화면이 지으면 화면마다 다른 이름으로 저장된다.
+
+🔴 **시험이 잡은 것 — DB 가 Manifest 의 키 순서를 바꾼다.** jsonb 는 키를 제 순서(길이·알파벳)로
+다시 늘어놓는다. 그 객체를 그대로 `JSON.stringify` 하니 zip 안 manifest.json 이 플러그인이
+쓰는 것(Zod 로 판 것)과 **글자가 달랐다** — 같은 버전인데 zip 으로 받은 기기와 플러그인으로
+받은 기기의 manifest.json 이 갈릴 뻔했다. `manifestJsonText()` 가 계약으로 **한 번 되판 뒤**
+적는다. ★ 「플러그인이 쓰는 것과 글자 그대로 같다」를 시험이 재지 않았으면 초록이었다.
+
+🔴 **SPEC 과 코드를 맞췄다 (§5 zip 줄).** SPEC 은 「member · 파일 ≤ 20개」였다. 기기 토큰을
+막지 않는다 — 기기는 이미 파일을 하나씩 다 받을 수 있어서 막아도 지키는 것이 없다.
+20 을 따로 세지 않는다 — Manifest 계약(`files.max`)이 이미 상한이고, 그 수에서 store 는
+무겁지 않다. 없는 검사를 코드에 두면 「정의만 있고 아무 일도 안 하는」 그 종류가 된다.
+
+🔴 **`<a href>` 로 걸지 않았다.** 세션 토큰은 `Authorization` 머리로만 나간다 — 링크로 걸면
+브라우저가 머리 없이 열어서 **401 페이지를 zip 이름으로 저장**한다. 문은 `apiBlob` 하나
+(`lib/web/api.ts`)이고 화면은 object URL 로 저장을 시킨다.
+
+⚠ **`manual` 을 보고하는 쪽은 아직 없다.** 문은 생겼지만 플러그인 `status` 가 「우리
+`cache/<semver>/` 가 없는데 manifest.json 과 파일이 다 맞는다」를 `manual` 로 판정하는
+자리는 다음 몫이다 — FINDINGS 69 에 그 절차를 적어 두고 대기로 둔다 (주인은 플러그인 바퀴).
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-zip/zip.txt`: 관통이 남긴 zip 을 우리 리더가
+아니라 Info-ZIP `unzip -l`·`-t` 로 열었다. 7 항목 · 시각이 전부 Manifest 의 `generated_at`(UTC).
+⚠ 브라우저에서 버튼을 눌러 저장 대화상자까지 본 적은 없다 — 아래 「눈 판정 대기」.
+
+**그 바퀴가 다음으로 지목한 것**: PLAN P5 첫 행의 남은 두 조각(AGENTS/cursor · 터미널 재생) 중 하나.
+61바퀴가 AGENTS/cursor 를, 62바퀴가 터미널 재생을 했다 — 그 행이 닫혔다.
+
 ### 지난 바퀴 (59) — 랜딩 v1 · 화면 1 (PLAN P4 둘째 행 ③ · `8d30558`)
 
 > ⚠ 59바퀴도 CI GREEN 까지 확인하고 **커밋 전에 끝났다** — 58바퀴와 같은 일이 **두 바퀴

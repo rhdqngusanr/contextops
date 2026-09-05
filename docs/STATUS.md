@@ -5,11 +5,77 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 65바퀴 · 코드 `8d29737` · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 66바퀴 · 코드 `0dc2e93` · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴는 `docs/PLAN.md` P6 둘째 행(제출서 · README · KNOWN_LIMITATIONS)의 첫 조각 — README 와 KNOWN_LIMITATIONS 의
+본문**을 만들었다 (`0dc2e93`). 65바퀴가 지목한 FINDINGS 122 의 **본문 쪽**이다 — 🙋 URL·팀명은 그대로 🙋 라 122 는 대기로 둔다.
+관통 7단계 881 검사 초록 · 고장 0 이라 ④3 의 ② 로 갔고, PLAN 의 `- [ ]` 중 위의 셋은 사람이 막고 있다(🙋 Supabase ·
+🙋 Anthropic 키 · GATE 3). P5 둘째 행의 남은 것은 전부 계정이고, P6 첫 행(영상·슬라이드)은 발표자가 있어야 한다.
+
+🔴 **잰 것 — README 가 거짓말을 하고 있었고, 이제 랜딩과 같은 문장을 말하며 시험이 그것을 잰다.**
+
+| | 전 | 후 |
+|---|---|---|
+| README 머리 | 「🚧 지금 이 저장소에는 **자율 개발 루프와 명세만** 있습니다」 — 제품 코드가 295파일(principles P2 셈)인데 | 지금 도는 것 — 신뢰 경계 7줄에 「무엇이 잰다」 칸 · Before/After · 3단계 · 설치 4줄 · CLI 8 · 검사 층 6 · 저장소 지도 |
+| README 의 기술 스택 | Tailwind 4 + shadcn/ui · Node 20 — 둘 다 **코드에 없다** (`apps/web/package.json` 에 tailwind 0 · `engines.node >=22`) | 실제 의존만 (Next 15 · Drizzle · postgres · PGlite · Zod · vitest · Node 22) |
+| README ↔ 랜딩 | 대조 없음 (Before/After 문장도 없었다) | `apps/web/test/readme.test.ts` **15개** — 헤드라인 · Before/After(질문 · 두 답 · Pack 의 그 줄 · `ctx:item_policy_retry`) · 3단계 · 신뢰 경계 10행 · 설치 4줄(같은 순서 · 같은 설명) · 마무리 문장을 **랜딩 표에서 들여와** 글자 그대로 대조 |
+| README 가 가리키는 경로 | 아무도 안 셈 (옛 트리는 `src/app/(marketing)` 처럼 없는 경로였다) | 저장소 지도 표 **40행** · 마크다운 링크 · 백틱 경로 전부 `existsSync` — 첫 실행에서 CLI 표의 `scan` 이 걸려 절 범위를 좁혔다 |
+| KNOWN_LIMITATIONS | 8줄 — SPEC §17 을 옮긴 것 · 코드 근거 없음 | 줄마다 코드에서 이름을 찾았다. **P1 이 못 막는 것** 절 신설(P1 근거 문서 §7 의 두 줄 + 문서 원문은 의도적으로 올라간다 + manifest 서명 없음) · 제품 절에 코드에서 확인한 아홉을 더했다 (production 없음 · `npx contextops` 없음 · `ask`·`demo` 문 없음 · 데모 항목 15 · zip 드롭존 없음 · `manual` 보고 없음 · e2e 없음 · 게스트 403 문구 · Codex/Cursor 는 거울 문서) |
+| KNOWN_LIMITATIONS 가 단 FINDINGS 번호 | — | 5개(122 · 121 · 117 · 119 · 69) 전부 **대기**인지 시험이 센다 — 닫힌 것을 한계라고 적으면 빨개진다. 백틱 경로 실존도 |
+| 서버측 AI 「4개 기능」의 실체 | README 는 「4개 기능 한정」만 | `features.ts` 표는 넷인데 라우트가 부르는 것은 **둘**(structure · conflict) — KNOWN_LIMITATIONS 에 적었다 (FINDINGS 117 · 126) |
+| 웹 시험 | 565 | **580** (`readme` +15) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 881 · docs → GREEN (`0dc2e93`) |
+
+🔴 **README 는 마크다운이라 표를 import 할 수 없다 — 그래서 시험이 대조한다.** 65바퀴가 「한쪽을 정본으로 하고 다른
+쪽은 그것을 읽게 하든지, 시험이 대조하게 해라」라고 적었다. 정본은 `landing.tsx` 의 표다(거기가 시드·픽스처와 대조된다) —
+README 에 문장을 **베껴 적되** 시험이 글자 그대로인지 잰다. 랜딩 문장을 고치면 README 시험이 빨개지고, 그때 README 를 같이
+고친다. 셋째 사본(제출서 · FINDINGS 126)이 생기면 같은 시험을 넓힌다.
+
+🔴 **「알려진 한계」는 코드에서 이름을 찾은 뒤에 적었다.** SPEC §17 의 여덟 줄은 코드가 생기기 전 문장이라 「Codex/Cursor 는
+출력 파일만」처럼 지금은 **절반만** 맞는 것이 있었다(거울 문서 `AGENTS.md`·`.cursor/rules` 는 생겼다 — 훅·Skill 만 없다).
+그리고 코드에만 있고 §17 에 없는 것이 아홉이었다. 특히 「서버측 AI 4종 중 둘은 문이 없다」는 principles 의 P3 줄(「2개 호출부」)이
+매 바퀴 찍고 있었는데 아무도 한계로 읽지 않았다 — 표에 넷이 있으면 넷이 도는 줄 안다 (④2-B 의 그 종류).
+
+⚠ **README 의 산문이 맞는가는 시험이 못 잰다.** 시험은 「랜딩과 같은가 · 경로가 있는가 · FINDINGS 가 대기인가」까지다.
+「검사 층 6」·「CLI 8」 같은 수는 이 바퀴에 코드에서 세었지만 다음 바퀴가 층을 더하면 README 는 조용히 낡는다 — 그 수는
+표에만 있고 산문에는 안 적었다.
+
+**눈으로 읽었다** — `README.md` 를 처음부터 끝까지 한 번 읽었다: 머리의 🙋 줄(URL · 팀명 · production 없음)이 KNOWN_LIMITATIONS 로
+보내고 · Before/After 표의 After 가 `<!-- ctx:item_policy_retry -->` 를 달고 있고 · 설치 블록 4줄이 랜딩 `INSTALL_STEPS` 와
+같은 주석까지 같고 · 저장소 지도 40행의 경로가 전부 있다(시험) · 「실시간」 0건 · `npx contextops` 0건.
+
+**다음 바퀴의 일 — FINDINGS 126**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **126 은 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P6 둘째 행**이고, 그 행에서 루프가 할 수 있는
+마지막 조각이 **제출서**다. README·KNOWN_LIMITATIONS 는 이 바퀴에 됐고, 남은 것은 제출서(루프) 와 🙋 두 값(URL · 팀명)이다.
+
+> **제출서를 쓰는 법** — `docs/SUBMISSION.md` 하나. 재료는 `docs/SPEC.md` §16(문제 · AI 활용 · 도구)과 README 다.
+> ⚠ §16 의 「AI 활용 (4) 승인 항목만 근거로 답하는 질의」는 **문이 없다** (`POST …/ask` 0곳 · FINDINGS 117) — 빼거나
+> KNOWN_LIMITATIONS 를 가리켜라. 없는 것을 적으면 심사의 첫 질문이 그것이 된다. P1~P7 의 문장과 설치 줄은 README 와
+> 같아야 한다 — `apps/web/test/readme.test.ts` 의 대조를 제출서에도 넓혀라 (파일 하나 더 읽는 것뿐이다).
+> 🙋 자리(공개 URL · 팀명 · 영상 링크)는 값 없이 자리만 만든다.
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). P5 둘째 행의 코드 쪽은 다 됐다.
+- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+
+---
+
+
+### 지난 바퀴 (65) — scan 단계의 env 값 검사 · 64바퀴 미커밋 올림 (PLAN P5 둘째 행 ③ · `8d29737`)
+
 
 **이번 바퀴는 둘을 했다.** ① 64바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** P1 근거 문서 작업을 같은 트리에서
 전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`0018ce9`) — 58·59·60·61·63·64 **여섯 바퀴**다 (아래 「밟은 함정」).
@@ -46,14 +112,8 @@ _마지막 갱신: 2026-09-06 · 루프 65바퀴 · 코드 `8d29737` · 문서�
 각각 「키 이름만 읽었다 — 값은 안 읽는다」로 적는다 · 파일 안에 `PLANTED` **0건** (`grep -c`). scan 로그의 마지막 줄은
 「코드 본문 0건 · env 값 0건 (잰 값 2개 · 심은 키 2개 산출물에 있음) (P1)」이다 — 잰 수가 로그에 있다.
 
-**다음 바퀴의 일 — FINDINGS 122**
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 122** → 66바퀴가 README·KNOWN_LIMITATIONS 의 본문을 썼다 (🙋 URL·팀명은 그대로 · 122 는 대기).
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 **122 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS)
 이고, 그 행에서 루프가 할 수 있는 조각이 **README 본문**이다. P5 둘째 행의 남은 것은 전부 🙋(계정)이고, P6 첫 행(2분 영상 ·
@@ -311,67 +371,6 @@ AGENTS.md 에도」를 사람이 기억해야 하고 다음 사람은 반드시 
 **그 바퀴가 다음으로 지목한 것**: 적지 못했다 (STATUS 를 못 썼다). 남은 조각은 터미널 재생
 하나였고 62바퀴가 했다.
 
-
-
-### 지난 바퀴 (60) — Pack zip · GET …/packs/{semver}/zip (PLAN P5 첫 행 ① · `8faad6a`)
-
-
-**60바퀴는 둘을 했다.** ① 59바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 랜딩 v1 을
-같은 트리에서 CI 를 다시 돌려(GREEN) 그대로 올렸다 (`8d30558`) — **58바퀴에 이어 두 바퀴
-연속**이다 (아래 「밟은 함정」). ② `docs/PLAN.md` **P5 첫 행의 한 조각 — Pack zip** 을 만들었다.
-셋 중 이걸 고른 이유: 절삭 순서에서 제일 늦게 잘리고(5번), 화면 9 의 `manual`(zip 수동 적용)이
-가리키는 실체가 **없는 채로 화면에 서 있었다** (FINDINGS 69 · 105-B).
-
-🔴 **잰 것 — Pack 을 손으로 받는 길이 생겼고, 그 zip 은 플러그인이 받는 것과 같다.**
-
-| | 전 | 후 |
-|---|---|---|
-| `GET …/packs/{semver}/zip` | **0곳** (SPEC §5 에만) | 라우트 · `application/zip` · ETag=manifest_hash · 불변 캐시 · 304 |
-| zip 을 만드는 코드 | — | `lib/api/zip.ts` — 압축 없음(store) · CRC-32 · **라이브러리 0** |
-| zip 안의 `.contextops/manifest.json` | — | 플러그인 `sync` 가 쓰는 자리·모양 **글자 그대로** (Zod 순서) |
-| 화면 7 상단 우측 | 「아직 없다」 주석 | [Pack 다운로드 (.zip)] · 「이 Pack을 받은 기기 N / M」 |
-| 「받았다」의 기준 | — | `countReceived` — manifest_hash 하나 (화면 9 와 같은 문·같은 표) |
-| 관통 publish 검사 | 28 | **31** (되읽기 · sha256/CRC · **두 번 받아 byte 같음**) |
-| 독립 도구로 열었다 | — | `unzip -t` → 7 files OK (`docs/evidence/2026-09-06-zip/zip.txt`) |
-| 웹 시험 | 525 | **536** (`api-pack-zip` +11) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN |
-
-🔴 **라이브러리를 안 쓰고 압축도 안 한다 — P4 의 연장이다.** 필요한 것은 작은 Markdown
-몇십 개를 담는 것뿐이고, deflate 는 라이브러리 버전이 바뀌면 바이트가 바뀔 수 있다.
-store 는 그럴 자리가 없다. 항목 시각은 **Manifest 의 `generated_at`** 이다 — `now` 를 적으면
-같은 버전을 두 번 받을 때 바이트가 달라진다. 그래서 ETag 를 `manifest_hash` 로 둘 수 있고
-`{semver}` 와 같은 1년 캐시다. 파일 이름은 **서버가** 정한다 (`content-disposition` ·
-`<slug>-v<semver>.zip`) — 화면이 지으면 화면마다 다른 이름으로 저장된다.
-
-🔴 **시험이 잡은 것 — DB 가 Manifest 의 키 순서를 바꾼다.** jsonb 는 키를 제 순서(길이·알파벳)로
-다시 늘어놓는다. 그 객체를 그대로 `JSON.stringify` 하니 zip 안 manifest.json 이 플러그인이
-쓰는 것(Zod 로 판 것)과 **글자가 달랐다** — 같은 버전인데 zip 으로 받은 기기와 플러그인으로
-받은 기기의 manifest.json 이 갈릴 뻔했다. `manifestJsonText()` 가 계약으로 **한 번 되판 뒤**
-적는다. ★ 「플러그인이 쓰는 것과 글자 그대로 같다」를 시험이 재지 않았으면 초록이었다.
-
-🔴 **SPEC 과 코드를 맞췄다 (§5 zip 줄).** SPEC 은 「member · 파일 ≤ 20개」였다. 기기 토큰을
-막지 않는다 — 기기는 이미 파일을 하나씩 다 받을 수 있어서 막아도 지키는 것이 없다.
-20 을 따로 세지 않는다 — Manifest 계약(`files.max`)이 이미 상한이고, 그 수에서 store 는
-무겁지 않다. 없는 검사를 코드에 두면 「정의만 있고 아무 일도 안 하는」 그 종류가 된다.
-
-🔴 **`<a href>` 로 걸지 않았다.** 세션 토큰은 `Authorization` 머리로만 나간다 — 링크로 걸면
-브라우저가 머리 없이 열어서 **401 페이지를 zip 이름으로 저장**한다. 문은 `apiBlob` 하나
-(`lib/web/api.ts`)이고 화면은 object URL 로 저장을 시킨다.
-
-⚠ **`manual` 을 보고하는 쪽은 아직 없다.** 문은 생겼지만 플러그인 `status` 가 「우리
-`cache/<semver>/` 가 없는데 manifest.json 과 파일이 다 맞는다」를 `manual` 로 판정하는
-자리는 다음 몫이다 — FINDINGS 69 에 그 절차를 적어 두고 대기로 둔다 (주인은 플러그인 바퀴).
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-zip/zip.txt`: 관통이 남긴 zip 을 우리 리더가
-아니라 Info-ZIP `unzip -l`·`-t` 로 열었다. 7 항목 · 시각이 전부 Manifest 의 `generated_at`(UTC).
-⚠ 브라우저에서 버튼을 눌러 저장 대화상자까지 본 적은 없다 — 아래 「눈 판정 대기」.
-
-**그 바퀴가 다음으로 지목한 것**: PLAN P5 첫 행의 남은 두 조각(AGENTS/cursor · 터미널 재생) 중 하나.
-61바퀴가 AGENTS/cursor 를, 62바퀴가 터미널 재생을 했다 — 그 행이 닫혔다.
-
-
-
----
 
 
 ## 앞 바퀴들이 남긴 것 — 다음 사람이 알아야 하는 것

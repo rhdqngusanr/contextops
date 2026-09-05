@@ -29,6 +29,21 @@
 
 ## 다음에 고칠 것
 
+### 126. **제출서(SPEC §16)가 저장소에 문서로 없다** — 랜딩·README 와 대조되지 않는다   [구멍]
+- **증상**: `docs/PLAN.md` P6 둘째 행은 「제출서 · README · KNOWN_LIMITATIONS」인데 제출서는 `docs/SPEC.md` §16 의
+  초안 세 문단뿐이고, 그 문단은 코드가 생기기 전의 문장이라 지금과 어긋난 곳이 있다 — 「(4) 승인 항목만 근거로
+  답하는 질의」는 **문이 없다** (`POST …/ask` 0곳 · FINDINGS 117 · `docs/KNOWN_LIMITATIONS.md`). 제출서에 없는
+  기능을 적으면 심사의 첫 질문이 그것이 된다.
+- **근거**: 66바퀴 직접 셈 — `docs/` 에 제출서 파일 0 · `docs/SPEC.md` §16 「AI 활용」 (4) · `apps/web/src/lib/ai/features.ts`
+  의 `ask`·`demo` 를 부르는 라우트 0곳 (`tools/principles.ps1` P3 「2개 호출부」).
+- **정본**: `docs/SPEC.md` §16 · `docs/PLAN.md` P6 둘째 행
+- **왜 고장이 아닌가**: 제출은 9/20 이고 아무것도 막히지 않는다. 없는 문서일 뿐이다.
+- **고칠 방향**: `docs/SUBMISSION.md` 하나 — 문제 · AI 활용 · 도구 · 🙋 자리(URL · 팀명 · 영상 링크). 재료는 §16 과
+  README(66바퀴가 랜딩 표와 글자 그대로 대조해 둔 것)다. ⚠ §16 의 (4) 는 빼거나 KNOWN_LIMITATIONS 를 가리켜라 —
+  없는 것을 적지 않는다. `apps/web/test/readme.test.ts` 의 대조(랜딩 문장 · 경로 실존 · FINDINGS 번호가 대기인가)를
+  제출서에도 넓혀라.
+- **상태**: 대기 (주인은 PLAN **P6 둘째 행** · 🙋 값 없이 본문은 쓸 수 있다)
+
 ### 125. ✅ **scan 단계의 「env 값 0건」 검사가 잰 값이 0개다** — 픽스처 규칙이 값을 금지한다   [구멍]
 - **증상**: `plugin/contextops/scripts/walkthrough-scan.ts` 는 픽스처 `.env.example` 의 **값**이 `scan.json` 에
   없는지 재는데, 그 파일은 `tools/fixtures.mjs` ③(「.env.example 에 값이 0건」)이 **값을 금지**한다. 그래서
@@ -89,7 +104,10 @@
 - **고칠 방향**: 🙋 사람이 **공개 저장소 URL 과 제출 팀명**을 `INBOX.md` 에 적어 준다 →
   `LANDING_FOOT` 에 두 줄. Known limitations 는 그 URL 의 `docs/KNOWN_LIMITATIONS.md` 로 건다
   (앱에 페이지를 또 만들면 같은 문서가 두 곳이 된다).
-- **상태**: 대기 (🙋 URL · 주인은 PLAN **P6 둘째 행** README)
+- **상태**: 대기 (🙋 URL · 주인은 PLAN **P6 둘째 행**) — **README · KNOWN_LIMITATIONS 의 본문은 66바퀴가 썼다**
+  (`0dc2e93` · `apps/web/test/readme.test.ts` 가 랜딩 표와 대조). 남은 것은 🙋 두 값
+  (공개 저장소 URL · 제출 팀명)뿐이다 — 오면 `LANDING_FOOT` 두 줄 + README 머리의 🙋 줄 + KNOWN_LIMITATIONS 의
+  `<marketplace>` 줄.
 
 ### 121. **게스트가 누른 버튼의 403 을 화면이 「팀 owner만」이라고 옮긴다**   [격차]
 - **증상**: 게스트는 데모 팀의 **member** 라, 화면은 member 가 할 수 있는 버튼(항목 승인 ·
