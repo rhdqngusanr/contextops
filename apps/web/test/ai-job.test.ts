@@ -4,8 +4,8 @@ import type { PGlite } from '@electric-sql/pglite'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, type AiJobStatus,
-  type SourceDocumentKind,
+  AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, ERROR_CODES, ERROR_STATUS,
+  isRetryableErrorCode, type AiJobStatus, type ErrorCode, type SourceDocumentKind,
 } from '@contextops/schema'
 
 import { AI_JOB_STATUS_RULES, aiJobs, conflicts, contextItemRevisions, contextItems } from '../src/db/schema'
@@ -29,6 +29,7 @@ import { SOURCE_DOCUMENT_KIND_BRIEF, chunkByHeading } from '../src/lib/ai/struct
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { POST as batchDraft } from '../src/app/api/v1/projects/[id]/context-items/batch-draft/route'
 import { POST as acceptJobItems } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/items/route'
+import { POST as retryJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/retry/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
 import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
 import { GET as listConflicts } from '../src/app/api/v1/projects/[id]/conflicts/route'
@@ -1193,5 +1194,129 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
 
     expect((await errorOf(await accept(other, otherId, job.id, ['item_doc_retry']))).code).toBe('NOT_FOUND')
     expect(await db.select().from(contextItems)).toHaveLength(0)
+  })
+})
+
+// =====================================================================
+describe('🔴 실패한 job 을 다시 굴리는 문 (FINDINGS 59 · SPEC §5 · §9 화면 3)', () => {
+  /** job 하나를 만들고 그 행을 **그 코드로 실패시킨다** — 러너를 굴리지 않고 상태만 만든다. */
+  async function failedJob(projectId: string, code: ErrorCode, docVersionId: string) {
+    const job = await createJob(db, {
+      projectId, feature: 'structure', input: { document_version_id: docVersionId },
+    })
+    await db
+      .update(aiJobs)
+      .set({
+        status: 'failed',
+        errorCode: code,
+        startedAt: new Date(),
+        finishedAt: new Date(),
+        progress: { done: 1, total: 4, unit: '조각' },
+      })
+      .where(eq(aiJobs.id, job.id))
+    return job
+  }
+
+  function retry(auth: string, projectId: string, jobId: string) {
+    return retryJob(
+      req('POST', `/api/v1/projects/${projectId}/jobs/${jobId}/retry`, { auth, body: {} }),
+      params({ id: projectId, jobId }),
+    )
+  }
+
+  it('🔴 **표의 항목이 전부 결과를 바꾼다** — `retryable` 인 코드만 200 이고 나머지는 400', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+
+    //  ⚠ 목록을 손으로 적지 않는다 — `ERROR_CODES` 전부를 돌린다. 코드를 하나 더하면
+    //    이 시험이 그 코드도 같이 재고, 표의 축을 안 고르면 타입이 먼저 막는다.
+    for (const code of ERROR_CODES) {
+      const job = await failedJob(projectId, code, doc.current_version_id)
+      const res = await retry(owner, projectId, job.id)
+      if (ERROR_STATUS[code].retryable) {
+        expect(res.status, `${code}: 다시 굴릴 수 있어야 한다`).toBe(200)
+        expect((await jobRow(job.id)).status, code).toBe('queued')
+      } else {
+        expect((await errorOf(res)).code, `${code}: 막혀야 한다`).toBe('VALIDATION_FAILED')
+        //  막힌 것은 **행이 그대로**다 — 400 을 내면서 상태를 바꾸면 화면이 못 읽는다.
+        expect((await jobRow(job.id)).status, code).toBe('failed')
+      }
+    }
+
+    //  축이 한쪽으로 쏠려 있으면 위 반복은 **한 갈래만** 돈다 — 그러면 아무것도 안 가른다.
+    //  ⚠ 어느 코드가 `true` 인지의 닻은 여기가 아니라 `error-codes.test.ts` 한 곳이다
+    //    (두 곳에 적으면 갈린다).
+    const yes = ERROR_CODES.filter((c) => ERROR_STATUS[c].retryable)
+    expect(yes.length).toBeGreaterThan(0)
+    expect(yes.length).toBeLessThan(ERROR_CODES.length)
+  })
+
+  it('되돌린 행은 **처음 만든 것과 같은 모양**이다 — 지난 판의 수가 남지 않는다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const job = await failedJob(projectId, 'BUDGET_EXCEEDED', doc.current_version_id)
+
+    const data = await dataOf(await retry(owner, projectId, job.id))
+    expect(data).toMatchObject({
+      id: job.id, status: 'queued', shape: 'full',
+      error_code: null, result: null, started_at: null, finished_at: null,
+      //  🔴 「4조각 중 1」이 남아 있으면 화면이 **아직 아무것도 안 한 job** 에
+      //     지난 판의 막대를 그린다.
+      progress: null, stalled: false,
+    })
+    const row = await jobRow(job.id)
+    expect(row.progress).toBeNull()
+    expect(row.errorCode).toBeNull()
+    //  ⚠ 응답을 보낸 **뒤에** 굴린다 — 라우트가 그 id 를 `startJob()` 에 넘겼다.
+    expect(startedJobIds()).toEqual([doc.job.id, job.id])
+  })
+
+  it('두 번 눌러도 한 번만 되돌려진다 — 둘째는 400 이고 job 은 하나만 굴러간다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const job = await failedJob(projectId, 'RATE_LIMITED', doc.current_version_id)
+
+    expect((await retry(owner, projectId, job.id)).status).toBe(200)
+    //  이미 `queued` 다 — 「실패한 job 이 아니다」로 막힌다.
+    expect((await errorOf(await retry(owner, projectId, job.id))).code).toBe('VALIDATION_FAILED')
+    expect(startedJobIds().filter((id) => id === job.id)).toHaveLength(1)
+  })
+
+  it('아직 안 끝난 job · 성공한 job 은 400 이다', async () => {
+    const { owner, projectId } = await seed()
+    const queued = await uploadDoc(owner, projectId)
+    expect((await errorOf(await retry(owner, projectId, queued.job.id))).code).toBe('VALIDATION_FAILED')
+
+    stubAi(() => ({ input: { items: [], open_questions: [] } }))
+    expect(await runJob(queued.job.id)).toBe('succeeded')
+    expect((await errorOf(await retry(owner, projectId, queued.job.id))).code).toBe('VALIDATION_FAILED')
+  })
+
+  it('🔴 남의 프로젝트 job 은 404 다 — 그 행은 그대로 남는다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const job = await failedJob(projectId, 'BUDGET_EXCEEDED', doc.current_version_id)
+
+    const other = sessionJwt('other-owner')
+    const otherTeam = await dataOf(await createTeam(
+      req('POST', '/api/v1/teams', { auth: other, body: { name: 'Other', slug: 'other' } }),
+      params({}),
+    ))
+    const otherProject = await dataOf(await createProject(
+      req('POST', `/api/v1/teams/${otherTeam.id as string}/projects`, { auth: other, body: { name: 'Xray', slug: 'xray' } }),
+      params({ id: otherTeam.id as string }),
+    ))
+
+    expect((await errorOf(await retry(other, otherProject.id as string, job.id))).code).toBe('NOT_FOUND')
+    expect((await jobRow(job.id)).status).toBe('failed')
+  })
+
+  it('표를 읽는 문은 모르는 값·빈 값에 `false` 다 — `error_code` 는 `text` 다', () => {
+    expect(isRetryableErrorCode(null)).toBe(false)
+    expect(isRetryableErrorCode(undefined)).toBe(false)
+    expect(isRetryableErrorCode('NOPE')).toBe(false)
+    //  ⚠ `Object.hasOwn` 이라 프로토타입의 이름이 새어 들어오지 않는다.
+    expect(isRetryableErrorCode('toString')).toBe(false)
+    expect(isRetryableErrorCode('BUDGET_EXCEEDED')).toBe(true)
   })
 })

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { isRetryableErrorCode } from '@contextops/schema'
 
 import { hintFor } from '../lib/web/api'
 import type { AiJobSummary } from '../lib/web/queries'
@@ -29,11 +30,21 @@ export function JobProgress({
   job,
   done,
   now,
+  retry,
 }: {
   job: AiJobSummary
   done?: ReactNode
   /** ⚠ 시험이 시계를 옮겨 「8분 전」이 갈리는 것을 보기 위한 자리다. */
   now?: Date
+  /**
+   * 🔴 **[다시 시도] 를 누르면 할 일**. 없으면 버튼을 안 그린다 (FINDINGS 59).
+   *
+   * ★ 왜 손잡이를 밖에서 받나 — 이 파일은 훅이 없는 순수 함수라 시험이 여섯 상태를
+   *   그려서 마크업을 읽는다 (머리 주석 ②). 여기서 fetch 를 부르면 그 성질이 사라진다.
+   * ⚠ **버튼을 그릴지는 여기서 정한다** (`canRetryJob`). 부르는 화면이 조건을 다시
+   *   적으면 화면마다 갈라지고, 그중 느슨한 쪽이 그린 버튼이 400 을 받는다.
+   */
+  retry?: { run: () => void; busy: boolean }
 }) {
   return (
     <>
@@ -61,12 +72,13 @@ export function JobProgress({
         {job.started_at === null ? '올린 지' : '마지막 걸음'} {sinceText(job.updated_at, now)}
       </span>
 
-      {/* ⚠ 여기에 [다시 시도] 를 두지 마라 — 멈춘 job 을 `queued` 로 되돌리는 문이
-          아직 없다 (FINDINGS 59+64 가 한 묶음이다). 없는 버튼을 그리면 누른 사람은
-          자기가 뭘 잘못한 줄 안다. */}
+      {/* ⚠ **멈춘 job 에는 아직 [다시 시도] 가 없다** — 그 행은 `running` 이라
+          되돌리면 아직 살아 있을지 모르는 러너와 둘이 같은 job 을 굴린다
+          (FINDINGS 154 · 재시도 라우트 머리 주석). 아래 실패 카드의 버튼과
+          **다른 일**이다. 없는 버튼을 그리면 누른 사람은 자기가 뭘 잘못한 줄 안다. */}
       {job.stalled ? <p className="meta">이 일이 한동안 움직이지 않았습니다. 문서를 다시 올려 주세요.</p> : null}
 
-      {job.status === 'failed' ? <JobFailed job={job} /> : null}
+      {job.status === 'failed' ? <JobFailed job={job} retry={retry} /> : null}
       {job.status === 'succeeded' ? done : null}
     </>
   )
@@ -113,7 +125,13 @@ export function JobBar({ job }: { job: AiJobSummary }) {
  * 실패해도 **어디까지 갔는지는 남는다** — `progress` 는 수명 CHECK 밖이라 지워지지 않는다.
  * 「4조각 중 1에서 멈췄습니다」가 실패 화면이 사람에게 할 수 있는 유일한 참말이다.
  */
-export function JobFailed({ job }: { job: AiJobSummary }) {
+export function JobFailed({
+  job,
+  retry,
+}: {
+  job: AiJobSummary
+  retry?: { run: () => void; busy: boolean }
+}) {
   return (
     <div className="col-tight">
       {/* 코드를 그대로 띄우지 않는다 — 문구의 정본은 `ERROR_HINT` 표 하나다.
@@ -123,6 +141,31 @@ export function JobFailed({ job }: { job: AiJobSummary }) {
       {job.progress ? (
         <span className="meta">{job.progress.total}{job.progress.unit} 중 {job.progress.done}에서 멈췄습니다.</span>
       ) : null}
+      {retry && canRetryJob(job) ? (
+        <div className="col-tight">
+          <button type="button" className="btn" onClick={retry.run} disabled={retry.busy}>
+            {retry.busy ? '다시 굴리는 중…' : '다시 시도'}
+          </button>
+          {/* 🔴 **버튼 옆에 「무엇이 달라져서 이번엔 되나」를 적는다.** 이 버튼은
+              LLM 을 한 번 더 부르므로(P3) 사람이 헛되이 누르는 자리가 되면 안 된다.
+              ⚠ accent 를 쓰지 않는다 — 화면 3 의 주요 액션은 [구조화하기] 하나다
+                (DESIGN_BRIEF §3). */}
+          <span className="meta">올린 문서를 그대로 다시 읽습니다. 문서를 다시 올릴 필요는 없습니다.</span>
+        </div>
+      ) : null}
     </div>
   )
+}
+
+/**
+ * 🔴 **[다시 시도] 를 그릴 수 있나** — 서버의 재시도 라우트와 **같은 표**를 읽는다
+ * (`ERROR_STATUS[code].retryable` · FINDINGS 59).
+ *
+ * ★ 왜 화면이 조건을 다시 적으면 안 되나 — 둘이 갈리면 느슨한 쪽이 이긴다.
+ *   화면이 넓으면 그린 버튼이 400 을 받고, 좁으면 되는 재시도를 사람이 못 한다.
+ * ⚠ `error_code` 는 `string | null` 이다 (DB 는 `text`) — 캐스팅하지 않고
+ *   표를 읽는 문(`isRetryableErrorCode`)에 그대로 넘긴다.
+ */
+export function canRetryJob(job: AiJobSummary): boolean {
+  return job.status === 'failed' && isRetryableErrorCode(job.error_code)
 }

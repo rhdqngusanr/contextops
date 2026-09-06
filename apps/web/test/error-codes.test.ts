@@ -65,6 +65,16 @@ describe('에러 코드 표가 정본이고, 갈라질 자리가 없다', () => 
     }
   })
 
+  it('🔴 **`retryable` 축의 값이 무엇인지 여기 한 번 적혀 있다** (FINDINGS 59)', () => {
+    //  ★ 왜 목록을 적나 — 이 축을 읽는 시험(`ai-job` · `web-job-progress`)은 둘 다
+    //    **표 자신**을 기대값으로 쓴다 (화면이 서버와 같은 표를 읽는지를 재는 시험이라
+    //    그게 맞다). 그러면 표를 잘못 고쳤을 때 아무도 안 막는다 — **닻이 하나 필요하다.**
+    //  ⚠ 이 목록을 고치는 것은 「예산을 태우는 버튼을 하나 늘린다」는 결정이다 (P3).
+    //    한 줄 늘리기 전에 「무엇이 저절로 달라져서 이번엔 되나」에 답할 수 있어야 한다.
+    expect(ERROR_CODES.filter((c) => ERROR_STATUS[c].retryable))
+      .toEqual(['BUDGET_EXCEEDED', 'RATE_LIMITED', 'INTERNAL'])
+  })
+
   it('코드를 바꾸면 응답이 갈린다 — 상태와 code 가 표를 따라간다', async () => {
     for (const code of ERROR_CODES) {
       const res = failure(new ApiError(code), '3f9c2e1a-0000-4000-8000-000000000000')

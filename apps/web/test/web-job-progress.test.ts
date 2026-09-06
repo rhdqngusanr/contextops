@@ -1,9 +1,9 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AI_JOB_STATUSES, type AiJobStatus } from '@contextops/schema'
+import { AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, type AiJobStatus } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 
-import { JobProgress } from '../src/components/job-progress'
+import { JobProgress, canRetryJob } from '../src/components/job-progress'
 import { structureCounts, type AiJobSummary } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -21,7 +21,8 @@ import { structureCounts, type AiJobSummary } from '../src/lib/web/queries'
 //    ① 상태를 **색만으로** 구분하지 않는다 (아이콘 + 라벨 병기) — §3
 //    ② 근거 없는 숫자·판정이 없다 (`stalled` 옆에 `updated_at` 이 있다) — §2-1
 //    ③ 「실시간」이라는 낱말이 없다 — §2-3
-//    ④ 없는 문을 그리지 않는다 (되살리기 버튼이 없다) — FINDINGS 59+64
+//    ④ 없는 문을 그리지 않는다 — 되살리기 버튼은 **되살릴 수 있는 실패에만** 있다
+//       (`ERROR_STATUS[code].retryable` · FINDINGS 59) · 멈춘 job 에는 아직 없다 (154)
 // =====================================================================
 
 const NOW = new Date('2026-09-04T12:00:00Z')
@@ -49,6 +50,19 @@ function job(over: Partial<AiJobSummary> = {}): AiJobSummary {
 function draw(over: Partial<AiJobSummary> = {}): string {
   return renderToStaticMarkup(createElement(JobProgress, { job: job(over), now: NOW }))
 }
+
+/** 손잡이를 **들려 준** 판 — 화면 3 이 그러듯이. 버튼을 그릴지는 컴포넌트가 정한다. */
+function drawWithRetry(over: Partial<AiJobSummary> = {}, busy = false): string {
+  return renderToStaticMarkup(createElement(JobProgress, {
+    job: job(over), now: NOW, retry: { run: () => {}, busy },
+  }))
+}
+
+/** 그 코드로 죽은 실패 job 한 장. */
+const failedWith = (code: string): Partial<AiJobSummary> => ({
+  status: 'failed', error_code: code, finished_at: ago(5),
+  progress: { done: 1, total: 4, unit: '조각' },
+})
 
 /** 화면 3 의 오른쪽 칸이 실제로 만나는 여섯 모양. */
 const STATES: { what: string; over: Partial<AiJobSummary> }[] = [
@@ -109,10 +123,44 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
     for (const state of STATES) expect(draw(state.over), state.what).not.toContain('실시간')
   })
 
-  it('④ 없는 문을 그리지 않는다 — 멈춘 job 에 [다시 시도] 버튼이 없다 (FINDINGS 59+64)', () => {
-    //  되살리는 라우트가 아직 없다. 누르면 아무 일도 없는 버튼은 「고장」으로 읽힌다.
-    expect(draw({ stalled: true })).not.toContain('<button')
-    expect(draw({ status: 'failed', error_code: 'INTERNAL', finished_at: ago(5) })).not.toContain('<button')
+  it('④ 손잡이를 안 주면 버튼이 없다 — 누르면 아무 일도 없는 버튼은 「고장」으로 읽힌다', () => {
+    for (const state of STATES) expect(draw(state.over), state.what).not.toContain('<button')
+    expect(draw(failedWith('BUDGET_EXCEEDED'))).not.toContain('<button')
+  })
+
+  it('🔴 **화면이 서버와 같은 표를 읽는다** — 되살릴 수 있는 코드에만 버튼이 있다 (FINDINGS 59)', () => {
+    //  ⚠ 코드 목록을 손으로 적지 않는다. 표의 축을 뒤집으면 이 시험이 갈린다 —
+    //    그게 「표의 항목이 전부 실제로 뭔가를 바꾼다」의 화면 쪽 절반이다.
+    for (const code of ERROR_CODES) {
+      const html = drawWithRetry(failedWith(code))
+      //  ⚠ **버튼**을 센다 — 낱말로 세면 안 된다. `ERROR_HINT` 의 몇 문구가 이미
+      //    「다시 시도해주세요」로 끝나서, 버튼이 없는 코드도 그 낱말은 갖고 있다.
+      expect(html.includes('<button'), `${code}: 표와 화면이 갈렸다`).toBe(ERROR_STATUS[code].retryable)
+    }
+    //  판정 문(`canRetryJob`)이 그 표를 그대로 읽는다 — 화면이 조건을 다시 적지 않는다.
+    for (const code of ERROR_CODES) {
+      expect(canRetryJob(job(failedWith(code))), code).toBe(ERROR_STATUS[code].retryable)
+    }
+  })
+
+  it('🔴 실패가 아닌 job 에는 버튼이 없다 — 손잡이를 줘도 그리지 않는다', () => {
+    for (const state of STATES) {
+      if (state.over.status === 'failed') continue
+      expect(drawWithRetry(state.over), state.what).not.toContain('<button')
+    }
+    //  멈춘(`running`) job 도 마찬가지다 — 되돌리면 러너 둘이 같은 job 을 굴린다 (154).
+    expect(drawWithRetry({ stalled: true, updated_at: ago(8 * 60) })).not.toContain('<button')
+  })
+
+  it('버튼 옆에 **무엇이 달라지는지**가 있고, 누르는 동안 잠긴다', () => {
+    const idle = drawWithRetry(failedWith('BUDGET_EXCEEDED'))
+    //  🔴 이 버튼은 LLM 을 한 번 더 부른다 (P3). 헛되이 누르는 자리가 되면 안 된다.
+    expect(idle).toContain('문서를 다시 올릴 필요는 없습니다')
+    expect(idle).not.toContain('disabled')
+
+    const busy = drawWithRetry(failedWith('BUDGET_EXCEEDED'), true)
+    expect(busy).toContain('disabled')
+    expect(busy).toContain('다시 굴리는 중')
   })
 })
 

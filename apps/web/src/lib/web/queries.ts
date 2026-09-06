@@ -236,6 +236,20 @@ export function fetchJob(projectId: string, jobId: string): Promise<AiJobSummary
 }
 
 /**
+ * 🔴 **실패한 job 을 그대로 다시 굴린다** (`POST /projects/{id}/jobs/{jobId}/retry` ·
+ * FINDINGS 59). 문서를 다시 올리지 않는다 — 그러면 같은 문서가 두 벌 생긴다.
+ *
+ * ⚠ 누를 수 있는지는 화면이 다시 적지 않는다 — `canRetryJob()`(`components/job-progress.tsx`)
+ *   이 서버와 **같은 표**(`ERROR_STATUS[code].retryable`)를 읽는다. 그 조건을 안 보고
+ *   부르면 `VALIDATION_FAILED` 다.
+ * ⚠ 돌아오는 것은 `shape:'full'` 인 **되돌려진 job**(`queued`)이다. 화면은 그것을
+ *   들고 있지 않고 목록을 다시 읽는다 (`fetchJobs`) — polling 이 그리는 자리가 하나다.
+ */
+export function retryJob(projectId: string, jobId: string): Promise<AiJobSummary & { result: unknown }> {
+  return post(`/projects/${projectId}/jobs/${jobId}/retry`, {})
+}
+
+/**
  * 문서를 올린다 → **구조화 job 이 같이 시작된다** (SPEC §5 · §7.1).
  * ⚠ 응답의 `job` 은 `{id,status}` 뿐인 **셋째 모양**이라 (FINDINGS 63) 진행 표시에
  *   쓰지 않는다 — 화면은 올린 뒤에도 `fetchJobs()` 가 낸 것만 그린다.

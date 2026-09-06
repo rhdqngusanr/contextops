@@ -8,7 +8,7 @@ import {
 import { hintFor, messageOf } from '../../../../../../lib/web/api'
 import {
   JOB_POLL_MS, acceptJobItems, answerQuestions, createDocument, fetchJob, fetchJobs, fetchQuestions,
-  structureCandidates, structureCounts,
+  retryJob, structureCandidates, structureCounts,
   type AiJobSummary, type ProjectRef, type QuestionRow,
 } from '../../../../../../lib/web/queries'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
@@ -281,6 +281,26 @@ function StructureCard({
 }) {
   const { result } = jobs
   const job = result.state === 'ready' ? result.data.jobs[0] : undefined
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<unknown>(null)
+
+  //  🔴 **누를 수 있는지는 여기서 안 본다** — `JobProgress` 가 서버와 같은 표를 읽어
+  //     버튼을 그릴지 정한다 (`canRetryJob` · FINDINGS 59). 화면이 조건을 다시 적으면
+  //     그 조건이 서버와 갈린다.
+  async function retry(jobId: string): Promise<void> {
+    setRetrying(true)
+    setRetryError(null)
+    try {
+      await retryJob(projectId, jobId)
+      //  ⚠ 응답의 job 을 들고 다니지 않는다 — 그리는 것은 언제나 목록이 낸 한 줄이다
+      //    (`PasteCard` 와 같은 판단). `reload` 가 polling 을 다시 켠다.
+      jobs.reload()
+    } catch (err) {
+      setRetryError(err)
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   return (
     <section className="card pad col drawer">
@@ -295,8 +315,16 @@ function StructureCard({
         <EmptyState message="아직 올린 문서가 없습니다. 왼쪽에 문서를 붙여넣어 보세요." />
       ) : null}
       {job ? (
-        <JobProgress job={job} done={<Succeeded base={base} projectId={projectId} jobId={job.id} />} />
+        <JobProgress
+          job={job}
+          done={<Succeeded base={base} projectId={projectId} jobId={job.id} />}
+          retry={{ run: () => { void retry(job.id) }, busy: retrying }}
+        />
       ) : null}
+      {/* ⚠ 다시 굴리기가 **실패했을 때**의 자리다 — job 자신의 실패(`JobFailed`)와
+          다른 것이라 문구를 겹쳐 두지 않는다. 예산이 아직 안 풀렸으면 job 은 다시
+          `failed` 로 돌아오고, 그건 여기가 아니라 위 카드가 말한다. */}
+      {retryError ? <p className="ink-bad">{messageOf(retryError)}</p> : null}
     </section>
   )
 }

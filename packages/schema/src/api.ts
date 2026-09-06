@@ -53,11 +53,11 @@ export const ERROR_CODES = [
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
 /**
- * 🔴 **코드 → HTTP 상태 + 기본 문구의 정본 표.**
+ * 🔴 **코드 → HTTP 상태 + 기본 문구 + 「그대로 다시 굴려도 되나」의 정본 표.**
  *
  * ★ 새 에러 코드를 더하는 절차 — 넷이고, 앞의 둘은 기계가 막아 준다:
  *   ① 위 `ERROR_CODES` **끝에** 값 추가 (중간에 끼우지 마라 — 직렬화된다)
- *   ② 이 표에 한 줄  ← ①만 하면 여기서 타입 검사가 막힌다
+ *   ② 이 표에 한 줄 (`retryable` 을 **고른다** — 기본값이 없다)  ← ①만 하면 여기서 타입 검사가 막힌다
  *   ③ 그 코드를 **실제로 내는 자리**를 만든다 (라우트나 가드)
  *   ④ `apps/web/test/error-codes.test.ts` 의 「아직 주인이 없는 코드」 표에서 지운다
  *      ← ③을 안 하면 그 시험이 「소비처가 0곳」이라며 빨개진다
@@ -66,24 +66,52 @@ export type ErrorCode = (typeof ERROR_CODES)[number]
  *   같은 코드가 곳에 따라 다른 상태로 나간다. 화면은 상태로 갈래를 타는데 그러면
  *   조용히 갈라진다. **한 코드는 한 상태다.**
  *
+ * 🔴 **`retryable` 은 「같은 입력 그대로 다시 굴리면 결과가 달라질 수 있나」다**
+ *   (FINDINGS 59). 실패한 AI job 을 `failed → queued` 로 되돌리는 문
+ *   (`POST /projects/{id}/jobs/{jobId}/retry`)과 그 버튼을 그리는 화면 3 이
+ *   **둘 다 이 축을 읽는다.** 화면이 조건을 다시 적으면 그린 버튼이 400 을 받는다.
+ *   ⚠ 「사람이 다시 해 볼 수 있나」가 아니다 — 그건 대부분 `true` 라 아무것도 안 가른다.
+ *     여기서 묻는 것은 **아무것도 안 고치고 그대로 다시 부를 값이 있나**이고,
+ *     `true` 인 줄은 곧 **예산을 태우는 버튼**이 된다 (P3). 새 코드에 `true` 를 적기 전에
+ *     「무엇이 저절로 달라져서 이번엔 되나」에 한 줄로 답할 수 있어야 한다.
+ *
  * ⚠ 상태가 겹치는 것은 정상이다 (409 둘 · 429 둘). 화면이 구별하는 근거는 `code` 다.
  */
-export const ERROR_STATUS: Record<ErrorCode, { status: number; message: string }> = {
-  UNAUTHORIZED: { status: 401, message: '인증이 필요하다' },
-  FORBIDDEN: { status: 403, message: '이 작업을 할 권한이 없다' },
-  NOT_FOUND: { status: 404, message: '대상을 찾을 수 없다' },
-  VALIDATION_FAILED: { status: 400, message: '요청 본문이 계약과 맞지 않는다' },
+export const ERROR_STATUS: Record<ErrorCode, { status: number; message: string; retryable: boolean }> = {
+  //  로그인·권한·주소는 시간이 안 고친다. 사람이 무언가를 바꿔야 달라진다.
+  UNAUTHORIZED: { status: 401, message: '인증이 필요하다', retryable: false },
+  FORBIDDEN: { status: 403, message: '이 작업을 할 권한이 없다', retryable: false },
+  NOT_FOUND: { status: 404, message: '대상을 찾을 수 없다', retryable: false },
+  VALIDATION_FAILED: { status: 400, message: '요청 본문이 계약과 맞지 않는다', retryable: false },
   //  발행 요청의 base 가 지금의 공식 버전이 아니다 (SPEC §2.1 1단계).
-  STALE_BASE: { status: 409, message: '기준 버전이 낡았다 — 다시 읽고 보내라' },
-  //  항목 부분 갱신에서 `revision` 이 현재와 다르다 (SPEC §5).
-  REVISION_CONFLICT: { status: 409, message: '항목이 그 사이 바뀌었다 — 다시 읽고 보내라' },
-  BUDGET_EXCEEDED: { status: 429, message: '오늘 AI 예산을 다 썼다' },
-  RATE_LIMITED: { status: 429, message: '요청이 너무 잦다' },
-  COMPILE_FAILED: { status: 500, message: 'Pack 컴파일에 실패했다' },
-  INTERNAL: { status: 500, message: '서버에서 처리하지 못했다' },
+  //  ⚠ 다시 보낼 것이 **다른 body** 다 (base 를 다시 읽어야 한다) — 같은 것을 다시 굴리면 또 409 다.
+  STALE_BASE: { status: 409, message: '기준 버전이 낡았다 — 다시 읽고 보내라', retryable: false },
+  //  항목 부분 갱신에서 `revision` 이 현재와 다르다 (SPEC §5). 위와 같은 이유로 `false` 다.
+  REVISION_CONFLICT: { status: 409, message: '항목이 그 사이 바뀌었다 — 다시 읽고 보내라', retryable: false },
+  //  🔴 시간이 고치는 둘이다 — 예산은 날이 바뀌면, 빈도는 창이 지나면 저절로 풀린다 (SPEC §7.5).
+  BUDGET_EXCEEDED: { status: 429, message: '오늘 AI 예산을 다 썼다', retryable: true },
+  RATE_LIMITED: { status: 429, message: '요청이 너무 잦다', retryable: true },
+  //  ⚠ P4 — 컴파일은 순수 함수다. 같은 snapshot 은 **언제 돌려도 같은 자리에서** 실패한다.
+  COMPILE_FAILED: { status: 500, message: 'Pack 컴파일에 실패했다', retryable: false },
+  //  드라이버·연결처럼 저절로 지나가는 것이 여기로 온다. 화면 문구도 「잠시 후 다시」다.
+  INTERNAL: { status: 500, message: '서버에서 처리하지 못했다', retryable: true },
   //  ⚠ 502 다 — 우리가 터진 게 아니라 **상류가 계약을 어겼다.** 500 으로 내면
   //     운영자가 우리 스택을 뒤지고, 화면은 「다시 해 보세요」를 못 고른다 (SPEC §7).
-  AI_OUTPUT_INVALID: { status: 502, message: 'AI 응답이 계약과 맞지 않는다' },
+  //  ⚠ `retryable:false` 다 — §7 공통 규약이 **이미 한 번 재시도한 뒤**의 코드라
+  //     (오류 위치를 넣어 다시 물었는데 또 계약을 어겼다) 셋째 왕복은 예산만 태운다.
+  AI_OUTPUT_INVALID: { status: 502, message: 'AI 응답이 계약과 맞지 않는다', retryable: false },
+}
+
+/**
+ * 🔴 위 표의 `retryable` 축을 **읽는 유일한 문**이다 — 서버(재시도 라우트)와 화면 3 이
+ * 같은 함수를 부른다. 모르는 문자열(`ai_jobs.error_code` 는 `text` 다)은 `false` 다.
+ *
+ * ★ 왜 함수인가 — 부르는 쪽이 `code as ErrorCode` 로 캐스팅하지 않게 하려고다.
+ *   캐스팅은 표에 없는 값이 왔을 때 조용히 `undefined.retryable` 로 터진다.
+ */
+export function isRetryableErrorCode(code: string | null | undefined): boolean {
+  if (code === null || code === undefined) return false
+  return Object.hasOwn(ERROR_STATUS, code) && ERROR_STATUS[code as ErrorCode].retryable
 }
 
 // ---------------------------------------------------------------------
