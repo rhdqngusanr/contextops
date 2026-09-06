@@ -140,7 +140,9 @@ if ($webFiles.Count -eq 0) {
     $callers = @()
     foreach ($f in $webFiles) {
         $raw = Get-Content -LiteralPath $f.FullName -Raw -ErrorAction SilentlyContinue
-        if ($raw -match "messages\.create|messages\.stream") { $callers += $f }
+        #  ⚠ `generateContent` 는 Gemini 의 문이다 (2026-09-06 · INBOX). 공급자를 바꾸면
+        #    **여기 패턴을 같이 바꿔라** — 안 바꾸면 「LLM 호출 없음」SKIP 으로 P3 가 눈을 감는다.
+        if ($raw -match "messages\.create|messages\.stream|generateContent") { $callers += $f }
     }
     if ($callers.Count -eq 0) {
         Add-Row "P3" "모든 LLM 호출이 withBudget() 경유" "SKIP" "아직 LLM 호출 없음"

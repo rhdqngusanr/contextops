@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import type Anthropic from '@anthropic-ai/sdk'
 import type { PGlite } from '@electric-sql/pglite'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -13,6 +12,7 @@ import { AI_JOB_STATUS_RULES, aiJobs, conflicts, contextItemRevisions, contextIt
 import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
+import { stubTransport } from './helpers/ai'
 import { AI_FEATURES, AI_FEATURE_LIMITS, AI_JOB_FEATURES, type AiFeature } from '../src/lib/ai/features'
 import {
   AI_JOB_COLUMNS,
@@ -75,20 +75,7 @@ let calls = 0
 
 function stubAi(reply: (n: number) => StubReply): void {
   calls = 0
-  setAiClientForTest({
-    messages: {
-      create: async (r: { tools: { name: string }[] }) => {
-        const answer = reply(calls++)
-        return {
-          content: [{ type: 'tool_use', name: r.tools[0]!.name, input: answer.input }],
-          usage: {
-            input_tokens: answer.inputTokens ?? 100,
-            output_tokens: answer.outputTokens ?? 50,
-          },
-        }
-      },
-    },
-  } as unknown as Anthropic)
+  setAiClientForTest(stubTransport(() => reply(calls++)))
 }
 
 // ---------------------------------------------------------------------
@@ -150,7 +137,7 @@ async function jobRow(jobId: string) {
 beforeEach(async () => {
   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
   delete process.env.AI_DAILY_BUDGET_USD
-  delete process.env.ANTHROPIC_MODEL
+  delete process.env.GEMINI_MODEL
   const fresh = await freshDb()
   pg = fresh.pg
   db = fresh.db
@@ -416,7 +403,7 @@ describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
     const { owner, projectId } = await seed()
     const { job } = await uploadDoc(owner, projectId)
     //  스텁을 꽂지 않는다 — `client.ts` 가 「키가 없다」로 던진다.
-    delete process.env.ANTHROPIC_API_KEY
+    delete process.env.GEMINI_API_KEY
 
     expect(await runJob(job.id)).toBe('failed')
     expect((await jobRow(job.id)).errorCode).toBe('INTERNAL')
@@ -428,17 +415,10 @@ describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
     const { job } = await uploadDoc(owner, projectId, PAYLAB_GOALS, 'notes')
 
     const seen: string[] = []
-    setAiClientForTest({
-      messages: {
-        create: async (r: { messages: { content: string }[]; tools: { name: string }[] }) => {
-          seen.push(r.messages[0]!.content)
-          return {
-            content: [{ type: 'tool_use', name: r.tools[0]!.name, input: { items: [], open_questions: [] } }],
-            usage: { input_tokens: 100, output_tokens: 50 },
-          }
-        },
-      },
-    } as unknown as Anthropic)
+    setAiClientForTest(stubTransport((sent) => {
+      seen.push(sent.user)
+      return { input: { items: [], open_questions: [] } }
+    }))
 
     expect(await runJob(job.id)).toBe('succeeded')
 
@@ -788,18 +768,10 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
    */
   function stubAiWatching(jobId: string, seen: unknown[], answer: (n: number) => StubReply): void {
     let n = 0
-    setAiClientForTest({
-      messages: {
-        create: async (r: { tools: { name: string }[] }) => {
-          seen.push((await jobRow(jobId)).progress)
-          const reply = answer(n++)
-          return {
-            content: [{ type: 'tool_use', name: r.tools[0]!.name, input: reply.input }],
-            usage: { input_tokens: 100, output_tokens: 50 },
-          }
-        },
-      },
-    } as unknown as Anthropic)
+    setAiClientForTest(stubTransport(async () => {
+      seen.push((await jobRow(jobId)).progress)
+      return { input: answer(n++).input }
+    }))
   }
 
   it('🔴 조각마다 자란다 — polling 이 status 한 글자 말고 볼 것이 생겼다', async () => {

@@ -200,7 +200,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 TypeScript 5 / Node 22 · pnpm workspace · Next.js 15 (App Router · Route Handlers) · Postgres (Supabase) + Drizzle ORM ·
 PGlite (시험·로컬) · Zod · vitest · Vercel (Cron 포함)
 
-서버측 AI: `@anthropic-ai/sdk` (tool use 구조화 출력 · `withBudget()` 필수)
+서버측 AI: Gemini `generateContent` — SDK 없이 `fetch` (`responseJsonSchema` 구조화 출력 · `withBudget()` 필수)
 플러그인: Claude Code 공식 plugin 레이아웃 · esbuild 단일 ESM 번들 (런타임 의존 0)
 
 ---

@@ -1,5 +1,4 @@
 import type { PGlite } from '@electric-sql/pglite'
-import type Anthropic from '@anthropic-ai/sdk'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { parseTraceTag } from '@contextops/compiler'
@@ -7,6 +6,7 @@ import { parseTraceTag } from '@contextops/compiler'
 import { packFiles } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
+import { stubTransport } from './helpers/ai'
 import { runJob } from '../src/lib/ai/job'
 import { questionItemId } from '../src/lib/api/answer'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
@@ -68,21 +68,12 @@ const DOC = [
 ].join('\n')
 
 function stubStructure(): void {
-  setAiClientForTest({
-    messages: {
-      create: async (r: { tools: { name: string }[] }) => ({
-        content: [{
-          type: 'tool_use',
-          name: r.tools[0]!.name,
-          input: {
-            items: [CANDIDATE],
-            open_questions: [{ question: OPEN_QUESTION, span: { start_char: 0, end_char: 20 } }],
-          },
-        }],
-        usage: { input_tokens: 100, output_tokens: 50 },
-      }),
+  setAiClientForTest(stubTransport(() => ({
+    input: {
+      items: [CANDIDATE],
+      open_questions: [{ question: OPEN_QUESTION, span: { start_char: 0, end_char: 20 } }],
     },
-  } as unknown as Anthropic)
+  })))
 }
 
 beforeEach(async () => {

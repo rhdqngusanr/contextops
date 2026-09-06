@@ -124,22 +124,27 @@ export interface AiModelPrice {
 }
 
 /**
- * 🔴 **모델 → 정가 표.** `ANTHROPIC_MODEL` 은 **이 표 안의 이름만** 받는다.
+ * 🔴 **모델 → 정가 표.** `GEMINI_MODEL` 은 **이 표 안의 이름만** 받는다.
  *
  * ★ 왜 allowlist 인가 — 모르는 모델 이름이 오면 값을 셀 수 없고, 값을 못 세면
  *   하루 예산이 조용히 무한이 된다. 그건 P3 가 막으려던 것 자체다.
  *   그래서 표에 없는 이름은 **켜질 때 크게 죽는다** (.env.example ③).
  *
  * ★ 모델을 더하는 절차: ① 여기 한 줄(정가 포함) ② `.env.example` 의 주석
+ *
+ * 2026-09-06 Anthropic → Gemini (INBOX). claude-* 줄은 지웠다 — `client.ts` 가 더는 그 문을
+ * 못 부르는데 표에 남기면 「쓸 수 있는 이름」이 거짓말을 한다.
+ * 🙋 정가는 **Gemini 2.5 Flash 의 공개 정가**(입력 0.30 · 출력 2.50 USD/M) 를 3.5·3.6 에도
+ *    임시로 적었다 — 3.5/3.6 의 정가를 사람이 확인해 고쳐라 (`docs/STATUS.md` 「막힌 것」).
+ *    0 으로 두면 하루 예산이 조용히 무한이 되므로 모르는 값이라도 0 은 안 된다.
  */
 export const AI_MODELS: Record<string, AiModelPrice> = {
-  'claude-opus-5': { inputPerMTokUsd: 5, outputPerMTokUsd: 25 },
-  'claude-sonnet-5': { inputPerMTokUsd: 3, outputPerMTokUsd: 15 },
-  'claude-haiku-4-5': { inputPerMTokUsd: 1, outputPerMTokUsd: 5 },
+  'gemini-3.5-flash': { inputPerMTokUsd: 0.3, outputPerMTokUsd: 2.5 },
+  'gemini-3.6-flash': { inputPerMTokUsd: 0.3, outputPerMTokUsd: 2.5 },
 }
 
 /** 환경변수가 없을 때 쓰는 모델 (SPEC §1.2). */
-export const DEFAULT_AI_MODEL = 'claude-opus-5'
+export const DEFAULT_AI_MODEL = 'gemini-3.5-flash'
 
 // ---------------------------------------------------------------------
 //  기본 한도 — SPEC §7.5 의 숫자는 전부 여기 한 곳에 있다

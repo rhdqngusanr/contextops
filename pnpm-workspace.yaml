@@ -47,9 +47,8 @@ catalog:
   react-dom: ^19.2.0
   "@types/react": ^19.2.18
   "@types/react-dom": ^19.2.4
-  # 서버측 AI (SPEC §1.2 · §7 · P3). **우리 API 키로만** 부른다 — 사용자의 Claude
-  # 구독을 대신 쓰는 것이 아니다(P2). 부르는 자리는 apps/web/src/lib/ai/client.ts 하나다.
-  "@anthropic-ai/sdk": ^0.123.0
+  # 서버측 AI (SPEC §1.2 · §7 · P3) 는 SDK 없이 fetch 로 Gemini 를 부른다 —
+  # apps/web/src/lib/ai/client.ts 하나. (2026-09-06 @anthropic-ai/sdk 를 뺐다 · INBOX)
   # PGlite — 프로세스 안에서 도는 Postgres(WASM). 마이그레이션을 **실제로 적용해 보는**
   # 시험이 이걸 쓴다. Docker 도 Supabase 계정도 없이 「적용됨」을 잴 수 있는 유일한 길이다.
   "@electric-sql/pglite": ^0.5.8

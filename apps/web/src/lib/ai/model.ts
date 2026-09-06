@@ -9,14 +9,14 @@ import { AI_MODELS, DEFAULT_AI_MODEL } from './features'
 // =====================================================================
 
 /**
- * `ANTHROPIC_MODEL` 또는 기본값. **`AI_MODELS` 표에 없는 이름이면 죽는다.**
+ * `GEMINI_MODEL` 또는 기본값. **`AI_MODELS` 표에 없는 이름이면 죽는다.**
  * ★ 왜 죽나 — 표에 없으면 정가를 모르고, 정가를 모르면 하루 예산이 조용히 무한이 된다.
  */
 export function currentModel(): string {
-  const model = process.env.ANTHROPIC_MODEL || DEFAULT_AI_MODEL
+  const model = process.env.GEMINI_MODEL || DEFAULT_AI_MODEL
   if (!AI_MODELS[model]) {
     throw new Error(
-      `ANTHROPIC_MODEL 이 AI_MODELS 표에 없다: ${model} — ` +
+      `GEMINI_MODEL 이 AI_MODELS 표에 없다: ${model} — ` +
       `쓸 수 있는 값: ${Object.keys(AI_MODELS).join(', ')} (src/lib/ai/features.ts)`,
     )
   }

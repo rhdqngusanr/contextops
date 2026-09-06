@@ -1,8 +1,8 @@
-import type Anthropic from '@anthropic-ai/sdk'
 import { eq } from 'drizzle-orm'
 
 import { packFiles } from '../src/db/schema'
 import { setAiClientForTest } from '../src/lib/ai/client'
+import { stubTransport } from '../test/helpers/ai'
 import { runJob } from '../src/lib/ai/job'
 import { questionItemId } from '../src/lib/api/answer'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
@@ -51,21 +51,12 @@ const OPEN_QUESTION = '재시도 상한이 5회인가 3회인가?'
 const OPEN_ANSWER = '재시도는 3회까지만 한다 — 그 뒤는 수동 처리다.'
 const SEED_ANSWER = 'PSP 장애가 가맹점 결제로 번지지 않게 하는 결제 게이트웨이를 만듭니다.'
 
-setAiClientForTest({
-  messages: {
-    create: async (r: { tools: { name: string }[] }) => ({
-      content: [{
-        type: 'tool_use',
-        name: r.tools[0]!.name,
-        input: {
-          items: [CANDIDATE],
-          open_questions: [{ question: OPEN_QUESTION, span: { start_char: 0, end_char: 40 } }],
-        },
-      }],
-      usage: { input_tokens: 100, output_tokens: 50 },
-    }),
+setAiClientForTest(stubTransport(() => ({
+  input: {
+    items: [CANDIDATE],
+    open_questions: [{ question: OPEN_QUESTION, span: { start_char: 0, end_char: 40 } }],
   },
-} as unknown as Anthropic)
+})))
 
 const lines: string[] = ['화면만으로 만든 v1.0.0 — 항목 셋이 서로 **다른 문**으로 들어왔다 (FINDINGS 35)', '']
 

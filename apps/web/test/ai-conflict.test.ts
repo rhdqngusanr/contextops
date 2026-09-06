@@ -1,5 +1,4 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import type Anthropic from '@anthropic-ai/sdk'
 import type { PGlite } from '@electric-sql/pglite'
 import {
   AI_MAX_CONFLICTS,
@@ -13,6 +12,7 @@ import {
 import { closeDb, freshDb } from './helpers/db'
 import { aiUsage, contextItemRevisions, contextItems } from '../src/db/schema'
 import { setAiClientForTest } from '../src/lib/ai/client'
+import { stubTransport, type SentRequest, type StubReply } from './helpers/ai'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import { AI_FEATURE_LIMITS } from '../src/lib/ai/features'
 import {
@@ -39,7 +39,7 @@ import type { Db } from '../src/db/client'
 
 let pg: PGlite | undefined
 let db: Db
-const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'ANTHROPIC_MODEL'] as const
+const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL'] as const
 const saved: Record<string, string | undefined> = {}
 
 const TEAM = '22222222-2222-4222-8222-222222222222'
@@ -47,43 +47,18 @@ const PROJECT = '11111111-1111-4111-8111-111111111111'
 const NOW = new Date('2026-09-04T12:00:00.000Z')
 
 // ---------------------------------------------------------------------
-//  스텁 클라이언트 — `messages.create` 가 받는 것을 그대로 붙잡아 둔다
+//  스텁 — `generateContent` 가 받는 것을 그대로 붙잡아 둔다 (`helpers/ai.ts` 가 모양을 안다)
 // ---------------------------------------------------------------------
-
-interface SentRequest {
-  system: string
-  user: string
-  toolSchema: Record<string, unknown>
-}
-
-interface StubReply {
-  input?: unknown
-  blocks?: unknown[]
-  inputTokens?: number
-  outputTokens?: number
-}
 
 let sent: SentRequest[] = []
 
 /** `reply(요청번호)` 가 그 회차의 응답을 정한다. */
 function stubAi(reply: (n: number) => StubReply): void {
-  setAiClientForTest({
-    messages: {
-      create: async (req: {
-        system: string
-        messages: { content: string }[]
-        tools: { name: string; input_schema: Record<string, unknown> }[]
-      }) => {
-        const n = sent.length
-        sent.push({ system: req.system, user: req.messages[0]!.content, toolSchema: req.tools[0]!.input_schema })
-        const r = reply(n)
-        return {
-          content: r.blocks ?? [{ type: 'tool_use', name: req.tools[0]!.name, input: r.input }],
-          usage: { input_tokens: r.inputTokens ?? 100, output_tokens: r.outputTokens ?? 50 },
-        }
-      },
-    },
-  } as unknown as Anthropic)
+  setAiClientForTest(stubTransport((req) => {
+    const n = sent.length
+    sent.push(req)
+    return reply(n)
+  }))
 }
 
 // ---------------------------------------------------------------------
@@ -189,7 +164,7 @@ describe('표가 실제로 프롬프트와 검증을 정한다 (SPEC §7.2)', ()
     //  ⚠ `AI_SYSTEM_COMMON` 은 「확신이 없으면 open_question 으로 낸다」를 말한다.
     //     그건 §7.1 의 낱말이므로 여기서 재는 것은 **종류 목록의 줄**이다.
     expect(sent[0]!.system).not.toContain('- open_question:')
-    expect(JSON.stringify(sent[0]!.toolSchema)).not.toContain('open_question')
+    expect(JSON.stringify(sent[0]!.schema)).not.toContain('open_question')
   })
 
   it('도구 스키마가 계약에서 나온다 (SPEC §7 「input_schema = 해당 Zod 의 JSON Schema」)', async () => {
@@ -197,7 +172,7 @@ describe('표가 실제로 프롬프트와 검증을 정한다 (SPEC §7.2)', ()
     stubAi(() => ({ input: { conflicts: [] } }))
     await detectConflicts({ projectId: PROJECT, changedItemIds: ['item_changed'], now: NOW })
 
-    const text = JSON.stringify(sent[0]!.toolSchema)
+    const text = JSON.stringify(sent[0]!.schema)
     for (const kind of DETECTED_CONFLICT_KINDS) expect(text).toContain(kind)
     for (const sev of CONFLICT_SEVERITIES) expect(text).toContain(`"${sev}"`)
   })
@@ -348,7 +323,7 @@ describe('계약과 다른 응답 → 오류 위치를 넣어 1회 재시도 (SP
 
   it('도구 블록이 없는 응답도 같은 길로 간다 — 조용히 빈 결과가 되지 않는다', async () => {
     await seedPair()
-    stubAi(() => ({ blocks: [{ type: 'text', text: '충돌은 없어 보입니다.' }] }))
+    stubAi(() => ({ text: '충돌은 없어 보입니다.' }))
 
     await expect(detectConflicts({ projectId: PROJECT, changedItemIds: ['item_changed'], now: NOW }))
       .rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID' })

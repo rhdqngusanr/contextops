@@ -31,7 +31,7 @@ import type { Db } from '../src/db/client'
 
 let pg: PGlite | undefined
 let db: Db
-const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'ANTHROPIC_MODEL'] as const
+const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL'] as const
 const saved: Record<string, string | undefined> = {}
 
 const TEAM = '22222222-2222-4222-8222-222222222222'
@@ -47,7 +47,7 @@ async function seedProject(): Promise<void> {
   )
 }
 
-/** 예산을 안 태우는 가짜 호출. `client.ts` 의 `callClaude()` 가 내는 모양과 같다. */
+/** 예산을 안 태우는 가짜 호출. `client.ts` 의 `callModel()` 가 내는 모양과 같다. */
 function fakeCall(inputTokens = 100, outputTokens = 50) {
   return async () => ({ value: 'ok', model: currentModel(), inputTokens, outputTokens })
 }
@@ -89,7 +89,7 @@ describe('표가 실제로 무언가를 정한다', () => {
   })
 
   it('표에 없는 모델 이름은 조용히 지나가지 않고 죽는다', () => {
-    process.env.ANTHROPIC_MODEL = 'claude-does-not-exist'
+    process.env.GEMINI_MODEL = 'gemini-does-not-exist'
     expect(() => currentModel()).toThrow(/AI_MODELS/)
   })
 
@@ -111,12 +111,18 @@ describe('표가 실제로 무언가를 정한다', () => {
     expect(estimateTokens(100)).toBeGreaterThan(estimateTokens(50))
   })
 
-  it('모델을 바꾸면 같은 토큰의 값이 갈린다 — 정가 표가 살아 있다', () => {
-    const opus = costMicros('claude-opus-5', 1_000_000, 0)
-    const haiku = costMicros('claude-haiku-4-5', 1_000_000, 0)
-    expect(opus).toBe(5_000_000)
-    expect(haiku).toBe(1_000_000)
-    expect(opus).toBeGreaterThan(haiku)
+  it('값은 정가 표에서 온다 — 표의 모든 줄이 입력·출력을 따로 세고, 0 인 줄은 없다', () => {
+    //  ⚠ 2026-09-06 Gemini 로 바꾸며 표의 두 줄이 같은 정가가 됐다(🙋 확인 전) — 그래서
+    //    「모델을 바꾸면 갈린다」 대신 「표의 값이 그대로 셈에 들어간다」를 잰다.
+    //    0 을 막는 이유: 정가 0 은 하루 예산을 조용히 무한으로 만든다 (P3).
+    for (const [model, price] of Object.entries(AI_MODELS)) {
+      expect(price.inputPerMTokUsd, model).toBeGreaterThan(0)
+      expect(price.outputPerMTokUsd, model).toBeGreaterThan(0)
+      expect(costMicros(model, 1_000_000, 0)).toBe(Math.ceil(price.inputPerMTokUsd * 1_000_000))
+      expect(costMicros(model, 0, 1_000_000)).toBe(Math.ceil(price.outputPerMTokUsd * 1_000_000))
+      expect(costMicros(model, 0, 1_000_000)).toBeGreaterThan(costMicros(model, 1_000_000, 0))
+    }
+    expect(() => costMicros('gemini-does-not-exist', 1, 1)).toThrow(/AI_MODELS/)
   })
 })
 

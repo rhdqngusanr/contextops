@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import type Anthropic from '@anthropic-ai/sdk'
 import type { PGlite } from '@electric-sql/pglite'
 
 import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/schema'
@@ -9,6 +8,7 @@ import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/sche
 import { closeDb, freshDb } from './helpers/db'
 import { aiUsage } from '../src/db/schema'
 import { setAiClientForTest } from '../src/lib/ai/client'
+import { stubTransport, type SentRequest, type StubReply } from './helpers/ai'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import {
   SOURCE_DOCUMENT_KIND_BRIEF,
@@ -37,7 +37,7 @@ import type { Db } from '../src/db/client'
 
 let pg: PGlite | undefined
 let db: Db
-const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'ANTHROPIC_MODEL'] as const
+const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL'] as const
 const saved: Record<string, string | undefined> = {}
 
 const TEAM = '22222222-2222-4222-8222-222222222222'
@@ -53,51 +53,18 @@ async function seedProject(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------
-//  스텁 클라이언트 — `messages.create` 가 받는 것을 그대로 붙잡아 둔다
+//  스텁 — `generateContent` 가 받는 것을 그대로 붙잡아 둔다 (`helpers/ai.ts` 가 모양을 안다)
 // ---------------------------------------------------------------------
-
-interface SentRequest {
-  system: string
-  user: string
-  toolName: string
-  toolSchema: Record<string, unknown>
-}
-
-interface StubReply {
-  /** 도구 입력. `blocks` 를 주면 무시된다. */
-  input?: unknown
-  /** 도구 블록이 아예 없는 응답을 흉내 낼 때. */
-  blocks?: unknown[]
-  inputTokens?: number
-  outputTokens?: number
-}
 
 let sent: SentRequest[] = []
 
 /** `reply(요청번호)` 가 그 회차의 응답을 정한다. */
 function stubAi(reply: (n: number) => StubReply): void {
-  setAiClientForTest({
-    messages: {
-      create: async (req: {
-        system: string
-        messages: { content: string }[]
-        tools: { name: string; input_schema: Record<string, unknown> }[]
-      }) => {
-        const n = sent.length
-        sent.push({
-          system: req.system,
-          user: req.messages[0]!.content,
-          toolName: req.tools[0]!.name,
-          toolSchema: req.tools[0]!.input_schema,
-        })
-        const r = reply(n)
-        return {
-          content: r.blocks ?? [{ type: 'tool_use', name: req.tools[0]!.name, input: r.input }],
-          usage: { input_tokens: r.inputTokens ?? 100, output_tokens: r.outputTokens ?? 50 },
-        }
-      },
-    },
-  } as unknown as Anthropic)
+  setAiClientForTest(stubTransport((req) => {
+    const n = sent.length
+    sent.push(req)
+    return reply(n)
+  }))
 }
 
 /** 계약을 만족하는 항목 하나. `span` 은 **조각 기준**이다. */
@@ -295,7 +262,7 @@ describe('계약과 다른 응답은 AI_OUTPUT_INVALID 다 (SPEC §7)', () => {
   })
 
   it('도구 블록이 없는 응답도 같은 길로 간다 — 조용히 빈 결과가 되지 않는다', async () => {
-    stubAi(() => ({ blocks: [{ type: 'text', text: '네, 정리해 드리겠습니다.' }] }))
+    stubAi(() => ({ text: '네, 정리해 드리겠습니다.' }))
 
     await expect(structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
@@ -482,7 +449,7 @@ describe('프롬프트가 SPEC §7 · §11 을 따른다', () => {
     await structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
-    const schema = sent[0]!.toolSchema as { properties?: Record<string, unknown> }
+    const schema = sent[0]!.schema as { properties?: Record<string, unknown> }
     expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['items', 'open_questions'])
   })
 })

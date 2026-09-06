@@ -20,7 +20,7 @@ import { currentModel } from './model'
 //  apps/web/src/lib/ai/budget.ts — 서버 AI 로 들어가는 **문 하나** (SPEC §7.5 · P3)
 //
 //  🔴 P3: 「서버측 LLM 은 API 키로만 · 4개 기능 한정 · **withBudget() 경유**」.
-//     `tools/principles.ps1` 이 `messages.create` 를 부르는 파일을 세고, 그 파일에
+//     `tools/principles.ps1` 이 `generateContent` 를 부르는 파일을 세고, 그 파일에
 //     `withBudget` 이 없으면 **FAIL** 이다. 예외는 이 파일과 `client.ts` 둘뿐이다.
 //
 //  ★ 왜 문이 하나여야 하나 — 한 곳만 새도 하룻밤에 예산이 탄다. 그리고 새는 자리는
@@ -137,7 +137,7 @@ async function record(
  *
  * @param feature `AI_FEATURES` 표의 넷 중 하나 — 표 밖의 이름은 타입이 막는다.
  * @param ctx     프로젝트·행위자·입력 **글자수**. 본문은 받지 않는다 (P1).
- * @param fn      실제 호출. `client.ts` 의 `callClaude()` 가 이 모양을 낸다.
+ * @param fn      실제 호출. `client.ts` 의 `callModel()` 가 이 모양을 낸다.
  *
  * @throws ApiError `BUDGET_EXCEEDED` — 입력 상한 초과 또는 하루 예산 소진.
  *                  화면은 이걸 받으면 픽스처 결과를 보여 준다 (SPEC §7.5).

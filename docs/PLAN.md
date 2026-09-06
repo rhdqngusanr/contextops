@@ -391,7 +391,7 @@
       (`scripts/dump-landing.tsx`). 덤프가 잡은 것: 머리글과 히어로에 [로그인]이 **둘** 서서
       하나로 줄였다. ⚠ 브라우저 캡처는 없다 — 「스크롤 없이 A·B·C 가 보이나」는 사람 몫이다.
       → ④ 남은 것: **GATE 3 을 사람이 시크릿 창에서 한 번 밟는다** (`pnpm --filter web demo:db`
-      → `http://localhost:3000/`) · `/demo/ai-once`(P3 · FINDINGS 117 · 🙋 Anthropic 키) ·
+      → `http://localhost:3000/`) · `/demo/ai-once`(P3 · FINDINGS 117 · 키는 2026-09-06 Gemini 로 꽂혔다 — 79바퀴) ·
       production 시드(Cron · **120** · P5 둘째 행).
       ⚠ 화면 9 의 **질의창(§7.3)은 안 만들었다** — 부르는 문(`POST …/ask`)이 0곳이고
       §14 **절삭 순서 1번**이다 (FINDINGS **117**). 누르면 아무 일도 안 하는 입력칸을

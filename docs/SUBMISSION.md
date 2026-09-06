@@ -62,7 +62,7 @@ AI 가 있는 자리는 셋 — **서버측 둘**(우리 API 키)과 **사용자
 
 1. **문서·답변 → 스키마 항목 구조화** (`apps/web/src/lib/ai/structure.ts`) — 팀장이 등록한 문서를 항목 10종 중
    하나로 나누고, 각 항목에 **원문 offset 근거**를 붙입니다. 근거 ID 는 입력에 존재하는 것만 허용해 환각을
-   구조적으로 차단합니다. Claude API 의 tool use 로 출력 형식을 고정합니다 (`lib/ai/client.ts`).
+   구조적으로 차단합니다. Gemini API 의 `responseJsonSchema` 로 출력 형식을 고정합니다 (`lib/ai/client.ts`).
 2. **항목 간 충돌·오래됨·중복 탐지** (`apps/web/src/lib/ai/conflict.ts`) — AI 는 판정하지 않고 **질문 카드**를
    만듭니다. 결정은 팀장이 클릭으로 합니다.
 3. **사용자 본인의 Claude Code 가 로컬에서** 코드 근거 추출·변경 제안·진행 보고 (`plugin/contextops/skills/`) —
@@ -104,7 +104,7 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 
 - **Claude Code Plugin** — Skill 3(`/contextops:init` · `sync` · `propose`) · 훅 2(`SessionStart` · `Stop`) · CLI 단일 번들
   (`plugin/contextops/bin/contextops-cli.mjs`). 훅은 알리기만 하고 LLM 을 부르지 않습니다.
-- **Claude API** — `@anthropic-ai/sdk` · tool use 구조화 출력 · `withBudget()` 필수.
+- **Gemini API** — SDK 없이 `fetch` · `responseJsonSchema` 구조화 출력 · `withBudget()` 필수 · 우리 API 키(사용자의 Claude 구독이 아닙니다).
 - **웹·서버** — TypeScript 5 / Node 22 · Next.js 15 (App Router · Route Handlers) · Postgres (Supabase) + Drizzle ORM ·
   PGlite (시험·로컬) · Zod · vitest · Vercel (Cron 포함).
 - **개발 전 과정 Claude Code** — 이 저장소는 자율 루프(`loop/`)가 만들었습니다. 한 바퀴마다 새 헤드리스 세션이

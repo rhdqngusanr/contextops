@@ -15,7 +15,7 @@ import { contextItemRevisions, contextItems, REVISION_ORIGINS } from '../../db/s
 import { ApiError } from '../api/error'
 import { CURRENT_REVISION_JOIN } from '../api/item'
 import { withBudget } from './budget'
-import { callClaude, type ToolCallRequest } from './client'
+import { callModel, type ToolCallRequest } from './client'
 import { currentModel } from './model'
 import { AI_SYSTEM_COMMON, untrusted } from './prompt'
 
@@ -58,8 +58,6 @@ const MAX_REPORTED_ISSUES = 5
 
 /** 응답의 출력 토큰 상한. 충돌 20장(`AI_MAX_CONFLICTS`)이 들어갈 만큼이다. */
 const MAX_OUTPUT_TOKENS = 4_000
-
-const TOOL_NAME = 'record_conflicts'
 
 // ---------------------------------------------------------------------
 //  프롬프트에 실리는 항목 한 줄 — 본문이 아니라 **요약**이다
@@ -142,9 +140,8 @@ function toolRequest(changed: readonly ItemBrief[], candidates: readonly ItemBri
   return {
     system: SYSTEM,
     user: `${head.join('\n')}\n\n${untrusted(bodyText)}`,
-    toolName: TOOL_NAME,
-    toolDescription: '항목들 사이에서 찾은 충돌과 사람에게 물을 질문을 기록한다.',
-    //  SPEC §7 「input_schema = 해당 Zod 의 JSON Schema」 — 계약이 두 벌이 되지 않는다.
+    //  SPEC §7 「responseJsonSchema = 해당 Zod 의 JSON Schema」 — 계약이 두 벌이 되지 않는다.
+    //  (도구 이름·설명은 없다 — Gemini 는 스키마로 출력을 고정한다. 2026-09-06 INBOX)
     inputSchema: toJsonSchemaOf(AiConflictOutput),
     maxTokens: MAX_OUTPUT_TOKENS,
   }
@@ -240,7 +237,7 @@ function bySeverity(a: AiConflict, b: AiConflict): number {
  *
  * @throws ApiError `BUDGET_EXCEEDED`·`RATE_LIMITED` — 예산 가드가 막았다 (SPEC §7.5).
  * @throws ApiError `AI_OUTPUT_INVALID` — 재시도까지 계약과 다른 응답이 왔다 (SPEC §7).
- * @throws Error `ANTHROPIC_API_KEY 가 없다` — 키 없는 배포. 고장이 아니라 §7.5 의
+ * @throws Error `GEMINI_API_KEY 가 없다` — 키 없는 배포. 고장이 아니라 §7.5 의
  *               「픽스처 결과로 떨어지는」 갈래가 받을 자리다 (화면의 일).
  */
 export async function detectConflicts(input: ConflictInput): Promise<ConflictResult> {
@@ -306,7 +303,7 @@ export async function detectConflicts(input: ConflictInput): Promise<ConflictRes
       let complaint: string | undefined
 
       for (let attempt = 0; attempt <= CONFLICT_RETRIES; attempt++) {
-        const call = await callClaude(toolRequest(changed, candidates, complaint))
+        const call = await callModel(toolRequest(changed, candidates, complaint))
         //  ⚠ 실패한 시도의 토큰도 더한다. 안 더하면 재시도가 장부 밖에서 예산을 태운다.
         inputTokens += call.inputTokens
         outputTokens += call.outputTokens

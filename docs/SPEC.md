@@ -41,7 +41,7 @@
 │ Claude Code (사용자 구독)                    │           │ Next.js (apps/web)                       │
 │  ├─ Plugin: skills/ hooks/ bin/cli.mjs       │ ──JSON──▶ │  ├─ Route Handlers /api/v1/*             │
 │  ├─ 저장소 파일 (서버로 안 감)               │           │  ├─ 서버 컴포넌트 화면 9개               │
-│  ├─ CLAUDE.md, .claude/rules (Pack 산출물)   │ ◀─Pack──  │  └─ lib/ai (Claude API, 예산 가드)       │
+│  ├─ CLAUDE.md, .claude/rules (Pack 산출물)   │ ◀─Pack──  │  └─ lib/ai (Gemini API, 예산 가드)       │
 │  └─ ~/.contextops/credentials.json (0600)    │           │ Supabase: Postgres · Auth · Realtime     │
 └──────────────────────────────────────────────┘           │ Vercel 배포 · Cron 헬스핑                │
                                                            └──────────────────────────────────────────┘
@@ -103,7 +103,7 @@ contextops/
 | DB | Supabase Postgres, Drizzle ORM + drizzle-kit | RLS 미사용, 서버 service role + 앱 레벨 권한 검사 |
 | Auth | Supabase Auth (GitHub OAuth + Email magic link) | 플러그인은 프로젝트 토큰(opaque, sha256 저장) |
 | 실시간 | Supabase Realtime (progress_events, context_versions 구독) | Roadmap·Sync 즉시 갱신 |
-| 서버 AI | `@anthropic-ai/sdk`, 모델 `claude-opus-5` (환경변수로 교체 가능 · 쓸 수 있는 이름의 정본은 `apps/web/src/lib/ai/features.ts` 의 `AI_MODELS` 표), tool use로 구조화 출력 | 예산 가드 필수 |
+| 서버 AI | Gemini `generateContent` 를 **SDK 없이 `fetch`** 로 (`apps/web/src/lib/ai/client.ts` 하나 · 2026-09-06 Anthropic 에서 바꿈). 모델은 `GEMINI_MODEL` 환경변수로 교체 가능 · 기본값과 쓸 수 있는 이름의 정본은 `apps/web/src/lib/ai/features.ts` 의 `AI_MODELS` 표 **한 곳**(버전 숫자를 여기 적지 않는다) · `responseJsonSchema` 로 구조화 출력 | 예산 가드 필수 · 무료 티어는 분당 요청 제한 |
 | 플러그인 CLI | esbuild → 단일 ESM 번들, 런타임 의존 0 | `node ${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs` |
 | 테스트 | vitest (schema·compiler·api), Playwright 1 시나리오 | |
 | 배포 | Vercel (web), Supabase cloud | Vercel Cron `0 */6 * * *` → `/api/health` (Supabase pause 방지) |
@@ -393,7 +393,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 ## 7. 서버측 AI (`apps/web/src/lib/ai`)
 
-공통 규약: `client.messages.create` + tool use(`input_schema` = 해당 Zod의 JSON Schema). 출력은 Zod로 재검증, 실패 시 오류 위치를 넣어 1회 재시도, 재실패 시 `AI_OUTPUT_INVALID`. 모든 호출은 `withBudget(kind, estTokens, fn)` 경유. 시스템 프롬프트에 공통 금지: "입력에 없는 사실·수치·기한을 만들지 않는다. 확신 없으면 confidence:low 또는 open_question. 원문 인용은 offset으로만."
+공통 규약: Gemini `generateContent` + `responseMimeType: application/json` · `responseJsonSchema`(= 해당 Zod의 JSON Schema · `packages/schema` 의 `toJsonSchemaOf()`). 부르는 자리는 `lib/ai/client.ts` 의 `callModel()` 하나. 출력은 Zod로 재검증, 실패 시 오류 위치를 넣어 1회 재시도, 재실패 시 `AI_OUTPUT_INVALID`. 모든 호출은 `withBudget(kind, estTokens, fn)` 경유. 시스템 프롬프트에 공통 금지: "입력에 없는 사실·수치·기한을 만들지 않는다. 확신 없으면 confidence:low 또는 open_question. 원문 인용은 offset으로만."
 
 ### 7.1 문서 구조화 `structureDocument(docVersion)`
 - 입력: heading 기준 chunk(6~10k자). chunk마다 항목 추출 → 전체 title/type 중복 병합 후보 표시.
@@ -666,7 +666,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 
 **AI 활용:** (1) 문서·답변 → 스키마 항목 구조화(원문 offset 근거), (2) 항목 간 충돌·오래됨·중복 탐지(판정 대신 질문 생성), (3) 사용자 본인의 Claude Code가 로컬에서 코드 근거 추출·변경 제안·진행 보고(코드는 서버로 가지 않음), (4) 승인 항목만 근거로 답하는 질의. 근거 ID는 입력에 존재하는 것만 허용해 환각을 구조적으로 차단하고, 승인 이후 컴파일·해시·배포는 LLM 없이 결정론적으로 수행합니다.
 
-**도구:** Claude Code Plugin(Skills 3·Hooks 2), Claude API(tool use 구조화 출력), Next.js·Supabase·Vercel·TypeScript. 개발 전 과정 Claude Code.
+**도구:** Claude Code Plugin(Skills 3·Hooks 2), Gemini API(`responseJsonSchema` 구조화 출력 · 우리 API 키), Next.js·Supabase·Vercel·TypeScript. 개발 전 과정 Claude Code.
 
 ---
 
