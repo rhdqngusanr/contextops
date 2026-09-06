@@ -2,7 +2,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { ERROR_CODES, ERROR_STATUS, type ErrorCode } from '@contextops/schema'
+import {
+  AI_JOB_RETRY_RULES, AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, jobRetryMode, type ErrorCode,
+} from '@contextops/schema'
 
 import { ApiError } from '../src/lib/api/error'
 import { failure } from '../src/lib/api/respond'
@@ -73,6 +75,31 @@ describe('에러 코드 표가 정본이고, 갈라질 자리가 없다', () => 
     //    한 줄 늘리기 전에 「무엇이 저절로 달라져서 이번엔 되나」에 답할 수 있어야 한다.
     expect(ERROR_CODES.filter((c) => ERROR_STATUS[c].retryable))
       .toEqual(['BUDGET_EXCEEDED', 'RATE_LIMITED', 'INTERNAL'])
+  })
+
+  it('🔴 **어느 수명이 어떻게 다시 굴러가는지도 여기 한 번 적혀 있다** (FINDINGS 154)', () => {
+    //  ★ 같은 이유의 닻이다 — 재시도 라우트 시험도 화면 시험도 `AI_JOB_RETRY_RULES`
+    //    자신을 기대값으로 쓴다. 표를 잘못 고치면 **양쪽이 사이좋게 따라간다.**
+    //  ⚠ `queued` 가 `none` 인 것은 「집히지 않은 채 멈춘 행」을 포기한다는 뜻이 아니다 —
+    //    그건 되돌릴 것이 없는 다른 고장이다 (FINDINGS 156).
+    expect(AI_JOB_STATUSES.map((s) => [s, AI_JOB_RETRY_RULES[s].mode, AI_JOB_RETRY_RULES[s].needs]))
+      .toEqual([
+        ['queued', 'none', 'none'],
+        ['running', 'fresh', 'stalled'],
+        ['succeeded', 'none', 'none'],
+        ['failed', 'requeue', 'retryable_error'],
+      ])
+  })
+
+  it('표를 읽는 문은 모르는 상태·모자란 근거에 `null` 이다', () => {
+    //  🔴 `running` 인데 **안 멈춘** job 은 다시 굴릴 수 없다 — 도는 일을 사람이 죽인다.
+    expect(jobRetryMode({ status: 'running', error_code: null, stalled: false })).toBeNull()
+    expect(jobRetryMode({ status: 'running', error_code: null, stalled: true })).toBe('fresh')
+    expect(jobRetryMode({ status: 'failed', error_code: 'BUDGET_EXCEEDED', stalled: false })).toBe('requeue')
+    expect(jobRetryMode({ status: 'failed', error_code: 'COMPILE_FAILED', stalled: false })).toBeNull()
+    expect(jobRetryMode({ status: 'nope', error_code: null, stalled: true })).toBeNull()
+    //  ⚠ `Object.hasOwn` 이라 프로토타입의 이름이 새어 들어오지 않는다.
+    expect(jobRetryMode({ status: 'toString', error_code: null, stalled: true })).toBeNull()
   })
 
   it('코드를 바꾸면 응답이 갈린다 — 상태와 code 가 표를 따라간다', async () => {

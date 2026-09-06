@@ -88,8 +88,10 @@ export interface AiJobRunner<I = unknown> {
    * ★ 왜 화면이 아니라 **표**에 두나 — 기능마다 한 걸음의 길이가 다르다. 화면에 숫자를
    *   두면 기능이 늘 때 화면이 갈래를 갖고(`feature === …`), 두 곳의 숫자가 갈린다
    *   (CLAUDE.md 「수치를 하드코딩하지 마라」·「확장은 표에 한 줄」).
-   * ⚠ **판정만 하고 되살리지는 않는다.** 멈춘 job 을 `queued` 로 되돌리는 문은
-   *   실패한 job 의 재시도(FINDINGS 59)와 같은 자리라 거기서 같이 정한다.
+   * 🔴 **이 판정이 곧 되살리는 문의 조건이다** (FINDINGS 154). 재시도 라우트가
+   *   `isJobStalled()` 로 같은 판정을 하고, `AI_JOB_RETRY_RULES.running` 이
+   *   그때 무엇을 하는지(`fresh` — 닫고 새로 만든다)를 정한다. ⚠ 이 수를 늘리면
+   *   **되살릴 수 있게 되기까지의 시간**이 같이 늘어난다.
    */
   readonly stallAfterSec: number
   run(ctx: AiJobRunContext<I>): Promise<unknown>
@@ -498,7 +500,7 @@ type AiJobFullRow = AiJobSummaryRow & { result: unknown }
  * ★ 「끝났나」를 손으로 세지 않는다 — `AI_JOB_STATUS_RULES` 의 `finished` 축을 읽는다.
  *   상태가 늘어도 이 함수는 안 고친다.
  */
-function isStalled(row: { feature: AiFeature; status: AiJobStatus; updated_at: Date }, now: Date): boolean {
+export function isJobStalled(row: { feature: AiFeature; status: AiJobStatus; updated_at: Date }, now: Date): boolean {
   //  끝난 job 은 안 움직이는 것이 정상이다. 「멈췄다」는 **아직 갈 길이 남은 행**의 말이다.
   if (AI_JOB_STATUS_RULES[row.status].finished) return false
   //  job 이 아닌 기능은 `ai_jobs_feature_ck` 가 막지만, 표를 읽는 문은 여기서도 하나다.
@@ -537,7 +539,7 @@ export function toAiJob(row: AiJobSummaryRow | AiJobFullRow, now: Date = new Dat
     updated_at: row.updated_at.toISOString(),
     //  🔴 근거(`updated_at`)를 **옆에** 두고 판정을 낸다 — 판정만 내면 화면이 그 값을
     //     설명할 수 없다 (DESIGN_BRIEF 「근거 없는 숫자는 화면에 없다」).
-    stalled: isStalled(row, now),
+    stalled: isJobStalled(row, now),
   }
   return 'result' in row ? { ...summary, result: row.result } : summary
 }

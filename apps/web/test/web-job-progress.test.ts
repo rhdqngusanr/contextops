@@ -1,6 +1,8 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, type AiJobStatus } from '@contextops/schema'
+import {
+  AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, jobRetryMode, type AiJobStatus,
+} from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 
 import { JobProgress, canRetryJob } from '../src/components/job-progress'
@@ -21,8 +23,8 @@ import { structureCounts, type AiJobSummary } from '../src/lib/web/queries'
 //    ① 상태를 **색만으로** 구분하지 않는다 (아이콘 + 라벨 병기) — §3
 //    ② 근거 없는 숫자·판정이 없다 (`stalled` 옆에 `updated_at` 이 있다) — §2-1
 //    ③ 「실시간」이라는 낱말이 없다 — §2-3
-//    ④ 없는 문을 그리지 않는다 — 되살리기 버튼은 **되살릴 수 있는 실패에만** 있다
-//       (`ERROR_STATUS[code].retryable` · FINDINGS 59) · 멈춘 job 에는 아직 없다 (154)
+//    ④ 없는 문을 그리지 않는다 — 되살리기 버튼은 **다시 굴릴 수 있는 job 에만** 있다
+//       (`AI_JOB_RETRY_RULES` · FINDINGS 59 · 154) — 되는 실패와 **멈춘 job** 둘이다
 // =====================================================================
 
 const NOW = new Date('2026-09-04T12:00:00Z')
@@ -143,13 +145,29 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
     }
   })
 
-  it('🔴 실패가 아닌 job 에는 버튼이 없다 — 손잡이를 줘도 그리지 않는다', () => {
+  it('🔴 **막힌 job 이 아니면 버튼이 없다** — 손잡이를 줘도 그리지 않는다', () => {
+    //  ⚠ 목록을 손으로 적지 않는다 — 표(`jobRetryMode`)가 정한 것과 그린 것을 견준다.
+    //    도는 중인 job 에 버튼이 생기면 사람이 **멀쩡한 일을 죽인다.**
     for (const state of STATES) {
-      if (state.over.status === 'failed') continue
-      expect(drawWithRetry(state.over), state.what).not.toContain('<button')
+      const drawn = drawWithRetry(state.over)
+      expect(drawn.includes('<button'), state.what).toBe(jobRetryMode(job(state.over)) !== null)
     }
-    //  멈춘(`running`) job 도 마찬가지다 — 되돌리면 러너 둘이 같은 job 을 굴린다 (154).
-    expect(drawWithRetry({ stalled: true, updated_at: ago(8 * 60) })).not.toContain('<button')
+    expect(drawWithRetry({ status: 'running', stalled: false }), '도는 중').not.toContain('<button')
+  })
+
+  it('🔴 멈춘 job 에는 **다른 갈래**의 버튼이 붙는다 — 되돌리는 게 아니라 새로 만든다 (FINDINGS 154)', () => {
+    const stalled = drawWithRetry({ status: 'running', stalled: true, updated_at: ago(8 * 60) })
+    expect(canRetryJob(job({ status: 'running', stalled: true }))).toBe(true)
+    expect(stalled).toContain('<button')
+    //  버튼 옆 문장이 실패 갈래와 **다르다** — 그 행은 실패로 닫히고 일이 새로 생긴다.
+    expect(stalled).toContain('멈춘 일은 실패로 닫고, 같은 문서로 일을 새로 만듭니다')
+    expect(stalled).not.toContain('올린 문서를 그대로 다시 읽습니다')
+    //  ⚠ 「문서를 다시 올려 주세요」는 이 문이 없애려던 말이다 (59) — 남아 있으면 안 된다.
+    expect(stalled).not.toContain('문서를 다시 올려 주세요')
+
+    const failed = drawWithRetry(failedWith('BUDGET_EXCEEDED'))
+    expect(failed).toContain('올린 문서를 그대로 다시 읽습니다')
+    expect(failed).not.toContain('멈춘 일은 실패로 닫고')
   })
 
   it('버튼 옆에 **무엇이 달라지는지**가 있고, 누르는 동안 잠긴다', () => {

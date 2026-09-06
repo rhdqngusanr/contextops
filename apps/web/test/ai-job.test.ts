@@ -1320,3 +1320,136 @@ describe('🔴 실패한 job 을 다시 굴리는 문 (FINDINGS 59 · SPEC §5 �
     expect(isRetryableErrorCode('BUDGET_EXCEEDED')).toBe(true)
   })
 })
+
+// =====================================================================
+describe('🔴 멈춘 job 을 되살리는 문 — 되돌리지 않고 **새로 만든다** (FINDINGS 154 · SPEC §5)', () => {
+  /**
+   * `running` 인 채 **한동안 안 움직인** 행을 만든다 — 서버가 chunk 중간에 죽은 모양이다.
+   * ⚠ 초를 손으로 적지 않는다: 잣대는 `AI_JOB_RUNNERS[feature].stallAfterSec` 이고
+   *   여기서는 그 두 배만큼 시계를 뒤로 민다. 잣대가 바뀌어도 이 시험은 따라간다.
+   */
+  async function stalledJob(projectId: string, docVersionId: string) {
+    const job = await createJob(db, {
+      projectId, feature: 'structure', input: { document_version_id: docVersionId },
+    })
+    const old = new Date(Date.now() - AI_JOB_RUNNERS.structure.stallAfterSec * 2000)
+    await db
+      .update(aiJobs)
+      .set({
+        status: 'running',
+        startedAt: old,
+        updatedAt: old,
+        progress: { done: 1, total: 4, unit: '조각' },
+      })
+      .where(eq(aiJobs.id, job.id))
+    return job
+  }
+
+  function retry(auth: string, projectId: string, jobId: string) {
+    return retryJob(
+      req('POST', `/api/v1/projects/${projectId}/jobs/${jobId}/retry`, { auth, body: {} }),
+      params({ id: projectId, jobId }),
+    )
+  }
+
+  /** 그 프로젝트의 `structure` job 을 만든 순서대로. */
+  async function structureJobs(projectId: string) {
+    return await db
+      .select({ id: aiJobs.id, status: aiJobs.status, errorCode: aiJobs.errorCode, input: aiJobs.input })
+      .from(aiJobs)
+      .where(and(eq(aiJobs.projectId, projectId), eq(aiJobs.feature, 'structure')))
+      .orderBy(asc(aiJobs.createdAt))
+  }
+
+  it('🔴 멈춘 행은 **닫히고**, 같은 입력으로 job 이 하나 더 생긴다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const stalled = await stalledJob(projectId, doc.current_version_id)
+
+    const before = (await structureJobs(projectId)).length
+    const data = await dataOf(await retry(owner, projectId, stalled.id))
+
+    //  🔴 응답이 가리키는 것은 **새 행**이다 — 화면 3 은 최신 하나만 보므로 그 행을 그린다.
+    expect(data.id).not.toBe(stalled.id)
+    expect(data).toMatchObject({
+      status: 'queued', shape: 'full',
+      error_code: null, result: null, started_at: null, finished_at: null,
+      //  새 일은 자기 진행률을 처음부터 센다 — 지난 판의 「4조각 중 1」이 오면 안 된다.
+      progress: null, stalled: false,
+    })
+    //  ⚠ 입력을 **그대로** 옮긴다 — 문서를 다시 올리지 않는 것이 이 문의 전부다.
+    expect(data.input).toEqual({ document_version_id: doc.current_version_id })
+
+    const rows = await structureJobs(projectId)
+    expect(rows).toHaveLength(before + 1)
+    const closed = rows.find((r) => r.id === stalled.id)!
+    //  🔴 멈춘 행은 되돌아가지 않는다 — 아직 살아 있을지 모르는 러너가 자기 행에 쓴다.
+    expect(closed.status).toBe('failed')
+    expect(closed.errorCode).toBe('INTERNAL')
+
+    //  응답을 보낸 뒤에 굴린 것은 **새 행**이다 (멈춘 행이 아니다).
+    expect(startedJobIds()).toEqual([doc.job.id, data.id])
+  })
+
+  it('🔴 **도는 중인 job 은 못 죽인다** — 멈추지 않았으면 400 이고 행은 그대로다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const job = await createJob(db, {
+      projectId, feature: 'structure', input: { document_version_id: doc.current_version_id },
+    })
+    //  방금 한 걸음 갔다 — 잣대 안이다.
+    await db.update(aiJobs).set({ status: 'running', startedAt: new Date() }).where(eq(aiJobs.id, job.id))
+
+    expect((await errorOf(await retry(owner, projectId, job.id))).code).toBe('VALIDATION_FAILED')
+    expect((await jobRow(job.id)).status).toBe('running')
+    expect((await structureJobs(projectId))).toHaveLength(2)
+  })
+
+  it('두 번 눌러도 새 job 은 하나다 — 둘째는 400 이다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const stalled = await stalledJob(projectId, doc.current_version_id)
+
+    const first = await dataOf(await retry(owner, projectId, stalled.id))
+    //  ⚠ 그 사이 그 행은 `failed`+`INTERNAL` 로 닫혔고 **멈춘 상태가 아니다** —
+    //    `fresh` 갈래는 `status='running'` 조건에서 진다. 둘째 누름은 `requeue` 갈래로
+    //    가는데, 그건 이미 끝난 행을 다시 굴리는 것이라 안전하다 (러너가 이미 끝났다).
+    //    여기서 재는 것은 **새 행이 둘 생기지 않는다**는 것이다.
+    const after = (await structureJobs(projectId)).length
+    const second = await dataOf(await retry(owner, projectId, stalled.id))
+    expect(second.id).toBe(stalled.id)
+    expect((await structureJobs(projectId))).toHaveLength(after)
+    expect(startedJobIds().filter((id) => id === first.id)).toHaveLength(1)
+  })
+
+  it('🔴 남의 프로젝트 job 은 404 다 — 그 행은 그대로 `running` 이다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const stalled = await stalledJob(projectId, doc.current_version_id)
+
+    const other = sessionJwt('other-owner-154')
+    const otherTeam = await dataOf(await createTeam(
+      req('POST', '/api/v1/teams', { auth: other, body: { name: 'Other', slug: 'other-154' } }),
+      params({}),
+    ))
+    const otherProject = await dataOf(await createProject(
+      req('POST', `/api/v1/teams/${otherTeam.id as string}/projects`, { auth: other, body: { name: 'Xray', slug: 'xray' } }),
+      params({ id: otherTeam.id as string }),
+    ))
+
+    expect((await errorOf(await retry(other, otherProject.id as string, stalled.id))).code).toBe('NOT_FOUND')
+    expect((await jobRow(stalled.id)).status).toBe('running')
+  })
+
+  it('🔴 새 job 은 **실제로 굴러간다** — 되살린 뒤 결과가 나온다', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const stalled = await stalledJob(projectId, doc.current_version_id)
+
+    const made = await dataOf(await retry(owner, projectId, stalled.id))
+    stubAi(() => ({ input: { items: [], open_questions: [] } }))
+    expect(await runJob(made.id as string)).toBe('succeeded')
+    //  멈춘 행은 그대로 닫힌 채다 — 새 행만 성공한다.
+    expect((await jobRow(stalled.id)).status).toBe('failed')
+  })
+})

@@ -183,6 +183,73 @@ export const AI_JOB_STATUSES = ['queued', 'running', 'succeeded', 'failed'] as c
 export type AiJobStatus = (typeof AI_JOB_STATUSES)[number]
 
 /**
+ * 🔴 **「다시 굴린다」가 상태마다 무엇을 뜻하는가 — 표 하나** (FINDINGS 59 · 154).
+ *
+ * ★ 왜 표인가 — 다시 굴리는 갈래가 **둘**이 됐다. 실패한 job 은 같은 행을 되돌리면
+ *   되지만(`requeue`), 멈춘 것 같은 `running` 행은 되돌리는 순간 아직 살아 있을지
+ *   모르는 러너와 **둘이 같은 job 을 굴린다** — 그래서 그 행은 닫고 같은 입력으로
+ *   **새로 만든다**(`fresh`). 갈래가 둘이 되는 순간 조건을 서버와 화면이 따로 적기
+ *   시작하고, 그러면 느슨한 쪽이 이겨서 **그린 버튼이 400 을 받는다**
+ *   (`ERROR_STATUS.retryable`·`ACTOR_RULES` 와 같은 모양).
+ *
+ * ★ 상태를 하나 더하는 절차 — ① `AI_JOB_STATUSES` 끝에 값 ② 이 표에 한 줄
+ *   (`Record` 라 ①만 하면 타입이 먼저 막는다) ③ `mode` 가 `none` 이 아니면
+ *   `apps/web` 의 재시도 라우트에 그 갈래의 동작이 있어야 한다 (`RETRY_ACTIONS`).
+ *
+ * ⚠ `queued` 가 `none` 인 이유 — 되돌릴 것이 없다. 그 행은 이미 `queued` 이고
+ *   `runJob()` 의 집기가 그대로 집는다. (집히지 않은 채 오래 `queued` 로 남는 행은
+ *   **다른 고장**이고 이 문이 고칠 것이 아니다 — FINDINGS 156.)
+ */
+export interface AiJobRetryRule {
+  /**
+   * `requeue` — 그 행을 `queued` 로 되돌린다 · `fresh` — 그 행을 닫고 같은 입력으로
+   * job 을 **하나 더** 만든다 · `none` — 다시 굴리는 문이 없다.
+   */
+  readonly mode: 'requeue' | 'fresh' | 'none'
+  /** 상태만으로는 못 정한다 — 이 상태에서 **더 봐야 하는 것**. */
+  readonly needs: 'retryable_error' | 'stalled' | 'none'
+}
+
+export type AiJobRetryMode = 'requeue' | 'fresh'
+
+export const AI_JOB_RETRY_RULES: Record<AiJobStatus, AiJobRetryRule> = {
+  queued: { mode: 'none', needs: 'none' },
+  //  멈춘 것 같은 행만이다 — 도는 중인 job 에 버튼을 그리면 사람이 멀쩡한 일을 죽인다.
+  running: { mode: 'fresh', needs: 'stalled' },
+  succeeded: { mode: 'none', needs: 'none' },
+  //  되는 실패만이다 — 어느 코드인지는 `ERROR_STATUS[code].retryable` 이 정한다.
+  failed: { mode: 'requeue', needs: 'retryable_error' },
+}
+
+/** 위 표의 `needs` 축을 **재는 자리**. 축을 하나 더하면 여기 한 줄이 같이 는다. */
+const RETRY_NEEDS: Record<AiJobRetryRule['needs'], (job: AiJobRetryInput) => boolean> = {
+  none: () => true,
+  retryable_error: (job) => isRetryableErrorCode(job.error_code),
+  //  ⚠ 「멈췄나」는 **서버가 낸 값**이다 — 잣대(`stallAfterSec`)가 서버 전용 표에 있고
+  //    브라우저의 시계는 서버와 어긋난다 (`toAiJob` 의 `stalled`).
+  stalled: (job) => job.stalled === true,
+}
+
+/** 판정에 필요한 것만 — job 응답도 DB 행도 이 모양으로 좁혀서 넘긴다. */
+export interface AiJobRetryInput {
+  readonly status: string
+  readonly error_code: string | null | undefined
+  readonly stalled: boolean
+}
+
+/**
+ * 🔴 위 표를 **읽는 유일한 문**이다 — 서버(재시도 라우트)와 화면 3 이 같은 함수를 부른다.
+ * 다시 굴릴 수 없으면 `null` 이다. 모르는 상태(`ai_jobs.status` 는 enum 이지만 응답은
+ * 문자열로 온다)도 `null` 이다.
+ */
+export function jobRetryMode(job: AiJobRetryInput): AiJobRetryMode | null {
+  if (!Object.hasOwn(AI_JOB_RETRY_RULES, job.status)) return null
+  const rule = AI_JOB_RETRY_RULES[job.status as AiJobStatus]
+  if (rule.mode === 'none') return null
+  return RETRY_NEEDS[rule.needs](job) ? rule.mode : null
+}
+
+/**
  * 마일스톤 한 줄이 화면에서 가질 수 있는 상태 4종 (SPEC §5 roadmap · §9 화면 8 · P5).
  *
  * ★ 왜 여기로 올라왔나 — **둘째 사용자가 생겼다.** `apps/web/src/lib/api/progress.ts`
