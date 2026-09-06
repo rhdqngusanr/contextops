@@ -19301,6 +19301,7 @@ var SOURCE_DOCUMENT_KINDS = ["goal", "policy", "roadmap", "adr", "notes", "wiki"
 var CONFLICT_KINDS = ["contradiction", "stale", "duplicate", "doc_vs_code", "open_question", "seed_question"];
 var CONFLICT_STATUSES = ["open", "resolved", "dismissed"];
 var CONFLICT_CHOICES = ["a", "b", "both", "dismiss"];
+var PROPOSAL_STATUSES = ["draft", "submitted", "approved", "rejected", "published"];
 var CONFLICT_KIND_RULES = {
   contradiction: {
     detected: true,
@@ -19434,6 +19435,9 @@ var ContextItemUpdate = external_exports.object({
 var ConflictQuery = ListQuery.extend({
   status: external_exports.enum(CONFLICT_STATUSES).optional(),
   kind: external_exports.enum(CONFLICT_KINDS).optional()
+}).strict();
+var ProposalQuery = ListQuery.extend({
+  status: external_exports.enum(PROPOSAL_STATUSES).optional()
 }).strict();
 var RESOLUTION_NOTE_MAX = 500;
 var ResolveConflict = external_exports.object({

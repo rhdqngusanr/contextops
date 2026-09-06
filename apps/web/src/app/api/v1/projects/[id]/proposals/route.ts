@@ -1,5 +1,5 @@
-import { and, desc, eq } from 'drizzle-orm'
-import { ListQuery, Proposal } from '@contextops/schema'
+import { and, desc, eq, type SQL } from 'drizzle-orm'
+import { Proposal, ProposalQuery } from '@contextops/schema'
 
 import { contextVersions, proposals } from '../../../../../../db/schema'
 import { fail } from '../../../../../../lib/api/error'
@@ -77,18 +77,27 @@ export const GET = route<{ id: string }>('GET /projects/{id}/proposals', async (
   ctx.note({ project_id: projectId })
 
   await requireProject(ctx.db, actor, projectId, 'member')
-  const query = parseQuery(ctx.req, ListQuery)
+  const query = parseQuery(ctx.req, ProposalQuery)
+
+  //  거르개는 **서버가 건다** (SPEC §5 `?status`). 화면이 50장을 받아 놓고 손으로 거르면
+  //  51번째부터는 걸러도 안 보인다 — 목록의 상한과 거르개가 같은 자리에 있어야 한다.
+  const where: SQL[] = [eq(proposals.projectId, projectId)]
+  if (query.status) where.push(eq(proposals.status, query.status))
 
   //  🔴 작성자·결정자의 **이름**을 같이 읽는다 (FINDINGS 113 · 116). uuid 만 내면 화면 6 의
   //     함 목록은 그 칸을 **아예 만들 수 없다** — 뜻 없는 글자를 표에 그리게 되니까.
   //  ⚠ join 은 `selectProposals()` 한 곳이 건다: 둘 다 `leftJoin` 이다. `author_id`·
   //    `decided_by` 는 nullable 이라 inner 로 두면 그 제안이 목록에서 **조용히 사라진다**.
   const rows = await selectProposals(ctx.db)
-    .where(eq(proposals.projectId, projectId))
+    .where(and(...where))
     //  인덱스(`proposals_project_status_created_idx`)가 이 순서다 — 최신이 위다.
     .orderBy(desc(proposals.createdAt))
     .limit(query.limit)
     .offset(query.offset)
 
-  return ctx.ok({ proposals: rows.map((r) => toProposalPeople(r as ProposalReadRow)), limit: query.limit, offset: query.offset })
+  return ctx.ok({
+    proposals: rows.map((r) => toProposalPeople(r as ProposalReadRow)),
+    limit: query.limit,
+    offset: query.offset,
+  })
 })

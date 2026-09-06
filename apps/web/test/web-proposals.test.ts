@@ -10,8 +10,8 @@ import {
 } from '@contextops/schema'
 
 import {
-  DECIDED_TEXT, DIFF_MISSING_TEXT, DiffView, ProposalDecisions, ProposalHead, ProposalItemCard, ProposalTable,
-  availableActions, diffSidesOf,
+  DECIDED_TEXT, DIFF_MISSING_TEXT, DiffView, ProposalDecisions, ProposalHead, ProposalItemCard,
+  ProposalStatusFilter, ProposalTable, availableActions, diffSidesOf, proposalEmptyMessage,
 } from '../src/components/proposals'
 import { PROPOSAL_STATUS_CHIP } from '../src/components/chips'
 import { diffCounts, lineDiff } from '../src/lib/web/diff'
@@ -433,6 +433,37 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
       emptyMessage: '없다',
     }))
     for (const status of PROPOSAL_STATUSES) expect(markup).toContain(PROPOSAL_STATUS_CHIP[status].label)
+  })
+
+  it('🔴 거르개가 상태 5종을 **표에서** 그린다 — 손으로 적은 칩이 아니다 (FINDINGS 112)', () => {
+    const markup = html(createElement(ProposalStatusFilter, { value: null, onChange: () => {} }))
+    expect(markup).toContain('전체')
+    //  ★ 표가 늘면 칩도 는다. 하나라도 빠지면 그 상태는 **아무도 못 거르는 값**이 된다.
+    for (const status of PROPOSAL_STATUSES) expect(markup, status).toContain(PROPOSAL_STATUS_CHIP[status].label)
+    //  🔴 개수를 적지 않는다 — 거른 목록만 손에 있는 화면은 그 수를 모른다.
+    expect(markup).not.toMatch(/\d+\s*(장|개)/)
+  })
+
+  it('고른 칩만 눌린 상태다 — 색만으로 구분하지 않는다 (`aria-pressed`)', () => {
+    const none = html(createElement(ProposalStatusFilter, { value: null, onChange: () => {} }))
+    const picked = html(createElement(ProposalStatusFilter, { value: 'rejected' as ProposalStatus, onChange: () => {} }))
+    expect(none.match(/aria-pressed="true"/g)?.length).toBe(1)
+    expect(picked.match(/aria-pressed="true"/g)?.length).toBe(1)
+    expect(none).not.toBe(picked)
+  })
+
+  it('🔴 거른 목록이 비면 **어느 상태가 비었는지** 말한다', () => {
+    const whenAll = '아직 올라온 제안이 없습니다.'
+    expect(proposalEmptyMessage(null, whenAll)).toBe(whenAll)
+    for (const status of PROPOSAL_STATUSES) {
+      const text = proposalEmptyMessage(status, whenAll)
+      expect(text, status).toContain(PROPOSAL_STATUS_CHIP[status].label)
+      expect(text, status).not.toBe(whenAll)
+    }
+    const markup = html(createElement(ProposalTable, {
+      proposals: [], hrefOf: href, emptyMessage: proposalEmptyMessage('rejected', whenAll),
+    }))
+    expect(markup).toContain(PROPOSAL_STATUS_CHIP.rejected.label)
   })
 
   it('🔴 작성자를 **이름으로** 그린다 — uuid 는 표에 없다 (FINDINGS 113)', () => {

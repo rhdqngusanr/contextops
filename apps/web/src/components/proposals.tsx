@@ -1,12 +1,12 @@
 import {
-  PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_NOTE_MAX, ROLE_RANK,
+  PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_NOTE_MAX, PROPOSAL_STATUSES, ROLE_RANK,
   type ContextItemView, type ProposalAction, type ProposalItem, type ProposalStatus, type TeamRole,
 } from '@contextops/schema'
 
 import { diffCounts, lineDiff, type DiffLine } from '../lib/web/diff'
 import type { ProposalDetail, ProposalRow, VersionRow } from '../lib/web/queries'
 import { dateText } from '../lib/web/time'
-import { CtxTag, ProposalOperationChip, ProposalStatusChip, TypeIcon, VersionPill } from './chips'
+import { PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, TypeIcon, VersionPill } from './chips'
 import { EvidenceList } from './evidence'
 
 // =====================================================================
@@ -38,6 +38,54 @@ import { EvidenceList } from './evidence'
 // ---------------------------------------------------------------------
 //  목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)
 // ---------------------------------------------------------------------
+
+/**
+ * 상태로 거르는 칩 (DESIGN_BRIEF §4 화면 6 「status 필터」 · FINDINGS 112).
+ *
+ * 🔴 **거르는 것은 서버다** (`?status` · `ProposalQuery`). 그래서 여기엔 개수가 없다 —
+ *    거른 목록만 손에 있는 화면이 「거절됨 3」을 적으면 그건 **지금 보이는 것의 수**이지
+ *    그 상태의 수가 아니고, 칩을 누를 때마다 다른 숫자가 된다. 없는 수를 지어내지 않는다.
+ * ⚠ 그래서 화면 4 의 종류 칩(`KindFilter`)과 달리 **다섯 종류를 늘 다 그린다** —
+ *   한 장도 없는 상태를 숨기려면 그 수를 알아야 하는데, 서버가 거르는 목록에는 그 수가 없다.
+ *   대신 눌러서 빈 것은 표가 「이 상태의 제안이 없습니다」로 말한다 (`emptyMessage`).
+ * ★ 값도 낱말도 표에서 온다 — `PROPOSAL_STATUSES` · `PROPOSAL_STATUS_CHIP`.
+ *   상태가 하나 늘면 칩이 저절로 따라오고, 손으로 적은 다섯째가 조용히 빠지지 않는다.
+ */
+export function ProposalStatusFilter({
+  value,
+  onChange,
+}: {
+  value: ProposalStatus | null
+  onChange: (status: ProposalStatus | null) => void
+}) {
+  return (
+    <div className="row wrap" role="group" aria-label="상태로 거르기">
+      <button type="button" className="btn btn-sm" aria-pressed={value === null} onClick={() => onChange(null)}>
+        전체
+      </button>
+      {PROPOSAL_STATUSES.map((status) => (
+        <button
+          key={status}
+          type="button"
+          className="btn btn-sm"
+          aria-pressed={value === status}
+          onClick={() => onChange(value === status ? null : status)}
+        >
+          <ProposalStatusChip status={status} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * 거른 목록이 비었을 때 표가 말할 문장. **어느 상태가 비었는지 이름을 말한다** —
+ * 「제안이 없습니다」만 적으면 사람은 그것이 칩 때문인지 진짜 빈 것인지 못 가린다.
+ */
+export function proposalEmptyMessage(status: ProposalStatus | null, whenAll: string): string {
+  if (status === null) return whenAll
+  return `「${PROPOSAL_STATUS_CHIP[status].label}」 상태의 제안이 없습니다. [전체] 를 누르면 모두 봅니다.`
+}
 
 export function ProposalTable({
   proposals,

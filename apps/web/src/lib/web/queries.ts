@@ -499,12 +499,17 @@ export type ProposalRow = {
  */
 export type ProposalDetail = ProposalRow & { targets: ContextItemView[] }
 
+/**
+ * ⚠ `status` 는 **서버가 거른다** (`ProposalQuery` · FINDINGS 112). 받아 놓고 화면에서
+ *   거르면 `limit` 안에 우연히 들어온 것만 걸러지고, 51번째 「거절됨」은 영원히 안 보인다.
+ */
 export function fetchProposals(
   projectId: string,
-  query: { limit?: number } = {},
+  query: { limit?: number; status?: ProposalStatus } = {},
 ): Promise<{ proposals: ProposalRow[]; limit: number; offset: number }> {
   const q = new URLSearchParams()
   if (query.limit !== undefined) q.set('limit', String(query.limit))
+  if (query.status !== undefined) q.set('status', query.status)
   const tail = q.toString()
   return apiJson(`/projects/${projectId}/proposals${tail ? `?${tail}` : ''}`)
 }

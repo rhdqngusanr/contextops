@@ -215,6 +215,9 @@
 
 ### 화면 6 — Proposals `…/proposals`, `…/proposals/[id]`
 - 함 목록 테이블: 상태 chip(submitted/approved/rejected/published) | 제목 | 작성자 | 관련 마일스톤 칩 | 항목 수 | 제출 시각.
+- 표 위에 **상태 거르개 칩** `[전체]` + 상태 5종 (`ProposalStatusFilter` · FINDINGS 112). 낱말과 값은 `PROPOSAL_STATUS_CHIP`·`PROPOSAL_STATUSES` 표에서 오고, 고른 것은 `aria-pressed` 로도 말한다(색만으로 구분하지 않는다).
+  ⚠ **개수를 적지 않는다** — 거르는 것은 서버(`?status`)라 화면 손에는 거른 목록뿐이고, 「거절됨 3」은 그 상태의 수가 아니라 지금 보이는 수다. 그래서 화면 4 의 종류 칩과 달리 **한 장도 없는 상태도 그린다**(그 수를 모른다). 눌러서 비면 표가 「'거절됨' 상태의 제안이 없습니다」라고 말한다.
+  ⚠ **author 거르개는 없다** — 고를 이름의 목록을 내는 문이 없다.
 - 상세: 상단 요약 + `base v1.2.0`. 항목별 카드: operation 배지(add/update/deprecate) · **before/after Diff**(줄 단위, 삭제 bad-soft, 추가 ok-soft) · 근거 EvidenceLink · 이유. **결정은 제안 한 장 단위다** — 전체 [모두 승인] / [거절(사유 필수)] 뿐이고, 누가·어떤 상태에서 누를 수 있나는 `PROPOSAL_DECISIONS`(`packages/schema`) 표 하나가 정한다.
   ⚠ **항목별 [승인]/[거절] 은 없다** (FINDINGS 114 ②) — 상태를 담는 칸이 `proposals.status` 하나뿐이고 항목(`items`)에는 결정 칸이 없다. 항목마다 갈라 받고 싶으면 제안을 나눠 낸다. 항목별 결정을 만들려면 §2.1 발행 트랜잭션(`applyProposals`)·`packages/schema`·이 줄을 **같은 바퀴**에 고쳐야 한다 — `test/web-proposals.test.ts` 「결정은 제안 한 장 단위다」가 이 줄과 코드를 대조한다.
 - 상세 머리는 **누가 이 상태로 옮겼나**를 그 시각 옆에 적는다 — `승인한 사람 최지훈 · 2026-09-05` (FINDINGS 116).

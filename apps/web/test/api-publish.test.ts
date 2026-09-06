@@ -695,6 +695,56 @@ describe('제안 — 표 하나가 누가·언제·무엇으로를 정한다', (
     expect(JSON.stringify(list)).not.toContain('@')
   })
 
+  it('🔴 목록이 `?status` 로 걸린다 — 거르개는 **서버가** 건다 (FINDINGS 112)', async () => {
+    const { owner, projectId } = await seeded()
+    const base = await dataOf(await publishFirst(owner, projectId))
+
+    const make = async (publicId: string): Promise<string> => {
+      const p = await dataOf(await createProposal(req('POST', `/api/v1/projects/${projectId}/proposals`, {
+        auth: owner,
+        body: {
+          title: `제안 ${publicId}`,
+          summary: '',
+          base_version_id: base.id,
+          items: [{
+            operation: 'add', draft: draft(publicId, 'constraint'),
+            evidence: [{ kind: 'manual', note: 'n' }], reason: 'r',
+          }],
+          relates_to: [],
+          client_request_id: randomUUID(),
+        },
+      }), params({ id: projectId })))
+      return p.id as string
+    }
+    const stillDraft = await make('item_filter_draft')
+    const willReject = await make('item_filter_rejected')
+    await submitProposal(req('POST', `/api/v1/proposals/${willReject}/submit`, { auth: owner }), params({ id: willReject }))
+    await rejectProposal(
+      req('POST', `/api/v1/proposals/${willReject}/reject`, { auth: owner, body: { note: '근거가 한 건뿐이다' } }),
+      params({ id: willReject }),
+    )
+
+    const idsOf = async (tail: string): Promise<string[]> => {
+      const list = await dataOf(await listProposals(
+        req('GET', `/api/v1/projects/${projectId}/proposals${tail}`, { auth: owner }), params({ id: projectId }),
+      ))
+      return (list.proposals as { id: string }[]).map((p) => p.id).sort()
+    }
+
+    //  거르개가 없으면 둘 다 온다 — 그래야 아래 둘이 「걸렸다」는 뜻이 된다.
+    expect(await idsOf('')).toEqual([stillDraft, willReject].sort())
+    expect(await idsOf('?status=rejected')).toEqual([willReject])
+    expect(await idsOf('?status=draft')).toEqual([stillDraft])
+    //  🔴 아무것도 없는 상태는 **빈 목록**이다 — 조용히 전체가 오면 거르개가 아니다.
+    expect(await idsOf('?status=approved')).toEqual([])
+
+    //  오타는 400 이다. 모르는 값을 무시하고 전체를 내면 화면은 「걸린 줄」 알고 그린다.
+    const bad = await listProposals(
+      req('GET', `/api/v1/projects/${projectId}/proposals?status=nope`, { auth: owner }), params({ id: projectId }),
+    )
+    expect(bad.status).toBe(400)
+  })
+
   it('결정 전에는 `decided_by` 가 null 이다 — 사람을 지어내지 않는다 (FINDINGS 116)', async () => {
     const { owner, proposalId } = await aProposal()
     const got = await dataOf(await getProposal(

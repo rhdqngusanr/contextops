@@ -628,6 +628,20 @@ export const ConflictQuery = ListQuery.extend({
 }).strict()
 
 /**
+ * `GET /projects/{id}/proposals` 의 질의 (SPEC §5 · §9 화면 6 「status 필터」).
+ *
+ * ⚠ **`author` 칸을 여기 만들지 마라.** 고를 이름의 목록을 내는 문이 없어서,
+ *   화면이 그릴 수 있는 것은 「지금 목록에 우연히 보이는 사람」뿐이다 —
+ *   거르개가 자기가 거른 결과에 따라 달라지면 그건 거르개가 아니다 (FINDINGS 112).
+ * ★ 값은 `PROPOSAL_STATUSES` 를 그대로 읽는다. 상태가 늘면 거르개가 저절로 따라오고,
+ *   화면의 칩도 같은 표(`PROPOSAL_STATUS_CHIP`)를 읽으므로 한 종류가 조용히 빠지지 않는다.
+ */
+export const ProposalQuery = ListQuery.extend({
+  status: z.enum(PROPOSAL_STATUSES).optional(),
+}).strict()
+export type ProposalQuery = z.infer<typeof ProposalQuery>
+
+/**
  * 결정 메모의 상한. **화면 4 의 메모 칸이 이 값을 읽는다** — 숫자가 두 곳에 있으면
  * 화면은 600자를 받고 서버는 400 을 내는 자리가 생긴다.
  */
