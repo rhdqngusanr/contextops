@@ -87,6 +87,15 @@ html, body {
   font-size: var(--fs-body);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  /* 🔴 한글은 낱말 중간에서 안 접는다 (DESIGN_BRIEF §3 「타이포」 · FINDINGS 129).
+     ★ 왜 — 이게 없으면 헤드라인이 「같 / 은 방향으로」, 에러 카드가 「다시 시 / 도해주세요」로
+       그려진다. 사람이 브라우저에서 잰 것이고, 시안(design/*.dc.html)의 body 에는 있었는데
+       구현으로 옮길 때 빠졌다. `overflow-wrap` 은 낱말 하나가 줄보다 길 때만 접는 안전망이다.
+     ⚠ 코드·경로·해시(`.tree-item`·`.pack-linetext`·`.diff-text`·`*.module.css` 의 명령줄)는
+       자기 규칙(`break-all`/`break-word`)이 이걸 덮는다 — 거긴 그게 맞다. 여기서 mono 를
+       예외로 만들지 마라. `apps/web/test/design-tokens.test.ts` 가 이 두 줄을 센다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 h1, h2, h3, h4 { color: var(--ink); margin: 0; font-weight: 600; line-height: 1.3; }

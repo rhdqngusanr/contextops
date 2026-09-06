@@ -154,3 +154,54 @@ describe('🔴 비활성 색(`ink-4`)으로 읽어야 하는 글자를 그리지
     expect(hits, `ink-4 는 비활성과 장식에만 쓴다: ${hits.join(' · ')}`).toEqual([])
   })
 })
+
+// ---------------------------------------------------------------------
+//  ⑤ 한글은 낱말 중간에서 안 접는다 (FINDINGS 129 · INBOX 2026-09-06 ③ · DESIGN_BRIEF §3 「타이포」)
+//
+//  ★ 왜 이 시험이 생겼나 — 사람이 브라우저에서 잰 것: `body *` 중 `word-break: keep-all` 인 요소가
+//    **0개**였고 헤드라인이 「같 / 은 방향으로」, 에러 카드가 「다시 시 / 도해주세요」로 그려졌다.
+//    시안(`design/*.dc.html`)의 `body` 에는 있었는데 구현으로 옮길 때 빠졌다 — 색 토큰처럼
+//    「문서 ↔ 코드」를 기계가 대조하지 않으면 이런 한 줄은 다시 빠진다.
+//  ⚠ 코드·경로·해시는 예외다 — `.tree-item`(break-all) · `.pack-linetext`·`.diff-text`(break-word).
+//    그 예외가 `keep-all` 로 바뀌면 해시가 한 줄에 못 들어가고 경로가 잘린다. 같이 잠근다.
+// ---------------------------------------------------------------------
+describe('🔴 한글은 낱말 중간에서 안 접는다 — `body` 의 keep-all', () => {
+  const css = () => readFileSync(globalsCss, 'utf8')
+
+  /** `html, body { … }` 블록의 본문. */
+  function bodyRule(): string {
+    const m = /(?:^|\n)html,\s*body\s*\{([\s\S]*?)\}/.exec(css())
+    if (!m) throw new Error('globals.css 에 `html, body { … }` 규칙이 없다')
+    return m[1] as string
+  }
+
+  it('`html, body` 규칙에 `word-break: keep-all` 과 `overflow-wrap: break-word` 가 있다', () => {
+    const rule = bodyRule()
+    expect(rule).toMatch(/word-break:\s*keep-all\s*;/)
+    expect(rule).toMatch(/overflow-wrap:\s*break-word\s*;/)
+  })
+
+  it('DESIGN_BRIEF §3 「타이포」 가 같은 값을 정본으로 적고 있다 (문서 ↔ 코드 양방향)', () => {
+    const md = readFileSync(designBrief, 'utf8')
+    const typo = /### 타이포([\s\S]*?)\n### /.exec(md)
+    expect(typo, 'DESIGN_BRIEF §3 에 「### 타이포」 절이 없다').not.toBeNull()
+    expect(typo![1]).toContain('word-break: keep-all')
+    expect(typo![1]).toContain('overflow-wrap: break-word')
+  })
+
+  it('코드·경로·해시의 예외는 그대로다 — `.tree-item` break-all · `.pack-linetext`·`.diff-text` break-word', () => {
+    const text = css()
+    const ruleOf = (selector: string): string => {
+      const m = new RegExp(`(?:^|\\n)${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`).exec(text)
+      if (!m) throw new Error(`globals.css 에 \`${selector}\` 규칙이 없다`)
+      return m[1] as string
+    }
+    expect(ruleOf('.tree-item')).toMatch(/word-break:\s*break-all\s*;/)
+    expect(ruleOf('.pack-linetext')).toMatch(/word-break:\s*break-word\s*;/)
+    expect(ruleOf('.diff-text')).toMatch(/word-break:\s*break-word\s*;/)
+    //  ⚠ mono 규칙 안에 `keep-all` 이 들어오면 여기서 걸린다.
+    for (const sel of ['.tree-item', '.pack-linetext', '.diff-text', 'code, pre, .mono']) {
+      expect(ruleOf(sel), `${sel} 에 keep-all 을 걸지 마라`).not.toContain('keep-all')
+    }
+  })
+})
