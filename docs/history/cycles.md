@@ -15,6 +15,54 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (79) — 관통 api RED 를 docs 층 게이트로 (FINDINGS 138 · `bd003a5`) · 서버측 AI Anthropic → Gemini · client.ts 한 문 (INBOX · FINDINGS 139 · `836a0a9`)
+
+**이번 바퀴(79)는 둘이다 — ① 고장 FINDINGS 138(관통이 api 단계에서 빨갛게 시작 · `bd003a5`) ② INBOX 지시 「서버측 AI 를 Anthropic → Gemini」(`836a0a9`).**
+시작하자마자 관통이 `api FAIL` 이었다: 78 의 **문서만 고치는 커밋**(`99324a3`)이 121 을 ✅ 로 바꾸며 `docs/KNOWN_LIMITATIONS.md` 의 그 줄을 안 지웠고, 그 커밋은 test 층을 다시 안 돌렸다
+(`readme.test.ts` ④ 1 빨강). 줄을 지우고 **같은 검사를 `docs` 층(`tools/status-shape.mjs` ②-B)에도** 뒀다 — 문서만 고치는 커밋이 보는 유일한 층이 거기다. 옛 줄을 되돌리면 `docs:check` 1 빨강.
+그 다음 119 로 가려는데 INBOX 에 새 지시가 와 있었다(INBOX 는 PLAN·FINDINGS 보다 위) — Gemini 로 바꿨다. 부르는 자리가 `client.ts` 하나라 「접근은 한 문으로」가 값을 했다.
+
+🔴 **잰 것 — Gemini** (`docs/evidence/2026-09-06-gemini/probe.txt` · 전부 진짜 API · gemini-3.5-flash · 우리 키):
+
+| | 전 (`bd003a5`) | 후 (`836a0a9`) |
+|---|---|---|
+| 부르는 문 | `@anthropic-ai/sdk` `messages.create` + tool use | **SDK 없이 `fetch`** → `generateContent` · `responseMimeType: application/json` + `responseJsonSchema` (`callClaude` → `callModel` · `ToolCallRequest` 의 죽은 `toolName`·`toolDescription` 둘을 뺐다) |
+| 스키마를 받나 | — | `responseJsonSchema` 는 `$schema`·`$defs`·`$ref`·`const`·`oneOf`·`pattern`·`format`·`additionalProperties`·`min/maxLength`·`minimum/maximum`·`default` 전부 받고 **`minItems`·`maxItems` 만 400** (낱개 bisect a~e · `responseSchema` 는 `$ref` 부터 못 받는다) |
+| `const` | — | 받지만 **지키지 않는다** — `type` 이 표 밖 낱말로 와서 Zod 「Invalid discriminator value」 → `const` → `enum: [v]` 로 바꾸니 통과 |
+| 끝까지 (`pnpm --filter web ai:smoke`) | — | 문서 2문장 → **policy 2 · Zod 통과** · 토큰 83/252 · 11~12초 |
+| 변환이 사는 자리 | — | `client.ts` `toGeminiSchema()` 순수 함수 하나 + `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS` 두 줄 — **스키마(`packages/schema`)는 안 고쳤다**(플러그인 검증·문서 산출이 같이 읽는다) |
+| P3 게이트 | `messages\.create|messages\.stream` | `+generateContent` — `withBudget` 없는 rogue 파일을 두고 **FAIL 을 봤다**(OK 8 · FAIL 1) · 지운 뒤 OK 9. ⚠ 첫 probe 는 주석에 「withBudget 없이」라고 적어 게이트가 정당하게 통과시켰다 — 문자열 게이트는 낱말 하나로 만족된다 |
+| 모델·정가 | `AI_MODELS` claude-* 3줄 · `ANTHROPIC_MODEL` | `gemini-3.5-flash`·`gemini-3.6-flash` 2줄 · `GEMINI_MODEL` · 🙋 정가는 **2.5 flash 공개가를 임시로**(0 은 예산을 무한으로 만든다 · 아래 「막힌 것」) |
+| 시험 스텁 | 다섯 파일이 각자 `messages.create` 를 흉내 | `test/helpers/ai.ts` **한 곳**(`stubTransport`) · 새 `ai-client.test.ts` 9 · 여섯 파일 154/154 |
+| 의존 | `@anthropic-ai/sdk` catalog·package·lock | **0** (lock -60줄) |
+| 문서 | SPEC §1.2·§7·§16 · README · SUBMISSION 이 「Claude API · tool use」 | Gemini · `responseJsonSchema` · KNOWN_LIMITATIONS 에 **무료 티어 분당 제한** 한 줄 |
+| CI | GREEN 21:35 (138 뒤) | **GREEN 21:56** — principles OK 9 · typecheck 11초 · test 92초 · build 22초 · walkthrough **985** · docs OK |
+
+⚠ **안 한 것** — 화면에서 실제 구조화 job 을 Gemini 로 돌려 보지는 않았다 (`ai:smoke` 는 `callModel` 직접 · 아래 「눈 판정 대기」). `structure.ts`·`conflict.ts` 의 프롬프트는 한 글자도 안 바꿨다 —
+프롬프트가 Gemini 에서 어떤 품질인지는 **PLAN P3 첫 행의 완료 기준**(「paylab 문서 → 항목 12 + 충돌 3」)을 재는 바퀴가 본다. 그 행은 이제 **루프가 혼자 잴 수 있다** (키가 생겼다).
+
+🔴 **배운 것 둘** — ① 문서만 고치는 커밋도 게이트를 돌려라. 78 은 코드 커밋 앞에 CI 를 봤고 그 뒤 문서 커밋에서 121 을 닫으며 KNOWN_LIMITATIONS 를 안 지웠다. 「닫힌 것을 다음 할 일로 가리킨다」(102)와
+「닫힌 것을 한계라고 적는다」(138)는 같은 썩음이라 같은 게이트(`status-shape`)에 뒀다. ② 공급자를 바꿀 때 「스키마를 받나」와 「스키마를 지키나」는 다른 질문이다 — `const` 는 200 인데 안 지켰다. 끝까지 Zod 를 통과시켜 봐야 안다.
+
+🔴 **2-B 이번 라운드 — `AI_MODELS` 표(이제 2줄)와 `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS`(2줄)** ① 소비처: `currentModel()`·`costMicros()` / `toGeminiSchema()` ② 뒤집으면 갈림: 표에 없는 이름은 죽는다(`ai-budget`) ·
+정가 0 이면 시험이 막는다(새) / 키워드를 안 벗기면 진짜 API 가 400(실측 · 시험은 「모든 깊이에서 빠졌나」). `ItemType` 10종은 여전히 다음 라운드.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 122 (INBOX 「값이 생겼다」). 80바퀴가 닫았다.
+
+
+🔴 **고장은 없다. INBOX 「할 것」에 하나 남았다 — 「값이 생겼다」(공개 저장소 URL · 제출 팀명 · 2026-09-06)** → FINDINGS **122**(+126 의 팀명 자리 · README 머리 문단). INBOX 는 PLAN 보다 위다.
+그 다음은 **PLAN P3 첫 행**이 열렸다 — 완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `goals.md` → job `succeeded` →
+항목 수·충돌 수·offset). 🙋 없이 루프가 할 수 있는 첫 PLAN 행이다 (FINDINGS 109 — 이 줄은 PLAN 행을 못 가리키므로 122 다음에 여기서 읽어라). 그 뒤 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137.
+
+> **122 를 하는 법** — INBOX 의 값 둘을 **정본 하나**에 둔다: 랜딩 푸터는 `LANDING_FOOT`(`apps/web/src/components/landing.tsx` · 59바퀴가 만든 상수)이 읽고, README·SUBMISSION·KNOWN_LIMITATIONS 의 `<marketplace>`·🙋 자리는
+> 그 값을 **글자 그대로** 적되 `readme.test.ts` 가 세 문서와 상수가 같은 문자열인지 센다(지금 「P1~P7 행 동일」을 세는 방식 그대로). README 머리의 「🙋 … 아직 없습니다」 문단은 지운다. production URL·영상은 자리표시자 그대로.
+> 팀명은 띄어쓰기까지 그대로 `퇴직했는데저좀이직시켜주세요`. KNOWN_LIMITATIONS 의 122 줄을 지우는 것을 잊지 마라 — `docs:check` 가 잡는다(138).
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다 · 78 이 게스트의 쓰기 버튼 셋을 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · URL·팀명은 왔다 → 122).
+- 대장의 대기(122 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 138 ✅ · 139 는 기록.
+
+---
+
 ### 지난 바퀴 (78) — 화면이 서버와 같은 표 `ACTOR_RULES` 를 읽는다 · 게스트 [발행하기] 는 모달 대신 그 자리에 이유 · 403 문구는 `GUEST_HINT` (FINDINGS 121 · 135 · `816420b`)
 
 **78바퀴는 FINDINGS 121 + 135 — 격차 둘(게스트의 403 을 「팀 owner만」이라고 옮긴다 · 게스트가 [발행하기] 를 누르면 발행 모달이 열린다)을 같은 바퀴에 닫았다** (`816420b`).

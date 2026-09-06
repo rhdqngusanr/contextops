@@ -91,3 +91,47 @@ conflict.ts detectConflicts(): 후보 = 같은 type(DB) 이고 scopeKey 가 같�
 - 146 은 안 고쳤다 (적기만). PLAN P3 첫 행은 두 번 연속 3 이상을 봤지만 146 이 열려 있어 아직 열어 둔다.
 - 재시도 불평이 첫 인용 하나만 말한다 — 다섯이 틀리면 다섯을 다 말해야 한 번에 고친다. 이번엔 접기로 다섯이 다 지나서 안 건드렸다.
 - 화면 3(/import) 은 여전히 브라우저로 안 봤다.
+
+# 85바퀴 · 2026-09-07 (KST 01:05~01:35) — FINDINGS 146 을 닫고 재다가 148 을 찾아 같이 닫았다 · PLAN P3 첫 행을 닫는다
+# 전부 진짜 API(gemini-3.5-flash · 우리 키) · PGlite(freshDb) · 길은 제품 그대로 · 문 `pnpm --filter web p3:measure`
+# 파일: probe-85-run1.json · probe-85-run2.json · probe-85-fail.json = 146 만 고친 코드(f487d67) 세 번(셋째가 실패)
+#       probe-85b-run1.json · probe-85b-run2.json(= probe.json) = 146+148 을 고친 코드(b1f7d3c)로 두 번
+
+## 0. 무엇을 바꿨나
+- 146 (f487d67): detectConflicts() 가 후보를 「같은 type」까지만 고른다 — wantedScopes 조건을 뺐다. scope 는 renderItem 의 scope= 줄에 실려 모델이 견준다.
+  같은 커밋에서 p3:measure 가 진짜 transport 를 기록 껍데기로 감싼다(왕복마다 finishReason · 글자수 · JSON 여부 · 재시도면 그 불평). 응답 본문은 안 남긴다.
+- 148 (b1f7d3c): findFolded 가 강조 표시 `*` 를 양쪽에서 뺀다 (QUOTE_FOLDED_CHARS). 글자·문장부호는 그대로.
+
+## 1. 146 만 고친 코드로 세 번
+  기준                      run1 (probe-85-run1)         run2 (probe-85-run2)         run3 (probe-85-fail)
+  goals.md 항목 ≥ 12        11 (goal 3 · policy 5 · roadmap 3)   14 (policy 7 · goal 3 · roadmap 3 · domain 1)   failed AI_OUTPUT_INVALID (42초)
+  왕복                      2 — 첫 응답 12,816자 JSON, 그러나 items.0~2.id 가 /^item_[a-z0-9_]{3,40}$/ 위반 → 재시도 7,031자 (항목이 줄었다 → 149)   1   2 — 첫 응답 16,446자 JSON · 「item_paylab_mission 의 span.quote 가 조각 원문에 없다: "가맹점이 우리를 쓰는 이유는 하나다 — PSP 가 흔들려도 결제가 흔들리"」 → 재시도도 같은 자리
+  인용                      15/15 · 6/6                  18/18 · 6/6                  0/0 · 6/6
+  accept 거절               0                            0                            —
+  탐지 후보 {used,total}    **6/6**                      **6/6**                      —
+  충돌 ≥ 3                  **3** (contradiction high)   **5**                        —
+  장부                      3행 ≈ $0.029                 3행 ≈ $0.019                 2행
+  후보가 3 → 6 인 것이 146 이다: goals 의 roadmap 항목(scope project)이 old-roadmap 의 마일스톤(path:src/…)과 처음으로 짝이 됐다 (같은 type 이면 후보).
+  run3 의 원인: 픽스처 「하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**」을 모델이 `**` 없이 인용했다. 84바퀴의 재시도는 반대로 `**` 를 더했다. → 148.
+  ★ 왕복 기록이 없었으면 84바퀴처럼 일회용 진단을 또 만들었어야 했다 — 이번엔 probe 에 이유가 그대로 있었다.
+
+## 2. 146+148 코드로 두 번 — 완료 기준 대 실측 (PLAN P3 첫 행)
+  기준                      run1 (probe-85b-run1)                                  run2 (probe-85b-run2 = probe.json)
+  goals.md 항목 ≥ 12        **17** (policy 10 · goal 3 · roadmap 3 · domain 1)      **25** (policy 12 · architecture 5 · goal 3 · roadmap 3 · mission 1 · domain 1)
+  열린 질문                 4                                                      4
+  인용 (goals · roadmap)    21/21 · 6/6                                            29/29 · 6/6
+  재시도                    0                                                      0
+  accept 거절               0                                                      0
+  scope                     goals 의 roadmap 셋이 path:src/payment/·refund/·common/ · domain 하나 domain:payment · 나머지 project   전부 project (roadmap 의 마일스톤은 path:paylab-api/src/…)
+  탐지 후보 {used,total}    **6/6**                                                **6/6**
+  충돌 ≥ 3                  **4** (contradiction high ×4)                          **5** (contradiction high ×5)
+  장부                      3행 ≈ $0.021                                           3행 ≈ $0.024
+  충돌 짝 run1: 환불 24h 에스컬레이션 vs 기한 없음 · PII 금지 vs payload 로그 · 고정 간격 금지 vs 0.5초 고정 · 5회 vs 3회
+  충돌 짝 run2: 환불 SLA vs 기한 없음 · 고정 간격 금지 vs 0.5초 · PII vs payload 로그 · 5회 vs 3회 · pending 금지 vs 기한 없음 — 의도된 셋(SPEC §10.1)이 두 번 다 들어 있다.
+  → 두 번 연속 항목 ≥ 12 · 충돌 ≥ 3 · 후보 ≥ 3 · 인용 전부 원문 · 장부 = 왕복. **PLAN P3 첫 행을 닫는다.**
+  run1 은 146 이 실제로 갈린 실행이다 — goals 의 roadmap·domain 넷이 project 가 아닌데도 후보 6 (83바퀴 코드였다면 roadmap 은 짝이 없었다).
+
+## 3. 이번 바퀴가 안 한 것
+- 144(finishReason · 429 → RATE_LIMITED)는 그대로다 — 타입에 finishReason 칸만 더했고 callModel 은 아직 안 읽는다.
+- 149(첫 응답 id 패턴 위반 → 재시도 → 항목이 준다 · 재시도 불평이 첫 오류 하나만 말한다)는 적기만 했다.
+- 화면 3(/import) 은 여전히 브라우저로 안 봤다.

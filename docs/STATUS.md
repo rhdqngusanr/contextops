@@ -5,13 +5,57 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-07 · 루프 84바퀴 · 코드 `9a5da46`(FINDINGS 145 ✅ — 기존 항목 id 를 `takenIds` 로 · 거절 0) + `e64831b`(FINDINGS 147 ✅ — 인용을 공백 접어 찾는다 · 진짜 Gemini 두 번 충돌 4/3 · 4/3) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-07 · 루프 85바퀴 · 코드 `f487d67`(FINDINGS 146 ✅ — 후보를 scope 로 거르지 않는다 · 후보 6/6) + `b1f7d3c`(FINDINGS 148 ✅ — 인용의 `**` 를 뺀다) · **PLAN P3 첫 행 닫음** (진짜 Gemini 두 번 연속 항목 17·25 · 충돌 4·5) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴(84)는 FINDINGS 145 — 구멍(구조화 후보가 기존 항목과 같은 slug 를 고르면 accept 에서 거절돼 충돌 탐지 재료에서 빠진다)을 닫았다** (`9a5da46`). 재려니 goals.md 가 셋 다 `AI_OUTPUT_INVALID` 로 죽어 원인을 파니 **별개의 구멍 147**(인용이 줄을 넘으면 `indexOf` 가 못 찾는다)이었고, 그것도 같은 바퀴에 따로 닫았다 (`e64831b`). INBOX 「할 것」비어 있음 · 관통 7단계 OK(999→1003) · 고장 0 · 둘 다 PLAN P3 첫 행의 몫이라 ④3 ② 와 어긋나지 않는다.
+**이번 바퀴(85)는 FINDINGS 146 — 구멍(탐지 후보가 모델이 고른 scope 에 달려 있어 같은 코드로 충돌 3/3 ↔ 0/3)을 닫았다** (`f487d67`). 재려니 셋째 실행에서 goals.md 가 `AI_OUTPUT_INVALID` — 이번 바퀴가 `p3:measure` 에 넣은 **왕복 기록**이 이유를 바로 말했다(모델이 인용에서 `**` 를 뺐다) → **별개의 구멍 148**, 같은 바퀴에 따로 닫았다 (`b1f7d3c`). 그 코드로 두 번 연속 완료 기준을 넘어 **PLAN P3 첫 행을 닫았다** (⑧). INBOX 「할 것」비어 있음 · 관통 7단계 OK(1003→1005) · 고장 0.
+**146** — `detectConflicts()` 의 `wantedScopes` 조건을 뺐다: 후보 = 같은 type 의 active 항목(상한 40 · 우선순위 정렬 그대로). scope 는 `renderItem` 의 `scope=` 줄에 실려 **모델이 견준다** — 프롬프트 머리에 「scope 가 다른 둘은 범위가 안 겹치면 어긋난 것이 아니다」 한 줄. 시험은 「scope 가 다르면 후보가 아니다」를 뒤집어 세 scope 가 전부 실리는 것을 센다(24/24) · SPEC §7.2.
+**148** — `QUOTE_FOLDED_CHARS = ['*']`: `findFolded` 가 강조 표시를 needle·haystack 양쪽에서 뺀다. 공백을 접는 것(147)과 같은 판단 — 꾸밈이지 글자가 아니다. 147 의 「`**` 를 더하면 여전히 없다」 시험을 셋으로 뒤집었다(뺀 인용 · 더한 인용 · **글자 하나 바꾼 인용은 여전히 없다**) · ai-structure 35 · SPEC §7.1.
+**측정 문** — `p3:measure` 가 진짜 transport 를 **기록만 하는 껍데기**로 감싼다(`geminiTransport()` export · `setAiClientForTest`): 왕복마다 finishReason · 글자수 · JSON 여부 · 재시도라면 그 불평. 응답 본문은 안 남긴다. ★ 왜 — 실패한 job 의 이유는 P1 때문에 DB 에 없어 84바퀴가 일회용 진단을 만들었다 지웠다. 두 번째라 문으로 올렸다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-07-p3-gemini/probe.txt` 85바퀴 절 · 진짜 gemini-3.5-flash):
+
+| | 146 만 (`f487d67` · 세 번) | 146+148 1회차 (`probe-85b-run1.json`) | 146+148 2회차 (`probe-85b-run2.json`) |
+|---|---|---|---|
+| goals.md 항목 | 11 · 14 · **실패**(`AI_OUTPUT_INVALID` — 인용에서 `**` 빠짐 → 148) | **17** (policy 10 · goal 3 · roadmap 3 · domain 1) | **25** (policy 12 · architecture 5 · goal 3 · roadmap 3 · mission 1 · domain 1) |
+| 인용 · 재시도 | 15/15(재시도 1 · id 패턴 위반 → 149) · 18/18 · 0/0 | **21/21** · 재시도 0 | **29/29** · 재시도 0 |
+| accept 거절 | 0 · 0 · — | 0 | 0 |
+| 탐지 후보 · 충돌 | **6/6** · 3 · **6/6** · 5 · — | **6/6** · **4** | **6/6** · **5** |
+| scope | goals 전부 `project` | roadmap 셋 `path:src/…` · domain 하나 `domain:payment` — **그런데도 후보 6** (146 이 갈린 실행) | 전부 `project` |
+| 충돌 짝 | 환불 24h vs 기한 없음 · PII vs payload 로그 · 5회 vs 3회 (+고정 간격 · pending) | 의도된 셋 + 5회 vs 3회 · 전부 contradiction high | 의도된 셋 + 5회 vs 3회 + pending 금지 vs 기한 없음 |
+| 장부 | 3 · 3 · 2행 | 3행 ≈ $0.021 | 3행 ≈ $0.024 |
+| 시험 · CI | ai-conflict 24 · **GREEN 01:20** (walkthrough 1003) | — | ai-structure **35** · **GREEN 01:29** (principles OK 9 · test 100초 · build 23초 · walkthrough **1005** · docs OK) |
+
+후보 3 → 6 이 146 이다 — goals 의 roadmap 항목이 old-roadmap 의 마일스톤(`path:src/…`)과 처음으로 짝이 됐다(같은 type 이면 후보).
+⚠ **PLAN P3 첫 행을 닫았다** — 두 번 연속 항목 ≥ 12 · 충돌 ≥ 3 · 후보 ≥ 3 · 인용 전부 원문 · 장부 = 왕복. 완료 기준 밖에 남은 것은 **144**(실패 경로의 이름) · **149**(첫 응답 id 패턴 위반 → 재시도 → 항목 11 · 새로 적음)이고 대장에 있다.
+⚠ **안 한 것** — 144 는 타입에 `finishReason` 칸만 더했고 `callModel` 은 아직 안 읽는다 · 149 는 적기만 · 화면 3 은 여전히 브라우저로 안 봤다.
+
+🔴 **배운 것 둘** — ① **측정 문에 「왜 실패했나」 열이 없으면 실패는 숫자일 뿐이다.** 84바퀴는 같은 자리에서 일회용 진단을 만들었다 지웠고, 이번엔 probe 에 불평 문장이 그대로 있어 원인(`**`)을 1분에 봤다. 같은 지적이 두 번이면 문으로 올린다 — 그래서 올렸다. ② **「원문 그대로」에서 글자가 아닌 것은 둘이다 — 공백과 꾸밈.** 모델은 마크다운 강조를 읽을 때 넣기도 빼기도 한다. 검사를 글자·문장부호로 좁히는 것이 기준을 낮추지 않는 고침이고, 「글자 하나 바꾼 인용은 여전히 없다」 시험이 그 경계를 잠근다.
+
+🔴 **2-B 이번 라운드 — `scope.kind` 3종** ① 소비처: `conflict.ts` 는 이제 **읽기만**(프롬프트 줄) · `scopeKey` 하나 ② 뒤집으면 갈림: 시험 「세 scope 가 전부 프롬프트에 실린다」 · 진짜 모델 run1 에서 `path:`·`domain:` 넷이 후보에 들었다. `ItemType` 10종 중 이번 두 실행은 **5종 · 6종**(mission·architecture 가 2회차에) — 10종 전수는 다음 라운드.
+
+**다음 바퀴의 일 — FINDINGS 144**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 PLAN 의 `- [ ]` 맨 위는 이제 **P4 둘째 행**(GATE 3 · 눈 판정)이다 — ④3 ② 로는 그 행이 다음이지만, 그 행의 몫인 격차(119 · 118 · 116 · 112 · 131~134 · 137)보다 **구멍 144** 가 순서상 위이고(구멍 → 격차) 한 파일(`client.ts`)이라 먼저 닫는다. 그 다음 149(격차 · `structure.ts` 프롬프트 한 줄 + 불평 접기) → 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **144 를 하는 법** — 대장의 「고칠 방향」: `client.ts` `callModel()` 이 `candidates[0].finishReason` 을 읽어 `MAX_TOKENS` 면 값 대신 「출력이 상한에서 잘렸다」를 부르는 쪽에 알린다(재시도 불평이 「더 짧게」가 되게 — `structure.ts`·`conflict.ts` 의 `OutputInvalid` 자리) · `geminiTransport()` 의 `!res.ok` 에서 429 는 `ApiError('RATE_LIMITED')`, 401/403 은 지금처럼 Error. 시험은 `ai-client.test.ts` 에 스텁이 `finishReason: 'MAX_TOKENS'` · 429 를 내는 둘. `p3:measure` 의 왕복 기록은 이미 finishReason 을 적는다.
+
+- PLAN 의 `- [ ]` 중 남은 것 **넷**: P4 둘째 행(GATE 3 · 눈 판정 — 다음 PLAN 행) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋). **P3 첫 행은 이번에 닫았다.**
+- 대장의 대기(144 · 149 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 146 ✅ · 148 ✅.
+
+### 지난 바퀴 (84) — 기존 항목 id 를 `takenIds` 로 · 인용을 공백 접어 찾는다 · 진짜 Gemini 두 번 충돌 4/3 · 4/3 · 146 은 열어 둠 (FINDINGS 145 · 147 · `9a5da46` · `e64831b`)
+
+**그 바퀴(84)는 FINDINGS 145 — 구멍(구조화 후보가 기존 항목과 같은 slug 를 고르면 accept 에서 거절돼 충돌 탐지 재료에서 빠진다)을 닫았다** (`9a5da46`). 재려니 goals.md 가 셋 다 `AI_OUTPUT_INVALID` 로 죽어 원인을 파니 **별개의 구멍 147**(인용이 줄을 넘으면 `indexOf` 가 못 찾는다)이었고, 그것도 같은 바퀴에 따로 닫았다 (`e64831b`). INBOX 「할 것」비어 있음 · 관통 7단계 OK(999→1003) · 고장 0 · 둘 다 PLAN P3 첫 행의 몫이라 ④3 ② 와 어긋나지 않는다.
 **145** — `StructureInput.takenIds`: 러너가 프로젝트의 `context_items.public_id` 전부(status 무관)를 한 번 조회해 넘기고 `uniqueId()` 가 그것으로 시작한다. 문서 안 중복과 같은 `_2` 규칙 · 프롬프트 불변 · 시험 +2.
 **147** — `toSourceRef` 가 `indexOf` 대신 `findFolded()`: 공백 연속(줄바꿈 포함)을 공백 하나로 접어 찾고 접힌 자리마다 원문 자리를 적어 offset 은 **원문 기준**. 글자는 그대로여야 한다(`**` 를 더한 인용은 여전히 「없다」) · 시험 +2 · SPEC §7.1 두 문장.
 
@@ -36,18 +80,9 @@ _마지막 갱신: 2026-09-07 · 루프 84바퀴 · 코드 `9a5da46`(FINDINGS 14
 
 🔴 **2-B 이번 라운드 — `takenIds`** ① 소비처 `structureDocument` 하나 · 넘기는 곳 러너 하나 ② 뒤집으면 갈림: 시험 두 개(빈 목록이면 첫 후보 그대로 · 목록에 있으면 `_2`) · 진짜 모델에서는 이번 두 번 안 밟혔다. `ItemType` 10종 중 이번 두 실행은 **7종 · 4종**(1회차에 mission·constraint 가 처음 나왔다) — 10종 전수는 다음 라운드.
 
-**다음 바퀴의 일 — FINDINGS 146**
+그 바퀴가 다음으로 지목한 것은 146 이었다 — PLAN P3 첫 행의 몫이다 — 구멍이고 「충돌 3」이 실행마다 갈리는 원인의 나머지 절반이라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 144 → `p3:measure` 가 **두 번 연속** 충돌 3 이상이면 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
-
-🔴 146 은 PLAN P3 첫 행의 몫이다 — 구멍이고 「충돌 3」이 실행마다 갈리는 원인의 나머지 절반이라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 144 → `p3:measure` 가 **두 번 연속** 충돌 3 이상이면 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
-
-> **146 을 하는 법** — 대장의 「고칠 방향」 ①: `conflict.ts` `detectConflicts()` 의 후보를 「같은 type」까지만으로 고르고(`wantedScopes`·`matched` 의 scope 조건을 뺀다) scope 는 지금처럼 `renderItem` 의 `scope=` 줄에 실어 모델이 견주게 한다. 상한 40 · 우선순위 정렬 그대로. SPEC §7.2 의 「같은 type/scope」 구절을 「같은 type(scope 는 프롬프트 줄로)」로. 시험은 `ai-conflict` 에 「scope 가 다른 같은 type 항목도 후보에 실린다」 한 개 + 기존 「같은 scope 만」 시험이 있으면 뒤집는다. 합격은 `p3:measure` 두 번 연속 후보 ≥ 3 · 충돌 ≥ 3 — 그러면 P3 첫 행을 체크한다.
+> **146 을 하는 법 (그 바퀴가 적은 것)** — 대장의 「고칠 방향」 ①: `conflict.ts` `detectConflicts()` 의 후보를 「같은 type」까지만으로 고르고(`wantedScopes`·`matched` 의 scope 조건을 뺀다) scope 는 지금처럼 `renderItem` 의 `scope=` 줄에 실어 모델이 견주게 한다. 상한 40 · 우선순위 정렬 그대로. SPEC §7.2 의 「같은 type/scope」 구절을 「같은 type(scope 는 프롬프트 줄로)」로. 시험은 `ai-conflict` 에 「scope 가 다른 같은 type 항목도 후보에 실린다」 한 개 + 기존 「같은 scope 만」 시험이 있으면 뒤집는다. 합격은 `p3:measure` 두 번 연속 후보 ≥ 3 · 충돌 ≥ 3 — 그러면 P3 첫 행을 체크한다.
 
 - PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(145 ✅ · 147 ✅ — 146 · 144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
 - 대장의 대기(146 · 144 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 145 ✅ · 147 ✅.
@@ -202,53 +237,6 @@ old-roadmap.md 를 active 로, goals.md 를 draft 로 넣고 탐지까지 굴린
 - PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
 - 대장의 대기(140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 122 ✅ · 122-B 는 기록.
 
-### 지난 바퀴 (79) — 관통 api RED 를 docs 층 게이트로 (FINDINGS 138 · `bd003a5`) · 서버측 AI Anthropic → Gemini · client.ts 한 문 (INBOX · FINDINGS 139 · `836a0a9`)
-
-**이번 바퀴(79)는 둘이다 — ① 고장 FINDINGS 138(관통이 api 단계에서 빨갛게 시작 · `bd003a5`) ② INBOX 지시 「서버측 AI 를 Anthropic → Gemini」(`836a0a9`).**
-시작하자마자 관통이 `api FAIL` 이었다: 78 의 **문서만 고치는 커밋**(`99324a3`)이 121 을 ✅ 로 바꾸며 `docs/KNOWN_LIMITATIONS.md` 의 그 줄을 안 지웠고, 그 커밋은 test 층을 다시 안 돌렸다
-(`readme.test.ts` ④ 1 빨강). 줄을 지우고 **같은 검사를 `docs` 층(`tools/status-shape.mjs` ②-B)에도** 뒀다 — 문서만 고치는 커밋이 보는 유일한 층이 거기다. 옛 줄을 되돌리면 `docs:check` 1 빨강.
-그 다음 119 로 가려는데 INBOX 에 새 지시가 와 있었다(INBOX 는 PLAN·FINDINGS 보다 위) — Gemini 로 바꿨다. 부르는 자리가 `client.ts` 하나라 「접근은 한 문으로」가 값을 했다.
-
-🔴 **잰 것 — Gemini** (`docs/evidence/2026-09-06-gemini/probe.txt` · 전부 진짜 API · gemini-3.5-flash · 우리 키):
-
-| | 전 (`bd003a5`) | 후 (`836a0a9`) |
-|---|---|---|
-| 부르는 문 | `@anthropic-ai/sdk` `messages.create` + tool use | **SDK 없이 `fetch`** → `generateContent` · `responseMimeType: application/json` + `responseJsonSchema` (`callClaude` → `callModel` · `ToolCallRequest` 의 죽은 `toolName`·`toolDescription` 둘을 뺐다) |
-| 스키마를 받나 | — | `responseJsonSchema` 는 `$schema`·`$defs`·`$ref`·`const`·`oneOf`·`pattern`·`format`·`additionalProperties`·`min/maxLength`·`minimum/maximum`·`default` 전부 받고 **`minItems`·`maxItems` 만 400** (낱개 bisect a~e · `responseSchema` 는 `$ref` 부터 못 받는다) |
-| `const` | — | 받지만 **지키지 않는다** — `type` 이 표 밖 낱말로 와서 Zod 「Invalid discriminator value」 → `const` → `enum: [v]` 로 바꾸니 통과 |
-| 끝까지 (`pnpm --filter web ai:smoke`) | — | 문서 2문장 → **policy 2 · Zod 통과** · 토큰 83/252 · 11~12초 |
-| 변환이 사는 자리 | — | `client.ts` `toGeminiSchema()` 순수 함수 하나 + `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS` 두 줄 — **스키마(`packages/schema`)는 안 고쳤다**(플러그인 검증·문서 산출이 같이 읽는다) |
-| P3 게이트 | `messages\.create|messages\.stream` | `+generateContent` — `withBudget` 없는 rogue 파일을 두고 **FAIL 을 봤다**(OK 8 · FAIL 1) · 지운 뒤 OK 9. ⚠ 첫 probe 는 주석에 「withBudget 없이」라고 적어 게이트가 정당하게 통과시켰다 — 문자열 게이트는 낱말 하나로 만족된다 |
-| 모델·정가 | `AI_MODELS` claude-* 3줄 · `ANTHROPIC_MODEL` | `gemini-3.5-flash`·`gemini-3.6-flash` 2줄 · `GEMINI_MODEL` · 🙋 정가는 **2.5 flash 공개가를 임시로**(0 은 예산을 무한으로 만든다 · 아래 「막힌 것」) |
-| 시험 스텁 | 다섯 파일이 각자 `messages.create` 를 흉내 | `test/helpers/ai.ts` **한 곳**(`stubTransport`) · 새 `ai-client.test.ts` 9 · 여섯 파일 154/154 |
-| 의존 | `@anthropic-ai/sdk` catalog·package·lock | **0** (lock -60줄) |
-| 문서 | SPEC §1.2·§7·§16 · README · SUBMISSION 이 「Claude API · tool use」 | Gemini · `responseJsonSchema` · KNOWN_LIMITATIONS 에 **무료 티어 분당 제한** 한 줄 |
-| CI | GREEN 21:35 (138 뒤) | **GREEN 21:56** — principles OK 9 · typecheck 11초 · test 92초 · build 22초 · walkthrough **985** · docs OK |
-
-⚠ **안 한 것** — 화면에서 실제 구조화 job 을 Gemini 로 돌려 보지는 않았다 (`ai:smoke` 는 `callModel` 직접 · 아래 「눈 판정 대기」). `structure.ts`·`conflict.ts` 의 프롬프트는 한 글자도 안 바꿨다 —
-프롬프트가 Gemini 에서 어떤 품질인지는 **PLAN P3 첫 행의 완료 기준**(「paylab 문서 → 항목 12 + 충돌 3」)을 재는 바퀴가 본다. 그 행은 이제 **루프가 혼자 잴 수 있다** (키가 생겼다).
-
-🔴 **배운 것 둘** — ① 문서만 고치는 커밋도 게이트를 돌려라. 78 은 코드 커밋 앞에 CI 를 봤고 그 뒤 문서 커밋에서 121 을 닫으며 KNOWN_LIMITATIONS 를 안 지웠다. 「닫힌 것을 다음 할 일로 가리킨다」(102)와
-「닫힌 것을 한계라고 적는다」(138)는 같은 썩음이라 같은 게이트(`status-shape`)에 뒀다. ② 공급자를 바꿀 때 「스키마를 받나」와 「스키마를 지키나」는 다른 질문이다 — `const` 는 200 인데 안 지켰다. 끝까지 Zod 를 통과시켜 봐야 안다.
-
-🔴 **2-B 이번 라운드 — `AI_MODELS` 표(이제 2줄)와 `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS`(2줄)** ① 소비처: `currentModel()`·`costMicros()` / `toGeminiSchema()` ② 뒤집으면 갈림: 표에 없는 이름은 죽는다(`ai-budget`) ·
-정가 0 이면 시험이 막는다(새) / 키워드를 안 벗기면 진짜 API 가 400(실측 · 시험은 「모든 깊이에서 빠졌나」). `ItemType` 10종은 여전히 다음 라운드.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 122 (INBOX 「값이 생겼다」). 80바퀴가 닫았다.
-
-
-🔴 **고장은 없다. INBOX 「할 것」에 하나 남았다 — 「값이 생겼다」(공개 저장소 URL · 제출 팀명 · 2026-09-06)** → FINDINGS **122**(+126 의 팀명 자리 · README 머리 문단). INBOX 는 PLAN 보다 위다.
-그 다음은 **PLAN P3 첫 행**이 열렸다 — 완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `goals.md` → job `succeeded` →
-항목 수·충돌 수·offset). 🙋 없이 루프가 할 수 있는 첫 PLAN 행이다 (FINDINGS 109 — 이 줄은 PLAN 행을 못 가리키므로 122 다음에 여기서 읽어라). 그 뒤 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137.
-
-> **122 를 하는 법** — INBOX 의 값 둘을 **정본 하나**에 둔다: 랜딩 푸터는 `LANDING_FOOT`(`apps/web/src/components/landing.tsx` · 59바퀴가 만든 상수)이 읽고, README·SUBMISSION·KNOWN_LIMITATIONS 의 `<marketplace>`·🙋 자리는
-> 그 값을 **글자 그대로** 적되 `readme.test.ts` 가 세 문서와 상수가 같은 문자열인지 센다(지금 「P1~P7 행 동일」을 세는 방식 그대로). README 머리의 「🙋 … 아직 없습니다」 문단은 지운다. production URL·영상은 자리표시자 그대로.
-> 팀명은 띄어쓰기까지 그대로 `퇴직했는데저좀이직시켜주세요`. KNOWN_LIMITATIONS 의 122 줄을 지우는 것을 잊지 마라 — `docs:check` 가 잡는다(138).
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다 · 78 이 게스트의 쓰기 버튼 셋을 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · URL·팀명은 왔다 → 122).
-- 대장의 대기(122 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 138 ✅ · 139 는 기록.
-
----
 
 ---
 
