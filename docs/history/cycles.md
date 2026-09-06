@@ -15,6 +15,41 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (86) — `callModel` 이 `finishReason` 을 읽는다 · 429 는 `RATE_LIMITED` · 인용의 백틱을 뺀다 · 진짜 Gemini 세 번(실패 · 실패(→151) · 항목 23 · 충돌 4) · 151 기록 (FINDINGS 144 · 150 · `2c69316` · `4d8ea74`)
+
+**이번 바퀴(86)는 FINDINGS 144 — 구멍(`callModel()` 이 `finishReason` 을 안 읽어 잘린 응답과 계약 위반이 같은 재시도로 가고 · Gemini 429 가 `INTERNAL` 이 된다)을 닫았다** (`2c69316`). 재려니 goals.md 가 `AI_OUTPUT_INVALID` — 왕복 기록이 이유를 바로 말했다(표 칸의 백틱을 모델이 뺐다) → **별개의 구멍 150**, 같은 바퀴에 따로 닫았다 (`4d8ea74`). 그 코드로 두 번: run1 은 **또 다른 자리**에서 죽었고(제목 줄 + 마침표 → **151** · 적기만) run2 는 항목 23 · 충돌 4 · 인용 27/27. INBOX 「할 것」비어 있음 · 관통 7단계 OK(1005→1013) · 고장 0.
+**144** — `client.ts` 한 파일이 정본이고 두 루프는 읽기만: `callModel()` 이 `ModelCall { truncated }` 를 낸다(`finishReason === GEMINI_TRUNCATED_FINISH_REASON` = `MAX_TOKENS`) · `OUTPUT_TRUNCATED_COMPLAINT`(「출력이 상한에서 잘렸다 — 항목 수는 그대로 두고 body 와 인용을 더 짧게」) 한 문장을 `structure.ts`·`conflict.ts` 의 재시도 루프가 **Zod 를 보기 전에** 싣는다 — 상한은 그대로(올리면 생각 토큰이 먹는다 · 141) · `GEMINI_HTTP_ERROR_CODES { 429: 'RATE_LIMITED' }` 표 — 표의 상태만 `ApiError`, 401/403·5xx 는 Error(job 은 `INTERNAL`). 스텁이 `finishReason` 을 받는다(기본 STOP). 시험 +8 · SPEC §7 · KNOWN_LIMITATIONS 의 「429 → 픽스처 결과」는 **거짓이었다**(픽스처 갈래는 §7.4 뿐) → 「RATE_LIMITED」로.
+**150** — `QUOTE_FOLDED_CHARS = ['*', '`']` 표 한 줄. 148 과 같은 판단 — 인라인 코드 표시는 꾸밈이지 글자가 아니다 · 코드의 글자(`refund.closed_at`)는 그대로 · offset 은 원문(백틱 포함) 자리. 시험 +1(ai-structure 38) · SPEC §7.1.
+
+🔴 **잰 것** (`docs/evidence/2026-09-07-p3-gemini/probe.txt` 86바퀴 절 · 진짜 gemini-3.5-flash):
+
+| | 144 만 (`2c69316` · `probe-86-fail.json`) | 144+150 run1 (`probe-86-run1.json`) | 144+150 run2 (`probe-86-run2.json`) |
+|---|---|---|---|
+| goals.md 항목 | **실패** `AI_OUTPUT_INVALID` (31초 · 왕복 2 · 둘 다 STOP · JSON) — 「`item_g2_refund_sla` … "환불 접수→종결 24시간 이내 95% \| refund.closed_at "」 → **150** | **실패** (31초 · 왕복 2 · 둘 다 STOP · JSON) — 「`item_webhook_signature_verification` … "웹훅은 서명 검증 후에만 처리한다. 서명 검증 전에는 payload 를 "」 → **151** | **23** (policy 8 · architecture 5 · goal 3 · roadmap 3 · constraint 2 · mission 1 · domain 1) |
+| 인용 · 재시도 | 0/0 · 1 | 0/0 · 1 | **27/27** · 0 |
+| accept 거절 | — | — | 0 (23/23) |
+| 탐지 후보 · 충돌 | — | — | **6/6** · **4** (contradiction high ×4) |
+| finishReason | STOP · STOP | STOP · STOP | STOP ×3 |
+| 장부 | 2행 | 2행 | 3행 ≈ $0.024 |
+| 시험 · CI | ai-client 14 · ai-structure 37 · ai-conflict 25 · **GREEN 01:50** (walkthrough 1013) | — | ai-structure **38** · **GREEN 01:58** |
+
+⚠ **144 의 두 길(MAX_TOKENS · 429)은 세 실행 어디에서도 안 밟혔다** — 전부 `STOP` 이라 스텁 시험으로만 잠갔다. 「잘리면 더 짧게」가 진짜 모델에서 실제로 짧아지는지는 실측이 없다 (밟히면 `p3:measure` 의 `roundTrips[].finishReason` 이 말한다).
+⚠ **안 한 것** — 151 은 적기만(SYSTEM 한 줄 「인용은 한 문단 안에서만 · 제목과 본문을 잇지 마라 · 문장부호를 더하지 마라」 + 149 ② 불평 접기) · 149 그대로 · 화면 3 은 여전히 브라우저로 안 봤다 · 인용 실패가 세 실행 중 둘이라 「두 번 연속」은 이번엔 못 봤다.
+
+🔴 **배운 것 둘** — ① **실패 경로에 이름을 붙이는 일은 정상 경로가 그 길을 안 밟는 동안엔 스텁으로만 증명된다.** 그래도 해야 한다 — 밟히는 날은 데모 중이다. 상수 셋(`GEMINI_TRUNCATED_FINISH_REASON` · `OUTPUT_TRUNCATED_COMPLAINT` · `GEMINI_HTTP_ERROR_CODES`)을 `client.ts` 에 두고 루프는 읽기만 하게 해서 「새 상태를 가르려면 표에 한 줄」이 됐다. ② **「원문 그대로」의 꾸밈 목록은 실측이 채운다** — `*`(148) 다음이 백틱(150)이었고, 그 다음(151)은 꾸밈이 아니라 **글자를 더한 것**이라 접기의 경계 밖이다. 경계 밖은 프롬프트로 간다 — 검사를 더 느슨하게 하지 않는다.
+
+🔴 **2-B 이번 라운드 — `GEMINI_HTTP_ERROR_CODES` · `truncated`** ① 소비처: 표는 `geminiTransport` 하나 · `truncated` 는 두 루프 ② 뒤집으면 갈림: 시험 「표의 값은 전부 코드를 바꾼다」 · 「401/500 은 ApiError 가 아니다」 · 「잘리면 불평이 다르고 상한은 같다」. `ItemType` 10종 중 run2 는 **7종**(policy·architecture·goal·roadmap·constraint·mission·domain) — 10종 전수는 다음 라운드.
+
+그 바퀴가 다음으로 지목한 것은 FINDINGS 151 이었다 — 87바퀴가 닫았다 (`57498b7` · 149 ①②③ 도 같은 커밋 + `COMPLAINT_QUOTE_CHARS`) · 진짜 Gemini 세 번 중 run2 가 다른 자리(M3)에서 죽어 152 를 적었다.
+
+
+🔴 PLAN 의 `- [ ]` 맨 위는 **P4 둘째 행**(GATE 3 · 눈 판정)이다 — ④3 ② 로는 그 행이 다음이지만, 그 행의 몫인 격차보다 **구멍 151** 이 순서상 위이고(구멍 → 격차) 진짜 모델에서 goals.md 를 2회 중 1회 죽이는 자리라 먼저 닫는다. 그 다음 149(격차 · 같은 파일 · 151 과 같이 해도 된다) → 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **151 을 하는 법** — 대장의 「고칠 방향」: 접기로는 못 고친다(마침표는 글자 · 148 의 「글자 하나 바꾼 인용은 여전히 없다」 시험이 잠근다). `structure.ts` SYSTEM 의 span 문장에 「인용은 한 문단(또는 한 제목 줄) 안에서만 · 제목과 본문을 잇지 마라 · 문장부호를 더하거나 빼지 마라」 한 줄 — 표가 아니라 SYSTEM(여섯 종류 전부). 시험은 SYSTEM 에 그 문장이 산다(83바퀴 `RULE_LIST_LINES` 와 같은 모양). 같이 149 ②(`issueText` 가 같은 종류의 오류를 「N개, 예: …」로 접어 전부 말한다)를 하면 둘째 왕복이 같은 자리에서 안 죽는다. 합격은 `p3:measure` **두 번 연속** 인용 전부 원문 · 재시도 0.
+
+- PLAN 의 `- [ ]` 중 남은 것 **넷**: P4 둘째 행(GATE 3 · 눈 판정 — 다음 PLAN 행) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(151 · 149 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 144 ✅ · 150 ✅.
+
 ### 지난 바퀴 (85) — 후보를 scope 로 거르지 않는다 · 인용의 `**` 를 뺀다 · 진짜 Gemini 두 번 연속 항목 17·25 · 충돌 4·5 · **PLAN P3 첫 행 닫음** · 149 기록 (FINDINGS 146 · 148 · `f487d67` · `b1f7d3c`)
 
 **이번 바퀴(85)는 FINDINGS 146 — 구멍(탐지 후보가 모델이 고른 scope 에 달려 있어 같은 코드로 충돌 3/3 ↔ 0/3)을 닫았다** (`f487d67`). 재려니 셋째 실행에서 goals.md 가 `AI_OUTPUT_INVALID` — 이번 바퀴가 `p3:measure` 에 넣은 **왕복 기록**이 이유를 바로 말했다(모델이 인용에서 `**` 를 뺐다) → **별개의 구멍 148**, 같은 바퀴에 따로 닫았다 (`b1f7d3c`). 그 코드로 두 번 연속 완료 기준을 넘어 **PLAN P3 첫 행을 닫았다** (⑧). INBOX 「할 것」비어 있음 · 관통 7단계 OK(1003→1005) · 고장 0.
