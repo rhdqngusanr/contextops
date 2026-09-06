@@ -233,9 +233,11 @@ function FilterBar({ filter, onChange }: { filter: Filter; onChange: (f: Filter)
       </label>
       <label className="row">
         <span className="label">scope</span>
-        {/* SPEC §5 의 `?scope=` 는 `kind` 또는 `kind:value` 다. 그대로 적게 둔다. */}
+        {/* SPEC §5 의 `?scope=` 는 `kind` 또는 `kind:value` 다. 그대로 적게 둔다.
+            ⚠ `input-filter` 가 「이 문구가 안 잘리는 폭」을 준다 — 폭은 `--filter-input-ch` 가 정본이고
+               문구를 늘리면 그 값도 같이 늘려야 한다 (FINDINGS 158 · design-tokens.test.ts 가 대조한다). */}
         <input
-          className="input mono"
+          className="input mono input-filter"
           placeholder="project · domain:billing"
           value={filter.scope ?? ''}
           onChange={(e) => onChange({ ...filter, scope: e.target.value || undefined })}

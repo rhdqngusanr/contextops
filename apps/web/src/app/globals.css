@@ -79,6 +79,16 @@
         더 길어지면 그때부터 스스로 스크롤한다. */
   --palette-w: 480px;
   --palette-list-h: 420px;
+  /* 거르개의 자유 입력 칸(화면 5 의 `scope`) — placeholder 가 **쓰는 법**을 말하는 자리다.
+     🔴 그 문구가 잘리면 사람은 잘린 문법을 따라 적는다 (FINDINGS 158 · `domain:billin`).
+        1440×900 에서 잰 것: 칸 안쪽 195px · 문구 203.91px → **8.91px 모자랐다.**
+     mono 라 글자 폭을 `ch` 로 잰다 — 글꼴이 폴백으로 바뀌어도 문구와 같이 늘어난다.
+     여기에 칸 자신의 좌우 padding(`--sp-3`)과 테두리 1px 둘을 더해야 바깥 폭이 된다
+     (`box-sizing: border-box`).
+     ⚠ placeholder 를 늘리면 `--filter-input-ch` 도 같이 늘려라 —
+       `design-tokens.test.ts` 가 문구의 글자 수와 이 값을 대조한다 (여유 2자). */
+  --filter-input-ch: 26;
+  --filter-input-w: calc(var(--filter-input-ch) * 1ch + var(--sp-3) * 2 + 2px);
 }
 
 /* ── 바탕 ─────────────────────────────────────────────────────────── */
@@ -240,6 +250,13 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 /* 테두리만 바꾼다. 링은 위의 `:focus-visible` 한 줄이 그린다 — 여기서 `outline: none` 을 되살리지 마라 (FINDINGS 130). */
 .input:focus, .textarea:focus, .select:focus { border-color: var(--accent-ink); }
 .input.mono { font-family: var(--font-mono); }
+/* 거르개 칸만 넓힌다 — `.input` 자체는 다른 화면(모달·설정)도 쓰므로 건드리지 않는다 (FINDINGS 158).
+   ⚠ `min-width` 가 아니라 `width` + `max-width` 다 — 좁은 화면에서는 **줄어들어야 한다.**
+     🔴 그런데 375px 에서는 지금 그 `max-width: 100%` 가 아무 일도 안 한다: 앱 껍데기가
+        내비 220px 를 안 접어서 `.main-inner` 가 **76px** 이고, 라벨은 내용 폭 그대로 커진다
+        (직접 잼 · 문서 폭 444 → 543px). 이 화면은 그 전에 이미 깨져 있다 — **FINDINGS 160**.
+        여기서 breakpoint 를 새로 들이지 않는다. 껍데기가 접히면 이 두 줄이 그때 저절로 맞는다. */
+.input-filter { width: var(--filter-input-w); max-width: 100%; }
 .textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
 
 /* ── 표 — 목록은 카드가 아니라 표다 (DESIGN_BRIEF §3) ────────────── */

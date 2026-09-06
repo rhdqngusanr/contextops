@@ -340,3 +340,55 @@ describe('🔴 움직임 줄이기 — `prefers-reduced-motion` 블록 한 곳',
     }
   })
 })
+
+// ---------------------------------------------------------------------
+//  ⑧ 쓰는 법을 말하는 placeholder 는 잘리지 않는다 (FINDINGS 158 · DESIGN_BRIEF §3 「레이아웃」)
+//
+//  ★ 왜 이 시험이 생겼나 — 화면 5 의 `scope` 거르개는 placeholder 로 **문법**을 가르친다
+//    (`project · domain:billing` · SPEC §5 의 `?scope=`). 그런데 칸 안쪽이 195px 인데 문구가
+//    203.91px 이라 마지막 글자가 잘렸고, 화면에는 `domain:billin` 으로 보였다 —
+//    **가르치는 자리가 틀린 것을 가르쳤다.** 폭은 캡처로만 보면 다음에 문구가 한 자 늘 때 또 잘린다.
+//  재는 것 둘:
+//    ① 그 칸이 `input-filter` 를 달고 있고, 그 클래스가 `--filter-input-w` 로 폭을 받는다 (좁으면 줄어든다)
+//    ② **문구의 글자 수 + 여유 2자 ≤ `--filter-input-ch`** — 문구를 늘리면 여기서 빨개진다
+//  ⚠ 폭을 px 로 직접 적지 마라. mono 라 `ch` 로 재야 글꼴이 폴백으로 바뀌어도 같이 늘어난다.
+//  ⚠ 그리고 `min-width` 로 잠그지 마라 — 좁은 화면에서는 줄어드는 것이 위다.
+//    그래서 `width` + `max-width: 100%` 이고 시험이 **그 짝**을 센다.
+//    (375px 에서는 아직 둘 다 소용없다 — 껍데기가 내비를 안 접어 `.main-inner` 가 76px 다 · FINDINGS 160)
+// ---------------------------------------------------------------------
+describe('🔴 쓰는 법을 말하는 placeholder 가 칸 폭에서 잘리지 않는다', () => {
+  const contextPage = join(webSrc, 'app', 't', '[team]', 'p', '[project]', 'context', 'page.tsx')
+  /** 문구가 안 잘리려면 남겨 둘 여유 글자 수. 커서·글꼴 폴백의 반올림을 흡수한다. */
+  const SPARE = 2
+
+  it('scope 거르개가 `input-filter` 를 달고, 그 클래스가 `--filter-input-w` 를 쓰되 100% 를 안 넘는다', () => {
+    const tsx = readFileSync(contextPage, 'utf8')
+    expect(tsx, 'scope 칸이 `input-filter` 를 안 달았다').toMatch(/className="input mono input-filter"/)
+    const css = readFileSync(globalsCss, 'utf8')
+    expect(css).toMatch(/\.input-filter\s*\{[^}]*width:\s*var\(--filter-input-w\)[^}]*max-width:\s*100%/)
+    //  폭은 `ch` + 자기 padding·border 다 — px 를 직접 적으면 글꼴이 바뀔 때 다시 잘린다.
+    expect(css).toMatch(/--filter-input-w:\s*calc\(var\(--filter-input-ch\)\s*\*\s*1ch/)
+  })
+
+  it('placeholder 의 글자 수 + 여유 2자가 `--filter-input-ch` 를 넘지 않는다', () => {
+    const tsx = readFileSync(contextPage, 'utf8')
+    const ph = /placeholder="([^"]*domain[^"]*)"/.exec(tsx)
+    expect(ph, 'scope 칸의 placeholder 를 찾지 못했다').not.toBeNull()
+    const css = readFileSync(globalsCss, 'utf8')
+    const budget = /--filter-input-ch:\s*(\d+)\s*;/.exec(css)
+    expect(budget, 'globals.css 에 `--filter-input-ch` 가 없다').not.toBeNull()
+    const text = (ph as RegExpExecArray)[1] as string
+    const need = [...text].length + SPARE
+    expect(
+      Number((budget as RegExpExecArray)[1] as string),
+      `placeholder 가 ${text} (${need - SPARE}자) 라 --filter-input-ch 는 ${need} 이상이어야 한다`,
+    ).toBeGreaterThanOrEqual(need)
+  })
+
+  it('DESIGN_BRIEF §3 「레이아웃」 이 같은 규칙을 정본으로 적고 있다 (문서 ↔ 코드 양방향)', () => {
+    const md = readFileSync(designBrief, 'utf8')
+    const layout = /### 레이아웃([\s\S]*?)\n### /.exec(md)
+    expect(layout, 'DESIGN_BRIEF §3 에 「### 레이아웃」 절이 없다').not.toBeNull()
+    expect((layout as RegExpExecArray)[1]).toContain('--filter-input-ch')
+  })
+})

@@ -125,6 +125,11 @@
   ★ 왜 — 전부 카드로 만들면 무엇이 결정을 요구하는지 안 보인다.
 - 간격 4/8/12/16/24/32/48.
 - 코드·경로·diff·표는 **항상 `overflow-x:auto` 컨테이너**. 본문이 가로로 밀리면 안 된다.
+- **placeholder 로 쓰는 법을 가르치는 칸은 그 문구가 안 잘리는 폭을 갖는다** (FINDINGS 158).
+  폭은 `--filter-input-ch`(글자 수) → `--filter-input-w`(+ 자기 padding·border) 한 자리가 정본이고,
+  mono 라 `ch` 로 잰다 — px 로 적으면 글꼴이 폴백으로 바뀔 때 다시 잘린다.
+  ★ 왜 — 화면 5 의 `scope` 칸이 `project · domain:billing` 을 `domain:billin` 으로 보여 줬다.
+  **가르치는 자리가 틀린 문법을 가르치면 사람은 그대로 따라 적는다.**
 
 ### 공통 컴포넌트
 - **StatusChip**: `applied ✓` / `outdated ⚠` / `modified ✎` / `manual ⇩` / `unknown ?` / `failed ✕` — 아이콘+텍스트+색.
