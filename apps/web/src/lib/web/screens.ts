@@ -211,7 +211,7 @@ export function matchEntries(
 // =====================================================================
 
 export type EmptySlot =
-  | 'import.docs'
+  | 'import.jobs'
   | 'context.items'
   | 'context.versions'
   | 'review.cards'
@@ -236,8 +236,12 @@ export type EmptyPlace =
   | { readonly message: string; readonly next?: undefined; readonly noNext: string }
 
 export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
-  'import.docs': {
-    message: '아직 올린 문서가 없습니다. 왼쪽에 문서를 붙여넣어 보세요.',
+  //  ⚠ 이 칸이 세는 것은 **문서가 아니라 job** 이다 (FINDINGS 159).
+  //     데모에는 문서가 2건 있는데도 「아직 올린 문서가 없습니다」라고 말해서,
+  //     화면이 사실이 아닌 것을 말하고 있었다. 이름도 `import.jobs` 로 바꿈 — 자리 이름이
+  //     세는 것과 다르면 다음 사람이 같은 문구를 다시 쓴다.
+  'import.jobs': {
+    message: '구조화 중인 문서가 없습니다. 왼쪽에 문서를 붙여넣고 [구조화하기] 를 눌러 보세요.',
     noNext: '다음 행동이 같은 화면 왼쪽 칸이다 — 옮길 곳이 없다.',
   },
   'context.items': {

@@ -312,7 +312,7 @@ function StructureCard({
       {result.state === 'loading' ? <Skeleton rows={3} /> : null}
       {result.state === 'error' ? <ErrorState error={result.error} retry={jobs.reload} /> : null}
       {result.state === 'ready' && !job ? (
-        <ScreenEmpty slot="import.docs" base={base} />
+        <ScreenEmpty slot="import.jobs" base={base} />
       ) : null}
       {job ? (
         <JobProgress

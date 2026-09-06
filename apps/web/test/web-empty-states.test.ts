@@ -19,11 +19,12 @@ import { ScreenEmpty } from '../src/components/states'
 //    화면마다 문구와 버튼을 손으로 적으면 **한 화면만 버튼이 없는 채로** 남고,
 //    그 화면은 비어 있을 뿐 멀쩡해 보인다 — 눈으로는 안 잡힌다.
 //
-//  재는 것 넷:
+//  재는 것 다섯:
 //    ① 표가 정본이다 — 화면이 빈 상태 문구를 손으로 적지 않는다
 //    ② 🔴 **표에 한 줄을 더하면 그 화면의 빈 상태에 저절로 나온다**
 //    ③ 🔴 **모든 목적지가 실제로 있는 화면이다** (404 로 가는 버튼 0개)
 //    ④ 버튼이 없는 자리는 **왜 없는지**를 적었다 (빠뜨린 것과 구별한다)
+//    ⑤ 🔴 **문구가 그 자리가 세는 것을 말한다** (FINDINGS 159 · 아래 ⑤ 의 ★ 를 읽어라)
 // =====================================================================
 
 const webRoot = fileURLToPath(new URL('..', import.meta.url))
@@ -140,5 +141,30 @@ describe('④ 버튼이 없는 자리는 왜 없는지를 적었다', () => {
       accentPerScreen.set(screen, (accentPerScreen.get(screen) ?? 0) + 1)
     }
     for (const [screen, count] of accentPerScreen) expect(count, screen).toBe(1)
+  })
+})
+
+// =====================================================================
+//  🔴 ⑤ **빈 상태 문구는 그 자리가 세는 것을 말한다** (FINDINGS 159)
+//
+//  ★ 왜 이 게이트가 생겼나 — 화면 3 의 「구조화 진행」 칸은 **도는 job 이 없을 때** 서는데,
+//    문구는 `아직 올린 문서가 없습니다` 였다. 데모에는 문서가 **2건** 있었다.
+//    화면이 사실이 아닌 것을 말하면 「이미 올렸는데?」 하는 사람은 그 칸을 못 믿는다.
+//    눈으로는 잡히지만 **한 번 잡고 끝날 종류가 아니다** — 그래서 시험으로 잠근다.
+// =====================================================================
+describe('⑤ 🔴 빈 상태 문구는 그 자리가 세는 것을 말한다 (FINDINGS 159)', () => {
+  const importPage = readFileSync(
+    join(webRoot, 'src', 'app', 't', '[team]', 'p', '[project]', 'import', 'page.tsx'),
+    'utf8',
+  )
+
+  it('「구조화 진행」 칸이 세는 것은 job 이다 — 그 자리가 job 으로 갈린다', () => {
+    expect(importPage).toContain('slot="import.jobs"')
+    //  자리 이름의 뒤 조각이 실제로 그 칸이 보는 값이다.
+    expect(importPage).toMatch(/!job \?\s*\(?\s*<ScreenEmpty slot="import\.jobs"/)
+  })
+
+  it('🔴 그 문구가 「올린 문서가 없다」고 말하지 않는다 — 문서는 있어도 job 이 없을 수 있다', () => {
+    expect(EMPTY_PLACES['import.jobs'].message).not.toMatch(/올린 문서가 없/)
   })
 })
