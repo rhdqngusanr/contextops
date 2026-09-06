@@ -33,9 +33,11 @@
 1. **위 ①②③④ 를 `FINDINGS.md` 에 옮기고** ① → ② → ③ → ④ 순으로 닫는다.
    ①②는 **고장**이라 PLAN 보다 위다 (④3 규칙). ③④는 격차지만 **랜딩·데모가
    심사의 첫 화면**이라 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다.
-2. **PLAN P1 첫 행(DB 마이그레이션)** — `apps/web/.env.local` 에 Supabase 값이 꽂혀 있고
+2. ✅ **PLAN P1 첫 행(DB 마이그레이션)** — `apps/web/.env.local` 에 Supabase 값이 꽂혀 있고
    접속도 확인됐다(PostgreSQL 17.6). 마이그레이션을 실제로 돌려 표 16 · 인덱스 5 를
    확인하고 행을 닫아라. ⚠ 실패하면 **원인을 적고 멈춰라** — 지어내지 마라.
+   > 루프(71바퀴): **닫았다** (`adac632` · 아래 「끝난 것」). 잰 수는 표 **18** · 인덱스 **8** 이다 — 「16 · 5」는 P0 때 수치고
+   > 정본(`src/db/schema.ts` · `INDEX_NAMES`)이 P3 에서 `ai_usage`·`ai_jobs` 만큼 늘었다. 다음은 순서 3(FINDINGS 126).
 3. **PLAN P6 둘째 행의 제출서**(FINDINGS 126) — SPEC §16 을 저장소 문서로 만든다.
    🙋 공개 저장소 URL · 팀명 · 영상 링크는 **자리표시자**로 두고 그 자리를 명시해라.
 4. 그 다음 **미해결 FINDINGS 를 구멍 → 격차 순**으로 소진한다.
@@ -50,6 +52,9 @@
 > 사람이 유명 서비스(Linear · Vercel · Stripe · Supabase · GitHub)와 나란히 놓고 본 뒤
 > 고른 것이다. **고장이 아니라 「있으면 점수가 갈리는 것」**이라 순서가 뒤다.
 > ⚠ 하나씩, `FINDINGS.md` 에 [격차]로 번호를 붙여 옮긴 뒤 한 바퀴에 하나만.
+
+> 루프(71바퀴): 다섯을 **FINDINGS 131(A) · 132(B) · 133(C) · 134(D) · 135(E)** 로 옮겼다 — 전부 [격차] · 주인은 PLAN P4 둘째 행.
+> 순서는 위 「이 순서로」의 3(126 제출서) → 4(구멍 → 격차) 그대로다. 하나도 아직 손대지 않았다.
 
 | # | 무엇 | 왜 |
 |---|---|---|
@@ -67,6 +72,21 @@
 _(비어 있음)_
 
 ## 끝난 것
+
+### ✅ 순서 2 · PLAN P1 첫 행 — 마이그레이션을 Supabase 에 실제로 적용했다 → `adac632` (2026-09-06 · 71바퀴)
+
+- 문 하나를 더했다: `pnpm --filter web db:migrate` (`apps/web/scripts/migrate.ts` · drizzle-orm 의 postgres-js migrator · `db:status` 는 읽기만).
+  `drizzle-kit migrate` 대신인 이유는 config 에 접속 정보를 넣으면 `generate` 까지 env 를 요구하게 돼서다. 같은 `drizzle/` 폴더·journal 을 읽고
+  `drizzle.__drizzle_migrations` 장부에 적어서 **두 번 돌려도 두 번째는 +0** 이다. 적용된 파일의 hash 가 장부와 다르면 멈춘다.
+- **잰 것** (`docs/evidence/2026-09-06-supabase-migrate/`): `aws-0-ap-northeast-2.pooler.supabase.com:5432` · PostgreSQL 17.6 ·
+  전 — 표 0 · 남은 7 · 장부 없음 → 후 — 적용 **7/7** · `information_schema.tables` **18** (= `src/db/schema.ts` 의 표 18) ·
+  `pg_indexes` 에 `INDEX_NAMES` **8/8** · enum **17** → `db:status`·`db:migrate` 를 다시 돌리면 둘 다 **+0**.
+  요청서의 「표 16 · 인덱스 5」는 P0 때 수치다 — P3 가 `ai_usage`·`ai_jobs` 와 인덱스 셋을 더했다 (SPEC §2 마지막 줄).
+- NOTICE 하나: `source_documents` 의 FK 이름이 66자라 Postgres 가 63자로 자른다. 참조하는 곳 0 · 기능 영향 없음 · PGlite 도 같다.
+- 시험 4개(`apps/web/test/migrate-script.test.ts`)가 pglite-socket → TCP → postgres-js 같은 길로 「dryRun 은 아무것도 안 만든다 ·
+  적용 7 · 다시 돌리면 +0 · migrator 와 시험 helper 가 만든 모양이 같다」를 잠근다. `.env.example` 의 「pooler 로 돌리지 마라」를
+  Transaction pooler(6543)만으로 좁혔다 — Session pooler(5432)가 IPv4 망의 유일한 길이다.
+- ⚠ 안 한 것: Supabase 위에서 `next dev` 를 띄워 화면을 연 적은 없다 (마이그레이션만). `docs/STATUS.md` 「눈 판정 대기」.
 
 ### ✅ ④ 키보드 포커스가 안 보인다 → `1bc1da3` (2026-09-06 · FINDINGS 130)
 

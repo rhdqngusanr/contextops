@@ -33,12 +33,16 @@
 
 ## P1 — API 와 발행 (SPEC 9/4~9/6)
 
-- [ ] **DB 스키마 · Drizzle 마이그레이션** (SPEC §2) + Supabase 연결
+- [x] **DB 스키마 · Drizzle 마이그레이션** (SPEC §2) + Supabase 연결 — `389c7f2` `adac632`
       **완료 기준**: 마이그레이션이 로컬에서 적용됨 · 인덱스 5개 존재
       🙋 **Supabase 프로젝트 생성은 사람이 한다.** 루프는 스키마·마이그레이션·`.env.example` 까지
-      → 루프가 할 몫은 끝났다 (`389c7f2`): 표 16 · 인덱스 5 · enum 14 를 **PGlite 에
-      실제로 적용**하고 시험 11개로 잠갔다. `- [x]` 로 바꾸지 않은 이유는 **Supabase 연결**
-      한 조각이 남아서다 — 사람이 프로젝트를 만들고 `DATABASE_URL` 을 주면 닫힌다
+      → 루프 몫(`389c7f2`): 표 · 인덱스 · enum 을 **PGlite 에 실제로 적용**하고 시험 11개로 잠갔다.
+      → **Supabase 연결**(`adac632` · 71바퀴): 사람이 `.env.local` 에 값을 꽂은 뒤 `pnpm --filter web db:migrate`
+      (`scripts/migrate.ts` · drizzle-orm migrator · `--status` 는 읽기만)로 **실제로 적용했다** —
+      PostgreSQL 17.6 (Session pooler · IPv4) · 적용 7/7 · **표 18/18 · 인덱스 8/8 · enum 17** ·
+      다시 돌리면 +0 (`docs/evidence/2026-09-06-supabase-migrate/`). 완료 기준의 「인덱스 5」는 P0 때
+      수치고 지금 정본 `INDEX_NAMES` 는 8 (SPEC §2 마지막 줄 · P3 가 `ai_usage`·`ai_jobs` 셋을 더했다).
+      시험 4개(`test/migrate-script.test.ts`)가 같은 길(pglite-socket → postgres-js)로 「두 번 돌려도 무해」를 잠근다
 - [x] **API 1군** — teams · projects · repos · tokens · documents · context-items · conflicts · questions — `0a370d8` `5d26744`
       **완료 기준**: vitest api 초록 · 권한 2단계(owner/member) 검사 · 응답 형식 SPEC §5 준수
       → 라우트 13개 · 시험 37개(auth 17 · routes 20). 셋 다 만족했다:

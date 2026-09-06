@@ -5,11 +5,75 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 70바퀴 · 코드 `1bc1da3` · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 71바퀴 · 코드 `adac632` · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(71)는 INBOX 순서 2 — PLAN P1 첫 행(DB 스키마 · Drizzle 마이그레이션 + Supabase 연결)을 닫았다** (`adac632`). P0 부터 열려 있던 행이다 —
+루프 몫(PGlite 적용 · `389c7f2`)은 끝나 있었고 「Supabase 연결」 한 조각이 사람 몫이었는데, 사람이 `.env.local` 에 값을 꽂아 줘서 이번에 **배포 DB 에
+실제로 적용**했다. **PLAN 이 한 칸 움직였다 — P1 은 전부 `- [x]`.** INBOX 의 다음은 순서 3(FINDINGS 126 · 제출서)이다.
+
+🔴 **잰 것 — Supabase 가 말하는 수다.** 짐작이 아니라 `information_schema.tables` · `pg_indexes` · `pg_type` 에서 셌다
+(`docs/evidence/2026-09-06-supabase-migrate/` — `status-before.txt` · `migrate.txt` · `status-after.txt` · `migrate-again.txt`).
+
+| | 전 (`db:status` · 돌리기 전) | 후 (`db:migrate`) | 다시 (`db:status` → `db:migrate`) |
+|---|---|---|---|
+| 서버 | PostgreSQL **17.6** · `aws-0-ap-northeast-2.pooler.supabase.com:5432` (Session pooler · IPv4 — 직결은 IPv6 전용이라 이 망에서 안 뚫린다) | 같음 | 같음 |
+| `drizzle.__drizzle_migrations` 장부 | **없음** (표 자체가 없다) | **7** 행 (+7) | 7 (+0) → 7 (+0) |
+| 남은 마이그레이션 (drizzle 의 셈법 — 장부 마지막 시각보다 뒤인 파일) | 7 | **0** | 0 → 0 |
+| `information_schema.tables` (public · BASE TABLE) | 0 | **18** = `src/db/schema.ts` 의 `pgTable` 18 (손으로 센 수가 아니라 `is(v, PgTable)` 로) | 18 |
+| `pg_indexes` ∩ `INDEX_NAMES` | 0/8 | **8/8** | 8/8 |
+| enum (`pg_type` typtype = e) | 0 | **17** | 17 |
+| 장부 hash ≠ 파일 hash (drifted) | 0 | 0 | 0 |
+| NOTICE | — | **1** — `source_documents_current_version_id_source_document_versions_id_fk` 66자 → Postgres 가 63자로 자른다 (참조하는 곳 0 · PGlite 도 같다 · 기능 영향 없음 · FINDINGS 로 안 올렸다) | — |
+| 문 | `db:generate` 뿐 (migrate 없음) | `db:status`(**읽기만**) · `db:migrate` — `apps/web/scripts/migrate.ts` 하나 · 접속 문자열은 호스트:포트/DB 까지만 찍는다 (P1) | |
+| 시험 | 0 — 이 길(postgres-js migrator)을 지나는 시험 없음 | `test/migrate-script.test.ts` **4** — pglite-socket → TCP → postgres-js 로 ① dryRun 은 장부 표조차 안 만든다 ② 적용 7 · 표 = TS · 인덱스 8/8 ③ **다시 돌리면 +0** ④ migrator(`--> statement-breakpoint` 로 쪼갬)와 시험 helper(통째로)가 만든 컬럼·인덱스·enum 이 같다 | |
+| 웹 시험 파일 | 92 | **93** | |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 946 · docs → GREEN (`adac632`) | |
+
+🔴 **「표 16 · 인덱스 5」는 낡은 수였다.** INBOX·PLAN 완료 기준의 수치는 P0(`389c7f2`) 때 것이고, P3 가 `ai_usage`·`ai_jobs` 표와 인덱스 셋을
+더해 정본 `INDEX_NAMES` 는 8, 표는 18 이다 (`test/migration.test.ts` 가 이미 18·8 을 센다). 요청서의 수를 그대로 「확인했다」고 적지 않고
+정본과 대조했다 — 요청서가 낡을 수 있다는 것도 「SPEC 은 의도, 코드는 현실」의 한 갈래다.
+
+🔴 **`drizzle-kit migrate` 가 아니라 drizzle-orm 의 migrator 다.** kit 는 config 에 `dbCredentials` 가 있어야 하고 그러면 `generate` 까지 env 를
+요구한다. orm 의 migrator 는 같은 `drizzle/` 폴더·같은 journal 을 읽고 `drizzle.__drizzle_migrations` 에 적는다 — 그래서 **두 번 돌려도 +0**
+이고, 스크립트는 거기에 「적용된 파일의 hash 가 장부와 다르면 멈춘다」(drizzle 자신은 마지막 시각만 본다)를 더했다. `.env.example` 의
+「pooler 로 돌리지 마라」는 반만 맞았다 — Transaction pooler(6543)만 안 되고 **Session pooler(5432)는 된다.** 고쳤다.
+
+🔴 **INBOX 가 그 사이 다섯을 더 적었다** (🟡 A~E · Linear·Vercel·Stripe 와 나란히 본 것). **FINDINGS 131~135** 로 옮겼다 — 전부 [격차] ·
+주인 PLAN P4 둘째 행. **손대지 않았다** — INBOX 순서 3(126) → 4(구멍 → 격차)가 먼저다. 70바퀴가 눈에 걸렸다고만 적은 「게스트에게 발행 모달이
+열린다」도 135(E) 안에 넣었다 (121 과 같은 바퀴에 닫는다).
+
+⚠ **안 한 것** — Supabase 위에서 `next dev` 를 띄워 화면을 연 적은 없다 (마이그레이션만 · 표는 비어 있다 — 데모 테넌트는 Cron 리셋 문이 심는다).
+`SUPABASE_JWT_SECRET` 도 꽂혀 있으니 **실제 Supabase Auth 로그인**이 이제 돌 수 있는 상태다 — 「눈 판정 대기」에 적었다.
+
+**다음 바퀴의 일 — FINDINGS 126**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **INBOX 순서 3 이 126 이다** — 제출서(SPEC §16)를 `docs/SUBMISSION.md` 로 · 🙋 공개 저장소 URL · 팀명 · 영상 링크는 **자리표시자**로 두고 그 자리를
+명시한다. 126 은 구멍이고 주인은 PLAN P6 둘째 행이라 ④3 ② 로도 맞다 (P3·P5 의 남은 행은 🙋 키·계정). 그 다음 순서 4: 미해결 FINDINGS
+**구멍**(122 · 117 · 115 · 114 · 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103 …) → **격차**(121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134 …).
+
+> **126 을 하는 법** — 재료는 `docs/SPEC.md` §16 과 README(66바퀴가 랜딩과 글자 그대로 대조해 둔 것 · `apps/web/test/readme.test.ts` 15개).
+> §16 의 「(4) 승인 항목만 근거로 답하는 질의」는 **문이 없다**(FINDINGS 117 · `POST …/ask` 0곳) — 빼거나 `docs/KNOWN_LIMITATIONS.md` 를 가리켜라.
+> 없는 것을 적지 않는다. readme.test 의 대조(랜딩 문장 · 경로 실존 · FINDINGS 번호가 대기인가)를 제출서에도 넓혀라. **한 바퀴에 하나.**
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행.
+  **P1 은 전부 닫혔다.** 사람이 막는 것은 「막힌 것」 표 — Supabase 행은 이번에 지웠다.
+- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 113 · 112 · 111 · 110 · 108 · 131~135 …)는 **PLAN 을 막지 않는다** — 고장은 없다.
+
+
+---
+
+### 지난 바퀴 (70) — 키보드 포커스 링 한 곳 · 탭을 눌러 찍었다 (INBOX 2026-09-06 ④ · FINDINGS 130 · `1bc1da3`)
 
 **이번 바퀴(70)는 INBOX 순서 ④ — FINDINGS 130(격차 · 키보드 포커스가 안 보인다)을 닫았다** (`1bc1da3`). INBOX 가 옮겨 준 결함 넷
 (127·128·129·130)이 **전부 닫혔다.** PLAN 은 이 바퀴에 안 움직였다 — INBOX 의 다음은 순서 2(PLAN P1 첫 행 · 마이그레이션을 Supabase 에 실제로)다.
@@ -37,14 +101,8 @@ CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:
 ⚠ 눈에 걸린 것 하나: 게스트(읽기 전용)가 [발행하기] 를 누르면 **발행 모달이 열린다** (`control/mouse-click.png`). 서버는 막겠지만(`ACTOR_RULES` 의
 `writes`) 화면이 먼저 「할 수 있다」고 말한다 — 격차다. 새 FINDINGS 로 적지 않았다: 한 바퀴에 하나고, 주인은 PLAN P4 둘째 행이다. 다음에 그 행을 볼 때.
 
-**다음 바퀴의 일 — FINDINGS 없음**
+**그 바퀴가 다음으로 지목한 것 = INBOX 순서 2 · PLAN P1 첫 행** → 71바퀴가 닫았다 (`adac632`). 아래는 70 이 남긴 지목의 원문이다.
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 **「없음」은 고장이 없다는 뜻이다 — 대기 항목은 있다(126 · 122 · …).** INBOX 순서가 그 위다: 130 까지 닫혔으니 다음 바퀴의 일은
 **INBOX 순서 2 · PLAN P1 첫 행**(마이그레이션을 Supabase 에 실제로 돌려 표 16 · 인덱스 5 를 확인하고 행을 닫는다 · INBOX 가 「`.env.local` 에
@@ -63,7 +121,6 @@ CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:
 
 
 ---
-
 
 ### 지난 바퀴 (69) — 한글 keep-all · 68 의 미커밋 올림 (INBOX 2026-09-06 ③ · FINDINGS 129 · `0a3535e`)
 
@@ -215,62 +272,6 @@ INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면
 
 **그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서). 67바퀴는 INBOX 의 고장이 위여서 127 로 갔다 — 126 은 그대로 대기다.
 
-
-
-### 지난 바퀴 (65) — scan 단계의 env 값 검사 · 64바퀴 미커밋 올림 (PLAN P5 둘째 행 ③ · `8d29737`)
-
-
-**이번 바퀴는 둘을 했다.** ① 64바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** P1 근거 문서 작업을 같은 트리에서
-전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`0018ce9`) — 58·59·60·61·63·64 **여섯 바퀴**다 (아래 「밟은 함정」).
-② 64바퀴가 다음으로 지목한 **FINDINGS 125** — scan 단계의 「env 값 0건」 검사가 **잰 값이 0개**였던 것 — 를 닫았다
-(`8d29737`). 주인은 `docs/PLAN.md` **P5 둘째 행**(보안 캡처 증거)이고 그 행의 ③ 줄로 적었다. 관통 7단계 초록 · 고장 0.
-그 행의 나머지(Vercel 연결 · 첫 리셋 · 네트워크 탭 캡처 · fresh install)는 🙋 다.
-
-🔴 **잰 것 — scan 단계의 P1 증언이 이제 실제로 무언가를 잰다. 그리고 두 단계가 같은 값을 심는다.**
-
-| | 전 | 후 |
-|---|---|---|
-| scan 단계 「env 값 0건」 | **잰 값 0개** — 픽스처 `.env.example` 의 값만 찾았고 그 파일은 값이 0건이어야 한다(`fixtures.mjs` ③) | 픽스처를 **임시 사본**(`mkdtemp`)에 복사 → 값이 든 `.env` 를 심고 → 그 사본을 훑는다. **잰 값 2개 · 0건** · 0개면 FAIL |
-| 스캐너가 `.env` 를 **열어 키만** 꺼냈다는 증거 (scan 쪽) | 안 잼 | `.env` 에만 있는 `SENTRY_DSN` 이 `env_keys` 에 **있다** — env 키 14 → 15 · 제외 1 → 2종 (`.env` · `.env.example` 둘 다 「키 이름만 읽었다」) |
-| 심는 값의 정본 | payload 스크립트 안의 표 하나 | `tools/walkthrough-stage.ts` 의 `PLANTED_ENV` · `plantEnv(repoDir)` — 둘째 사용자가 생겨 올렸다. 두 단계가 **같은 값**을 심고 각자 「내 산출물에 없다」를 잰다 |
-| 값 8자 하한 | 두 스크립트에 숫자 `8` | `ENV_VALUE_MIN_CHARS` 한 곳 |
-| `scan.json` 의 `repo` | 폴더 이름 (사본이면 난수) | `--repo-name paylab-api` 로 고정 — 증거 문서에 복사한 것과 어긋나지 않게 |
-| 음성 확인 | — | `values` 를 빈 배열로 바꾼 사본을 돌리면 **exit 1** 「env 값을 하나도 안 쟀다」 |
-| scan 단계 검사 · 관통 | 49 · 880 | **50 · 881** |
-| `p1-payload.md` | §3·§4·§7 에 「scan 은 아직 0개」 ⚠ 셋 | ⚠ 0 · §4 표가 실측(잰 값 2 · 키 15 · 제외 2) · 산출물 둘 다시 복사 |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`8d29737`) |
-
-🔴 **「표를 둘이 따로 들면 갈라진다」를 이번엔 미리 막았다.** 64바퀴가 payload 스크립트 안에 둔 `PLANTED_ENV` 를 scan
-스크립트에 **베끼면** 당장은 돌지만, 누가 한쪽 값을 바꾼 날부터 두 단계의 「이 값을 안 나른다」는 서로 다른 값에 대한 증언이
-된다. 둘째 사용자가 생긴 순간이 정본으로 올릴 때다 (CLAUDE.md 「둘째 사용자가 생기면 그때 정본으로 올린다」). `packages/schema`
-가 아니라 `tools/` 에 둔 이유는 그 파일 머리에 있다 — 개발 도구의 계약이지 제품의 계약이 아니다.
-
-🔴 **scan 단계는 여전히 `openStage()` 를 안 쓴다.** 산출물이 CLI 가 쓰는 `ScanResult` 라 `checks` 배열을 담을 자리가 없고,
-관통은 stdout 의 「검사 N개」 줄을 센다 (`walkthrough.ps1` 의 `count_log`). 그래서 이 단계의 실패 사유는 산출물이 아니라
-**로그**에만 남는다 — 사람이 읽는 증거로 굳힐 때 payload 단계처럼 `sent` 를 남길 수 없다. 바꾸려면 산출물을 둘로
-(`walkthrough-scan.json` = 단계 산출물 · `scan.json` 은 그 안이나 옆에) 나눠야 하는데, 지금 그 둘째 사용자는 없다 — 적어만 둔다.
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-p1-payload/walkthrough-scan.json`: `repo: "paylab-api"` · `files` 48개 전부
-`{path, language}` 두 칸 · `summary.env_keys` 15개에 `SENTRY_DSN` 이 있고 · `excluded` 두 줄이 `.env` 와 `.env.example` 을
-각각 「키 이름만 읽었다 — 값은 안 읽는다」로 적는다 · 파일 안에 `PLANTED` **0건** (`grep -c`). scan 로그의 마지막 줄은
-「코드 본문 0건 · env 값 0건 (잰 값 2개 · 심은 키 2개 산출물에 있음) (P1)」이다 — 잰 수가 로그에 있다.
-
-**그 바퀴가 다음으로 지목한 것 = FINDINGS 122** → 66바퀴가 README·KNOWN_LIMITATIONS 의 본문을 썼다 (🙋 URL·팀명은 그대로 · 122 는 대기).
-
-
-🔴 **122 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS)
-이고, 그 행에서 루프가 할 수 있는 조각이 **README 본문**이다. P5 둘째 행의 남은 것은 전부 🙋(계정)이고, P6 첫 행(2분 영상 ·
-슬라이드 · 리허설)은 발표자와 production URL 이 있어야 재료가 된다. 122 의 🙋 URL(GitHub · Known limitations 링크)은 그대로
-🙋 로 두되, **README 와 KNOWN_LIMITATIONS 의 본문**은 URL 없이도 쓸 수 있다 — 링크는 자리만 만들고 값은 사람이 꽂는다.
-
-> **README 를 쓰는 법** — `docs/SPEC.md` §16(제출서 초안)·§17(Known Limitations)과 랜딩(`apps/web/src/components/landing.tsx`)의 문장이 재료다.
-> 랜딩과 README 가 서로 다른 말을 하면 안 된다 — 한쪽을 정본으로 하고 다른 쪽은 그것을 읽게 하든지, 시험이 대조하게 해라.
-> KNOWN_LIMITATIONS 에는 `docs/evidence/2026-09-06-p1-payload/p1-payload.md` §7 의 두 줄(배포에서 찍은 것이 아니다 ·
-> `body` 에 사람이 코드를 붙여 넣으면 계약은 못 막는다)이 들어간다. ⚠ 만들기 전에 **코드에서 그 이름을 찾아라.**
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). P5 둘째 행의 코드 쪽은 다 됐다.
-- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
 
 
 ---
@@ -561,7 +562,7 @@ INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면
   @contextops/plugin build` 를 돌려야 `test/bundle.test.ts` 가 초록이다
   (이번 바퀴에 `byAi` 를 더해서 실제로 돌렸다).
 
-⚠ **P1 첫 행(DB·Supabase)은 사람이 막고 있다** — 루프 몫은 끝났다 (`389c7f2`).
+✅ **P1 첫 행(DB·Supabase)은 닫혔다** (`389c7f2` PGlite · `adac632` Supabase 실제 적용 · 71바퀴). `pnpm --filter web db:status` 가 배포 DB 의 표·인덱스·남은 마이그레이션을 **읽기만 하고** 센다 · `db:migrate` 가 적용한다.
 ⚠ **Anthropic API 키도 사람이 준다.**
 
 **값싼 것들 (아무 바퀴에서나)**: FINDINGS **21·22·23·17·32·44·57·61·63** 은
@@ -576,6 +577,11 @@ INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면
 (**67 ①** 과 같은 자리다). ✅ **31·65 는 닫혔다** (`c57b3fb`·`5fe0068`).
 
 ## 눈 판정 대기
+
+🔴 **Supabase 위에서 화면을 연 적이 없다** (71바퀴 · `adac632`). 마이그레이션만 적용했고 표는 비어 있다. 못 잰 것: ① `.env.local` 그대로 `next dev` 를 띄우고
+**실제 Supabase Auth 로 로그인**이 도나 (`SUPABASE_JWT_SECRET` 도 꽂혀 있다 — 지금까지 로그인은 전부 시험용 JWT 였다) ② `CRON_SECRET` 을 `.env.local` 에 넣고(아직 없다 · 아무 난수)
+`curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/v1/cron/demo-reset` 로 데모 테넌트를 심으면 60초 안에 끝나고 시크릿 창의 `/demo` 가 열리나.
+둘 다 지나면 P5 둘째 행의 「Supabase 에서 60초 안에 끝나나」도 같이 닫힌다. ⚠ 배포 DB 에 쓰는 일이다 — 리셋은 데모 팀만 지운다지만(`demo-reset.test.ts`) 돌리기 전에 그 시험이 초록인지 본다.
 
 🔴 **게스트 데모 — 고친 뒤 브라우저로 안 봤다** (67바퀴 · FINDINGS 127). → **70바퀴가 부분 봤다** (`docs/evidence/2026-09-06-focus-visible/probe.txt`):
 새 프로필로 `/demo` → context 항목 15개 · packs/1.1.0 본문 · 5xx 0 · 「줄을 섰다」 0. **남은 것은 proposals · roadmap · sync** — 같은 폴더의
@@ -792,7 +798,7 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 
 | 무엇 | 왜 루프가 못 하나 | 언제 필요한가 |
 |---|---|---|
-| Supabase 프로젝트 생성 · `DATABASE_URL` · **`SUPABASE_JWT_SECRET`** | 계정·결제가 필요하다 | **🔴 지금.** 코드는 다 됐다 — 값만 꽂으면 P1 첫 행이 닫히고 실제 로그인이 돈다. 필요한 값은 `apps/web/.env.example` 에 전부 있다 |
+| ~~Supabase 프로젝트 생성 · `DATABASE_URL` · `SUPABASE_JWT_SECRET`~~ | ✅ **2026-09-06 사람이 꽂았다** (`.env.local` · Session pooler · IPv4) | 71바퀴가 마이그레이션을 실제로 적용했다 (`adac632` · 표 18 · 인덱스 8). **표는 비어 있다** — 데모 테넌트는 Cron 리셋 문(`/api/v1/cron/demo-reset`)이 심는다. 같은 값을 Vercel 에도 꽂는 것은 아래 행 |
 | Anthropic API 키 (서버측 AI 용, 종량제) | 키 발급은 사람이 | P3 시작할 때 |
 | Vercel 프로젝트 연결 · 환경변수 (**Root Directory `apps/web`** · `CRON_SECRET` · `SUPABASE_JWT_SECRET` · `DATABASE_URL`) → 첫 리셋 한 번 (`curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset`) → `/demo` 가 열리나 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처 한 장(P1 증거의 나머지 절반 · `docs/evidence/2026-09-06-p1-payload/` 옆에) | 계정 연결이 필요하다 | **🔴 지금.** 코드 쪽(Cron · 리셋 문 · `vercel.json`)은 63바퀴에, P1 증거의 코드 쪽은 64·65바퀴에 다 됐다 — 값만 꽂으면 데모가 production 에서 매일 03:00 KST 에 다시 선다 |
 | 실데이터 픽스처(`brain`) 공개 가능 여부 판단 | 제품 결정이다 | P5 (안 되면 paylab 만 · SPEC §14 절삭 6번) |

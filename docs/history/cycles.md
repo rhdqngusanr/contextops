@@ -15,6 +15,65 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (65) — scan 단계의 env 값 검사 · 64바퀴 미커밋 올림 (PLAN P5 둘째 행 ③ · `8d29737`)
+
+
+**이번 바퀴는 둘을 했다.** ① 64바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** P1 근거 문서 작업을 같은 트리에서
+전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`0018ce9`) — 58·59·60·61·63·64 **여섯 바퀴**다 (아래 「밟은 함정」).
+② 64바퀴가 다음으로 지목한 **FINDINGS 125** — scan 단계의 「env 값 0건」 검사가 **잰 값이 0개**였던 것 — 를 닫았다
+(`8d29737`). 주인은 `docs/PLAN.md` **P5 둘째 행**(보안 캡처 증거)이고 그 행의 ③ 줄로 적었다. 관통 7단계 초록 · 고장 0.
+그 행의 나머지(Vercel 연결 · 첫 리셋 · 네트워크 탭 캡처 · fresh install)는 🙋 다.
+
+🔴 **잰 것 — scan 단계의 P1 증언이 이제 실제로 무언가를 잰다. 그리고 두 단계가 같은 값을 심는다.**
+
+| | 전 | 후 |
+|---|---|---|
+| scan 단계 「env 값 0건」 | **잰 값 0개** — 픽스처 `.env.example` 의 값만 찾았고 그 파일은 값이 0건이어야 한다(`fixtures.mjs` ③) | 픽스처를 **임시 사본**(`mkdtemp`)에 복사 → 값이 든 `.env` 를 심고 → 그 사본을 훑는다. **잰 값 2개 · 0건** · 0개면 FAIL |
+| 스캐너가 `.env` 를 **열어 키만** 꺼냈다는 증거 (scan 쪽) | 안 잼 | `.env` 에만 있는 `SENTRY_DSN` 이 `env_keys` 에 **있다** — env 키 14 → 15 · 제외 1 → 2종 (`.env` · `.env.example` 둘 다 「키 이름만 읽었다」) |
+| 심는 값의 정본 | payload 스크립트 안의 표 하나 | `tools/walkthrough-stage.ts` 의 `PLANTED_ENV` · `plantEnv(repoDir)` — 둘째 사용자가 생겨 올렸다. 두 단계가 **같은 값**을 심고 각자 「내 산출물에 없다」를 잰다 |
+| 값 8자 하한 | 두 스크립트에 숫자 `8` | `ENV_VALUE_MIN_CHARS` 한 곳 |
+| `scan.json` 의 `repo` | 폴더 이름 (사본이면 난수) | `--repo-name paylab-api` 로 고정 — 증거 문서에 복사한 것과 어긋나지 않게 |
+| 음성 확인 | — | `values` 를 빈 배열로 바꾼 사본을 돌리면 **exit 1** 「env 값을 하나도 안 쟀다」 |
+| scan 단계 검사 · 관통 | 49 · 880 | **50 · 881** |
+| `p1-payload.md` | §3·§4·§7 에 「scan 은 아직 0개」 ⚠ 셋 | ⚠ 0 · §4 표가 실측(잰 값 2 · 키 15 · 제외 2) · 산출물 둘 다시 복사 |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`8d29737`) |
+
+🔴 **「표를 둘이 따로 들면 갈라진다」를 이번엔 미리 막았다.** 64바퀴가 payload 스크립트 안에 둔 `PLANTED_ENV` 를 scan
+스크립트에 **베끼면** 당장은 돌지만, 누가 한쪽 값을 바꾼 날부터 두 단계의 「이 값을 안 나른다」는 서로 다른 값에 대한 증언이
+된다. 둘째 사용자가 생긴 순간이 정본으로 올릴 때다 (CLAUDE.md 「둘째 사용자가 생기면 그때 정본으로 올린다」). `packages/schema`
+가 아니라 `tools/` 에 둔 이유는 그 파일 머리에 있다 — 개발 도구의 계약이지 제품의 계약이 아니다.
+
+🔴 **scan 단계는 여전히 `openStage()` 를 안 쓴다.** 산출물이 CLI 가 쓰는 `ScanResult` 라 `checks` 배열을 담을 자리가 없고,
+관통은 stdout 의 「검사 N개」 줄을 센다 (`walkthrough.ps1` 의 `count_log`). 그래서 이 단계의 실패 사유는 산출물이 아니라
+**로그**에만 남는다 — 사람이 읽는 증거로 굳힐 때 payload 단계처럼 `sent` 를 남길 수 없다. 바꾸려면 산출물을 둘로
+(`walkthrough-scan.json` = 단계 산출물 · `scan.json` 은 그 안이나 옆에) 나눠야 하는데, 지금 그 둘째 사용자는 없다 — 적어만 둔다.
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-p1-payload/walkthrough-scan.json`: `repo: "paylab-api"` · `files` 48개 전부
+`{path, language}` 두 칸 · `summary.env_keys` 15개에 `SENTRY_DSN` 이 있고 · `excluded` 두 줄이 `.env` 와 `.env.example` 을
+각각 「키 이름만 읽었다 — 값은 안 읽는다」로 적는다 · 파일 안에 `PLANTED` **0건** (`grep -c`). scan 로그의 마지막 줄은
+「코드 본문 0건 · env 값 0건 (잰 값 2개 · 심은 키 2개 산출물에 있음) (P1)」이다 — 잰 수가 로그에 있다.
+
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 122** → 66바퀴가 README·KNOWN_LIMITATIONS 의 본문을 썼다 (🙋 URL·팀명은 그대로 · 122 는 대기).
+
+
+🔴 **122 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS)
+이고, 그 행에서 루프가 할 수 있는 조각이 **README 본문**이다. P5 둘째 행의 남은 것은 전부 🙋(계정)이고, P6 첫 행(2분 영상 ·
+슬라이드 · 리허설)은 발표자와 production URL 이 있어야 재료가 된다. 122 의 🙋 URL(GitHub · Known limitations 링크)은 그대로
+🙋 로 두되, **README 와 KNOWN_LIMITATIONS 의 본문**은 URL 없이도 쓸 수 있다 — 링크는 자리만 만들고 값은 사람이 꽂는다.
+
+> **README 를 쓰는 법** — `docs/SPEC.md` §16(제출서 초안)·§17(Known Limitations)과 랜딩(`apps/web/src/components/landing.tsx`)의 문장이 재료다.
+> 랜딩과 README 가 서로 다른 말을 하면 안 된다 — 한쪽을 정본으로 하고 다른 쪽은 그것을 읽게 하든지, 시험이 대조하게 해라.
+> KNOWN_LIMITATIONS 에는 `docs/evidence/2026-09-06-p1-payload/p1-payload.md` §7 의 두 줄(배포에서 찍은 것이 아니다 ·
+> `body` 에 사람이 코드를 붙여 넣으면 계약은 못 막는다)이 들어간다. ⚠ 만들기 전에 **코드에서 그 이름을 찾아라.**
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). P5 둘째 행의 코드 쪽은 다 됐다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+
+---
+
+
 ### 지난 바퀴 (64) — P1 근거 문서 · payload 단계의 env 값 검사 (PLAN P5 둘째 행 ② · `0018ce9`)
 
 > ⚠ 64바퀴도 CI GREEN 까지 가고 STATUS·PLAN·FINDINGS 를 다 쓴 뒤 **커밋하지 못한 채** 끝났다 — 58·59·60·61·63 에
