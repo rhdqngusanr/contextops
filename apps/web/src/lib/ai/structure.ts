@@ -318,9 +318,11 @@ function toSourceRef(span: AiSourceSpan, chunk: DocChunk, documentVersionId: str
  *   (84바퀴는 반대로 `**` 를 더했다), 그 하나로 「원문에 없다」→ 재시도도 같은 자리 → 문서 전체가
  *   `AI_OUTPUT_INVALID` 였다 (3회 중 1회). 강조는 마크다운의 **꾸밈**이지 글자가 아니다 — 공백을
  *   접는 것(147)과 같은 판단이다. 글자·문장부호는 여전히 그대로여야 한다.
+ * ★ 인라인 코드 표시(`` ` ``)도 같다 (FINDINGS 150 · 86바퀴) — goals.md 의 표 칸 「`refund.closed_at - …`」을
+ *   모델이 백틱 없이 인용해 goals.md 전체가 죽었다 (1회 중 1회). 코드 글자(`refund.closed_at`)는 그대로다.
  * ⚠ 여기 문자를 더할 때는 「그 문자가 없어도 뜻이 같은가」로만 판단해라. `_` 는 id·코드의 글자다.
  */
-export const QUOTE_FOLDED_CHARS: readonly string[] = ['*']
+export const QUOTE_FOLDED_CHARS: readonly string[] = ['*', '`']
 
 /**
  * 공백을 접고 꾸밈 문자(`QUOTE_FOLDED_CHARS`)를 뺀 글자열에서 `needle` 을 찾고 **원문 offset** 을

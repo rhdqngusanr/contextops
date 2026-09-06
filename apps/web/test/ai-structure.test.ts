@@ -331,6 +331,22 @@ describe('근거는 모델의 숫자가 아니라 **인용에서 계산한 문�
     expect(content.slice(ref.start_char, ref.end_char)).toBe('가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.')
   })
 
+  it('🔴 인라인 코드 표시(백틱)도 글자가 아니다 — 표 칸의 `refund.closed_at` 을 백틱 없이 인용해도 찾는다 (FINDINGS 150)', async () => {
+    //  진짜 Gemini 86바퀴 — goals.md 의 G2 행. 모델은 백틱을 빼고 인용했고 그 하나로 문서 전체가 죽었다.
+    const content = '# 목표\n\n| 번호 | 목표 | 지표 | 기한 |\n|---|---|---|---|\n| G2 | 환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95 | 2026-06-30 |\n'
+    stubAi(() => ({
+      input: output([policyItem('item_g2_refund_sla', 'G2', '환불 접수→종결 24시간 이내 95% | refund.closed_at - refund.created_at p95')]),
+    }))
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    expect(sent.length).toBe(1)
+    const ref = result.items[0]!.source_refs[0]!
+    if (ref.kind !== 'source_document') throw new Error(ref.kind)
+    //  근거는 원문 그대로(백틱 포함)다. 코드의 글자(`refund.closed_at`)는 하나도 안 바뀌었어야 한다.
+    expect(content.slice(ref.start_char, ref.end_char)).toBe('환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95')
+  })
+
   it('반대로 모델이 `**` 를 **더해도** 찾는다 — 84바퀴의 재시도가 그랬다 (FINDINGS 148)', async () => {
     const content = '# 사명\n\n가맹점이 우리를 쓰는 이유는\n하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.\n'
     stubAi(() => ({
