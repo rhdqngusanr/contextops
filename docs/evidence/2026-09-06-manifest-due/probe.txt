@@ -1,0 +1,40 @@
+FINDINGS 111 — Manifest 의 마일스톤이 `due` 를 나른다 (76바퀴 · 2026-09-06 · 코드 `4109f5e`)
+
+■ 어디서 왔나
+  75바퀴의 다음 세션이 작업(스키마·라우트·화면·시드·시험·SPEC·DESIGN_BRIEF·번들)을 다 해 놓고
+  CI 도 커밋도 없이 끝났다 (파일 mtime 18:20~18:21 · 마지막 커밋 19:15 는 사용자의 env 변경).
+  빠져 있던 것 둘: ① `compile.ts` 의 `milestonesOf()` — 정작 due 를 옮기는 한 줄(절차 ②)이 없었다
+  ② `scripts/dump-roadmap.tsx` 의 fixture 에 due 가 없어 typecheck 이 빨갰다. 76 이 둘을 채웠다.
+  그 뒤 `pnpm --filter @contextops/schema schemas` 가 필요했다 — `plugin/contextops/schemas/manifest.json` 이
+  Zod 정본과 어긋나 schema 시험 1개가 빨갰다 (산출기로 다시 뽑음 · 갈린 것은 `due` 한 칸 5줄뿐).
+
+■ 전 (`e65c2f8`)
+  packages/schema/src/manifest.ts  ManifestMilestone = { id, paths, done_when }            — due 없음
+  packages/compiler/src/compile.ts milestonesOf() → { id, paths, done_when }               — 셋만 옮김
+  .ci/walkthrough-pack/CLAUDE.md   `- **PL-M1 …** \`due: 2026-04-30\``                     — 본문에는 전부터 있었다
+  GET /projects/{id}/roadmap       행에 due 칸 없음 → 화면 8 이 기한을 그릴 근거 없음
+
+■ 후 (`4109f5e`)
+  .ci/walkthrough-pack/manifest.json:128   "due": "2026-04-30"          (PL-M1 · 관통이 낸 실물)
+  .ci/walkthrough-pack/CLAUDE.md:13        `due: 2026-04-30`            (본문 — 같은 글자)
+  golden case-1-small/expected/manifest.json  PL-M1 "due": "2026-10-15" · PL-M2 "due": "2026-11-30"
+    (UPDATE_GOLDEN=1 로 다시 뽑아 diff 를 봤다 — 갈린 줄은 이 둘뿐 · manifest_hash 그대로 · 파일 해시 그대로)
+  COMPILER_VERSION 0.1.0 → 0.2.0 (TEMPLATE_VERSION 그대로 — 본문은 안 바뀌었다)
+  plugin/contextops/schemas/manifest.json  +5줄 (`due` · format date · pattern)
+
+■ 화면 8 — 글자로 뽑은 모양 (`pnpm --filter web exec tsx scripts/dump-roadmap.tsx` · 20:45)
+  ④ 접힘 · 진행 중      ▸ | PL-M1 | due 2026-09-20 | ◐ | 진행 중 | 마지막 보고 8분 전 | 근거 1 / 2
+  ⑥ 보고가 한 번도 없다 ▾ | PL-M1 | due 2026-09-20 | ○ | 시작 전 | 아직 보고가 없습니다 | 근거 0 / 1 | …
+  ⑫ 확정됨 (done)       ▸ | PL-M1 | due 2026-09-20 | ✓ | 완료 | 마지막 보고 8분 전 | 근거 1 / 2
+  → 13 행 모양 전부에 `due YYYY-MM-DD` 가 마일스톤 ID 바로 뒤 · chip 앞에 선다. 「지났다」는 안 잰다.
+  → due=null 은 시험이 센다: 「due 」·「기한」 0 · 나머지 글자 그대로 (web-roadmap.test.ts)
+
+■ 시험
+  packages/compiler  185/185  (liveness +4: 값 실림 · 뒤집으면 갈림 · 없으면 키 없음 · 해시는 files 만)
+  packages/schema    140/140  (schemas 재생성 뒤)
+  apps/web           web-roadmap +3 · api-publish 행의 due = ROADMAP_DATA.due · demo-guest PL-M1 due = 2026-04-30
+  CI 2026-09-06 20:44 | principles OK 9 | typecheck 10초 | test 94초 | build 32초 | walkthrough 960 | docs OK => GREEN
+
+■ 안 한 것
+  브라우저로 화면 8 을 열지 않았다 (`.ci/shots/` 비어 있음 · 관통은 roadmap 화면을 안 찍는다).
+  글자 모양은 위 dump 가 정본이고, 픽셀은 STATUS 「눈 판정 대기」.

@@ -5,11 +5,64 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 75바퀴 · 코드 `e7e0513`(FINDINGS 114 ② · 제안 결정은 「한 장 단위」 — DESIGN_BRIEF·SPEC §9 를 코드에 · 게이트 4) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 76바퀴 · 코드 `4109f5e`(FINDINGS 111 · Manifest 마일스톤이 `due` 를 나른다 — 화면 8 행에 `due YYYY-MM-DD` · COMPILER_VERSION 0.2.0) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(76)는 FINDINGS 111 — 구멍(Manifest 의 마일스톤에 `due` 가 없어 화면 8 이 기한을 말할 수 없다)을 닫았다** (`4109f5e`). INBOX 순서 4(구멍 → 격차)의
+셋째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). ⚠ **이 바퀴가 처음 연 것이 아니다** — 75 의 다음 세션이 스키마·라우트·화면·시드·시험·SPEC·DESIGN_BRIEF·번들까지 다 고쳐 놓고
+(파일 mtime 18:20~18:21) **CI 도 커밋도 없이 끝났다.** 워킹트리에 14 파일이 남아 있었다. 76 은 그 위에서 빠진 둘을 채웠다: ① `compile.ts` 의 `milestonesOf()` — 정작 `due` 를 옮기는
+한 줄(스키마 주석의 절차 ②)이 **없었다** → liveness 시험이 빨갰을 것 ② `scripts/dump-roadmap.tsx` fixture 에 `due` 가 없어 typecheck 이 빨갰다. 그 뒤 `pnpm --filter @contextops/schema schemas` 로
+`plugin/contextops/schemas/manifest.json` 을 다시 뽑아야 schema 시험이 초록이 됐다 (갈린 것은 `due` 5줄뿐).
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-manifest-due/probe.txt`):
+
+| | 전 (`e65c2f8`) | 후 (`4109f5e`) |
+|---|---|---|
+| `ManifestMilestone` (schema) | `{ id, paths, done_when }` | `+ due: CalendarDate.optional()` — 없으면 없다 · 칸을 더하는 절차 ①~⑥ 을 옆 주석에 |
+| `milestonesOf()` (compiler) | 셋만 옮김 | `due` 가 있을 때만 키를 만든다 (`undefined` 키 없음 · P4 · JSON 과 toEqual 이 같은 말) |
+| 관통 실물 `.ci/walkthrough-pack/manifest.json` | PL-M1 에 due 없음 (본문 `CLAUDE.md:13` 에는 `due: 2026-04-30` 이 전부터 있었다) | **`"due": "2026-04-30"`** (128행) — 본문과 같은 글자 |
+| golden `case-1-small/expected/manifest.json` | — | PL-M1 `2026-10-15` · PL-M2 `2026-11-30` 두 줄만 갈렸다 (`UPDATE_GOLDEN=1` 로 다시 뽑아 diff 확인) · `manifest_hash` 그대로(`files` 만 센다) |
+| `COMPILER_VERSION` | 0.1.0 | **0.2.0** — 같은 snapshot 에서 나오는 Manifest 가 다르다. `TEMPLATE_VERSION` 은 그대로(본문 불변) |
+| 라우트 `GET /projects/{id}/roadmap` | 칸을 하나씩 고르므로 안 나름 | `due: m.due ?? null` 한 줄 |
+| 화면 8 `MilestoneRow` (dump 13 모양) | `▸ \| PL-M1 \| ◐ \| 진행 중 …` | `▸ \| PL-M1 \| **due 2026-09-20** \| ◐ \| 진행 중 …` — 13/13 · null 이면 「due 」·「기한」 0 |
+| 데모 시드 PL-M1 | due 없음 | `2026-04-30` (goals.md §4 제목 괄호) · `QUOTED_DATA.roadmap` 에 `due` |
+| 시험 | compiler 181 · schema 140 | compiler **185**(liveness +4: 실림 · 뒤집으면 갈림 · 없으면 키 없음 · 해시는 due 에 안 흔들림) · web-roadmap **+3** · api-publish·demo-guest 가 행의 due 를 센다 |
+| CI | GREEN 18:09 (docs FAIL 은 75 의 문서 커밋 전) | **GREEN 20:44** — principles OK 9 · typecheck 10초 · test 94초 · build 32초 · walkthrough **960** · docs OK |
+
+⚠ **안 한 것** — 브라우저로 화면 8 을 열지 않았다 (`.ci/shots/` 비어 있음 · 관통은 roadmap 화면을 안 찍는다). 글자 모양은 `dump-roadmap.tsx` 가 정본이고 픽셀은 「눈 판정 대기」.
+「지났다」(overdue) 판정은 서버도 화면도 안 잰다 — 그건 111 의 범위가 아니었고, 만들려면 `Date.now` 가 컴파일러 밖(라우트)에 있어야 한다 (P4).
+
+🔴 **배운 것 — 워킹트리에 남은 작업은 「누가 어디까지 했나」를 diff 로 먼저 센다.** 14 파일이 다 있어 보여도 정작 핵심 한 줄(`milestonesOf()`)이 없었다. ⑥ 의 「CI 를 배경으로 띄우지 마라」와
+같은 종류의 죽음이다 — 이번엔 CI 를 부르기도 전에 끝났다. 절차 주석(①~⑥)이 스키마 옆에 있었기에 **빠진 칸이 어느 것인지 바로 보였다** — 「더하는 절차를 표 옆에 적어라」가 값을 했다.
+
+🔴 **2-B 이번 라운드 — Manifest 마일스톤의 `due` 가 그 예다.** 「데이터는 있고 Manifest 만 안 나르던 칸」 — ① 소비처: `compile.ts` `milestonesOf()` · 라우트 · `MilestoneRow` ② 뒤집으면 갈림:
+`liveness.test.ts` 「값을 뒤집으면 Manifest 가 갈린다」 · `web-roadmap.test.ts` 「값을 뒤집으면 글자가 갈린다」. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**다음 바퀴의 일 — FINDINGS 108**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 구멍 중 남은 것은 **108**(라우트가 `answerSlot` 을 두 갈래로만 읽는다 — `none` 과 `ask` 가 같다) 하나다. 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이
+와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다. 108 뒤는 격차 — 121+135 · 119 · 118 · 116 · 112 · 59 · 100 · 131 · 132 · 133 · 134.
+
+> **108 을 하는 법** — `apps/web/src/app/api/v1/projects/[id]/questions/route.ts:98~115` 가 `slot === 'seeded'` 만 본다. 갈래를 `CONFLICT_KIND_RULES[kind].answerSlot` 의 값 수(3)만큼 —
+> `none` 이면 `save_as` 를 400 으로 거절(문구 「이 질문은 답을 항목으로 만들지 않습니다」 · 에러 코드는 한 곳의 표에서) · `seeded` 는 지금대로 · `ask` 만 사람이 고른 자리로. ⚠ 지금 `none` 은
+> 닿을 수 없다(`QUESTION_CONFLICT_KINDS` 둘이 `seeded`·`ask`) — 시험은 규칙 표를 뒤집어(`'none'`) API 가 빨개지는 모양으로 잠근다. 「어느 종류가 질문인가」와 「자리를 묻나」가 두 표에 나뉘어 있으니
+> 둘의 관계도 같은 시험에. SPEC §5 먼저. **한 바퀴에 하나씩.**
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 108 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
+### 지난 바퀴 (75) — 제안 결정은 「한 장 단위」 · DESIGN_BRIEF·SPEC §9 를 코드에 · 게이트 4 · 코드 0줄 (FINDINGS 114 ② · `e7e0513`)
 
 **이번 바퀴(75)는 FINDINGS 114 — 구멍(DESIGN_BRIEF §4 화면 6 이 「항목별 [승인] [거절]」을 약속하는데 서버에 담을 자리가 없다)을 ② 로 닫았다** (`e7e0513`). INBOX 순서 4(구멍 → 격차)의
 둘째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 114 의 「고칠 방향」 **②(문서를 코드에)** 를 골랐다 — 코드가 현실이고 관통이 지나는 전체 결정을 그대로 둔다. ① 항목별 결정 표는
@@ -38,14 +91,7 @@ SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고쳤다. `doc
 `sections.ts` 의 `SCOPE_INLINE_LABEL`(줄 끝 `· 도메인: payment`) — 표 셋이 다 읽는다 ② `packages/compiler/test/liveness.test.ts` 「scope.kind 3종 · 배치」·「정렬」·「SCOPE_INLINE_LABEL 은 project 를 뺀
 전부를 덮는다」가 셋을 돌려 가며 출력이 갈림을 센다. 웹은 `context/page.tsx:266` 이 `kind:value` 로 그린다. 새로 적을 것 없음. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
 
-**다음 바퀴의 일 — FINDINGS 111**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 111** → 76바퀴가 닫았다 (`4109f5e`). 아래는 75 가 남긴 지목의 원문이다.
 
 🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 74바퀴가 적어 둔 「그 다음 구멍 113 · 111 · 110 · 108 …」에서 **113 과 110 은 이미 닫혀 있었다** (`aee5de2` · `8c3e8c5` · 57바퀴 — 대장에 ✅ 가 있다).
 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **111**(Manifest 의 마일스톤에 `due` 가 없다 — 화면 8 이 기한을 말할 수 없다).
@@ -273,60 +319,6 @@ CPU 74~80% 였고(16 논리코어 중 6코어쯤 · 사람이 쓰는 중이라 �
 
 
 ---
-
-### 지난 바퀴 (70) — 키보드 포커스 링 한 곳 · 탭을 눌러 찍었다 (INBOX 2026-09-06 ④ · FINDINGS 130 · `1bc1da3`)
-
-**이번 바퀴(70)는 INBOX 순서 ④ — FINDINGS 130(격차 · 키보드 포커스가 안 보인다)을 닫았다** (`1bc1da3`). INBOX 가 옮겨 준 결함 넷
-(127·128·129·130)이 **전부 닫혔다.** PLAN 은 이 바퀴에 안 움직였다 — INBOX 의 다음은 순서 2(PLAN P1 첫 행 · 마이그레이션을 Supabase 에 실제로)다.
-
-🔴 **잰 것 — `:focus-visible` 한 줄로 34개 요소가 탭에 링을 얻었고 마우스엔 안 뜬다.** 짐작이 아니라 **탭을 눌러** 찍었다
-(`docs/evidence/2026-09-06-focus-visible/` · `focus-cdp.mjs` 가 CDP 로 Tab 을 보내고 `activeElement.matches(':focus-visible')` 과 계산된 outline 을
-읽는다 · Node 22 내장 WebSocket 뿐 · 프로필은 매번 새것 = 시크릿 창).
-
-| | 전 (`0a3535e`) | 후 (`1bc1da3`) |
-|---|---|---|
-| `:focus-visible` 규칙 (스타일시트에서 셈 · 사람이 잰 방법 그대로) | **0** | **2** (`:focus-visible` · `.pack-line:focus-visible`) |
-| `:focus-visible` 없이 `outline: none` 인 규칙 | **1** (`.input:focus, .textarea:focus, .select:focus`) | **0** — 입력은 테두리 색만 바꾼다 |
-| 탭으로 간 요소 (landing 3 · context 9 · packs 22) | 링 없음 | **34/34** `focus-visible=true` · `outline solid 2px rgb(123,156,255)`(= accent-ink) · offset 2px |
-| `.scroll-x` 안의 폭 100% 행(`.pack-line`) | — | offset **-2px** 안쪽 링 — 네 변이 다 보인다 (`packs/p2-tab-18.png`) |
-| accent 바탕의 주요 버튼 · 선택된 내비(accent-soft) 위 | — | 2px 간격에 bg 가 보여 링이 갈린다 (`landing/tab-02.png` · `context/tab-03.png`) |
-| 마우스 대조군 (포커스 없던 [발행하기] 를 클릭) | — | `focus-visible=false` · outline none (`control/mouse-click.png`) — `:focus` 였으면 떴다 |
-| 정본 | DESIGN_BRIEF §3 에 없음 | §3 「접근성」 절 — 시험이 문서 ↔ 코드 양방향 대조 |
-| 시험 | `design-tokens.test.ts` 10 | **13** (+3) — `outline: none` 을 되살리면 ② 가 빨갛다 (직접 확인) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough 942 · docs → GREEN (`1bc1da3`) |
-
-🔴 **127 의 「브라우저로는 아직 안 봤다」를 부분으로 닫았다.** 같은 서버(`demo:db` + `next dev`)에서 **새 프로필**(= 시크릿 창)로 `/demo` 를
-열자 `POST /demo/session` 201 → context 가 **항목 15개 표 · v1.1.0 공식 칩** 으로 그려졌고(`context/tab-09.png`), packs/1.1.0 은 파일 8 ·
-CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:"error"` **0** · `GET /teams` 4~9ms(전엔 30초 500) · demo:db 「줄을 섰다」 **0**.
-⚠ 못 본 것: proposals · roadmap(aria-busy 가 내려오나) · sync — 같은 스크립트의 둘째 url 만 바꾸면 된다 (「눈 판정 대기」).
-⚠ 눈에 걸린 것 하나: 게스트(읽기 전용)가 [발행하기] 를 누르면 **발행 모달이 열린다** (`control/mouse-click.png`). 서버는 막겠지만(`ACTOR_RULES` 의
-`writes`) 화면이 먼저 「할 수 있다」고 말한다 — 격차다. 새 FINDINGS 로 적지 않았다: 한 바퀴에 하나고, 주인은 PLAN P4 둘째 행이다. 다음에 그 행을 볼 때.
-
-**그 바퀴가 다음으로 지목한 것 = INBOX 순서 2 · PLAN P1 첫 행** → 71바퀴가 닫았다 (`adac632`). 아래는 70 이 남긴 지목의 원문이다.
-
-
-🔴 **「없음」은 고장이 없다는 뜻이다 — 대기 항목은 있다(126 · 122 · …).** INBOX 순서가 그 위다: 130 까지 닫혔으니 다음 바퀴의 일은
-**INBOX 순서 2 · PLAN P1 첫 행**(마이그레이션을 Supabase 에 실제로 돌려 표 16 · 인덱스 5 를 확인하고 행을 닫는다 · INBOX 가 「`.env.local` 에
-값이 꽂혀 있고 접속도 확인됐다」고 한다) → 순서 3 · FINDINGS 126(제출서) → 미해결 FINDINGS 구멍 → 격차.
-⚠ P1 첫 행이 실패하면 **원인을 적고 멈춘다** — 지어내지 마라. 54·64바퀴도 같은 뜻으로 「없음」을 썼다.
-
-> **P1 첫 행을 하는 법** — 마이그레이션 파일은 `apps/web/drizzle/*.sql` 7개 · 설정은 `apps/web/drizzle.config.ts`. package.json 에는
-> `db:generate`(drizzle-kit generate)뿐이고 **migrate script 가 없다** — `drizzle-kit migrate` 를 `.env.local` 의 `DATABASE_URL`(Session pooler ·
-> IPv4 · 비밀번호 `%40` 인코딩)로 부르거나 script 를 한 줄 더한다. SPEC §2 는 의도, `src/db/schema*.ts` 가 현실 — 먼저 코드를 봐라.
-> 끝나면 `information_schema.tables` 로 표 16 · `pg_indexes` 로 인덱스 5 를 **세어** STATUS 에 적고 PLAN 행을 `- [x]` 로.
-> ⚠ Supabase 에 실제로 쓴다 — 같은 값을 두 번 돌려도 무해한지(`__drizzle_migrations` 표) 먼저 확인해라.
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase — 값은 꽂혔다고 한다 · 🙋 Anthropic 키 · GATE 3).
-- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 고장은 없다.
-
-
----
-
-
-
-
-
 
 ## 앞 바퀴들이 남긴 것 — 다음 사람이 알아야 하는 것
 
@@ -628,6 +620,10 @@ CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:
 (**67 ①** 과 같은 자리다). ✅ **31·65 는 닫혔다** (`c57b3fb`·`5fe0068`).
 
 ## 눈 판정 대기
+
+🟡 **화면 8 의 `due` 칸을 브라우저로 안 봤다** (76바퀴 · `4109f5e` · FINDINGS 111). 글자 모양은 `pnpm --filter web exec tsx scripts/dump-roadmap.tsx` 가 정본이고 13 모양 전부에
+`due 2026-09-20` 이 마일스톤 ID 뒤 · chip 앞에 선다 (`docs/evidence/2026-09-06-manifest-due/probe.txt`). 못 본 것: 그 `meta mono` 칸이 375px 에서 chip 과 줄바꿈될 때 어색하지 않은가.
+`demo:db` + `next dev` → `/demo` → roadmap 탭에서 PL-M1 행에 `due 2026-04-30` 이 보이면 끝 — 아래 「게스트 데모」 항목(roadmap 미확인)과 같은 스크립트로 한 번에.
 
 🟡 **CLI 의 「어디서 보나」 줄을 진짜 서버에 대고 찍은 적이 없다** (74바퀴 · `4d0ba9a` · FINDINGS 115). 전/후는 fakeCli 의 stdout 이다
 (`docs/evidence/2026-09-06-cli-web-hint/probe.txt`) — 코드 길은 같으니 모양은 같다. 확인하려면 `demo:db` + `next dev` 위에서 기기 토큰을 하나 발급해

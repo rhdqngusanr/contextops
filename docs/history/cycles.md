@@ -15,6 +15,55 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (70) — 키보드 포커스 링 한 곳 · 탭을 눌러 찍었다 (INBOX 2026-09-06 ④ · FINDINGS 130 · `1bc1da3`)
+
+**이번 바퀴(70)는 INBOX 순서 ④ — FINDINGS 130(격차 · 키보드 포커스가 안 보인다)을 닫았다** (`1bc1da3`). INBOX 가 옮겨 준 결함 넷
+(127·128·129·130)이 **전부 닫혔다.** PLAN 은 이 바퀴에 안 움직였다 — INBOX 의 다음은 순서 2(PLAN P1 첫 행 · 마이그레이션을 Supabase 에 실제로)다.
+
+🔴 **잰 것 — `:focus-visible` 한 줄로 34개 요소가 탭에 링을 얻었고 마우스엔 안 뜬다.** 짐작이 아니라 **탭을 눌러** 찍었다
+(`docs/evidence/2026-09-06-focus-visible/` · `focus-cdp.mjs` 가 CDP 로 Tab 을 보내고 `activeElement.matches(':focus-visible')` 과 계산된 outline 을
+읽는다 · Node 22 내장 WebSocket 뿐 · 프로필은 매번 새것 = 시크릿 창).
+
+| | 전 (`0a3535e`) | 후 (`1bc1da3`) |
+|---|---|---|
+| `:focus-visible` 규칙 (스타일시트에서 셈 · 사람이 잰 방법 그대로) | **0** | **2** (`:focus-visible` · `.pack-line:focus-visible`) |
+| `:focus-visible` 없이 `outline: none` 인 규칙 | **1** (`.input:focus, .textarea:focus, .select:focus`) | **0** — 입력은 테두리 색만 바꾼다 |
+| 탭으로 간 요소 (landing 3 · context 9 · packs 22) | 링 없음 | **34/34** `focus-visible=true` · `outline solid 2px rgb(123,156,255)`(= accent-ink) · offset 2px |
+| `.scroll-x` 안의 폭 100% 행(`.pack-line`) | — | offset **-2px** 안쪽 링 — 네 변이 다 보인다 (`packs/p2-tab-18.png`) |
+| accent 바탕의 주요 버튼 · 선택된 내비(accent-soft) 위 | — | 2px 간격에 bg 가 보여 링이 갈린다 (`landing/tab-02.png` · `context/tab-03.png`) |
+| 마우스 대조군 (포커스 없던 [발행하기] 를 클릭) | — | `focus-visible=false` · outline none (`control/mouse-click.png`) — `:focus` 였으면 떴다 |
+| 정본 | DESIGN_BRIEF §3 에 없음 | §3 「접근성」 절 — 시험이 문서 ↔ 코드 양방향 대조 |
+| 시험 | `design-tokens.test.ts` 10 | **13** (+3) — `outline: none` 을 되살리면 ② 가 빨갛다 (직접 확인) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 942 · docs → GREEN (`1bc1da3`) |
+
+🔴 **127 의 「브라우저로는 아직 안 봤다」를 부분으로 닫았다.** 같은 서버(`demo:db` + `next dev`)에서 **새 프로필**(= 시크릿 창)로 `/demo` 를
+열자 `POST /demo/session` 201 → context 가 **항목 15개 표 · v1.1.0 공식 칩** 으로 그려졌고(`context/tab-09.png`), packs/1.1.0 은 파일 8 ·
+CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:"error"` **0** · `GET /teams` 4~9ms(전엔 30초 500) · demo:db 「줄을 섰다」 **0**.
+⚠ 못 본 것: proposals · roadmap(aria-busy 가 내려오나) · sync — 같은 스크립트의 둘째 url 만 바꾸면 된다 (「눈 판정 대기」).
+⚠ 눈에 걸린 것 하나: 게스트(읽기 전용)가 [발행하기] 를 누르면 **발행 모달이 열린다** (`control/mouse-click.png`). 서버는 막겠지만(`ACTOR_RULES` 의
+`writes`) 화면이 먼저 「할 수 있다」고 말한다 — 격차다. 새 FINDINGS 로 적지 않았다: 한 바퀴에 하나고, 주인은 PLAN P4 둘째 행이다. 다음에 그 행을 볼 때.
+
+**그 바퀴가 다음으로 지목한 것 = INBOX 순서 2 · PLAN P1 첫 행** → 71바퀴가 닫았다 (`adac632`). 아래는 70 이 남긴 지목의 원문이다.
+
+
+🔴 **「없음」은 고장이 없다는 뜻이다 — 대기 항목은 있다(126 · 122 · …).** INBOX 순서가 그 위다: 130 까지 닫혔으니 다음 바퀴의 일은
+**INBOX 순서 2 · PLAN P1 첫 행**(마이그레이션을 Supabase 에 실제로 돌려 표 16 · 인덱스 5 를 확인하고 행을 닫는다 · INBOX 가 「`.env.local` 에
+값이 꽂혀 있고 접속도 확인됐다」고 한다) → 순서 3 · FINDINGS 126(제출서) → 미해결 FINDINGS 구멍 → 격차.
+⚠ P1 첫 행이 실패하면 **원인을 적고 멈춘다** — 지어내지 마라. 54·64바퀴도 같은 뜻으로 「없음」을 썼다.
+
+> **P1 첫 행을 하는 법** — 마이그레이션 파일은 `apps/web/drizzle/*.sql` 7개 · 설정은 `apps/web/drizzle.config.ts`. package.json 에는
+> `db:generate`(drizzle-kit generate)뿐이고 **migrate script 가 없다** — `drizzle-kit migrate` 를 `.env.local` 의 `DATABASE_URL`(Session pooler ·
+> IPv4 · 비밀번호 `%40` 인코딩)로 부르거나 script 를 한 줄 더한다. SPEC §2 는 의도, `src/db/schema*.ts` 가 현실 — 먼저 코드를 봐라.
+> 끝나면 `information_schema.tables` 로 표 16 · `pg_indexes` 로 인덱스 5 를 **세어** STATUS 에 적고 PLAN 행을 `- [x]` 로.
+> ⚠ Supabase 에 실제로 쓴다 — 같은 값을 두 번 돌려도 무해한지(`__drizzle_migrations` 표) 먼저 확인해라.
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase — 값은 꽂혔다고 한다 · 🙋 Anthropic 키 · GATE 3).
+- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 고장은 없다.
+
+
+---
+
 ### 지난 바퀴 (69) — 한글 keep-all · 68 의 미커밋 올림 (INBOX 2026-09-06 ③ · FINDINGS 129 · `0a3535e`)
 
 **이번 바퀴(69)는 둘을 했다.** ① 68바퀴가 CI 를 배경으로 띄운 채 끝나 **커밋하지 못한** FINDINGS 128(오류 로그의 표)을 같은 트리에서

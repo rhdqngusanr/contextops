@@ -507,7 +507,11 @@ params:
   `milestonesOf()` 에 한 줄 → 라우트가 그대로 나르고 → 화면 8 의 행에 한 칸.
   ⚠ Manifest 가 바뀌면 `manifest_hash` 가 바뀐다 — 템플릿/컴파일러 버전을 올리고
   golden expected 를 갱신한 이유를 커밋 메시지에 써라 (③ 의 규칙).
-- **상태**: 대기 (주인은 화면 8 을 다시 만지는 바퀴 · PLAN P4 첫 행)
+- **상태**: ✅ `4109f5e` (76바퀴 · 2026-09-06) — 절차 ①~⑥ 그대로: schema `due: CalendarDate.optional()` · `milestonesOf()` 가 그대로 옮김(없으면 키 없음) ·
+  라우트 `due: m.due ?? null` · 화면 8 행에 `due YYYY-MM-DD` 한 칸(없으면 칸 없음) · golden case-1 두 줄 + `COMPILER_VERSION` 0.2.0(해시는 `files` 만 세서 그대로) ·
+  SPEC §3·§9 · DESIGN_BRIEF 화면 8. 관통 실물 `.ci/walkthrough-pack/manifest.json` 의 PL-M1 에 `"due": "2026-04-30"`. 시험: compiler liveness +4 · web-roadmap +3 ·
+  api-publish·demo-guest 가 행의 due 를 센다. 실측 `docs/evidence/2026-09-06-manifest-due/probe.txt`. ⚠ 75 의 다음 세션이 다 해 놓고 커밋 없이 죽어 76 이 빠진 둘
+  (`milestonesOf()` 의 한 줄 · dump 스크립트 fixture)을 채우고 올렸다. 브라우저 픽셀은 안 봤다 (STATUS 「눈 판정 대기」).
 
 ### 110. **화면 9(`…/sync`)가 없다** — 기기 상태를 볼 자리가 아직 없다   [구멍]
 - **증상**: `GET /projects/{id}/sync-status` 는 있고 플러그인이 `POST /sync-reports` 로
