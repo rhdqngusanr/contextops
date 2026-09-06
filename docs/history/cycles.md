@@ -15,6 +15,54 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (69) — 한글 keep-all · 68 의 미커밋 올림 (INBOX 2026-09-06 ③ · FINDINGS 129 · `0a3535e`)
+
+**이번 바퀴(69)는 둘을 했다.** ① 68바퀴가 CI 를 배경으로 띄운 채 끝나 **커밋하지 못한** FINDINGS 128(오류 로그의 표)을 같은 트리에서
+앞단 CI(GREEN · 관통 936)를 돌려 그대로 올렸다 (`9319617` 코드 · `a1a26af` 문서). ② INBOX 순서 ③ — **FINDINGS 129(격차 · 한글이 낱말
+중간에서 잘린다)** 를 닫았다 (`0a3535e`). INBOX 가 PLAN 보다 위고, 129 는 격차지만 INBOX 가 「이번만 PLAN P4 둘째 행의 몫으로」라고 했다.
+PLAN 은 이 바퀴에 안 움직였다.
+
+🔴 **잰 것 — `body` 한 줄로 헤드라인과 에러 카드가 낱말 경계에서 접힌다.** 짐작이 아니라 찍었다 (`docs/evidence/2026-09-06-keep-all/`).
+
+| | 전 (`a1a26af`) | 후 (`0a3535e`) |
+|---|---|---|
+| `globals.css` 의 `html, body` | `word-break` 없음(= normal) — 한글이 글자 사이 아무 데서나 접힌다 | `word-break: keep-all; overflow-wrap: break-word` — 시안 `design/*.dc.html` 의 `body` 와 같은 값 |
+| 랜딩 헤드라인 (1280) | 「…기억을 같 / 은 방향으로」 (INBOX 가 본 것) | 「팀의 지식과 Claude의 기억을 / 같은 방향으로」 (`landing-1280.png`) |
+| 랜딩 (375 · iframe) | — | 「팀의 지식과 / Claude의 기억을 / 같은 방향으로」 · 본문·카드 전부 낱말 경계 · 가로 넘침 0 (`landing-375-frame.png`) |
+| 에러 카드 (1280) | 「잠시 후 다시 시 / 도해주세요」 | 「잠시 후 다시 / 시도해주세요.」 (`demo-1280.png`) |
+| mono 예외 (`.tree-item` break-all · `.pack-linetext`·`.diff-text` break-word) | 그대로 | 그대로 — 시험이 거기 `keep-all` 이 안 들어왔음을 센다 |
+| 정본 | DESIGN_BRIEF §3 에 없음 (시안에만) | DESIGN_BRIEF §3 「타이포」 한 줄 — 시험이 문서 ↔ 코드 양방향으로 대조 |
+| 시험 | `design-tokens.test.ts` 7 | **10** (+3) — CSS 를 stash 하고 돌리면 ① 이 빨갛다 (직접 확인) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 939 · docs → GREEN (`0a3535e`) |
+
+🔴 **128 의 「`next dev` 에서 다시 찍지 않았다」도 닫았다.** 같은 서버(DATABASE_URL 을 닫힌 포트 `127.0.0.1:1` 로 — Supabase 를 안 건드리고
+에러 카드를 보려고)에서 `/demo` 를 열자 stdout 에 `{"kind":"error",…"name":"DrizzleQueryError","message":"(질의문이 든 message 는 남기지 않는다 — P1)",
+…"cause":{…"code":"ECONNREFUSED"…}}` 가 찍혔고 `request_id` 가 화면의 에러 카드와 같았다. 배포 드라이버(postgres-js) 길에서도 모양이 같다
+(`docs/evidence/2026-09-06-keep-all/probe.txt`).
+
+⚠ **못 본 것** — 375 의 에러 카드(iframe 안의 fetch 가 virtual-time 안에 안 끝나 스켈레톤만 찍혔다 · 1280 으로 판정했다) · 진짜 `demo:db` 위의
+데모(127 의 「눈 판정 대기」는 그대로다).
+
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 130** → 70바퀴가 닫았다 (`1bc1da3`).
+
+
+🔴 **INBOX 가 정한 순서다** — 130(격차 · `:focus-visible` 0개) → PLAN P1 첫 행(마이그레이션을 Supabase 에 실제로) → 126(제출서) →
+미해결 FINDINGS 구멍 → 격차. 130 은 격차지만 INBOX 가 「이번만 PLAN P4 둘째 행의 몫으로 같이 닫아라」고 했다 — 랜딩·데모가 심사의 첫 화면이다.
+
+> **130 을 고치는 법** — `globals.css` 의 `.input:focus, .textarea:focus, .select:focus { outline: none; … }` 을 `:focus-visible` 로 바꾸고,
+> 토큰 옆 한 곳에 `:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px }` (버튼·링크·입력·행이 읽게). 시험은
+> `test/design-tokens.test.ts` 에 「`:focus-visible` 규칙이 있고 `outline: none` 이 `:focus-visible` 없이 홀로 있는 선택자가 0개」 — 129 의
+> ⑤ 블록 옆이 그 자리다. 화면은 headless Chrome 으로 찍을 수 있다 (「밟은 함정」의 375 함정을 보라) — 탭 포커스는 `--screenshot` 으로
+> 못 잡으니 규칙의 존재는 시험이, 모양은 사람이 본다. **한 바퀴에 하나씩.**
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). INBOX 2번(P1 첫 행)은 「`.env.local` 에
+  Supabase 값이 꽂혀 있고 접속도 확인됐다」고 한다 — 130 다음에 그 행이다. ⚠ 실패하면 원인을 적고 멈춘다.
+- 대장의 대기(130 · 126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 고장은 없다.
+
+---
+
+
 ### 지난 바퀴 (68) — 오류 로그의 표 · 원인은 남고 질의문은 안 남는다 (INBOX 2026-09-06 ② · FINDINGS 128 · `9319617`)
 
 **68바퀴는 INBOX 순서 ② — FINDINGS 128(고장 · 오류 로그에 메시지도 스택도 없다)을 닫았다** (`9319617`).

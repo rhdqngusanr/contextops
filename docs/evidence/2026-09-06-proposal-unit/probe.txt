@@ -1,0 +1,29 @@
+# FINDINGS 114 ② — 「결정은 제안 한 장 단위」 문서 ↔ 스키마 ↔ 화면 게이트 · 75바퀴 · 2026-09-06
+
+## 무엇을 잰 것인가
+- 문서(DESIGN_BRIEF §4 화면 6 · SPEC §9 6번 행)가 코드와 같은 말을 하는가 — 그리고 그 대조가 **정말로 빨개지는가**.
+- 코드는 안 바꿨다 (proposals.tsx 는 주석 한 덩이). 바뀐 것은 문서 두 줄과 시험 4개다.
+
+## 1. 고친 문서로 — 초록 (18:05:11)
+$ pnpm --filter web exec vitest run test/web-proposals.test.ts
+ Test Files  1 passed (1)
+      Tests  37 passed (37)        ← 33 + ⑧ 4개
+
+## 2. 문서 두 줄을 옛 문구로 되돌리고 (git stash push -- docs/DESIGN_BRIEF.md docs/SPEC.md) — 빨강 (18:05:21)
+ ❯ test/web-proposals.test.ts (37 tests | 2 failed)
+     × DESIGN_BRIEF §4 화면 6 은 항목별 [승인]/[거절] 을 약속하지 않는다
+       AssertionError: expected '## 화면 6 — Proposals …' to contain '제안 한 장 단위'
+       (받은 절: "… 근거 EvidenceLink · 이유. 항목별 [승인] [거절] + 전체 [모두 승인] [거절(사유 필수)].")
+     × SPEC §9 화면 6 행도 같은 말을 한다
+       Received: "| 6 | `…/proposals`, `…/proposals/[id]` | 함 목록(status/author 필터) · before/after Diff · 근거 링크 · 항목별 승인/거절 | |"
+ Tests  2 failed | 35 passed (37)
+(git stash pop 으로 되돌렸다)
+
+## 3. 스키마 · 화면 쪽은 옛 문서에서도 초록이었다 — 코드는 처음부터 한 장 단위였다
+- ProposalItem.safeParse({...item, status:'approved'}) → success:false (`.strict()`) — decision · approved · decided_by 도 같다
+- ProposalItemCard 마크업: `<button` 0 · 「승인」 0 · 「거절」 0
+- ProposalDecisions(submitted · owner) 의 `<button` 수 = availableActions('submitted','owner').length
+
+## 4. 전 층 CI (18:09)
+principles OK 9 · typecheck OK 11초 · test OK 87초 · build OK 21초 · walkthrough OK 953 (74바퀴 949 + 4)
+docs FAIL — STATUS 의 「다음 바퀴의 일」이 방금 닫은 114 를 가리켜서. STATUS 를 고친 뒤 status-shape 로 다시 잰다 (STATUS 75바퀴 절).

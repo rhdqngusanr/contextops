@@ -5,11 +5,63 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 74바퀴 · 코드 `4d0ba9a`(FINDINGS 115 · CLI 가 웹 주소를 안 짓는다 · where.ts 한 곳) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 75바퀴 · 코드 `e7e0513`(FINDINGS 114 ② · 제안 결정은 「한 장 단위」 — DESIGN_BRIEF·SPEC §9 를 코드에 · 게이트 4) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(75)는 FINDINGS 114 — 구멍(DESIGN_BRIEF §4 화면 6 이 「항목별 [승인] [거절]」을 약속하는데 서버에 담을 자리가 없다)을 ② 로 닫았다** (`e7e0513`). INBOX 순서 4(구멍 → 격차)의
+둘째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 114 의 「고칠 방향」 **②(문서를 코드에)** 를 골랐다 — 코드가 현실이고 관통이 지나는 전체 결정을 그대로 둔다. ① 항목별 결정 표는
+§2.1 발행 트랜잭션·`packages/schema`·화면 6·발행 시험을 한 바퀴에 다 건드리므로 **사람이 INBOX 에 적어야 연다.** 열어 보니 **같은 약속이 한 곳 더 있었다** — `docs/SPEC.md` §9 화면 표 6번 행
+(「항목별 승인/거절」). 대장은 DESIGN_BRIEF 만 적었지만 같은 개념이라 같이 고쳤다. 코드는 **0줄** 바꿨다 (`proposals.tsx` 는 머리 주석 한 덩이) — 바뀐 것은 문서 두 줄과 **게이트 4개**다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-proposal-unit/probe.txt`):
+
+| | 전 (`8dd871a`) | 후 (`e7e0513`) |
+|---|---|---|
+| DESIGN_BRIEF §4 화면 6 | 「항목별 [승인] [거절] + 전체 [모두 승인] [거절(사유 필수)]」 | 「**결정은 제안 한 장 단위다** — 전체 [모두 승인] / [거절(사유 필수)] · `PROPOSAL_DECISIONS` 표 하나」 + ⚠ 항목별은 없다 · 갈라 받고 싶으면 제안을 나눠 낸다 · 만들려면 §2.1·스키마·이 줄을 같은 바퀴에 |
+| SPEC §9 6번 행 | 「… 근거 링크 · 항목별 승인/거절」 | 「… **제안 한 장 단위** 승인/거절(사유 필수 · `PROPOSAL_DECISIONS` §5) — 항목별 결정은 없다」 |
+| 코드 (스키마 · 화면) | `ProposalItem` 에 결정 칸 없음 · `ProposalItemCard` 에 버튼 0 · 결정은 `proposals.status` 한 칸 | **그대로** — 처음부터 한 장 단위였다. 문서가 코드보다 넓었던 것 |
+| 게이트 `test/web-proposals.test.ts` | 33 | **37** (+⑧ 4개) — ① 화면 6 절에 「제안 한 장 단위」·`PROPOSAL_DECISIONS` 가 있고 「항목별 [승인]」이 든 줄은 「없다」고 말하는 줄뿐 ② SPEC §9 6번 행도 같은 말 ③ `ProposalItem` 이 `status`·`decision`·`approved`·`decided_by` 를 실으면 `.strict()` 가 거절 ④ 항목 카드 마크업에 `<button`·「승인」·「거절」 0 · `ProposalDecisions` 버튼 수 = `availableActions('submitted','owner')` |
+| 빨개지는 것을 봤나 | — | **봤다** — 문서 두 줄을 `git stash` 로 옛 문구로 되돌리니 ①② 가 빨갛다 (받은 절이 「항목별 [승인] [거절] …」이라고 찍힌다) · pop 하니 37/37 |
+| `proposals.tsx` 머리 주석 | 「DESIGN_BRIEF §4 는 항목별 버튼을 적지만 누르면 아무 일도 안 하는 버튼이 된다」 | 「DESIGN_BRIEF 화면 6 과 SPEC §9 도 이제 같은 말을 한다 — 카드에 버튼을 그리지 마라」 |
+| CI | GREEN (17:55) | principles OK 9 · typecheck 11초 · test 87초 · build 21초 · walkthrough **953**(949 + 4) · docs 는 STATUS 의 「다음」이 114 라 이 커밋에서 FAIL → 이 문서 커밋이 닫는다 (18:09) |
+
+⚠ **안 한 것** — 화면 6 을 브라우저로 다시 열지 않았다 (코드가 0줄이라 화면은 74바퀴와 같다 · 70바퀴 캡처 `docs/evidence/2026-09-06-focus-visible/` 에 결정 칸이 있다).
+SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고쳤다. `docs/PLAN.md:343` 의 「114」 언급은 56바퀴의 서사라 그대로 뒀다.
+
+🔴 **배운 것 — 「문서를 코드에 맞춘다」도 게이트가 있어야 닫힌다.** 문서만 고치면 다음 사람이 옛 SPEC 을 보고 항목별 버튼을 다시 그린다 — 이번에도 SPEC §9 에 같은 약속이 **하나 더** 살아 있었다.
+그래서 시험 ③ 은 「지금 없다」가 아니라 **「생기면 빨개진다」** 로 짰다 — 항목별 결정을 정말로 만드는 바퀴는 이 시험이 빨개지고, 그때 §2.1·스키마·문서를 같은 커밋에 고친다. 그게 의도다.
+
+🔴 **2-B 이번 라운드 — `scope.kind` 3종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/partition.ts` 의 `SCOPE_DOC`(어느 파일로 가나) · `sort.ts` 의 `SCOPE_ORDER`(같은 절 안의 순서) ·
+`sections.ts` 의 `SCOPE_INLINE_LABEL`(줄 끝 `· 도메인: payment`) — 표 셋이 다 읽는다 ② `packages/compiler/test/liveness.test.ts` 「scope.kind 3종 · 배치」·「정렬」·「SCOPE_INLINE_LABEL 은 project 를 뺀
+전부를 덮는다」가 셋을 돌려 가며 출력이 갈림을 센다. 웹은 `context/page.tsx:266` 이 `kind:value` 로 그린다. 새로 적을 것 없음. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**다음 바퀴의 일 — FINDINGS 111**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 74바퀴가 적어 둔 「그 다음 구멍 113 · 111 · 110 · 108 …」에서 **113 과 110 은 이미 닫혀 있었다** (`aee5de2` · `8c3e8c5` · 57바퀴 — 대장에 ✅ 가 있다).
+122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **111**(Manifest 의 마일스톤에 `due` 가 없다 — 화면 8 이 기한을 말할 수 없다).
+그 다음 구멍 108(`answerSlot` 을 두 갈래로만 · 지금은 닿을 수 없어 급하지 않다) → 격차 121+135 · 119 · 118 · 116 · 112 · 59 · 100 · 131 · 132 · 133 · 134.
+
+> **111 을 하는 법** — 컴파일러를 건드리는 일이라 **golden 과 템플릿 버전이 딸려 온다** (`loop/PROMPT.md` ③). `packages/schema/src/manifest.ts` 의 `ManifestMilestone` 에 `due: CalendarDate.optional()`
+> 한 줄 → `packages/compiler/src/compile.ts` 의 `milestonesOf()` 에 한 줄(지금은 `id`·`paths`·`done_when` 셋만 옮긴다 · `sections.ts:93` 은 같은 값을 본문에 이미 적는다) → 라우트(`GET /projects/{id}/roadmap`)는
+> Manifest 를 그대로 나르니 고칠 것이 없는지 **코드에서 확인** → 화면 8 행에 한 칸(DESIGN_BRIEF §4 화면 8 의 `due 09-20`). ⚠ Manifest 가 바뀌면 `manifest_hash` 가 바뀐다 — 컴파일러/템플릿 버전을 올리고
+> golden expected 를 갱신한 **이유를 커밋 메시지에**. 잠그는 시험은 「`due` 를 뒤집으면 Manifest 와 화면 8 의 글자가 갈린다」(2-B ②단계 모양). SPEC §4 의 Manifest 표도 같은 커밋에. **한 바퀴에 하나씩.**
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 111 · 108 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
+### 지난 바퀴 (74) — CLI 가 웹 주소를 안 짓는다 · where.ts 한 곳 · upload-draft 의 같은 줄도 (FINDINGS 115 · `4d0ba9a`)
+
 
 **이번 바퀴(74)는 FINDINGS 115 — 구멍(CLI 가 찍는 제안 주소가 앱에 없는 `/p/{uuid}/…` 라 눌러도 404)을 닫았다** (`4d0ba9a`). INBOX 순서 4(구멍 → 격차)의 첫 항목이다 —
 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 115 의 「고칠 방향」 **①(주소를 안 찍는다)** 을 골랐다 — 설정(`project.json`)에는 uuid 뿐이고 웹 주소는 slug 라(SPEC §8.2 · §9)
@@ -40,14 +92,8 @@ CLI 는 그 주소를 **알 수 없다**. ② 전달 라우트는 주소를 둘�
 🔴 **2-B 이번 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL` 표(4행 · `satisfies Record<…>` 라 하나 빠지면 컴파일이 깨진다)가
 policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/liveness.test.ts` 「enforcement 4종」이 넷을 돌려 가며 fingerprint 가 넷 다 다름을 센다. 새로 적을 것 없음.
 
-**다음 바퀴의 일 — FINDINGS 114**
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 114(항목별 승인/거절을 담을 자리가 서버에 없다 → ② 문서를 코드에). 75바퀴가 닫았다 (`e7e0513`).
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **114**
 (항목별 [승인]/[거절] 을 담을 자리가 서버에 없다). 114 는 「둘 중 하나를 **고르고** 손대라」다 — ① 항목별 결정 표(`proposal_item_decisions`)를 만들고 발행 `applyProposals` 를
@@ -277,52 +323,6 @@ CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:
 
 ---
 
-### 지난 바퀴 (69) — 한글 keep-all · 68 의 미커밋 올림 (INBOX 2026-09-06 ③ · FINDINGS 129 · `0a3535e`)
-
-**이번 바퀴(69)는 둘을 했다.** ① 68바퀴가 CI 를 배경으로 띄운 채 끝나 **커밋하지 못한** FINDINGS 128(오류 로그의 표)을 같은 트리에서
-앞단 CI(GREEN · 관통 936)를 돌려 그대로 올렸다 (`9319617` 코드 · `a1a26af` 문서). ② INBOX 순서 ③ — **FINDINGS 129(격차 · 한글이 낱말
-중간에서 잘린다)** 를 닫았다 (`0a3535e`). INBOX 가 PLAN 보다 위고, 129 는 격차지만 INBOX 가 「이번만 PLAN P4 둘째 행의 몫으로」라고 했다.
-PLAN 은 이 바퀴에 안 움직였다.
-
-🔴 **잰 것 — `body` 한 줄로 헤드라인과 에러 카드가 낱말 경계에서 접힌다.** 짐작이 아니라 찍었다 (`docs/evidence/2026-09-06-keep-all/`).
-
-| | 전 (`a1a26af`) | 후 (`0a3535e`) |
-|---|---|---|
-| `globals.css` 의 `html, body` | `word-break` 없음(= normal) — 한글이 글자 사이 아무 데서나 접힌다 | `word-break: keep-all; overflow-wrap: break-word` — 시안 `design/*.dc.html` 의 `body` 와 같은 값 |
-| 랜딩 헤드라인 (1280) | 「…기억을 같 / 은 방향으로」 (INBOX 가 본 것) | 「팀의 지식과 Claude의 기억을 / 같은 방향으로」 (`landing-1280.png`) |
-| 랜딩 (375 · iframe) | — | 「팀의 지식과 / Claude의 기억을 / 같은 방향으로」 · 본문·카드 전부 낱말 경계 · 가로 넘침 0 (`landing-375-frame.png`) |
-| 에러 카드 (1280) | 「잠시 후 다시 시 / 도해주세요」 | 「잠시 후 다시 / 시도해주세요.」 (`demo-1280.png`) |
-| mono 예외 (`.tree-item` break-all · `.pack-linetext`·`.diff-text` break-word) | 그대로 | 그대로 — 시험이 거기 `keep-all` 이 안 들어왔음을 센다 |
-| 정본 | DESIGN_BRIEF §3 에 없음 (시안에만) | DESIGN_BRIEF §3 「타이포」 한 줄 — 시험이 문서 ↔ 코드 양방향으로 대조 |
-| 시험 | `design-tokens.test.ts` 7 | **10** (+3) — CSS 를 stash 하고 돌리면 ① 이 빨갛다 (직접 확인) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough 939 · docs → GREEN (`0a3535e`) |
-
-🔴 **128 의 「`next dev` 에서 다시 찍지 않았다」도 닫았다.** 같은 서버(DATABASE_URL 을 닫힌 포트 `127.0.0.1:1` 로 — Supabase 를 안 건드리고
-에러 카드를 보려고)에서 `/demo` 를 열자 stdout 에 `{"kind":"error",…"name":"DrizzleQueryError","message":"(질의문이 든 message 는 남기지 않는다 — P1)",
-…"cause":{…"code":"ECONNREFUSED"…}}` 가 찍혔고 `request_id` 가 화면의 에러 카드와 같았다. 배포 드라이버(postgres-js) 길에서도 모양이 같다
-(`docs/evidence/2026-09-06-keep-all/probe.txt`).
-
-⚠ **못 본 것** — 375 의 에러 카드(iframe 안의 fetch 가 virtual-time 안에 안 끝나 스켈레톤만 찍혔다 · 1280 으로 판정했다) · 진짜 `demo:db` 위의
-데모(127 의 「눈 판정 대기」는 그대로다).
-
-**그 바퀴가 다음으로 지목한 것 = FINDINGS 130** → 70바퀴가 닫았다 (`1bc1da3`).
-
-
-🔴 **INBOX 가 정한 순서다** — 130(격차 · `:focus-visible` 0개) → PLAN P1 첫 행(마이그레이션을 Supabase 에 실제로) → 126(제출서) →
-미해결 FINDINGS 구멍 → 격차. 130 은 격차지만 INBOX 가 「이번만 PLAN P4 둘째 행의 몫으로 같이 닫아라」고 했다 — 랜딩·데모가 심사의 첫 화면이다.
-
-> **130 을 고치는 법** — `globals.css` 의 `.input:focus, .textarea:focus, .select:focus { outline: none; … }` 을 `:focus-visible` 로 바꾸고,
-> 토큰 옆 한 곳에 `:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px }` (버튼·링크·입력·행이 읽게). 시험은
-> `test/design-tokens.test.ts` 에 「`:focus-visible` 규칙이 있고 `outline: none` 이 `:focus-visible` 없이 홀로 있는 선택자가 0개」 — 129 의
-> ⑤ 블록 옆이 그 자리다. 화면은 headless Chrome 으로 찍을 수 있다 (「밟은 함정」의 375 함정을 보라) — 탭 포커스는 `--screenshot` 으로
-> 못 잡으니 규칙의 존재는 시험이, 모양은 사람이 본다. **한 바퀴에 하나씩.**
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). INBOX 2번(P1 첫 행)은 「`.env.local` 에
-  Supabase 값이 꽂혀 있고 접속도 확인됐다」고 한다 — 130 다음에 그 행이다. ⚠ 실패하면 원인을 적고 멈춘다.
-- 대장의 대기(130 · 126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 고장은 없다.
-
----
 
 
 
