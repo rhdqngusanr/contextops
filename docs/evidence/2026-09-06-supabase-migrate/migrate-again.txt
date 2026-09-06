@@ -1,0 +1,12 @@
+$ tsx scripts/migrate.ts
+migrate → aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+migrations: C:\dev\hackathon\apps\web\drizzle
+server        PostgreSQL 17.6
+journal       7
+applied       7 → 7  (+0)
+pending       0 → 0
+drifted       0
+tables        18 in db · 18 in src/db/schema.ts
+indexes       8/8
+enums         17
+OK

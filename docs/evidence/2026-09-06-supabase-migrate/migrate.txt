@@ -1,0 +1,21 @@
+$ tsx scripts/migrate.ts
+migrate → aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+migrations: C:\dev\hackathon\apps\web\drizzle
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42622',
+  message: 'identifier "source_documents_current_version_id_source_document_versions_id_fk" will be truncated to "source_documents_current_version_id_source_document_versions_id"',
+  file: 'scansup.c',
+  line: '99',
+  routine: 'truncate_identifier'
+}
+server        PostgreSQL 17.6
+journal       7
+applied       0 → 7  (+7)
+pending       7 → 0
+drifted       0
+tables        18 in db · 18 in src/db/schema.ts
+indexes       8/8
+enums         17
+OK

@@ -1,0 +1,11 @@
+$ tsx scripts/migrate.ts --status
+status → aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+migrations: C:\dev\hackathon\apps\web\drizzle
+server        PostgreSQL 17.6
+journal       7
+applied       0 → 0  (+0)
+pending       7 → 7
+drifted       0
+tables        0 in db · 18 in src/db/schema.ts
+indexes       0/8 · missing: context_items_project_status_idx, proposals_project_status_created_idx, progress_events_project_milestone_created_idx, sync_reports_project_device_reported_idx, conflicts_project_status_idx, ai_usage_day_feature_idx, ai_usage_created_idx, ai_jobs_project_created_idx
+enums         0

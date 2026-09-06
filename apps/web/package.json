@@ -9,6 +9,8 @@
     "start": "next start",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
+    "db:status": "tsx scripts/migrate.ts --status",
+    "db:migrate": "tsx scripts/migrate.ts",
     "dev:db": "tsx scripts/dev-server.ts",
     "demo:db": "tsx scripts/demo-server.ts"
   },
