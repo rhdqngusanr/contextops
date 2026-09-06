@@ -15,6 +15,65 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (64) — P1 근거 문서 · payload 단계의 env 값 검사 (PLAN P5 둘째 행 ② · `0018ce9`)
+
+> ⚠ 64바퀴도 CI GREEN 까지 가고 STATUS·PLAN·FINDINGS 를 다 쓴 뒤 **커밋하지 못한 채** 끝났다 — 58·59·60·61·63 에
+> 이어 **여섯 번째**다. 65바퀴가 같은 트리에서 전 층 CI(GREEN · 880)를 다시 돌려 그대로 올렸다 (`0018ce9`).
+> payload 스크립트가 지난 CI 결과(05:32)보다 **뒤에**(05:33) 고쳐져 있어서 그 CI 를 믿지 않고 다시 돌렸다.
+
+**이번 바퀴는 둘을 했다.** ① 63바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 데모 리셋 작업을 같은 트리에서
+전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`f15c650`) — 58·59·60·61·63 **다섯 바퀴**다 (아래 「밟은 함정」).
+② `docs/PLAN.md` **P5 둘째 행의 둘째 조각 — 보안 캡처 증거의 코드 쪽 절반**을 만들었다. 관통 7단계 초록 · 고장 0 이라
+④3 의 ② 로 갔고, 그 행에서 루프가 계정 없이 할 수 있는 조각이 이것이었다. 그 행의 나머지(Vercel 연결 · 첫 리셋 ·
+네트워크 탭 캡처 · fresh install)는 🙋 다.
+
+🔴 **잰 것 — P1 을 「주장」이 아니라 관통 산출물에서 나온 표로 읽을 수 있다. 그리고 그 표의 한 줄이 거짓이었다.**
+
+| | 전 | 후 |
+|---|---|---|
+| P1 을 사람이 읽는 문서 | **0** (관통 로그와 `.ci/*.json` 에만 · 관통마다 지워진다) | `docs/evidence/2026-09-06-p1-payload/p1-payload.md` + 관통 산출물 둘 복사 |
+| 「어떤 필드가 나갔나」 | 스키마를 읽어야 안다 | payload 단계가 **나간 body 3건을 산출물에 그대로 남긴다** (`sent` · `finish(extra)`) — 문서 §2 가 그것을 읽는다 |
+| 나가는 body 4종의 **없는 칸** | 어디에도 표가 없었다 | 문서 §1 표 — 엔드포인트 · 나가는 것 · **없는 것** · 누가 잰다 (payload ①②③⑤ · sync 「P1」) |
+| 「env 값이 payload 에 0건」 검사 | **잰 값 0개** — 픽스처 `.env.example` 은 값이 0건이어야 해서(`fixtures.mjs` ③) 늘 빈 배열이었다 | 관통이 임시 저장소에 값이 든 `.env` 를 심는다(`PLANTED_ENV` 2개) · **0개면 FAIL** · detail 「잰 값 2개」 |
+| 스캐너가 `.env` 를 열어 **키만** 꺼냈다는 증거 | 없음 (`.env.example` 의 키가 나갔다는 것만) | `.env` 에만 있는 `SENTRY_DSN` 이 body 에 있다 — env 키 14 → 15 |
+| Memory · transcript 를 읽는 플러그인 코드 | 셈 안 함 | `transcript` · `.claude/projects` · `memory` 를 `grep -rni` → **0곳** (문서 §6) |
+| payload 단계 검사 | 10 | 10 (둘을 갈아 끼웠다 — 수는 같다 · 재는 것이 달라졌다) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`0018ce9`) |
+
+🔴 **「정의만 있고 아무 일도 안 하는 검사」를 관통 안에서 찾았다 (④2-B).** 「env 값이 payload 에 0건 (P1)」은 63바퀴 내내
+초록이었는데 **잰 값이 0개**였다. 두 게이트가 서로를 무효화한 것이다 — fixtures.mjs ③ 은 픽스처에 값을 금지하고(옳다),
+payload 검사는 그 픽스처의 값을 찾는다(그래서 늘 없다). 눈으로는 절대 안 잡힌다 — 로그에 `OK env 값이 payload 에 0건` 이
+찍히니까. 고친 방향은 픽스처를 건드리지 않고 **관통이 임시 사본에 값을 심는 것**이다. 같은 구멍이 scan 단계에도 있다 —
+FINDINGS 125 로 남겼다(다음 바퀴).
+
+🔴 **증거 문서는 못 말하는 것을 §7 에 적었다.** 배포에서 찍은 것이 아니다(소켓은 진짜 · 서버는 관통의 짧은 것 · DB 는 PGlite) ·
+scan 단계의 env 검사는 아직 0개 · `body` 한 줄에 사람이 코드를 붙여 넣으면 계약은 못 막는다(2,000자 상한만 · Skill 의 규칙이
+막는다). 셋째는 KNOWN_LIMITATIONS 후보다 — P6 둘째 행에서.
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-p1-payload/walkthrough-payload.json` 의 `sent` 3건: batch-draft 의 `items[0]`
+은 id·title·body(한 줄)·scope·priority·source_refs(경로·줄)·tags·confidence·type·data 이고 `scan_summary.excluded` 가
+`.env (키 이름만 읽었다 — 값은 안 읽는다)` 라고 스스로 말한다. progress 는 경로·줄만, proposals 는 근거 경로·줄만.
+심은 값 두 개(`sk_live_PLANTED…` · `https://PLANTED…`)는 세 body 어디에도 없다.
+
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 125** → 65바퀴가 닫았다 (`8d29737`).
+
+🔴 **125 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P5 둘째 행**(지금 열려 있는 맨 위 행 중 루프가
+할 수 있는 것)이고, 이 바퀴가 그 행에서 만든 증거 문서의 §4 가 「아직 잰 값 0개」라고 적어 둔 그 줄이다. ④3 ②의
+「그 행을 할 때 같이 닫는다」에 해당한다.
+
+> **125 를 닫는 법** — `plugin/contextops/scripts/walkthrough-scan.ts` 가 픽스처를 임시 폴더에 복사하고 값이 든 `.env` 를
+> 심은 뒤 `scan --dir <임시>` 로 돌린다. 심은 값이 `scan.json` 에 없고 키는 있는지 — **잰 값이 0개면 FAIL**.
+> payload 단계(`apps/web/scripts/walkthrough-payload.ts` 의 `PLANTED_ENV`)가 한 것과 같다 — 심는 값 표를 둘이 따로 들면
+> 갈라지니 하나로 올릴지 그때 판단해라(둘째 사용자가 생겼다). 끝나면 `p1-payload.md` §4·§7 의 ⚠ 줄을 지운다.
+> 그 다음은 P5 둘째 행의 나머지가 전부 🙋 라 **P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS) 중 README 다 —
+> FINDINGS 122 의 🙋 URL 이 없어도 본문은 쓸 수 있고, KNOWN_LIMITATIONS 에는 위 §7 셋째 줄이 들어간다.
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3).
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+---
+
 ### 지난 바퀴 (63) — 데모 리셋 · GET /cron/demo-reset · 시드를 제품 코드로 (PLAN P5 둘째 행 ① · `f15c650`)
 
 

@@ -1,0 +1,177 @@
+[
+  {
+    "step": 0,
+    "url": "http://127.0.0.1:3000/",
+    "title": "ContextOps",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "ContextOps\n로그인\nTeam Context for Claude Code\n팀의 지식과 Claude의 기",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1265,
+        2510
+      ]
+    }
+  },
+  {
+    "step": 1,
+    "url": "http://127.0.0.1:3000/",
+    "active": {
+      "tag": "a",
+      "class": "btn btn-sm",
+      "text": "로그인",
+      "href": "/login",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        1167,
+        16,
+        67,
+        31
+      ]
+    },
+    "shot": "tab-01.png"
+  },
+  {
+    "step": 2,
+    "url": "http://127.0.0.1:3000/",
+    "active": {
+      "tag": "a",
+      "class": "btn btn-primary",
+      "text": "샘플 팀으로 둘러보기",
+      "href": "/demo",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(31, 78, 224)",
+      "rect": [
+        65,
+        359,
+        175,
+        40
+      ]
+    },
+    "shot": "tab-02.png"
+  },
+  {
+    "step": 3,
+    "url": "http://127.0.0.1:3000/",
+    "active": {
+      "tag": "a",
+      "class": "meta",
+      "text": "서버 상태",
+      "href": "/api/v1/health",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        342,
+        856,
+        50,
+        18
+      ]
+    },
+    "shot": "tab-03.png"
+  },
+  {
+    "step": 4,
+    "url": "http://127.0.0.1:3000/",
+    "active": {
+      "tag": "nextjs-portal",
+      "class": "",
+      "text": "",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(117, 117, 117)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(117, 117, 117)",
+      "rect": [
+        0,
+        900,
+        0,
+        0
+      ]
+    },
+    "shot": "tab-04.png"
+  },
+  {
+    "step": 5,
+    "url": "http://127.0.0.1:3000/",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "ContextOps\n로그인\nTeam Context for Claude Code\n팀의 지식과 Claude의 기",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        -1610,
+        1265,
+        2510
+      ]
+    },
+    "shot": "tab-05.png"
+  },
+  {
+    "step": 6,
+    "url": "http://127.0.0.1:3000/",
+    "active": {
+      "tag": "a",
+      "class": "btn btn-sm",
+      "text": "로그인",
+      "href": "/login",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        1167,
+        16,
+        67,
+        31
+      ]
+    },
+    "shot": "tab-06.png"
+  },
+  {
+    "step": "mouse-click",
+    "url": "http://127.0.0.1:3000/login",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(255, 255, 255)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(255, 255, 255)",
+      "rect": [
+        8,
+        8,
+        1264,
+        0
+      ]
+    },
+    "shot": "mouse-click.png"
+  },
+  {
+    "step": "stylesheet",
+    "ruleCount": {
+      "focusVisibleRules": 2,
+      "outlineNoneWithoutFocusVisible": 0
+    }
+  }
+]

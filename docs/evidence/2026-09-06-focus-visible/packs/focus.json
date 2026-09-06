@@ -1,0 +1,599 @@
+[
+  {
+    "step": "0",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/context",
+    "title": "ContextOps",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "팀 · 프로젝트\ndemo/paylab-api\n가져오기\n정리\nContext\n제안\nPack Explorer\nRo",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1249,
+        1650
+      ]
+    }
+  },
+  {
+    "step": "1",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/context",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "가져오기",
+      "href": "/t/demo/p/paylab-api/import",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        96,
+        187,
+        37
+      ]
+    },
+    "shot": "tab-01.png"
+  },
+  {
+    "step": "2",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/context",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "정리",
+      "href": "/t/demo/p/paylab-api/review",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        141,
+        187,
+        37
+      ]
+    },
+    "shot": "tab-02.png"
+  },
+  {
+    "step": "mouse-click",
+    "clicked": "내 팀으로 시작하기",
+    "url": "http://127.0.0.1:3000/login",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "ContextOps\n\n팀의 지식과 Claude의 기억을 같은 방향으로.\n\nGitHub로 계속\n이메일 링크 받",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1264,
+        805
+      ]
+    },
+    "shot": "mouse-click.png"
+  },
+  {
+    "step": "p2-0",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "title": "ContextOps",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "팀 · 프로젝트\ndemo/paylab-api\n가져오기\n정리\nContext\n제안\nPack Explorer\nRo",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1249,
+        2416
+      ]
+    }
+  },
+  {
+    "step": "p2-1",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "가져오기",
+      "href": "/t/demo/p/paylab-api/import",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        96,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-01.png"
+  },
+  {
+    "step": "p2-2",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "정리",
+      "href": "/t/demo/p/paylab-api/review",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        141,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-02.png"
+  },
+  {
+    "step": "p2-3",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "Context",
+      "href": "/t/demo/p/paylab-api/context",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        186,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-03.png"
+  },
+  {
+    "step": "p2-4",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "제안",
+      "href": "/t/demo/p/paylab-api/proposals",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        231,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-04.png"
+  },
+  {
+    "step": "p2-5",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "Pack Explorer",
+      "href": "/t/demo/p/paylab-api/packs",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(237, 239, 243)",
+      "rect": [
+        16,
+        276,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-05.png"
+  },
+  {
+    "step": "p2-6",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "Roadmap",
+      "href": "/t/demo/p/paylab-api/roadmap",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        321,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-06.png"
+  },
+  {
+    "step": "p2-7",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "Sync",
+      "href": "/t/demo/p/paylab-api/sync",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        366,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-07.png"
+  },
+  {
+    "step": "p2-8",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "btn btn-sm",
+      "text": "내 팀으로 시작하기",
+      "href": "/login",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        1057,
+        45,
+        144,
+        31
+      ]
+    },
+    "shot": "p2-tab-08.png"
+  },
+  {
+    "step": "p2-9",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm",
+      "text": "Pack 다운로드 (.zip)",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        1071,
+        125,
+        146,
+        28
+      ]
+    },
+    "shot": "p2-tab-09.png"
+  },
+  {
+    "step": "p2-10",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": ".claude/rules/architecture.md\nc840",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        229,
+        214,
+        42
+      ]
+    },
+    "shot": "p2-tab-10.png"
+  },
+  {
+    "step": "p2-11",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": ".claude/rules/domain-payment.md\n9f7e",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        279,
+        214,
+        42
+      ]
+    },
+    "shot": "p2-tab-11.png"
+  },
+  {
+    "step": "p2-12",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": ".claude/rules/domain-refund.md\n943d",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        329,
+        214,
+        42
+      ]
+    },
+    "shot": "p2-tab-12.png"
+  },
+  {
+    "step": "p2-13",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": ".claude/rules/scoped-src-webhook.md\n8ba3",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        379,
+        214,
+        42
+      ]
+    },
+    "shot": "p2-tab-13.png"
+  },
+  {
+    "step": "p2-14",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": ".claude/rules/workflow.md\nc8ac",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        429,
+        214,
+        42
+      ]
+    },
+    "shot": "p2-tab-14.png"
+  },
+  {
+    "step": "p2-15",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": ".cursor/rules/contextops.mdc\nf72c",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        479,
+        214,
+        42
+      ]
+    },
+    "shot": "p2-tab-15.png"
+  },
+  {
+    "step": "p2-16",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": "AGENTS.md\nf1f8",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        529,
+        214,
+        26
+      ]
+    },
+    "shot": "p2-tab-16.png"
+  },
+  {
+    "step": "p2-17",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-sm row-between tree-item",
+      "text": "CLAUDE.md\n9f8a",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(34, 38, 46)",
+      "rect": [
+        265,
+        563,
+        214,
+        26
+      ]
+    },
+    "shot": "p2-tab-17.png"
+  },
+  {
+    "step": "p2-18",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "pack-line",
+      "text": "1\n# paylab-api — Team Context v1.1.0",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "-2px",
+      "borderColor": "rgb(213, 218, 226) rgb(213, 218, 226) rgb(213, 218, 226) rgba(0, 0, 0, 0)",
+      "rect": [
+        505,
+        238,
+        379,
+        23
+      ]
+    },
+    "shot": "p2-tab-18.png"
+  },
+  {
+    "step": "p2-19",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "pack-line",
+      "text": "2\n<!-- ContextOps generated. Do not edit by hand; run /conte",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "-2px",
+      "borderColor": "rgb(213, 218, 226) rgb(213, 218, 226) rgb(213, 218, 226) rgba(0, 0, 0, 0)",
+      "rect": [
+        505,
+        260,
+        379,
+        69
+      ]
+    },
+    "shot": "p2-tab-19.png"
+  },
+  {
+    "step": "p2-20",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "pack-line",
+      "text": "3",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "-2px",
+      "borderColor": "rgb(213, 218, 226) rgb(213, 218, 226) rgb(213, 218, 226) rgba(0, 0, 0, 0)",
+      "rect": [
+        505,
+        329,
+        379,
+        23
+      ]
+    },
+    "shot": "p2-tab-20.png"
+  },
+  {
+    "step": "p2-21",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "pack-line",
+      "text": "4\n## Mission",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "-2px",
+      "borderColor": "rgb(213, 218, 226) rgb(213, 218, 226) rgb(213, 218, 226) rgba(0, 0, 0, 0)",
+      "rect": [
+        505,
+        352,
+        379,
+        23
+      ]
+    },
+    "shot": "p2-tab-21.png"
+  },
+  {
+    "step": "p2-22",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "button",
+      "class": "pack-line",
+      "text": "5\nPSP 장애가 가맹점 결제로 번지지 않게 한다.",
+      "href": null,
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "-2px",
+      "borderColor": "rgb(213, 218, 226) rgb(213, 218, 226) rgb(213, 218, 226) rgba(0, 0, 0, 0)",
+      "rect": [
+        505,
+        375,
+        379,
+        23
+      ]
+    },
+    "shot": "p2-tab-22.png"
+  },
+  {
+    "step": "p2-mouse-click",
+    "clicked": "내 팀으로 시작하기",
+    "url": "http://127.0.0.1:3000/login",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "ContextOps\n\n팀의 지식과 Claude의 기억을 같은 방향으로.\n\nGitHub로 계속\n이메일 링크 받",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1264,
+        805
+      ]
+    },
+    "shot": "p2-mouse-click.png"
+  },
+  {
+    "step": "stylesheet",
+    "ruleCount": {
+      "focusVisibleRules": 2,
+      "outlineNoneWithoutFocusVisible": 0
+    }
+  }
+]

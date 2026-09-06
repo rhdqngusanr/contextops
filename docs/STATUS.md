@@ -5,11 +5,67 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 69바퀴 · 코드 `0a3535e` · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 70바퀴 · 코드 `1bc1da3` · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(70)는 INBOX 순서 ④ — FINDINGS 130(격차 · 키보드 포커스가 안 보인다)을 닫았다** (`1bc1da3`). INBOX 가 옮겨 준 결함 넷
+(127·128·129·130)이 **전부 닫혔다.** PLAN 은 이 바퀴에 안 움직였다 — INBOX 의 다음은 순서 2(PLAN P1 첫 행 · 마이그레이션을 Supabase 에 실제로)다.
+
+🔴 **잰 것 — `:focus-visible` 한 줄로 34개 요소가 탭에 링을 얻었고 마우스엔 안 뜬다.** 짐작이 아니라 **탭을 눌러** 찍었다
+(`docs/evidence/2026-09-06-focus-visible/` · `focus-cdp.mjs` 가 CDP 로 Tab 을 보내고 `activeElement.matches(':focus-visible')` 과 계산된 outline 을
+읽는다 · Node 22 내장 WebSocket 뿐 · 프로필은 매번 새것 = 시크릿 창).
+
+| | 전 (`0a3535e`) | 후 (`1bc1da3`) |
+|---|---|---|
+| `:focus-visible` 규칙 (스타일시트에서 셈 · 사람이 잰 방법 그대로) | **0** | **2** (`:focus-visible` · `.pack-line:focus-visible`) |
+| `:focus-visible` 없이 `outline: none` 인 규칙 | **1** (`.input:focus, .textarea:focus, .select:focus`) | **0** — 입력은 테두리 색만 바꾼다 |
+| 탭으로 간 요소 (landing 3 · context 9 · packs 22) | 링 없음 | **34/34** `focus-visible=true` · `outline solid 2px rgb(123,156,255)`(= accent-ink) · offset 2px |
+| `.scroll-x` 안의 폭 100% 행(`.pack-line`) | — | offset **-2px** 안쪽 링 — 네 변이 다 보인다 (`packs/p2-tab-18.png`) |
+| accent 바탕의 주요 버튼 · 선택된 내비(accent-soft) 위 | — | 2px 간격에 bg 가 보여 링이 갈린다 (`landing/tab-02.png` · `context/tab-03.png`) |
+| 마우스 대조군 (포커스 없던 [발행하기] 를 클릭) | — | `focus-visible=false` · outline none (`control/mouse-click.png`) — `:focus` 였으면 떴다 |
+| 정본 | DESIGN_BRIEF §3 에 없음 | §3 「접근성」 절 — 시험이 문서 ↔ 코드 양방향 대조 |
+| 시험 | `design-tokens.test.ts` 10 | **13** (+3) — `outline: none` 을 되살리면 ② 가 빨갛다 (직접 확인) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 942 · docs → GREEN (`1bc1da3`) |
+
+🔴 **127 의 「브라우저로는 아직 안 봤다」를 부분으로 닫았다.** 같은 서버(`demo:db` + `next dev`)에서 **새 프로필**(= 시크릿 창)로 `/demo` 를
+열자 `POST /demo/session` 201 → context 가 **항목 15개 표 · v1.1.0 공식 칩** 으로 그려졌고(`context/tab-09.png`), packs/1.1.0 은 파일 8 ·
+CLAUDE.md 본문 · 「받은 기기 10 / 12」. next 로그 5xx **0** · `kind:"error"` **0** · `GET /teams` 4~9ms(전엔 30초 500) · demo:db 「줄을 섰다」 **0**.
+⚠ 못 본 것: proposals · roadmap(aria-busy 가 내려오나) · sync — 같은 스크립트의 둘째 url 만 바꾸면 된다 (「눈 판정 대기」).
+⚠ 눈에 걸린 것 하나: 게스트(읽기 전용)가 [발행하기] 를 누르면 **발행 모달이 열린다** (`control/mouse-click.png`). 서버는 막겠지만(`ACTOR_RULES` 의
+`writes`) 화면이 먼저 「할 수 있다」고 말한다 — 격차다. 새 FINDINGS 로 적지 않았다: 한 바퀴에 하나고, 주인은 PLAN P4 둘째 행이다. 다음에 그 행을 볼 때.
+
+**다음 바퀴의 일 — FINDINGS 없음**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **「없음」은 고장이 없다는 뜻이다 — 대기 항목은 있다(126 · 122 · …).** INBOX 순서가 그 위다: 130 까지 닫혔으니 다음 바퀴의 일은
+**INBOX 순서 2 · PLAN P1 첫 행**(마이그레이션을 Supabase 에 실제로 돌려 표 16 · 인덱스 5 를 확인하고 행을 닫는다 · INBOX 가 「`.env.local` 에
+값이 꽂혀 있고 접속도 확인됐다」고 한다) → 순서 3 · FINDINGS 126(제출서) → 미해결 FINDINGS 구멍 → 격차.
+⚠ P1 첫 행이 실패하면 **원인을 적고 멈춘다** — 지어내지 마라. 54·64바퀴도 같은 뜻으로 「없음」을 썼다.
+
+> **P1 첫 행을 하는 법** — 마이그레이션 파일은 `apps/web/drizzle/*.sql` 7개 · 설정은 `apps/web/drizzle.config.ts`. package.json 에는
+> `db:generate`(drizzle-kit generate)뿐이고 **migrate script 가 없다** — `drizzle-kit migrate` 를 `.env.local` 의 `DATABASE_URL`(Session pooler ·
+> IPv4 · 비밀번호 `%40` 인코딩)로 부르거나 script 를 한 줄 더한다. SPEC §2 는 의도, `src/db/schema*.ts` 가 현실 — 먼저 코드를 봐라.
+> 끝나면 `information_schema.tables` 로 표 16 · `pg_indexes` 로 인덱스 5 를 **세어** STATUS 에 적고 PLAN 행을 `- [x]` 로.
+> ⚠ Supabase 에 실제로 쓴다 — 같은 값을 두 번 돌려도 무해한지(`__drizzle_migrations` 표) 먼저 확인해라.
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase — 값은 꽂혔다고 한다 · 🙋 Anthropic 키 · GATE 3).
+- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 고장은 없다.
+
+
+---
+
+
+### 지난 바퀴 (69) — 한글 keep-all · 68 의 미커밋 올림 (INBOX 2026-09-06 ③ · FINDINGS 129 · `0a3535e`)
 
 **이번 바퀴(69)는 둘을 했다.** ① 68바퀴가 CI 를 배경으로 띄운 채 끝나 **커밋하지 못한** FINDINGS 128(오류 로그의 표)을 같은 트리에서
 앞단 CI(GREEN · 관통 936)를 돌려 그대로 올렸다 (`9319617` 코드 · `a1a26af` 문서). ② INBOX 순서 ③ — **FINDINGS 129(격차 · 한글이 낱말
@@ -37,14 +93,8 @@ PLAN 은 이 바퀴에 안 움직였다.
 ⚠ **못 본 것** — 375 의 에러 카드(iframe 안의 fetch 가 virtual-time 안에 안 끝나 스켈레톤만 찍혔다 · 1280 으로 판정했다) · 진짜 `demo:db` 위의
 데모(127 의 「눈 판정 대기」는 그대로다).
 
-**다음 바퀴의 일 — FINDINGS 130**
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 130** → 70바퀴가 닫았다 (`1bc1da3`).
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 **INBOX 가 정한 순서다** — 130(격차 · `:focus-visible` 0개) → PLAN P1 첫 행(마이그레이션을 Supabase 에 실제로) → 126(제출서) →
 미해결 FINDINGS 구멍 → 격차. 130 은 격차지만 INBOX 가 「이번만 PLAN P4 둘째 행의 몫으로 같이 닫아라」고 했다 — 랜딩·데모가 심사의 첫 화면이다.
@@ -59,7 +109,6 @@ PLAN 은 이 바퀴에 안 움직였다.
   Supabase 값이 꽂혀 있고 접속도 확인됐다」고 한다 — 130 다음에 그 행이다. ⚠ 실패하면 원인을 적고 멈춘다.
 - 대장의 대기(130 · 126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
   **PLAN 을 막지 않는다** — 고장은 없다.
-
 
 ---
 
@@ -223,66 +272,6 @@ INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면
 - 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
   **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
 
-
----
-
-
-### 지난 바퀴 (64) — P1 근거 문서 · payload 단계의 env 값 검사 (PLAN P5 둘째 행 ② · `0018ce9`)
-
-> ⚠ 64바퀴도 CI GREEN 까지 가고 STATUS·PLAN·FINDINGS 를 다 쓴 뒤 **커밋하지 못한 채** 끝났다 — 58·59·60·61·63 에
-> 이어 **여섯 번째**다. 65바퀴가 같은 트리에서 전 층 CI(GREEN · 880)를 다시 돌려 그대로 올렸다 (`0018ce9`).
-> payload 스크립트가 지난 CI 결과(05:32)보다 **뒤에**(05:33) 고쳐져 있어서 그 CI 를 믿지 않고 다시 돌렸다.
-
-**이번 바퀴는 둘을 했다.** ① 63바퀴가 CI GREEN 까지 확인하고 **커밋하지 못한** 데모 리셋 작업을 같은 트리에서
-전 층 CI 를 다시 돌려(GREEN · 관통 880) 그대로 올렸다 (`f15c650`) — 58·59·60·61·63 **다섯 바퀴**다 (아래 「밟은 함정」).
-② `docs/PLAN.md` **P5 둘째 행의 둘째 조각 — 보안 캡처 증거의 코드 쪽 절반**을 만들었다. 관통 7단계 초록 · 고장 0 이라
-④3 의 ② 로 갔고, 그 행에서 루프가 계정 없이 할 수 있는 조각이 이것이었다. 그 행의 나머지(Vercel 연결 · 첫 리셋 ·
-네트워크 탭 캡처 · fresh install)는 🙋 다.
-
-🔴 **잰 것 — P1 을 「주장」이 아니라 관통 산출물에서 나온 표로 읽을 수 있다. 그리고 그 표의 한 줄이 거짓이었다.**
-
-| | 전 | 후 |
-|---|---|---|
-| P1 을 사람이 읽는 문서 | **0** (관통 로그와 `.ci/*.json` 에만 · 관통마다 지워진다) | `docs/evidence/2026-09-06-p1-payload/p1-payload.md` + 관통 산출물 둘 복사 |
-| 「어떤 필드가 나갔나」 | 스키마를 읽어야 안다 | payload 단계가 **나간 body 3건을 산출물에 그대로 남긴다** (`sent` · `finish(extra)`) — 문서 §2 가 그것을 읽는다 |
-| 나가는 body 4종의 **없는 칸** | 어디에도 표가 없었다 | 문서 §1 표 — 엔드포인트 · 나가는 것 · **없는 것** · 누가 잰다 (payload ①②③⑤ · sync 「P1」) |
-| 「env 값이 payload 에 0건」 검사 | **잰 값 0개** — 픽스처 `.env.example` 은 값이 0건이어야 해서(`fixtures.mjs` ③) 늘 빈 배열이었다 | 관통이 임시 저장소에 값이 든 `.env` 를 심는다(`PLANTED_ENV` 2개) · **0개면 FAIL** · detail 「잰 값 2개」 |
-| 스캐너가 `.env` 를 열어 **키만** 꺼냈다는 증거 | 없음 (`.env.example` 의 키가 나갔다는 것만) | `.env` 에만 있는 `SENTRY_DSN` 이 body 에 있다 — env 키 14 → 15 |
-| Memory · transcript 를 읽는 플러그인 코드 | 셈 안 함 | `transcript` · `.claude/projects` · `memory` 를 `grep -rni` → **0곳** (문서 §6) |
-| payload 단계 검사 | 10 | 10 (둘을 갈아 끼웠다 — 수는 같다 · 재는 것이 달라졌다) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN (`0018ce9`) |
-
-🔴 **「정의만 있고 아무 일도 안 하는 검사」를 관통 안에서 찾았다 (④2-B).** 「env 값이 payload 에 0건 (P1)」은 63바퀴 내내
-초록이었는데 **잰 값이 0개**였다. 두 게이트가 서로를 무효화한 것이다 — fixtures.mjs ③ 은 픽스처에 값을 금지하고(옳다),
-payload 검사는 그 픽스처의 값을 찾는다(그래서 늘 없다). 눈으로는 절대 안 잡힌다 — 로그에 `OK env 값이 payload 에 0건` 이
-찍히니까. 고친 방향은 픽스처를 건드리지 않고 **관통이 임시 사본에 값을 심는 것**이다. 같은 구멍이 scan 단계에도 있다 —
-FINDINGS 125 로 남겼다(다음 바퀴).
-
-🔴 **증거 문서는 못 말하는 것을 §7 에 적었다.** 배포에서 찍은 것이 아니다(소켓은 진짜 · 서버는 관통의 짧은 것 · DB 는 PGlite) ·
-scan 단계의 env 검사는 아직 0개 · `body` 한 줄에 사람이 코드를 붙여 넣으면 계약은 못 막는다(2,000자 상한만 · Skill 의 규칙이
-막는다). 셋째는 KNOWN_LIMITATIONS 후보다 — P6 둘째 행에서.
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-p1-payload/walkthrough-payload.json` 의 `sent` 3건: batch-draft 의 `items[0]`
-은 id·title·body(한 줄)·scope·priority·source_refs(경로·줄)·tags·confidence·type·data 이고 `scan_summary.excluded` 가
-`.env (키 이름만 읽었다 — 값은 안 읽는다)` 라고 스스로 말한다. progress 는 경로·줄만, proposals 는 근거 경로·줄만.
-심은 값 두 개(`sk_live_PLANTED…` · `https://PLANTED…`)는 세 body 어디에도 없다.
-
-**그 바퀴가 다음으로 지목한 것 = FINDINGS 125** → 65바퀴가 닫았다 (`8d29737`).
-
-🔴 **125 는 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P5 둘째 행**(지금 열려 있는 맨 위 행 중 루프가
-할 수 있는 것)이고, 이 바퀴가 그 행에서 만든 증거 문서의 §4 가 「아직 잰 값 0개」라고 적어 둔 그 줄이다. ④3 ②의
-「그 행을 할 때 같이 닫는다」에 해당한다.
-
-> **125 를 닫는 법** — `plugin/contextops/scripts/walkthrough-scan.ts` 가 픽스처를 임시 폴더에 복사하고 값이 든 `.env` 를
-> 심은 뒤 `scan --dir <임시>` 로 돌린다. 심은 값이 `scan.json` 에 없고 키는 있는지 — **잰 값이 0개면 FAIL**.
-> payload 단계(`apps/web/scripts/walkthrough-payload.ts` 의 `PLANTED_ENV`)가 한 것과 같다 — 심는 값 표를 둘이 따로 들면
-> 갈라지니 하나로 올릴지 그때 판단해라(둘째 사용자가 생겼다). 끝나면 `p1-payload.md` §4·§7 의 ⚠ 줄을 지운다.
-> 그 다음은 P5 둘째 행의 나머지가 전부 🙋 라 **P6 둘째 행**(제출서 · README · KNOWN_LIMITATIONS) 중 README 다 —
-> FINDINGS 122 의 🙋 URL 이 없어도 본문은 쓸 수 있고, KNOWN_LIMITATIONS 에는 위 §7 셋째 줄이 들어간다.
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3).
-- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
 
 ---
 
@@ -588,7 +577,10 @@ scan 단계의 env 검사는 아직 0개 · `body` 한 줄에 사람이 코드�
 
 ## 눈 판정 대기
 
-🔴 **게스트 데모 — 고친 뒤 브라우저로 안 봤다** (67바퀴 · FINDINGS 127). API 는 잰다(`docs/evidence/2026-09-06-db-pool/probe.txt`:
+🔴 **게스트 데모 — 고친 뒤 브라우저로 안 봤다** (67바퀴 · FINDINGS 127). → **70바퀴가 부분 봤다** (`docs/evidence/2026-09-06-focus-visible/probe.txt`):
+새 프로필로 `/demo` → context 항목 15개 · packs/1.1.0 본문 · 5xx 0 · 「줄을 섰다」 0. **남은 것은 proposals · roadmap · sync** — 같은 폴더의
+`focus-cdp.mjs` 둘째 url 만 바꿔 돌리면 된다 (`node focus-cdp.mjs <out> http://127.0.0.1:3000/demo 0 '.nav-link[aria-current="page"]' <url2> <selector2> 1`).
+셋 다 지나면 GATE 3 이고 PLAN P4 둘째 행을 `- [x]` 로. 아래는 67 의 원문이다. API 는 잰다(`docs/evidence/2026-09-06-db-pool/probe.txt`:
 순차·동시·화면 fan-out 전부 200). 못 잰 것은 **사람이 시크릿 창에서** 본다 (`pnpm --filter web demo:db` → `next dev` 에
 `DATABASE_URL=…55432/postgres?max=1` · `SUPABASE_JWT_SECRET=contextops-test-jwt-secret` → `http://localhost:3000/demo`):
 - Context 가 「서버에서 처리하지 못했습니다」 대신 항목 15개를 그리나 · Roadmap 이 `aria-busy="true"` 에서 내려오나
@@ -814,6 +806,9 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 > 같은 벽에 두 번 부딪히면 `loop/PROMPT.md` ③ 의 규칙으로, 기계가 잴 수 있으면
 > `tools/principles.ps1` 의 검사로 올린다.
 
+- **탭 포커스·클릭·계산된 스타일은 `--screenshot` 이 아니라 CDP 로 잰다.** headless Chrome 을 `--remote-debugging-port` 로 띄우고 Node 22 의 내장
+  WebSocket 으로 `Input.dispatchKeyEvent`(Tab) · `Runtime.evaluate` · `Page.captureScreenshot` — 의존성 0 (`docs/evidence/2026-09-06-focus-visible/focus-cdp.mjs`).
+  ⚠ 마우스 대조군으로 **링크**를 누르면 화면이 넘어가 대조군이 없어진다 — 버튼을 눌러라 (70바퀴가 밟았다). `nextjs-portal` 이 탭 순서에 끼는 것은 dev 오버레이다.
 - 🔴 **headless Chrome 의 `--window-size=375,…` 는 375 가 아니다.** Windows 의 Chrome 은 창 최소 너비(약 500px)를 강제해서 **~504 뷰포트를
   375 로 자른 그림**이 나온다 — 「모바일에서 넘친다」로 오독하기 딱 좋다 (가운데 정렬 카드가 x=32 에서 시작하면 그 신호다). 좁은 뷰포트는
   **375px iframe 에 넣어** 찍어라 (`docs/evidence/2026-09-06-keep-all/probe.txt` · 미디어 쿼리는 iframe 너비에 반응한다). 단 iframe 안의

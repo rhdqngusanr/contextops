@@ -18,16 +18,7 @@
 먼저 이 넷을 `FINDINGS.md` 에 번호를 붙여 옮기고, 아래 「순서」대로 진행해라.
 
 > 루프(67바퀴): 넷을 **FINDINGS 127 · 128 · 129 · 130** 으로 옮겼다. ① 은 닫았고(아래 「끝난 것」 · `2134011`)
-> 68바퀴: ② 도 닫았다(`9319617` · 커밋은 69바퀴가). 69바퀴: ③ 도 닫았다(`0a3535e`). ④ 는 130 으로 대기 중이다 — 다음 바퀴의 일이다.
-
-#### ④ [격차] 키보드 포커스가 안 보인다 — `:focus-visible` 규칙 **0개**
-
-- **근거**: 스타일시트 전체에서 `:focus-visible` 을 쓰는 규칙 **0개**,
-  `outline: none` 으로 지우는 규칙 **1개**. 탭으로 넘기면 지금 어디 있는지 알 수 없다.
-- **왜 중요한가**: 접근성이자 **개발자 도구의 기본기**다. Linear·Stripe·GitHub 전부
-  또렷한 포커스 링이 있다. 심사에서 키보드로 훑는 사람이 있으면 바로 보인다.
-- **고칠 방향**: 버튼·링크·입력·행에 `:focus-visible { outline: 2px solid var(--accent-ink);
-  outline-offset: 2px }`. 토큰 옆 한 곳에 두고 컴포넌트가 읽게 해라.
+> 68바퀴: ② 도 닫았다(`9319617` · 커밋은 69바퀴가). 69바퀴: ③ 도 닫았다(`0a3535e`). 70바퀴: ④ 도 닫았다(`1bc1da3`). **넷 다 끝났다** — 다음은 아래 「순서」 2(PLAN P1 첫 행)다.
 
 #### ✅ 같이 잰 것 중 **통과**한 것 (지금 상태를 지켜라)
 
@@ -55,6 +46,28 @@
 _(비어 있음)_
 
 ## 끝난 것
+
+### ✅ ④ 키보드 포커스가 안 보인다 → `1bc1da3` (2026-09-06 · FINDINGS 130)
+
+- 요구한 대로 토큰 옆 **한 곳**(`globals.css`)에 `:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px }` — 버튼·링크·입력·행·탭이
+  전부 그 한 줄을 읽는다. `outline: none` 은 뺐다(입력은 테두리 색만). `.scroll-x` 안의 폭 100% 행(Pack 줄)만 안쪽 링(-2px).
+- 정본 `docs/DESIGN_BRIEF.md` §3 에 「접근성」 절 · `apps/web/test/design-tokens.test.ts` +3 이 규칙의 존재 · 홀로 있는 `outline: none` 0개 · 문서 ↔ 코드를 센다.
+- **탭을 눌러 봤다** (`docs/evidence/2026-09-06-focus-visible/`): CDP 로 Tab 을 보내 landing 3 · context 9 · packs 22 = 34/34 요소가 accent-ink 2px 링 ·
+  스타일시트 셈 `:focus-visible` 0 → 2 · 홀로 `outline: none` 1 → 0 · 마우스로 누른 버튼엔 링이 **안** 뜬다. 같은 서버에서 ① 의 데모도 새 프로필로 열렸다
+  (context 항목 15개 · 5xx 0).
+
+<details><summary>원문</summary>
+
+#### ④ [격차] 키보드 포커스가 안 보인다 — `:focus-visible` 규칙 **0개**
+
+- **근거**: 스타일시트 전체에서 `:focus-visible` 을 쓰는 규칙 **0개**,
+  `outline: none` 으로 지우는 규칙 **1개**. 탭으로 넘기면 지금 어디 있는지 알 수 없다.
+- **왜 중요한가**: 접근성이자 **개발자 도구의 기본기**다. Linear·Stripe·GitHub 전부
+  또렷한 포커스 링이 있다. 심사에서 키보드로 훑는 사람이 있으면 바로 보인다.
+- **고칠 방향**: 버튼·링크·입력·행에 `:focus-visible { outline: 2px solid var(--accent-ink);
+  outline-offset: 2px }`. 토큰 옆 한 곳에 두고 컴포넌트가 읽게 해라.
+
+</details>
 
 ### ✅ ③ 한글이 낱말 중간에서 잘린다 → `0a3535e` (2026-09-06 · FINDINGS 129)
 

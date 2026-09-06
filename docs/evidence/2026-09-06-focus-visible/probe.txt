@@ -1,0 +1,35 @@
+# FINDINGS 130 — 키보드 포커스가 안 보인다 · 고친 뒤 눈 판정 (70바퀴 · 2026-09-06 · 코드 1bc1da3)
+
+방법: `pnpm --filter web demo:db` → `next dev`(DATABASE_URL=…55432/postgres?max=1 · SUPABASE_JWT_SECRET=contextops-test-jwt-secret)
+→ `node focus-cdp.mjs`(이 폴더 · Node 22 내장 WebSocket 만 · 의존성 0). headless Chrome 을 `--remote-debugging-port` 로 띄우고
+CDP 로 ① 페이지를 열고 ② `Input.dispatchKeyEvent` 로 Tab 을 보내고 ③ 매번 `document.activeElement` 의 `matches(':focus-visible')` 과
+계산된 outline 을 읽고 ④ `Page.captureScreenshot`. ⑤ 대조군: 포커스 없던 **버튼**을 마우스로 눌러 링이 안 뜨는지.
+⚠ `--screenshot` 한 방으로는 탭을 못 누른다 — 69바퀴가 「모양은 사람이 본다」고 남긴 이유. CDP 면 기계가 누른다.
+⚠ 프로필은 매번 `mkdtemp` 새것 = 시크릿 창과 같다. 둘째 url 은 같은 프로필로 이어서 연다(/demo 가 심은 게스트 세션으로).
+
+## 읽은 것 (파일은 이 폴더 · 나머지 탭 캡처는 지웠다 — focus.json 에 전부 있다)
+| 파일 | 어디 | 탭 | 본 것 |
+|---|---|---|---|
+| landing/tab-01.png | `/` | 1 | [로그인](a.btn) 둘레에 accent-ink 2px 링 · 2px 띄움 |
+| landing/tab-02.png | `/` | 2 | [샘플 팀으로 둘러보기](a.btn-primary) — accent 바탕 위에도 링이 또렷하다 (2px 간격에 bg 가 보여 갈린다) |
+| landing/tab-03.png | `/` | 3 | 푸터 「서버 상태」 링크(a.meta) 에 링 |
+| context/tab-03.png | `/demo` → context | 3 | 좌측 내비 「Context」(a.nav-link · aria-current) 에 링 — 선택 배경(accent-soft) 위에서도 갈린다 · 이때 본문은 아직 스켈레톤 |
+| context/tab-09.png | context | 9 | [발행하기](button.btn-primary) 에 링 · **본문은 항목 15개 표** (127 의 눈 판정 — 아래) |
+| packs/p2-tab-09.png | packs/1.1.0 | 9 | [Pack 다운로드 (.zip)] 에 링 |
+| packs/p2-tab-10.png | packs/1.1.0 | 10 | 파일 트리 첫 항목(button.tree-item) 에 링 |
+| packs/p2-tab-18.png | packs/1.1.0 | 18 | **Pack 줄 1**(button.pack-line · 폭 100% · `.scroll-x` 안) 에 **안쪽** 링(offset -2px) — 잘리지 않고 네 변이 다 보인다 |
+| control/mouse-click.png | context | 마우스 | 포커스 없던 [발행하기] 를 **마우스로** 누름 → `focus-visible=false` · outline none · 모달이 열렸고 링은 없다 |
+
+## focus.json 에서 센 것
+- 탭으로 간 요소 **전부**(landing 3 · context 9 · packs 22 = 34) `matches(':focus-visible') = true` · `outline = solid 2px rgb(123,156,255)`(= `--accent-ink` #7B9CFF)
+  · offset 2px (pack-line 만 -2px). 계산된 값이라 CSS 가 실제로 그 요소에 닿았다는 뜻이다.
+- 스타일시트 셈(사람이 잰 것과 같은 방법 · `document.styleSheets`): `:focus-visible` 규칙 **2** (전 0) · `:focus-visible` 없이
+  `outline: none` 인 규칙 **0** (전 1).
+- 마우스 대조군: `focus-visible=false` · outline none. `:focus` 였으면 여기도 링이 떴을 것이다.
+- landing 탭 4 는 `nextjs-portal`(dev 오버레이 · 배포에 없다) · 탭 5 는 body — 문서 끝에서 한 바퀴 돈 것. 탭 6 이 다시 [로그인].
+
+## 같은 서버에서 잰 것 — FINDINGS 127 의 「브라우저로는 아직 안 봤다」 (부분)
+새 프로필(= 시크릿 창) 로 `/demo` → `POST /demo/session` 201 → `location.replace` → `/t/demo/p/paylab-api/context` 가
+**항목 15개 표 · v1.1.0 공식 칩 · 발행하기** 로 그려졌다 (context/tab-09.png). packs/1.1.0 도 파일 8 · CLAUDE.md 본문 · 「이 Pack을 받은 기기 10 / 12」.
+next dev 로그: 5xx **0** · `kind:"error"` **0** · 모든 라우트 4~90ms (GET /teams 4·8·9ms — 전엔 30초 500) · demo:db 의
+「둘째 DB 소켓이 줄을 섰다」 **0**. ⚠ 못 본 것: proposals · roadmap(aria-busy 가 내려오나) · sync 화면. 같은 스크립트로 둘째 url 만 바꾸면 된다.

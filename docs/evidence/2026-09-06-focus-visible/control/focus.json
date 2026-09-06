@@ -1,0 +1,116 @@
+[
+  {
+    "step": "0",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/context",
+    "title": "ContextOps",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "팀 · 프로젝트\ndemo/paylab-api\n가져오기\n정리\nContext\n제안\nPack Explorer\nRo",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1249,
+        1650
+      ]
+    }
+  },
+  {
+    "step": "mouse-click",
+    "clicked": "발행하기",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/context",
+    "active": {
+      "tag": "button",
+      "class": "btn btn-primary",
+      "text": "발행하기",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(237, 239, 243)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(31, 78, 224)",
+      "rect": [
+        1125,
+        125,
+        92,
+        38
+      ]
+    },
+    "shot": "mouse-click.png"
+  },
+  {
+    "step": "p2-0",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "title": "ContextOps",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "팀 · 프로젝트\ndemo/paylab-api\n가져오기\n정리\nContext\n제안\nPack Explorer\nRo",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1249,
+        2416
+      ]
+    }
+  },
+  {
+    "step": "p2-1",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "a",
+      "class": "nav-link",
+      "text": "가져오기",
+      "href": "/t/demo/p/paylab-api/import",
+      "focusVisible": true,
+      "outline": "solid 2px rgb(123, 156, 255)",
+      "outlineOffset": "2px",
+      "borderColor": "rgb(167, 174, 185)",
+      "rect": [
+        16,
+        96,
+        187,
+        37
+      ]
+    },
+    "shot": "p2-tab-01.png"
+  },
+  {
+    "step": "p2-mouse-click",
+    "clicked": "Pack 다운로드 (.zip)",
+    "url": "http://127.0.0.1:3000/t/demo/p/paylab-api/packs/1.1.0",
+    "active": {
+      "tag": "body",
+      "class": "",
+      "text": "팀 · 프로젝트\ndemo/paylab-api\n가져오기\n정리\nContext\n제안\nPack Explorer\nRo",
+      "href": null,
+      "focusVisible": false,
+      "outline": "none 3px rgb(213, 218, 226)",
+      "outlineOffset": "0px",
+      "borderColor": "rgb(213, 218, 226)",
+      "rect": [
+        0,
+        0,
+        1249,
+        2416
+      ]
+    },
+    "shot": "p2-mouse-click.png"
+  },
+  {
+    "step": "stylesheet",
+    "ruleCount": {
+      "focusVisibleRules": 2,
+      "outlineNoneWithoutFocusVisible": 0
+    }
+  }
+]

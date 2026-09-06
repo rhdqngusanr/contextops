@@ -29,7 +29,7 @@
 
 ## 다음에 고칠 것
 
-### 130. **키보드 포커스가 안 보인다** — `:focus-visible` 규칙 0개 · `outline: none` 1개   [격차]
+### 130. ✅ **키보드 포커스가 안 보인다** — `:focus-visible` 규칙 0개 · `outline: none` 1개   [격차]
 - **증상**: 탭으로 화면을 훑으면 지금 어디에 있는지 알 수 없다. 심사에서 키보드로 훑는 사람이 있으면 바로 보인다.
 - **근거**: 사람이 브라우저에서 잰 것 (INBOX 2026-09-06 ④) — 스타일시트 전체에서 `:focus-visible` 0개 ·
   `outline: none` 1개. 67바퀴가 코드에서 확인: `apps/web/src/app/globals.css:191`
@@ -40,7 +40,15 @@
   버튼·링크·입력·행이 그것을 읽게. `globals.css:191` 의 `outline: none` 은 `:focus` 를 지우는 대신 `:focus-visible`
   로 바꾼다 (마우스 클릭엔 안 뜨고 탭에는 뜬다). 시험은 `test/design-tokens.test.ts` 옆에 「`:focus-visible` 규칙이
   있고 `outline: none` 이 `:focus-visible` 없이 홀로 있는 선택자가 0개」 한 줄.
-- **상태**: 대기 (INBOX 순서 ④ · 129 다음 · 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다)
+- **고친 것** (`1bc1da3` · 70바퀴): `globals.css` 토큰 옆 한 곳에 `:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px }` —
+  버튼·링크·입력·행·탭이 전부 이 한 줄을 읽는다. `.scroll-x` 안의 폭 100% 행(`.pack-line`)만 바깥 링이 잘려서 `outline-offset: -2px`.
+  입력의 `:focus` 규칙에서 `outline: none` 을 뺐다(테두리 색만). DESIGN_BRIEF §3 에 「접근성」 절 · `test/design-tokens.test.ts` +3 —
+  ① `:focus-visible` 규칙이 있고 accent-ink 2px + offset ② 모든 css 에서 `outline: none`/`0` 이 `:focus-visible` 없이 홀로 있는 선택자 0개
+  (주석은 안 센다) ③ 문서 ↔ 코드 양방향. `outline: none` 을 되살리면 ② 가 빨갛다(직접 확인). **탭을 눌러 봤다** — CDP 로 Tab 을 보내고
+  `activeElement.matches(':focus-visible')` 과 계산된 outline 을 읽었다 (`docs/evidence/2026-09-06-focus-visible/`): landing 3 · context 9 ·
+  packs 22 = **34/34** 요소가 `solid 2px rgb(123,156,255)` · 스타일시트 셈 `:focus-visible` 0 → 2 · 홀로 `outline: none` 1 → 0 ·
+  마우스로 누른 [발행하기] 는 `focus-visible=false`(링 없음). accent 바탕의 주요 버튼 · 선택된 내비 위에서도 2px 간격에 bg 가 보여 갈린다.
+- **상태**: ✅ `1bc1da3` (70바퀴)
 
 ### 129. ✅ **한글이 낱말 중간에서 잘린다** — `word-break: keep-all` 이 한 곳도 없다   [격차]
 - **증상**: 랜딩 헤드라인이 「팀의 지식과 Claude의 기억을 같 / 은 방향으로」로, 에러 카드가 「잠시 후 다시 시 /
@@ -113,7 +121,9 @@ params:
   줄을 서면 stderr 에 원인 후보를 찍는다.
 - **다시 잰 것**: 같은 절차로 순차 3번 200(625·18·19ms) · 동시 8번 전부 200(27~64ms) · 화면 5·7 이 던지는 문 5개 동시
   (각각 첫 컴파일) 전부 200(1.4초) · next 로그 unhandled 0 · 5xx 0 · 「줄을 섰다」 0.
-- **상태**: ✅ `2134011` (67바퀴). ⚠ **브라우저로는 아직 안 봤다** — `STATUS.md` 「눈 판정 대기」.
+- **상태**: ✅ `2134011` (67바퀴). ⚠ **브라우저로는 아직 안 봤다** — `STATUS.md` 「눈 판정 대기」. → 70바퀴가 **부분** 봤다
+  (`docs/evidence/2026-09-06-focus-visible/probe.txt`): 새 프로필(= 시크릿 창)로 `/demo` → context 가 **항목 15개 표 · v1.1.0 공식 칩**
+  (`context/tab-09.png`) · packs/1.1.0 본문 · next 로그 5xx 0 · `GET /teams` 4~9ms · demo:db 「줄을 섰다」 0. 못 본 것: proposals · roadmap · sync.
 
 ### 126. **제출서(SPEC §16)가 저장소에 문서로 없다** — 랜딩·README 와 대조되지 않는다   [구멍]
 - **증상**: `docs/PLAN.md` P6 둘째 행은 「제출서 · README · KNOWN_LIMITATIONS」인데 제출서는 `docs/SPEC.md` §16 의
