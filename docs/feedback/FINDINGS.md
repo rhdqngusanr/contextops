@@ -62,7 +62,7 @@
 - **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §1·§2 — 제품이 보내는 몸 그대로 다시 보내니 `finishReason: MAX_TOKENS` · `thoughtsTokenCount 7,677` / 상한 8,000 · text 670자(JSON 아님). `thinkingLevel: low` 면 5.9초 · STOP · JSON.
 - **정본**: `docs/SPEC.md` §7 · `apps/web/src/lib/ai/client.ts`
 - **왜 고장인가**: 진행 불가 — §7.1 이 실데이터에서 한 번도 성공하지 못한다 (79바퀴 `ai:smoke` 의 2문장은 생각이 짧아 우연히 지났다).
-- **고친 것** (`__HASH81__` · 81바퀴): `client.ts` 에 `GEMINI_THINKING_LEVEL = 'low'` 상수 하나 · 모든 호출의 `generationConfig.thinkingConfig.thinkingLevel` 로 실린다 · `ai-client.test.ts` 가 몸에 그 값이 있는지 센다. 고른 이유는 상수 옆 주석(13~18 항목 · 14초 vs high 17 항목 · 58초 · 생각 12.6k).
+- **고친 것** (`314ab0e` · 81바퀴): `client.ts` 에 `GEMINI_THINKING_LEVEL = 'low'` 상수 하나 · 모든 호출의 `generationConfig.thinkingConfig.thinkingLevel` 로 실린다 · `ai-client.test.ts` 가 몸에 그 값이 있는지 센다. 고른 이유는 상수 옆 주석(13~18 항목 · 14초 vs high 17 항목 · 58초 · 생각 12.6k).
   고친 뒤 goals.md 18 항목 · 질문 4 · 충돌 2 · offset 27/27 범위 안 (probe.txt §0·§3). 잰 문은 `pnpm --filter web p3:measure`(`scripts/p3-measure.ts` · CI 밖 · 돈 ≈ $0.02).
 - **상태**: ✅ (남은 것은 142 · 143 · 144)
 

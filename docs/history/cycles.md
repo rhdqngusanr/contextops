@@ -15,6 +15,50 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (75) — 제안 결정은 「한 장 단위」 · DESIGN_BRIEF·SPEC §9 를 코드에 · 게이트 4 · 코드 0줄 (FINDINGS 114 ② · `e7e0513`)
+
+**이번 바퀴(75)는 FINDINGS 114 — 구멍(DESIGN_BRIEF §4 화면 6 이 「항목별 [승인] [거절]」을 약속하는데 서버에 담을 자리가 없다)을 ② 로 닫았다** (`e7e0513`). INBOX 순서 4(구멍 → 격차)의
+둘째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 114 의 「고칠 방향」 **②(문서를 코드에)** 를 골랐다 — 코드가 현실이고 관통이 지나는 전체 결정을 그대로 둔다. ① 항목별 결정 표는
+§2.1 발행 트랜잭션·`packages/schema`·화면 6·발행 시험을 한 바퀴에 다 건드리므로 **사람이 INBOX 에 적어야 연다.** 열어 보니 **같은 약속이 한 곳 더 있었다** — `docs/SPEC.md` §9 화면 표 6번 행
+(「항목별 승인/거절」). 대장은 DESIGN_BRIEF 만 적었지만 같은 개념이라 같이 고쳤다. 코드는 **0줄** 바꿨다 (`proposals.tsx` 는 머리 주석 한 덩이) — 바뀐 것은 문서 두 줄과 **게이트 4개**다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-proposal-unit/probe.txt`):
+
+| | 전 (`8dd871a`) | 후 (`e7e0513`) |
+|---|---|---|
+| DESIGN_BRIEF §4 화면 6 | 「항목별 [승인] [거절] + 전체 [모두 승인] [거절(사유 필수)]」 | 「**결정은 제안 한 장 단위다** — 전체 [모두 승인] / [거절(사유 필수)] · `PROPOSAL_DECISIONS` 표 하나」 + ⚠ 항목별은 없다 · 갈라 받고 싶으면 제안을 나눠 낸다 · 만들려면 §2.1·스키마·이 줄을 같은 바퀴에 |
+| SPEC §9 6번 행 | 「… 근거 링크 · 항목별 승인/거절」 | 「… **제안 한 장 단위** 승인/거절(사유 필수 · `PROPOSAL_DECISIONS` §5) — 항목별 결정은 없다」 |
+| 코드 (스키마 · 화면) | `ProposalItem` 에 결정 칸 없음 · `ProposalItemCard` 에 버튼 0 · 결정은 `proposals.status` 한 칸 | **그대로** — 처음부터 한 장 단위였다. 문서가 코드보다 넓었던 것 |
+| 게이트 `test/web-proposals.test.ts` | 33 | **37** (+⑧ 4개) — ① 화면 6 절에 「제안 한 장 단위」·`PROPOSAL_DECISIONS` 가 있고 「항목별 [승인]」이 든 줄은 「없다」고 말하는 줄뿐 ② SPEC §9 6번 행도 같은 말 ③ `ProposalItem` 이 `status`·`decision`·`approved`·`decided_by` 를 실으면 `.strict()` 가 거절 ④ 항목 카드 마크업에 `<button`·「승인」·「거절」 0 · `ProposalDecisions` 버튼 수 = `availableActions('submitted','owner')` |
+| 빨개지는 것을 봤나 | — | **봤다** — 문서 두 줄을 `git stash` 로 옛 문구로 되돌리니 ①② 가 빨갛다 (받은 절이 「항목별 [승인] [거절] …」이라고 찍힌다) · pop 하니 37/37 |
+| `proposals.tsx` 머리 주석 | 「DESIGN_BRIEF §4 는 항목별 버튼을 적지만 누르면 아무 일도 안 하는 버튼이 된다」 | 「DESIGN_BRIEF 화면 6 과 SPEC §9 도 이제 같은 말을 한다 — 카드에 버튼을 그리지 마라」 |
+| CI | GREEN (17:55) | principles OK 9 · typecheck 11초 · test 87초 · build 21초 · walkthrough **953**(949 + 4) · docs 는 STATUS 의 「다음」이 114 라 이 커밋에서 FAIL → 이 문서 커밋이 닫는다 (18:09) |
+
+⚠ **안 한 것** — 화면 6 을 브라우저로 다시 열지 않았다 (코드가 0줄이라 화면은 74바퀴와 같다 · 70바퀴 캡처 `docs/evidence/2026-09-06-focus-visible/` 에 결정 칸이 있다).
+SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고쳤다. `docs/PLAN.md:343` 의 「114」 언급은 56바퀴의 서사라 그대로 뒀다.
+
+🔴 **배운 것 — 「문서를 코드에 맞춘다」도 게이트가 있어야 닫힌다.** 문서만 고치면 다음 사람이 옛 SPEC 을 보고 항목별 버튼을 다시 그린다 — 이번에도 SPEC §9 에 같은 약속이 **하나 더** 살아 있었다.
+그래서 시험 ③ 은 「지금 없다」가 아니라 **「생기면 빨개진다」** 로 짰다 — 항목별 결정을 정말로 만드는 바퀴는 이 시험이 빨개지고, 그때 §2.1·스키마·문서를 같은 커밋에 고친다. 그게 의도다.
+
+🔴 **2-B 이번 라운드 — `scope.kind` 3종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/partition.ts` 의 `SCOPE_DOC`(어느 파일로 가나) · `sort.ts` 의 `SCOPE_ORDER`(같은 절 안의 순서) ·
+`sections.ts` 의 `SCOPE_INLINE_LABEL`(줄 끝 `· 도메인: payment`) — 표 셋이 다 읽는다 ② `packages/compiler/test/liveness.test.ts` 「scope.kind 3종 · 배치」·「정렬」·「SCOPE_INLINE_LABEL 은 project 를 뺀
+전부를 덮는다」가 셋을 돌려 가며 출력이 갈림을 센다. 웹은 `context/page.tsx:266` 이 `kind:value` 로 그린다. 새로 적을 것 없음. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**그 바퀴가 다음으로 지목한 것 = FINDINGS 111** → 76바퀴가 닫았다 (`4109f5e`). 아래는 75 가 남긴 지목의 원문이다.
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 74바퀴가 적어 둔 「그 다음 구멍 113 · 111 · 110 · 108 …」에서 **113 과 110 은 이미 닫혀 있었다** (`aee5de2` · `8c3e8c5` · 57바퀴 — 대장에 ✅ 가 있다).
+122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **111**(Manifest 의 마일스톤에 `due` 가 없다 — 화면 8 이 기한을 말할 수 없다).
+그 다음 구멍 108(`answerSlot` 을 두 갈래로만 · 지금은 닿을 수 없어 급하지 않다) → 격차 121+135 · 119 · 118 · 116 · 112 · 59 · 100 · 131 · 132 · 133 · 134.
+
+> **111 을 하는 법** — 컴파일러를 건드리는 일이라 **golden 과 템플릿 버전이 딸려 온다** (`loop/PROMPT.md` ③). `packages/schema/src/manifest.ts` 의 `ManifestMilestone` 에 `due: CalendarDate.optional()`
+> 한 줄 → `packages/compiler/src/compile.ts` 의 `milestonesOf()` 에 한 줄(지금은 `id`·`paths`·`done_when` 셋만 옮긴다 · `sections.ts:93` 은 같은 값을 본문에 이미 적는다) → 라우트(`GET /projects/{id}/roadmap`)는
+> Manifest 를 그대로 나르니 고칠 것이 없는지 **코드에서 확인** → 화면 8 행에 한 칸(DESIGN_BRIEF §4 화면 8 의 `due 09-20`). ⚠ Manifest 가 바뀌면 `manifest_hash` 가 바뀐다 — 컴파일러/템플릿 버전을 올리고
+> golden expected 를 갱신한 **이유를 커밋 메시지에**. 잠그는 시험은 「`due` 를 뒤집으면 Manifest 와 화면 8 의 글자가 갈린다」(2-B ②단계 모양). SPEC §4 의 Manifest 표도 같은 커밋에. **한 바퀴에 하나씩.**
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 111 · 108 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
 ### 지난 바퀴 (74) — CLI 가 웹 주소를 안 짓는다 · where.ts 한 곳 · upload-draft 의 같은 줄도 (FINDINGS 115 · `4d0ba9a`)
 
 
