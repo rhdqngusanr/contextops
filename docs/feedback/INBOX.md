@@ -18,16 +18,7 @@
 먼저 이 넷을 `FINDINGS.md` 에 번호를 붙여 옮기고, 아래 「순서」대로 진행해라.
 
 > 루프(67바퀴): 넷을 **FINDINGS 127 · 128 · 129 · 130** 으로 옮겼다. ① 은 닫았고(아래 「끝난 것」 · `2134011`)
-> ②③④ 는 128 · 129 · 130 으로 대기 중이다 — 순서는 그대로 ② → ③ → ④.
-
-#### ② [고장] 오류 로그에 메시지도 스택도 없다 — `{"kind":"unhandled","error":"Error"}`
-
-- **증상**: 위 500 의 원인을 **로그만으로는 알 수 없다.** 남는 건 저 한 줄뿐이다.
-- **근거**: `/tmp` 가 아니라 실제 서버 stdout. 500 이 날 때마다 저 줄만 찍힌다.
-- **고칠 방향**: P1 은 「**body·토큰·문서 본문**을 안 남긴다」이지 「에러 메시지를 안 남긴다」가
-  아니다. `error.name` · `error.message` · `stack` 첫 3줄은 **남겨야 한다** —
-  운영에서 이걸 못 보면 아무것도 못 고친다. 남기지 말아야 할 것과 남겨야 할 것을
-  **표 하나**로 만들고 로거가 그 표를 읽게 해라.
+> 68바퀴: ② 도 닫았다(`9319617`). ③④ 는 129 · 130 으로 대기 중이다 — 순서는 그대로 ③ → ④.
 
 #### ③ [격차] 한글이 낱말 중간에서 잘린다 — `word-break: keep-all` 이 **한 곳도 없다**
 
@@ -76,6 +67,29 @@
 _(비어 있음)_
 
 ## 끝난 것
+
+### ✅ ② 오류 로그에 메시지도 스택도 없다 → `9319617` (2026-09-06 · FINDINGS 128)
+
+- 요구한 대로 **남기는 것과 남기지 않는 것을 표 하나**(`apps/web/src/lib/api/log.ts` 의 `ERROR_FIELD_RULES`)로 만들고 로거가 그 표만 읽는다.
+  남기는 것: `request_id` · route · `name` · `code` · `message`(200자 · 질의문을 품으면 통째로 뺀다) · stack 「at …」 3줄 · `cause` 사슬.
+  안 남기는 것: `query` · `params` · `parameters` · `detail` · `hint` · `where` · `internal_query` · 표에 없는 모든 필드.
+- 밝혀진 것: 저 「Error」는 drizzle `DrizzleQueryError` 였다 (name 을 안 정한다 · message 에 질의문이 통째로 든다). 이제 `name` 은 클래스
+  이름이고 원인은 `cause` 에 `CONNECT_TIMEOUT` 같은 code 와 함께 남는다. 실물: `docs/evidence/2026-09-06-error-log/probe.txt`.
+- 시험 21개(`apps/web/test/error-log.test.ts`) — 진짜 drizzle 질의로 죽인 라우트의 로그 한 줄 전체에 `select` 가 없고 SQLSTATE 는 있다.
+- ⚠ `next dev` stdout 에서 다시 찍지는 않았다 (vitest 안에서 같은 `route()` 로 찍었다) — `docs/STATUS.md` 「눈 판정 대기」.
+
+<details><summary>원문</summary>
+
+#### ② [고장] 오류 로그에 메시지도 스택도 없다 — `{"kind":"unhandled","error":"Error"}`
+
+- **증상**: 위 500 의 원인을 **로그만으로는 알 수 없다.** 남는 건 저 한 줄뿐이다.
+- **근거**: `/tmp` 가 아니라 실제 서버 stdout. 500 이 날 때마다 저 줄만 찍힌다.
+- **고칠 방향**: P1 은 「**body·토큰·문서 본문**을 안 남긴다」이지 「에러 메시지를 안 남긴다」가
+  아니다. `error.name` · `error.message` · `stack` 첫 3줄은 **남겨야 한다** —
+  운영에서 이걸 못 보면 아무것도 못 고친다. 남기지 말아야 할 것과 남겨야 할 것을
+  **표 하나**로 만들고 로거가 그 표를 읽게 해라.
+
+</details>
 
 ### ✅ ① 게스트 데모가 안 열린다 — `GET /api/v1/teams` 30초 500 → `2134011` (2026-09-06 · FINDINGS 127)
 

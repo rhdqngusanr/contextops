@@ -5,13 +5,72 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 67바퀴 · 코드 `2134011` · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 68바퀴 · 코드 `9319617` · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴는 INBOX(2026-09-06 · 사람이 브라우저로 QC 한 결함 넷)를 FINDINGS 127~130 으로 옮기고, ① 을 닫았다** (`2134011`).
+**이번 바퀴는 INBOX 순서 ② — FINDINGS 128(고장 · 오류 로그에 메시지도 스택도 없다)을 닫았다** (`9319617`).
+INBOX 가 PLAN 보다 위고, 128 은 사람이 고장으로 분류했다(127 에서 그 대가를 치렀다). PLAN 은 이 바퀴에 안 움직였다 —
+INBOX 의 다음은 129(`keep-all`) → 130(`:focus-visible`) → PLAN P1 첫 행(마이그레이션을 Supabase 에) → 126(제출서) 다.
+
+🔴 **잰 것 — 127 의 로그 `{"kind":"unhandled","error":"Error"}` 에서 「Error」는 drizzle `DrizzleQueryError` 의 기본 name 이었다.**
+drizzle 0.45 는 **모든** 드라이버 예외를 `DrizzleQueryError(query, params, cause)` 로 감싸고 `this.name` 을 안 정한다. 그래서 저 한 낱말은
+「DB 질의가 죽었다」였고 원인(`CONNECT_TIMEOUT`)은 `cause` 에 있었는데 아무도 못 읽었다. 그리고 그 껍데기의 **message 가
+`Failed query: <sql>
+params: <값>`** 이다 — `console.error(err)` 한 줄로 고쳤으면 질의문이 로그로 새는 P1 사고였다.
+그 사이의 자리가 `lib/api/log.ts` 의 **오류 로그 표**다 (`docs/evidence/2026-09-06-error-log/probe.txt`).
+
+| | 전 (`2134011`) | 후 (`9319617`) |
+|---|---|---|
+| 500 이 될 예외의 로그 | `{"kind":"unhandled","error":"Error"}` — 이름 한 낱말 | `{"kind":"error", request_id, route, error:{name, code?, message, stack[≤3], cause?{…}}}` — `request_id` 가 바로 다음 `request` 줄과 같다 |
+| drizzle 껍데기의 `name` | `Error` (클래스가 `this.name` 을 안 정한다) | 클래스 이름 `DrizzleQueryError` (`name` 이 기본값이면 `constructor.name`) |
+| 원인 | 어디에도 없음 | `error.cause` — ① 없는 표: `code: "42P01"` + `relation "no_such_table" does not exist` ② 연결: `code: "CONNECT_TIMEOUT"` + `write CONNECT_TIMEOUT 127.0.0.1:5432` |
+| 질의문·매개변수 | 0 (이름만 남겨서) | **0** — 껍데기의 message 는 자기 `query` 를 품어서 통째로 뺀다(뺐다고 표시) · `query`·`params`·`parameters`·`detail`·`hint`·`where`·`internal_query` 는 `drop` · 시험이 **직렬화된 한 줄 전체**에 `select`·매개변수·`Failed query` 가 없음을 잰다 |
+| 표 | 없음 (`toApiError()` 안의 `console.error` 한 줄) | `ERROR_FIELD_RULES` **12행** — keep 2 · scrub 1 · frames 1 · chain 1 · drop 7 · 표에 없는 필드는 안 남는다(allowlist). `toApiError()` 는 `logError(describeError(err))` 만 부른다 |
+| 시험 | 0 | `test/error-log.test.ts` **21개** — 진짜 drizzle 질의(PGlite)로 죽인 라우트 1 · 연결 오류 2 · **표의 행마다 「값을 넣으면 로그가 갈린다」 12** · allowlist · scrub 양면 · 200자 · cause 깊이 3(순환) · non-Error · 4xx 는 error 줄 0 |
+| 상수 | — | `MESSAGE_MAX_CHARS` 200 · `STACK_FRAMES` 3 · `CAUSE_DEPTH` 3 · `MESSAGE_SCRUBBED` — 한 곳 |
+| SPEC §11 | 「로그: request_id·route·status·latency·id 만」 | 오류 로그 한 줄 추가 — 남기는 것·안 남기는 것·표의 자리 |
+| 웹 시험 파일 | 91 | **92** |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 936 · docs → GREEN (`9319617` · 69바퀴가 앞단에서 돌려 확인) |
+
+🔴 **PGlite 의 예외는 name 이 소문자 `error` 다** — 로그의 `cause.name: "error"` 는 오타가 아니다. 배포(postgres-js)에서는 `PostgresError` 다.
+
+⚠ **`next dev` 서버에서 다시 찍지는 않았다.** 위 두 줄은 vitest 프로세스 안에서 같은 `route()` → 같은 `log.ts` 로 찍은 것이다
+(INBOX 가 본 로그는 `next dev` stdout). 같은 코드 길이라 모양은 같지만, 「눈 판정 대기」에 한 줄 남겼다 — 129·130 을 브라우저로 볼 때
+`demo:db` 를 끄고 화면을 열어 보면 `kind:"error"` 줄에 `CONNECT_TIMEOUT` 이 찍히는지 같이 보면 된다.
+
+**다음 바퀴의 일 — FINDINGS 129**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **INBOX 가 정한 순서다** — 129(격차 · 한글이 낱말 중간에서 잘린다 · `word-break: keep-all` 0곳) → 130(격차 · `:focus-visible` 0개)
+→ PLAN P1 첫 행(마이그레이션을 Supabase 에 실제로) → 126(제출서) → 미해결 FINDINGS 구멍 → 격차. 129·130 은 격차지만 INBOX 가
+「이번만 PLAN P4 둘째 행의 몫으로 같이 닫아라」고 했다 — 랜딩·데모가 심사의 첫 화면이다.
+
+> **129 를 고치는 법** — `apps/web/src/app/globals.css` 의 `body` 에 `word-break: keep-all; overflow-wrap: break-word` 한 줄 (시안
+> `design/*.dc.html` 의 `body{…}` 와 같은 값). ⚠ mono · `.tree-sha` · `.pack-linetext` · `.diff-text` 는 건드리지 마라 — 거긴 이미
+> `break-all`/`break-word` 다 (`globals.css:378·405·433`). 시험은 `test/design-tokens.test.ts` 에 「`body` 규칙에 `keep-all` 이 있다」
+> 한 줄. 130 도 같은 파일이다 — `globals.css:191` 의 `outline: none` 을 `:focus-visible` 로. **한 바퀴에 하나씩.**
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). INBOX 2번(P1 첫 행)은 「`.env.local` 에
+  Supabase 값이 꽂혀 있고 접속도 확인됐다」고 한다 — 129·130 다음에 그 행이다. ⚠ 실패하면 원인을 적고 멈춘다.
+- 대장의 대기(129 · 130 · 126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 고장은 없다.
+
+
+---
+
+
+### 지난 바퀴 (67) — 게스트 데모의 30초 500 · 풀을 프로세스에 하나로 (INBOX 2026-09-06 ① · FINDINGS 127 · `2134011`)
+
+**67바퀴는 INBOX(2026-09-06 · 사람이 브라우저로 QC 한 결함 넷)를 FINDINGS 127~130 으로 옮기고, ① 을 닫았다** (`2134011`).
 INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면이 빈 화면)이라 ④3 의 ① 이다. PLAN 은 이 바퀴에 안 움직였다 —
 `- [ ]` 중 위의 셋은 사람이 막고 있고(🙋 Supabase · 🙋 Anthropic 키 · GATE 3), INBOX 가 그 다음 순서(P1 첫 행 마이그레이션 →
 126 제출서 → 미해결 FINDINGS)를 적어 두었다.
@@ -42,29 +101,7 @@ INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면
 ⚠ **브라우저로는 아직 안 봤다.** probe 는 API 만 쳤다. 「눈 판정 대기」에 적었다 — 시크릿 창에서 `/demo` 가 열리고 Roadmap 이
 `aria-busy` 에서 내려오는지는 사람이 본다.
 
-**다음 바퀴의 일 — FINDINGS 128**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
-
-🔴 **INBOX 가 정한 순서다** — 128(고장 · 오류 로그에 메시지·스택 없음) → 129(격차 · `keep-all`) → 130(격차 · `:focus-visible`)
-→ PLAN P1 첫 행(마이그레이션을 Supabase 에 실제로) → 126(제출서) → 미해결 FINDINGS 구멍 → 격차. 129·130 은 격차지만 INBOX 가
-「이번만 PLAN P4 둘째 행의 몫으로 같이 닫아라」고 했다 — 랜딩·데모가 심사의 첫 화면이다.
-
-> **128 을 고치는 법** — `lib/api/log.ts` 에 **오류 로그의 표**를 하나 더 (남기는 것: `request_id` · `route` · `name` · `code` ·
-> `message`(길이 자름) · `stack` 첫 3줄 / 남기지 않는 것: `query` · `parameters` · body). `route.ts` 의 `toApiError()` 는 그 표를
-> 읽는 함수 하나만 부른다. 시험은 「질의문이 든 예외를 던졌을 때 로그에 `select` 가 없다」와 「`code` 가 찍힌다」. 재현 로그의 실물은
-> `docs/evidence/2026-09-06-db-pool/probe.txt` 「고치기 전」 절이다 — 저 한 줄로는 127 을 못 찾았다.
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). INBOX 2번(P1 첫 행)은 「`.env.local` 에
-  Supabase 값이 꽂혀 있고 접속도 확인됐다」고 한다 — 128~130 다음에 그 행이다. ⚠ 실패하면 원인을 적고 멈춘다.
-- 대장의 대기(128 · 129 · 130 · 126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 128 만 고장이다.
-
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 128(오류 로그에 메시지·스택 없음). 68바퀴가 닫았다 (`9319617`).
 
 ---
 
@@ -294,63 +331,6 @@ secret 없음 → 401 「CRON_SECRET 가 없다 — Cron 문이 잠겨 있다」
 > (`f15c650`). 증거 폴더는 UTC 날짜(`2026-09-05-demo-reset`)로 남아 있었다 — 63 의 「밟은 함정」은 「손으로 옮겼다」고
 > 적었지만 옮겨져 있지 않았다. 64 가 문서가 가리키는 `2026-09-06-demo-reset` 으로 옮겼다.
 
-
----
-
-
-### 지난 바퀴 (62) — 터미널 재생 · 랜딩 C-3 (PLAN P5 첫 행 ③ · 행 닫음 · `8c3e8c5` `5b5b98b`)
-
-**62바퀴는 둘을 했다.** ① 61바퀴가 CI 도중에 끊긴 채 **커밋하지 못한** 거울 문서 작업을 같은
-트리에서 전 층 CI 를 다시 돌려(GREEN · 843) 그대로 올렸다 (`2a1db06`) — **58·59·60·61 네 바퀴
-연속**이다 (아래 「밟은 함정」). ② `docs/PLAN.md` **P5 첫 행의 마지막 조각 — 터미널 재생**을
-만들었다. **그 행이 닫혔다** (FINDINGS 123 닫음). 남은 `- [ ]` 는 P5 둘째 행부터다.
-
-🔴 **잰 것 — 랜딩에 터미널이 섰고, 그 터미널의 모든 줄은 실제 도구가 찍은 것이다.**
-
-| | 전 | 후 |
-|---|---|---|
-| `fixtures/replay/` | 없음 | `sync.json` **17줄** — 관통 sync 단계 ⑥ 이 **배포되는 번들**을 진짜 소켓으로 돌려 남긴 stdout · 손으로 쓴 줄 **0** |
-| 이야기 | — | 훅 알림(적용 v0.9.0 · 공식 v1.0.0) → `> /contextops:sync`(파일 8개 적용 · backup · applied 보고) → `$ … progress --milestone PL-M1 …` → `보고했다 — PL-M1 · criterion_done · 근거 1건 · v1.0.0` |
-| 녹화가 낡으면 | — | 관통이 **매번 다시 녹화해 픽스처와 대조**한다 (`t_ms` 제외 · backup 폴더의 시각만 가림). 다르면 FAIL + 「`.ci/walkthrough-replay.json` 을 복사해라」 |
-| `<TerminalReplay>` | 0곳 | `components/terminal-replay.tsx` — 명령 줄(`> `·`$ `)만 타이핑 · 서버 렌더는 **전부 드러남**(JS 없이 글로 읽힘) · reduced-motion 이면 재생 안 함 · 끝나면 7초 뒤 처음부터 · **버튼 0** |
-| 오른쪽 패널 | — | Roadmap 미니 — **왼쪽 줄을 읽어서** 바뀐다 (`panelState`): 근거 **0 / 3 → 1 / 3** · 마일스톤은 씨앗의 PL-M1 과 글자 그대로 (시험이 `paylabDrafts()` 와 대조) |
-| 계약 | — | `ReplayFrames` (`packages/schema/src/replay.ts`) — 랜딩이 모듈 로드 때 한 번 판다 · 관통 녹화기도 같은 계약으로 잰다 |
-| 관통 sync 검사 | 16 | **24** (녹화 준비 · P7 완료 기준 문장이 Pack 의 CLAUDE.md 에 있음 · 근거 경로 실존 · 세 명령 exit 0 · progress 가 서버에 닿음 · 계약 · 픽스처 대조) |
-| 웹 시험 | 536 | **551** (`web-terminal-replay` +15) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough · docs → GREEN |
-
-🔴 **녹화는 관통이 만든다 — SPEC 의 「수동 작성」을 지웠다.** §10.4 는 「`script` 명령 또는 수동
-작성」이었는데, 손으로 쓴 대사는 CLI 가 문장을 바꾼 날부터 거짓말이 되고 아무도 모른다.
-관통 sync 단계에 ⑥ 을 더해 진짜 번들의 stdout 을 `.ci/walkthrough-replay.json` 으로 남기고
-픽스처와 대조한다. ★ 첫 실행이 「픽스처가 없다」로 **FAIL 한 것**이 이 게이트가 실제로 잰다는
-증거다 — 복사한 뒤에야 초록이 됐다. 「작업」 구간(sync 와 progress 사이)은 녹화에 없다 —
-지어 넣지 않았고 화면의 출처 문장이 「사이의 작업은 생략했다」고 말한다.
-
-🔴 **패널에 별도 타임라인이 없다.** 보고 줄이 드러나는 순간 **바로 앞 명령의 `--criterion` 문장**이
-✓ 가 된다 (CLI 는 보고 줄에 문장을 다시 찍지 않는다). 두 타임라인을 손으로 맞추면 CLI 문장이
-바뀐 날 한쪽만 움직인다. `done_when` 에 글자 그대로 있는 문장만 센다 (P7).
-
-🔴 **「BS-M2 1/3 → 2/3」은 목업이다 — 실제는 paylab PL-M1 0/3 → 1/3.** 보고 하나가 실제로
-그만큼만 바꾼다. 데모의 2/3 을 흉내 내려면 보고를 지어내야 했다. DESIGN_BRIEF 에 그렇게 적었다.
-
-🔴 **재생 속도는 표시용이다.** 실제 녹화는 **329ms** 에 끝난다(한 명령의 stdout 은 같은 시각).
-`REPLAY_PACE` 가 줄 사이를 140ms~1.2s 로 누르고 명령은 글자당 22ms 로 친다 — 순서·내용은 안 건드린다.
-
-🔴 **`packages/schema` 에 파일 하나를 더하니 CI 가 RED.** 플러그인 번들(`bin/contextops-cli.mjs`)이
-schema 를 인라인해서 `bundle.test.ts` 가 「소스에서 방금 만든 번들과 byte 가 같다」에서 빨개졌다.
-`pnpm --filter @contextops/plugin build` → GREEN. 「밟은 함정」에 이미 두 번 적혀 있던 것이다.
-
-⚠ **`/sync` 상단에는 두지 않았다** (SPEC 문장을 코드에 맞췄다) — 그 화면은 실제 기기 표가 서는
-자리라 녹화가 실데이터처럼 읽힌다. ⚠ **스텝 썸네일(C-2)은 그대로 없다** — production 캡처가
-생긴 뒤(P5 둘째 행)이고, 캡처 없이 목업 그림을 넣지 않는다.
-
-**눈으로 읽었다** — `docs/evidence/2026-09-06-replay/landing.txt` (`scripts/dump-landing.tsx`):
-「어떻게 동작하나요」 다음에 터미널 17줄이 순서대로 서고 그 아래 패널이 `근거 1 / 3` · ✓○○ ·
-`보고 1건 · v1.0.0 기준` 이다. accent 1 · `<button>` 0 · 「실시간」·「영상」 0.
-⚠ 브라우저 캡처는 없다 — **타이핑이 실제로 움직이는가**는 아래 「눈 판정 대기」.
-
-**그 바퀴가 다음으로 지목한 것**: PLAN P5 둘째 행 중 루프가 계정 없이 할 수 있는 조각 —
-FINDINGS 120(데모 시드를 제품 코드로 · Cron 뒤에)을 권했다. 63바퀴가 그것을 했다.
 
 ---
 
@@ -656,6 +636,10 @@ FINDINGS 120(데모 시드를 제품 코드로 · Cron 뒤에)을 권했다. 63�
 
 ## 눈 판정 대기
 
+🔴 **오류 로그 — `next dev` 에서 다시 찍지 않았다** (68바퀴 · FINDINGS 128). vitest 안에서 같은 `route()` 로 찍은 두 줄은 읽었다
+(`docs/evidence/2026-09-06-error-log/probe.txt`). 129·130 을 브라우저로 볼 때 `demo:db` 를 끄고 아무 화면이나 열어 `next dev` stdout 에
+`{"kind":"error",…"cause":{…"code":"CONNECT_TIMEOUT"…}}` 가 찍히고 그 줄에 `select` 가 없는지 같이 본다.
+
 🔴 **게스트 데모 — 고친 뒤 브라우저로 안 봤다** (67바퀴 · FINDINGS 127). API 는 잰다(`docs/evidence/2026-09-06-db-pool/probe.txt`:
 순차·동시·화면 fan-out 전부 200). 못 잰 것은 **사람이 시크릿 창에서** 본다 (`pnpm --filter web demo:db` → `next dev` 에
 `DATABASE_URL=…55432/postgres?max=1` · `SUPABASE_JWT_SECRET=contextops-test-jwt-secret` → `http://localhost:3000/demo`):
@@ -665,8 +649,8 @@ FINDINGS 120(데모 시드를 제품 코드로 · Cron 뒤에)을 권했다. 63�
 
 🔴 **데모 리셋 — 배포에서 돌린 적이 없다** (63바퀴 · 🙋 Vercel 연결 뒤). PGlite 위에서는 읽었다
 (`docs/evidence/2026-09-06-demo-reset/reset.txt`). 못 잰 것 셋: `/var/task` 에서 `fixturesRoot()`
-가 `fixtures/` 를 찾나(못 찾으면 500 + 로그에 `Error` 이름만 — 자세한 문구는 서버 로그의
-`unhandled` 줄이 아니라 **던진 문구**를 봐야 하니 Vercel Functions 로그를 열어라) ·
+가 `fixtures/` 를 찾나(못 찾으면 500 — Vercel Functions 로그의 `"kind":"error"` 줄에 던진 문구와 stack 「at …」 3줄이
+남는다 · 68바퀴 FINDINGS 128 · 그 전엔 `Error` 이름뿐이었다) ·
 Supabase 에서 60초 안에 끝나나 · Cron 로그에 200 이 찍히나. 첫 리셋 뒤 시크릿 창에서 `/demo`.
 
 🔴 **화면 1 의 터미널 재생 — 브라우저에서 움직이는 것을 본 적이 없다** (62바퀴). 덤프는 읽었다

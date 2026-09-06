@@ -57,7 +57,7 @@
   「`body` 규칙에 `keep-all` 이 있다」 한 줄 — 토큰과 같은 파일이라 그 자리다.
 - **상태**: 대기 (INBOX 순서 ③ · 128 다음 · 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다)
 
-### 128. **오류 로그에 메시지도 스택도 없다** — `{"kind":"unhandled","error":"Error"}` 한 줄뿐   [고장]
+### 128. ✅ **오류 로그에 메시지도 스택도 없다** — `{"kind":"unhandled","error":"Error"}` 한 줄뿐   [고장]
 - **증상**: 127 의 500 을 **로그만으로는 알 수 없었다.** 남는 것은 저 한 줄이고, 원인(postgres-js `CONNECT_TIMEOUT`)은
   서버를 다시 띄워 소켓을 세어 본 뒤에야 나왔다. 운영에서 이걸 못 보면 아무것도 못 고친다.
 - **근거**: 67바퀴 재현 — `docs/evidence/2026-09-06-db-pool/probe.txt` 「고치기 전」 절: 500 여덟 번마다
@@ -73,7 +73,16 @@
   **별도 필드**로 붙이고 message 는 짧다(재현에서 `read ECONNRESET` · `CONNECT_TIMEOUT`). 그래도 message 를 **길이로
   자르고**(예: 200자) 시험이 「질의문이 든 예외를 던졌을 때 로그에 `select` 가 없다」를 잰다. `toApiError()` 는
   그 표를 읽는 함수 하나만 부른다.
-- **상태**: 대기 (INBOX 순서 ② · 고장이라 PLAN 보다 위)
+- **고친 것** (`9319617` · 68바퀴): `lib/api/log.ts` 에 **오류 로그의 표** `ERROR_FIELD_RULES` 12행 — `name`·`code` keep ·
+  `message` scrub(자기 `query` 를 품으면 통째로 빼고 뺐다고 표시 · 200자) · `stack` 은 「at …」 3줄 · `cause` 는 같은 표로 깊이 3 ·
+  `query`·`params`·`parameters`·`detail`·`hint`·`where`·`internal_query` drop · 표에 없는 필드는 안 남긴다. `toApiError()` 는
+  `logError(describeError(err))` 하나만 부른다. **밝혀진 것**: 저 「Error」는 drizzle `DrizzleQueryError` 의 기본 name 이었다
+  (`this.name` 을 안 정한다) — 그래서 `name` 이 기본값이면 클래스 이름을 쓴다. 그리고 그 껍데기의 message 가 `Failed query: <sql>
+params:
+  <값>` 이라 `console.error(err)` 로 고쳤으면 P1 사고였다. 시험 `test/error-log.test.ts` 21개 — 진짜 drizzle 질의(PGlite · 없는 표)로
+  죽인 라우트의 로그에 `42P01` 은 있고 **직렬화된 한 줄 전체**에 `select`·매개변수가 없다 · 감싼 `CONNECT_TIMEOUT` 이 `cause.code` 에 닿는다 ·
+  표의 행마다 「값을 넣으면 로그가 갈린다」 · 4xx 는 error 줄 0. 실물은 `docs/evidence/2026-09-06-error-log/probe.txt`. SPEC §11 에 한 줄.
+- **상태**: ✅ `9319617` (68바퀴). ⚠ `next dev` stdout 에서 다시 찍지는 않았다 — `STATUS.md` 「눈 판정 대기」.
 
 ### 127. ✅ **게스트 데모가 안 열린다 — `GET /api/v1/teams` 가 30초 뒤 500** · 풀이 라우트 수만큼 생겼다   [고장]
 - **증상**: `/demo` → `/t/demo/p/paylab-api/*` 의 모든 화면이 에러이거나 스켈레톤에서 안 넘어간다 (사람이 브라우저에서
