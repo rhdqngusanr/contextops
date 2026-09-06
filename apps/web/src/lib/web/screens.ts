@@ -61,18 +61,130 @@ export function isActiveScreen(screen: ProjectScreen, pathname: string): boolean
   return screen.match.test(pathname)
 }
 
-/**
- * 팔레트의 **검색** — 라벨·경로·`keywords` 중 하나에 걸리면 나온다.
- *
- * ⚠ 여기서 순위를 매기지 않는다. 일곱 줄짜리 목록에서 점수 매기기는 표의 차례
- * (= 일의 차례)를 흐트러뜨릴 뿐이다. 목록이 길어지면 그때 정한다.
- */
-export function matchScreens(
-  query: string,
+
+// =====================================================================
+//  팔레트가 그리는 **줄** — 화면과 프로젝트 두 묶음 (FINDINGS 157)
+//
+//  ★ 왜 지금 이 모양이 생겼나 — 94바퀴까지 팔레트의 줄은 **한 종류**(화면)뿐이어서
+//    `ProjectScreen` 을 그대로 그렸다. 둘째 종류(프로젝트 전환)가 온 **지금**이
+//    묶는 자리다 — 셋째가 온 뒤가 아니다. 팔레트는 `PaletteEntry` 하나만 알고,
+//    「무엇이 줄이 되나」는 이 파일의 두 빌더가 정한다.
+//
+//  🔴 **묶음을 하나 더하려면**: ① `PaletteGroup` 에 이름 ② `PALETTE_GROUP_TITLES` 에 제목
+//     (`Record` 라 빠뜨리면 타입이 먼저 막는다) ③ 줄을 만드는 빌더 함수 하나
+//     ④ `CommandPalette` 가 그 빌더를 부른다. 팔레트의 **그리는 부분은 안 고친다.**
+//
+//  ⛔ 목록을 손으로 지어내지 마라 — 프로젝트 줄은 **서버가 준 `GET /teams` 응답만**
+//    그린다 (그 문은 본인이 속한 팀만 낸다). 지어내면 남의 팀이 보이거나
+//    없는 곳으로 가는 줄이 생긴다.
+// =====================================================================
+
+export type PaletteGroup = 'screen' | 'project'
+
+/** 묶음의 제목. 차례는 아래 `PALETTE_GROUP_ORDER` 가 정한다. */
+export const PALETTE_GROUP_TITLES: Record<PaletteGroup, string> = {
+  screen: '화면',
+  project: '프로젝트',
+}
+
+/** 그리는 차례 — 지금 프로젝트 안에 있는 사람이라 가까운 것(화면)이 먼저다. */
+export const PALETTE_GROUP_ORDER: readonly PaletteGroup[] = ['screen', 'project']
+
+export type PaletteEntry = {
+  /** React 의 `key` 이자 시험의 이름. 묶음이 달라도 겹치지 않는다. */
+  readonly key: string
+  readonly group: PaletteGroup
+  readonly label: string
+  readonly href: string
+  /** 오른쪽에 붙는 짧은 말 — 화면은 경로, 프로젝트는 `팀/프로젝트`. 검색에도 걸린다. */
+  readonly hint: string
+  /** 라벨도 `hint` 도 아닌 낱말로 찾을 수 있게. */
+  readonly keywords: readonly string[]
+  /** 지금 보고 있는 자리인가 (「지금 여기」). */
+  readonly here: boolean
+}
+
+/** 화면 묶음 — `PROJECT_SCREENS` 표를 그대로 줄로 바꿈. */
+export function screenEntries(
+  base: string,
+  pathname: string,
   screens: readonly ProjectScreen[] = PROJECT_SCREENS,
-): ProjectScreen[] {
+): PaletteEntry[] {
+  return screens.map((screen) => ({
+    key: `screen:${screen.path}`,
+    group: 'screen' as const,
+    label: screen.label,
+    href: screenHref(base, screen),
+    hint: screen.path,
+    keywords: screen.keywords,
+    here: isActiveScreen(screen, pathname),
+  }))
+}
+
+/** `GET /teams` 응답에서 **이 팔레트가 쓰는 칸만**. 응답 타입을 import 하지 않는다 — 의존 방향. */
+export type TeamLike = {
+  readonly slug: string
+  readonly name: string
+  readonly projects: readonly { readonly slug: string; readonly name: string }[]
+}
+
+/**
+ * 지금 주소가 가리키는 화면. 모르면 `undefined` 다.
+ * ★ 프로젝트를 옮길 때 **보던 화면을 그대로 들고 간다** — Sync 를 보다 옆
+ *   프로젝트로 옮기는 사람은 거기서도 Sync 를 보려는 것이다.
+ */
+export function currentScreen(
+  pathname: string,
+  screens: readonly ProjectScreen[] = PROJECT_SCREENS,
+): ProjectScreen | undefined {
+  return screens.find((s) => isActiveScreen(s, pathname))
+}
+
+/**
+ * 프로젝트 묶음 — **서버가 준 팀 목록만** 줄로 바꿈 (FINDINGS 157).
+ *
+ * ⚠ 주소는 slug 다 (SPEC §9). uuid 를 쓰지 않는다 — 화면의 주소와 같은 말이어야
+ *   사람이 주소창에서 본 것과 팔레트가 말하는 것이 같다.
+ */
+export function projectEntries(
+  teams: readonly TeamLike[],
+  here: { team: string; project: string; pathname: string },
+  screens: readonly ProjectScreen[] = PROJECT_SCREENS,
+): PaletteEntry[] {
+  //  ★ 어느 화면으로 내려놓나 — 보던 화면, 모르면 표의 첫 줄이다.
+  //    ⚠ 표 밖의 경로를 지어내면 404 로 간다.
+  const landing = currentScreen(here.pathname, screens) ?? screens[0]
+  const entries: PaletteEntry[] = []
+  for (const team of teams) {
+    for (const project of team.projects) {
+      const base = `/t/${team.slug}/p/${project.slug}`
+      entries.push({
+        key: `project:${team.slug}/${project.slug}`,
+        group: 'project',
+        label: project.name,
+        href: landing ? screenHref(base, landing) : base,
+        hint: `${team.slug}/${project.slug}`,
+        //  팀 이름으로도 찾는다 — 사람은 「그 팀의 그것」으로 기억한다.
+        keywords: [team.name, project.slug, team.slug],
+        here: team.slug === here.team && project.slug === here.project,
+      })
+    }
+  }
+  return entries
+}
+
+/**
+ * 팔레트의 **검색** — 라벨·오른쪽 짧은 말(`hint`)·`keywords` 중 하나에 걸리면 나온다.
+ *
+ * ⚠ 여기서 순위를 매기지 않는다. 묶음의 차례(화면 → 프로젝트)가 곧 목록의 차례이고,
+ * 그것이 일의 차례다. 목록이 길어지면 그때 정한다.
+ */
+export function matchEntries(
+  query: string,
+  entries: readonly PaletteEntry[],
+): PaletteEntry[] {
   const q = query.trim().toLowerCase()
-  if (!q) return [...screens]
-  return screens.filter((s) =>
-    [s.label, s.path, ...s.keywords].some((word) => word.toLowerCase().includes(q)))
+  if (!q) return [...entries]
+  return entries.filter((e) =>
+    [e.label, e.hint, ...e.keywords].some((word) => word.toLowerCase().includes(q)))
 }

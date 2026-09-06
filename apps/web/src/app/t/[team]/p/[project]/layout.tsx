@@ -36,7 +36,7 @@ export default function ProjectLayout({
           <span className="mono ink">{team}/{project}</span>
         </div>
         {/* ⚠ 내비 안이다 — 「어디로 갈 수 있나」를 말하는 자리가 둘로 갈리지 않게. */}
-        <CommandPalette base={base} pathname={path} />
+        <CommandPalette base={base} pathname={path} team={team} project={project} />
         <div className="col-tight">
           {PROJECT_SCREENS.map((screen) => (
             <a

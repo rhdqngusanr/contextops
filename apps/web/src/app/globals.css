@@ -496,5 +496,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
    줄 전체가 좌우로 흔들린다 (눈으로 확인했다). */
 .palette-caret { flex: 0 0 auto; white-space: pre; }
 
+/* 묶음 제목(「화면」·「프로젝트」)과 안내 한 줄 — 고를 수 없는 줄이라 들여쓰기가
+   `palette-item` 과 같아야 목록이 한 줄로 읽힌다 (FINDINGS 157). */
+.palette-group { padding: var(--sp-2) var(--sp-3) 0; }
+.palette-note { padding: var(--sp-1) var(--sp-3) var(--sp-2); }
+
 /* 트리거는 내비의 한 줄이다 — 낱말은 왼쪽, `⌘K` 는 오른쪽 끝. */
 .palette-trigger { display: flex; justify-content: space-between; gap: var(--sp-3); }

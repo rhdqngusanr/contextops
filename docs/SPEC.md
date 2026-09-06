@@ -536,7 +536,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 8 | `…/roadmap` | 마일스톤 행: 기한(`due` · Manifest 의 날짜 그대로 · 없으면 칸 없음 — FINDINGS 111)·done_when별 근거 수·마지막 보고·충돌·"완료 확인" · 로드맵 외 작업 · 근거 클릭 시 path:line·commit | Realtime |
 | 9 | `…/sync` | 팀원·기기별 버전/상태/마지막 보고 · 질의창(답변 + 인용 항목 칩) | Realtime |
 
-- 🔴 **앱 화면(3~9)의 왼쪽 내비와 명령 팔레트 `⌘K` 는 같은 표 하나를 읽는다** (FINDINGS 132). 정본은 `apps/web/src/lib/web/screens.ts` 의 `PROJECT_SCREENS` 이고 **화면이 늘면 거기 한 줄**이다 — 내비도 팔레트도 안 고친다. 팔레트는 **이동과 검색뿐**이다(명령·프로젝트 전환 없음 — 프로젝트 목록을 내주는 문이 아직 0곳이다). `test/web-command-palette.test.ts` 가 ① 내비가 목록을 자기 안에 안 적는지 ② 표에 한 줄을 더하면 팔레트에 저절로 나오는지 ③ 표의 모든 줄에 `page.tsx` 가 있는지(404 로 가는 줄 0개)를 센다.
+- 🔴 **앱 화면(3~9)의 왼쪽 내비와 명령 팔레트 `⌘K` 는 같은 표 하나를 읽는다** (FINDINGS 132). 정본은 `apps/web/src/lib/web/screens.ts` 의 `PROJECT_SCREENS` 이고 **화면이 늘면 거기 한 줄**이다 — 내비도 팔레트도 안 고친다. 팔레트는 **이동과 검색뿐**이다(명령은 없다). 묶음은 둘 — 「화면」과 「프로젝트」이고, 프로젝트 줄은 **`GET /teams` 응답만** 그린다(FINDINGS 157 · 새 문을 뚫지 않았다 — 「내가 볼 수 있는 프로젝트」의 정본이 그 문 하나다). `test/web-command-palette.test.ts` 가 ① 내비가 목록을 자기 안에 안 적는지 ② 표에 한 줄을 더하면 팔레트에 저절로 나오는지 ③ 표의 모든 줄에 `page.tsx` 가 있는지(404 로 가는 줄 0개)를 센다.
 
 게스트 데모: `/demo` → **게스트 세션 토큰**으로 `demo` 팀 read-only + `/demo/ai-once` 호출 가능. 데모 테넌트는 production DB의 별도 team_id, 매일 03:00(KST) 리셋 — Vercel Cron(`apps/web/vercel.json`)이 `GET /cron/demo-reset` 을 부르고(§5 · `CRON_SECRET` 뒤), 그 문이 `lib/demo/reset.ts` 로 **지우고 다시 심는다**. 시드는 제품 코드다 (`lib/demo/seed.ts` · `seed-demo.ts` — 라우트를 프로세스 안에서 부른다, `inproc.ts`). 픽스처는 `next.config.ts` 의 `outputFileTracingIncludes` 로 배포 함수에 실린다.
 - 🔴 **쿠키가 아니라 로그인과 같은 자리(세션 토큰)다.** 원래 SPEC 은 「세션 쿠키」였는데, 저장 자리를 하나 더 만들면 로그아웃이 한쪽만 지우고 `lib/web/api.ts` 의 `Authorization` 조립이 두 갈래가 된다. 게스트도 **진짜 세션으로 진짜 라우트**를 지난다 — 다른 것은 **바꿀 수 없다**는 것뿐이다.
