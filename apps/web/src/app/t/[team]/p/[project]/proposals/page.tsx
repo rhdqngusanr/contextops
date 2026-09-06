@@ -10,7 +10,7 @@ import { ProjectGate } from '../../../../../../components/project-gate'
 import {
   ProposalStatusFilter, ProposalTable, proposalEmptyMessage,
 } from '../../../../../../components/proposals'
-import { ErrorState, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
 //  화면 6 — Proposals 목록 (SPEC §9 화면 6 · DESIGN_BRIEF §4 「화면 6」)
@@ -62,10 +62,7 @@ function ProposalList({ base, project }: { base: string; project: ProjectRef }) 
           <ProposalTable
             proposals={result.data.proposals}
             hrefOf={(p) => `${base}/proposals/${p.id}`}
-            emptyMessage={proposalEmptyMessage(
-              status,
-              '아직 올라온 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.',
-            )}
+            empty={<ScreenEmpty slot="proposals.list" base={base} message={proposalEmptyMessage(status)} />}
           />
         ) : null}
       </section>

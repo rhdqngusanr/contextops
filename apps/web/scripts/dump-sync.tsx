@@ -9,6 +9,7 @@ import type { DeviceSyncRow, VersionRow } from '../src/lib/web/queries'
 //    전역에 꽂아 준 뒤에 불러온다 (`dump-proposals.tsx` 와 같은 이유).
 ;(globalThis as { React?: unknown }).React = React
 const { DeviceTable, SyncLegend, SyncSummary } = await import('../src/components/sync')
+const { ScreenEmpty } = await import('../src/components/states')
 
 // =====================================================================
 //  화면 9(Sync)의 모든 모양을 **글자로** 뽑는다 (loop/PROMPT.md ④2 「눈으로 읽는다」)
@@ -95,7 +96,7 @@ lines.push('')
 
 lines.push('◆ 표 — 실제 팀 모양 (급한 것이 위다)')
 for (const line of text(renderToStaticMarkup(createElement(DeviceTable, {
-  devices: TEAM, emptyMessage: '없다', now: NOW,
+  devices: TEAM, empty: null, now: NOW,
 }))).split(' | ')) {
   lines.push(`    ${line}`)
 }
@@ -112,7 +113,7 @@ for (const status of SYNC_STATUSES) {
     reported_at: status === 'unknown' ? null : ago(8 * 60_000),
   })
   lines.push(`  ${status} — ${text(renderToStaticMarkup(createElement(DeviceTable, {
-    devices: [one], emptyMessage: '없다', now: NOW,
+    devices: [one], empty: null, now: NOW,
   })))}`)
 }
 lines.push('')
@@ -120,7 +121,7 @@ lines.push('')
 lines.push('◆ 시각이 지날수록')
 for (const [what, ms] of [['방금', 10_000], ['8분', 8 * 60_000], ['9시간', 9 * 3600_000], ['4일', 4 * 86_400_000]] as const) {
   lines.push(`  ${what} — ${text(renderToStaticMarkup(createElement(DeviceTable, {
-    devices: [device({ reported_at: ago(ms) })], emptyMessage: '없다', now: NOW,
+    devices: [device({ reported_at: ago(ms) })], empty: null, now: NOW,
   })))}`)
 }
 lines.push('')
@@ -128,7 +129,7 @@ lines.push('')
 lines.push('◆ 빈 상태')
 lines.push(`  ${text(renderToStaticMarkup(createElement(DeviceTable, {
   devices: [],
-  emptyMessage: '아직 등록된 기기가 없습니다. Claude Code에서 /contextops:init 을 실행하면 여기에 줄이 생깁니다.',
+  empty: createElement(ScreenEmpty, { slot: 'sync.devices', base: '/t/paylab/p/api' }),
   now: NOW,
 })))}`)
 lines.push('')

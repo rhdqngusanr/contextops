@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { ApiClientError, ERROR_HINT, messageOf } from '../lib/web/api'
+import { EMPTY_PLACES, emptyNextHref, type EmptySlot } from '../lib/web/screens'
 
 // =====================================================================
 //  loading / empty / error — **세 상태를 전부** 그리는 자리 (DESIGN_BRIEF §5)
@@ -30,6 +31,33 @@ export function EmptyState({ message, action }: { message: string; action?: Reac
       <p>{message}</p>
       {action}
     </div>
+  )
+}
+
+/**
+ * 🔴 **빈 상태는 여기로만 그린다** (FINDINGS 133) — 문구도 다음 행동도 표에서 온다
+ * (`lib/web/screens.ts` 의 `EMPTY_PLACES`).
+ *
+ * ★ 왜 — 「항목이 없습니다」에서 갈 곳이 없으면 첫 사용자가 거기서 막힌다. 화면마다
+ *   손으로 적으면 **한 화면만 버튼이 없는 채로** 남고, 비어 있을 뿐 멀쩡해 보인다.
+ * ⚠ `message` 는 **상태에 따라 달라지는 문장**만 넘긴다 (제안 목록의 필터 같은 것).
+ *   화면의 기본 문구를 여기서 덮어쓰면 표가 정본이 아니게 된다.
+ */
+export function ScreenEmpty({ slot, base, message }: { slot: EmptySlot; base: string; message?: string }) {
+  const place = EMPTY_PLACES[slot]
+  const next = place.next
+  return (
+    <EmptyState
+      message={message ?? place.message}
+      action={next ? (
+        <a
+          className={next.tone === 'accent' ? 'btn btn-primary' : 'btn'}
+          href={emptyNextHref(base, next)}
+        >
+          {next.label}
+        </a>
+      ) : undefined}
+    />
   )
 }
 

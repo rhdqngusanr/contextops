@@ -10,6 +10,7 @@ import type { ProposalDetail, ProposalRow, VersionRow } from '../src/lib/web/que
 ;(globalThis as { React?: unknown }).React = React
 const { ProposalDecisions, ProposalHead, ProposalItemCard, ProposalTable } =
   await import('../src/components/proposals')
+const { ScreenEmpty } = await import('../src/components/states')
 
 // =====================================================================
 //  화면 6(Proposals)의 모든 모양을 **글자로** 뽑는다 (loop/PROMPT.md ④2 「눈으로 읽는다」)
@@ -116,12 +117,12 @@ lines.push('◆ 목록')
 lines.push(`  ① 상태 5종 — ${text(renderToStaticMarkup(createElement(ProposalTable, {
   proposals: PROPOSAL_STATUSES.map((status, i) => row({ id: `p${i}`, status, title: `${status} 인 제안` })),
   hrefOf: (p: ProposalRow) => `/t/a/p/b/proposals/${p.id}`,
-  emptyMessage: '없다',
+  empty: null,
 })))}`)
 lines.push(`  ② 빈 목록 — ${text(renderToStaticMarkup(createElement(ProposalTable, {
   proposals: [],
   hrefOf: (p: ProposalRow) => `/t/a/p/b/proposals/${p.id}`,
-  emptyMessage: '아직 올라온 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.',
+  empty: createElement(ScreenEmpty, { slot: 'proposals.list', base: '/t/a/p/b' }),
 })))}`)
 lines.push('')
 

@@ -5,7 +5,7 @@ import { use } from 'react'
 import { fetchVersions, type ProjectRef } from '../../../../../../lib/web/queries'
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import { ErrorState, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 import { VersionHistory } from '../../../../../../components/versions'
 
 // =====================================================================
@@ -43,7 +43,7 @@ function PackList({ base, project }: { base: string; project: ProjectRef }) {
           <VersionHistory
             versions={result.data.versions}
             packHref={(semver) => `${base}/packs/${semver}`}
-            emptyMessage="아직 발행된 버전이 없습니다. Context 화면에서 [발행하기]를 눌러보세요."
+            empty={<ScreenEmpty slot="packs.versions" base={base} />}
           />
         ) : null}
       </section>

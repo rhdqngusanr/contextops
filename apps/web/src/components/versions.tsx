@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { VersionRow } from '../lib/web/queries'
 import { VersionPill } from './chips'
 
@@ -15,20 +17,14 @@ import { VersionPill } from './chips'
 export function VersionHistory({
   versions,
   packHref,
-  emptyMessage,
+  empty,
 }: {
   versions: VersionRow[]
   packHref: (semver: string) => string
-  emptyMessage: string
+  /** 빈 자리는 `ScreenEmpty` 가 그린다 — 문구·다음 행동의 정본은 `EMPTY_PLACES` 다 (FINDINGS 133). */
+  empty: ReactNode
 }) {
-  if (versions.length === 0) {
-    return (
-      <div className="state-box">
-        <span aria-hidden="true" className="ink-4">◌</span>
-        <p>{emptyMessage}</p>
-      </div>
-    )
-  }
+  if (versions.length === 0) return <>{empty}</>
   return (
     <div className="scroll-x">
       <table className="table">

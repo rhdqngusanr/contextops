@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import {
   PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_NOTE_MAX, PROPOSAL_STATUSES, ROLE_RANK,
   type ContextItemView, type ProposalAction, type ProposalItem, type ProposalStatus, type TeamRole,
@@ -81,29 +83,26 @@ export function ProposalStatusFilter({
 /**
  * 거른 목록이 비었을 때 표가 말할 문장. **어느 상태가 비었는지 이름을 말한다** —
  * 「제안이 없습니다」만 적으면 사람은 그것이 칩 때문인지 진짜 빈 것인지 못 가린다.
+ *
+ * ⚠ 거르지 않았으면 `undefined` 다 — 그때의 문구는 `EMPTY_PLACES['proposals.list']` 가
+ *   정본이다 (FINDINGS 133). 여기서 기본 문장을 한 번 더 적으면 둘이 갈린다.
  */
-export function proposalEmptyMessage(status: ProposalStatus | null, whenAll: string): string {
-  if (status === null) return whenAll
+export function proposalEmptyMessage(status: ProposalStatus | null): string | undefined {
+  if (status === null) return undefined
   return `「${PROPOSAL_STATUS_CHIP[status].label}」 상태의 제안이 없습니다. [전체] 를 누르면 모두 봅니다.`
 }
 
 export function ProposalTable({
   proposals,
   hrefOf,
-  emptyMessage,
+  empty,
 }: {
   proposals: readonly ProposalRow[]
   hrefOf: (proposal: ProposalRow) => string
-  emptyMessage: string
+  /** 빈 자리는 `ScreenEmpty` 가 그린다 — 문구·다음 행동의 정본은 `EMPTY_PLACES` 다 (FINDINGS 133). */
+  empty: ReactNode
 }) {
-  if (proposals.length === 0) {
-    return (
-      <div className="state-box">
-        <span aria-hidden="true" className="ink-4">◌</span>
-        <p>{emptyMessage}</p>
-      </div>
-    )
-  }
+  if (proposals.length === 0) return <>{empty}</>
   return (
     <div className="scroll-x">
       <table className="table">

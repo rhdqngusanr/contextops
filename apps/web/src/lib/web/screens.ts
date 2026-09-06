@@ -188,3 +188,99 @@ export function matchEntries(
   return entries.filter((e) =>
     [e.label, e.hint, ...e.keywords].some((word) => word.toLowerCase().includes(q)))
 }
+
+
+// =====================================================================
+//  빈 상태의 **다음 행동** — 화면마다 「어디로 가면 되나」의 정본 표 (FINDINGS 133)
+//
+//  ★ 왜 표인가 — 빈 상태는 첫 사용자가 제일 먼저 보는 화면이다. 문구와 목적지를
+//    화면마다 손으로 적으면 **한 화면만 갈 곳이 없는 채로 남고**, 그 화면은 비어 있을
+//    뿐 멀쩡해 보인다. 여기 한 줄이면 `ScreenEmpty` 가 저절로 그린다.
+//
+//  🔴 **빈 자리를 하나 더하려면**: ① `EmptySlot` 에 이름(`화면.무엇`) ② 이 표에 한 줄
+//     (`Record` 라 빠뜨리면 타입이 먼저 막는다) ③ 화면에서 `<ScreenEmpty slot="…" base={base} />`
+//     ④ 문구가 새로우면 `docs/DESIGN_BRIEF.md` §5. 시험(`test/web-empty-states.test.ts`)이
+//     ①만 하면 저절로 나오는지와 **목적지가 실제로 있는 화면인지**를 센다.
+//
+//  ⚠ 목적지는 `PROJECT_SCREENS` 의 `path` 여야 한다 — 주소를 손으로 지으면 404 로 가는
+//    버튼이 생기고, 그건 갈 곳이 없는 것보다 나쁘다.
+//  ⚠ `accent` 는 **화면당 주요 액션 하나**다 (DESIGN_BRIEF §3). 그 화면에 이미 accent 가
+//    있으면(예: Context 의 [발행하기]) `plain` 이다.
+//  ⚠ 갈 곳이 화면 밖(CLI·같은 화면의 다른 칸)이면 버튼을 만들지 말고 `noNext` 에 이유를
+//    적는다 — 타입이 둘 중 하나를 **반드시** 쓰게 한다. 「아무 데도 안 가는 버튼」 금지.
+// =====================================================================
+
+export type EmptySlot =
+  | 'import.docs'
+  | 'context.items'
+  | 'context.versions'
+  | 'review.cards'
+  | 'proposals.list'
+  | 'packs.versions'
+  | 'pack.files'
+  | 'roadmap.versions'
+  | 'roadmap.milestones'
+  | 'sync.devices'
+
+export type EmptyNext = {
+  readonly label: string
+  /** `PROJECT_SCREENS` 의 `path`. 시험이 실재를 센다. */
+  readonly to: string
+  /** `accent` 는 그 화면에 다른 주요 액션이 없을 때만. */
+  readonly tone: 'accent' | 'plain'
+}
+
+export type EmptyPlace =
+  | { readonly message: string; readonly next: EmptyNext; readonly noNext?: undefined }
+  //  버튼이 없는 자리는 **왜 없는지**를 적는다 — 다음 사람이 「빠뜨린 것」과 구별한다.
+  | { readonly message: string; readonly next?: undefined; readonly noNext: string }
+
+export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
+  'import.docs': {
+    message: '아직 올린 문서가 없습니다. 왼쪽에 문서를 붙여넣어 보세요.',
+    noNext: '다음 행동이 같은 화면 왼쪽 칸이다 — 옮길 곳이 없다.',
+  },
+  'context.items': {
+    message: '아직 항목이 없습니다. 가져오기에서 문서를 올리거나 질문에 답해보세요.',
+    next: { label: '가져오기로 이동', to: 'import', tone: 'plain' },
+  },
+  'context.versions': {
+    message: '아직 발행된 버전이 없습니다. 항목을 확인하고 [발행하기]를 눌러보세요.',
+    noNext: '[발행하기] 가 같은 화면 머리에 있다 — 같은 걸음을 두 번 그리지 않는다.',
+  },
+  'review.cards': {
+    message: '결정할 것이 없습니다. 발행할 준비가 됐어요.',
+    next: { label: 'Context로 이동', to: 'context', tone: 'accent' },
+  },
+  'proposals.list': {
+    message: '아직 올라온 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.',
+    //  ⚠ 제안을 만드는 곳은 CLI 다 — 화면에 「만들기」 버튼을 두면 거짓말이다.
+    //    갈 수 있는 곳은 지금 항목을 보는 Context 이고, 그래서 `plain` 이다.
+    next: { label: 'Context 항목 보기', to: 'context', tone: 'plain' },
+  },
+  'packs.versions': {
+    message: '아직 발행된 버전이 없습니다. Context 화면에서 [발행하기]를 눌러보세요.',
+    next: { label: 'Context로 이동', to: 'context', tone: 'accent' },
+  },
+  'pack.files': {
+    message: '이 Pack에는 파일이 없습니다.',
+    next: { label: 'Pack 목록으로', to: 'packs', tone: 'plain' },
+  },
+  'roadmap.versions': {
+    message: '아직 발행된 버전이 없습니다. 로드맵은 발행된 Pack의 마일스톤에서 옵니다.',
+    next: { label: 'Context로 이동', to: 'context', tone: 'accent' },
+  },
+  'roadmap.milestones': {
+    message: '공식 Pack에 마일스톤이 없습니다. roadmap 타입 항목을 만들면 여기 행이 생깁니다.',
+    next: { label: 'Context로 이동', to: 'context', tone: 'plain' },
+  },
+  'sync.devices': {
+    message: '아직 등록된 기기가 없습니다. Claude Code에서 /contextops:init 을 실행하면 여기에 줄이 생깁니다.',
+    noNext: '기기를 붙이는 것은 CLI 다 — 웹에 그 문이 없다.',
+  },
+}
+
+/** 빈 상태의 버튼이 갈 주소. 목적지는 표의 `to` 이고 주소는 여기서만 지어진다. */
+export function emptyNextHref(base: string, next: EmptyNext): string {
+  return `${base}/${next.to}`
+}

@@ -7,6 +7,7 @@ import {
   DeviceTable, OFFICIAL_HINT, SYNC_APPLY, SYNC_ORDER, SyncLegend, SyncSummary, countByStatus, officialOf, sortDevices,
 } from '../src/components/sync'
 import { SYNC_CHIP, SYNC_MEANING } from '../src/components/chips'
+import { ScreenEmpty } from '../src/components/states'
 import type { DeviceSyncRow, VersionRow } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -64,7 +65,11 @@ function oneOfEach(): DeviceSyncRow[] {
 }
 
 function table(devices: readonly DeviceSyncRow[], now: Date = NOW): string {
-  return renderToStaticMarkup(createElement(DeviceTable, { devices, emptyMessage: '아직 등록된 기기가 없습니다.', now }))
+  return renderToStaticMarkup(createElement(DeviceTable, {
+    devices,
+    empty: createElement(ScreenEmpty, { slot: 'sync.devices', base: '/t/paylab/p/api' }),
+    now,
+  }))
 }
 
 describe('🔴 상태 5종이 전부 화면에 나온다 (FINDINGS 110 · ④2-B)', () => {

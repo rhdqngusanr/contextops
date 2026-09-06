@@ -8,7 +8,7 @@ import {
 import { useAsync, usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { DeviceTable, SyncLegend, SyncSummary, officialOf } from '../../../../../../components/sync'
-import { ErrorState, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
 //  화면 9 — Sync (SPEC §9 화면 9 · §6 · DESIGN_BRIEF §4 「화면 9」)
@@ -32,12 +32,12 @@ export default function SyncPage({ params }: { params: Promise<{ team: string; p
   const { team, project } = use(params)
   return (
     <ProjectGate team={team} project={project}>
-      {({ project: p }) => <SyncView project={p} />}
+      {({ project: p }) => <SyncView base={`/t/${team}/p/${project}`} project={p} />}
     </ProjectGate>
   )
 }
 
-function SyncView({ project }: { project: ProjectRef }) {
+function SyncView({ base, project }: { base: string; project: ProjectRef }) {
   //  ⚠ 화면 8 과 같은 폴링이다 — 끝나는 일이 아니라서 `again` 이 늘 같은 값이다
   //    (실패하면 `usePolling` 이 스스로 멈춘다).
   const sync = usePolling(() => fetchSyncStatus(project.id), [project.id], () => REALTIME_POLL_MS)
@@ -69,7 +69,7 @@ function SyncView({ project }: { project: ProjectRef }) {
           <section className="card">
             <DeviceTable
               devices={sync.result.data.devices}
-              emptyMessage="아직 등록된 기기가 없습니다. Claude Code에서 /contextops:init 을 실행하면 여기에 줄이 생깁니다."
+              empty={<ScreenEmpty slot="sync.devices" base={base} />}
             />
           </section>
           <SyncLegend />

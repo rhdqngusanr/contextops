@@ -19,7 +19,7 @@ import { QuestionStack, type QuestionStackState } from '../../../../../../compon
 import {
   StructureCandidates, type StructureCandidate,
 } from '../../../../../../components/structure-candidates'
-import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
 //  화면 3 — 가져오기 (SPEC §9 화면 3 · DESIGN_BRIEF §4 「화면 3」)
@@ -312,7 +312,7 @@ function StructureCard({
       {result.state === 'loading' ? <Skeleton rows={3} /> : null}
       {result.state === 'error' ? <ErrorState error={result.error} retry={jobs.reload} /> : null}
       {result.state === 'ready' && !job ? (
-        <EmptyState message="아직 올린 문서가 없습니다. 왼쪽에 문서를 붙여넣어 보세요." />
+        <ScreenEmpty slot="import.docs" base={base} />
       ) : null}
       {job ? (
         <JobProgress

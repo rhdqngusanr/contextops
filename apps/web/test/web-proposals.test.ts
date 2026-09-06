@@ -14,6 +14,8 @@ import {
   ProposalStatusFilter, ProposalTable, availableActions, diffSidesOf, proposalEmptyMessage,
 } from '../src/components/proposals'
 import { PROPOSAL_STATUS_CHIP } from '../src/components/chips'
+import { ScreenEmpty } from '../src/components/states'
+import { EMPTY_PLACES } from '../src/lib/web/screens'
 import { diffCounts, lineDiff } from '../src/lib/web/diff'
 import type { ProposalDetail, ProposalRow, VersionRow } from '../src/lib/web/queries'
 
@@ -430,7 +432,7 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
     const markup = html(createElement(ProposalTable, {
       proposals: PROPOSAL_STATUSES.map((status, i) => row({ id: `${i}`, status })),
       hrefOf: href,
-      emptyMessage: '없다',
+      empty: null,
     }))
     for (const status of PROPOSAL_STATUSES) expect(markup).toContain(PROPOSAL_STATUS_CHIP[status].label)
   })
@@ -453,15 +455,18 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
   })
 
   it('🔴 거른 목록이 비면 **어느 상태가 비었는지** 말한다', () => {
-    const whenAll = '아직 올라온 제안이 없습니다.'
-    expect(proposalEmptyMessage(null, whenAll)).toBe(whenAll)
+    //  ⚠ 거르지 않았을 때의 문구는 여기서 짓지 않는다 — `EMPTY_PLACES` 가 정본이다 (FINDINGS 133).
+    expect(proposalEmptyMessage(null)).toBeUndefined()
     for (const status of PROPOSAL_STATUSES) {
-      const text = proposalEmptyMessage(status, whenAll)
+      const text = proposalEmptyMessage(status)
       expect(text, status).toContain(PROPOSAL_STATUS_CHIP[status].label)
-      expect(text, status).not.toBe(whenAll)
     }
     const markup = html(createElement(ProposalTable, {
-      proposals: [], hrefOf: href, emptyMessage: proposalEmptyMessage('rejected', whenAll),
+      proposals: [],
+      hrefOf: href,
+      empty: createElement(ScreenEmpty, {
+        slot: 'proposals.list', base: '/t/a/p/b', message: proposalEmptyMessage('rejected'),
+      }),
     }))
     expect(markup).toContain(PROPOSAL_STATUS_CHIP.rejected.label)
   })
@@ -470,7 +475,7 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
     //  ★ 57바퀴까지 이 시험은 「작성자 칸이 **없다**」를 잠그고 있었다. 이름을 내는 문이
     //    없었기 때문이다 (`lib/api/user.ts` 가 생기면서 뒤집혔다). 뒤집을 때 uuid 를
     //    안 그린다는 절반은 **그대로 둔다** — 그게 이 칸이 없던 이유였다.
-    const markup = html(createElement(ProposalTable, { proposals: [row()], hrefOf: href, emptyMessage: '없다' }))
+    const markup = html(createElement(ProposalTable, { proposals: [row()], hrefOf: href, empty: null }))
     expect(markup).toContain('작성자')
     expect(markup).toContain('박제안')
     expect(markup).not.toContain('00000000-0000-4000-8000-0000000000d1')
@@ -478,7 +483,7 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
 
   it('🔴 주인 없는 제안의 이름을 지어내지 않는다 — 「—」다', () => {
     const markup = html(createElement(ProposalTable, {
-      proposals: [row({ author: null })], hrefOf: href, emptyMessage: '없다',
+      proposals: [row({ author: null })], hrefOf: href, empty: null,
     }))
     expect(markup).toContain('작성자')
     expect(markup).not.toContain('박제안')
@@ -488,22 +493,26 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
 
   it('항목 수와 올라온 날을 센다', () => {
     const markup = html(createElement(ProposalTable, {
-      proposals: [row({ items: [item(), item()] })], hrefOf: href, emptyMessage: '없다',
+      proposals: [row({ items: [item(), item()] })], hrefOf: href, empty: null,
     }))
     expect(markup).toContain('>2<')
     expect(markup).toContain('2026-09-05')
   })
 
-  it('빈 목록은 다음 걸음을 말한다', () => {
+  it('빈 목록은 **넘겨받은 빈 상태를 그대로** 그린다 — 표가 문구를 짓지 않는다 (FINDINGS 133)', () => {
     const markup = html(createElement(ProposalTable, {
-      proposals: [], hrefOf: href, emptyMessage: '아직 올라온 제안이 없습니다.',
+      proposals: [],
+      hrefOf: href,
+      empty: createElement(ScreenEmpty, { slot: 'proposals.list', base: '/t/a/p/b' }),
     }))
-    expect(markup).toContain('아직 올라온 제안이 없습니다.')
+    expect(markup).toContain(EMPTY_PLACES['proposals.list'].message)
+    //  🔴 다음 행동이 같이 온다 — 「없습니다」에서 갈 곳이 없던 것이 133 이었다.
+    expect(markup).toContain('/t/a/p/b/context')
   })
 
   it('관련 마일스톤이 없는 제안도 칸을 비우지 않는다', () => {
     const markup = html(createElement(ProposalTable, {
-      proposals: [row({ relates_to: [] })], hrefOf: href, emptyMessage: '없다',
+      proposals: [row({ relates_to: [] })], hrefOf: href, empty: null,
     }))
     expect(markup).toContain('—')
   })

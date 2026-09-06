@@ -13,7 +13,7 @@ import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon } from '../../../../..
 import { countReceived } from '../../../../../../../components/sync'
 import { EvidenceList } from '../../../../../../../components/evidence'
 import { ProjectGate } from '../../../../../../../components/project-gate'
-import { EmptyState, ErrorState, Skeleton } from '../../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../../components/states'
 
 // =====================================================================
 //  화면 7 — Pack Explorer (SPEC §9 · DESIGN_BRIEF §4 「화면 7」)
@@ -39,12 +39,12 @@ export default function PackPage({
   const { team, project, semver } = use(params)
   return (
     <ProjectGate team={team} project={project}>
-      {({ project: p }) => <PackExplorer project={p} semver={semver} />}
+      {({ project: p }) => <PackExplorer base={`/t/${team}/p/${project}`} project={p} semver={semver} />}
     </ProjectGate>
   )
 }
 
-function PackExplorer({ project, semver }: { project: ProjectRef; semver: string }) {
+function PackExplorer({ base, project, semver }: { base: string; project: ProjectRef; semver: string }) {
   const manifest = useAsync(() => fetchManifest(project.id, semver), [project.id, semver])
   //  항목은 오른쪽 패널이 「제목·상태·근거」를 붙이는 데 쓴다. 없어도 화면은 열린다 —
   //  그래서 실패해도 여기서 죽이지 않는다 (빈 색인으로 둔다).
@@ -72,7 +72,7 @@ function PackExplorer({ project, semver }: { project: ProjectRef; semver: string
         <FileTree files={m.files} current={current} onPick={setPath} />
         {current
           ? <FileView project={project} semver={semver} file={current} manifest={m} byItemId={byItemId} />
-          : <EmptyState message="이 Pack에는 파일이 없습니다." />}
+          : <ScreenEmpty slot="pack.files" base={base} />}
       </div>
     </>
   )

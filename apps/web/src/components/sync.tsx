@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import { SYNC_STATUSES, type SyncStatus } from '@contextops/schema'
 
 import type { DeviceSyncRow, VersionRow } from '../lib/web/queries'
@@ -157,22 +159,16 @@ export function SyncSummary({
 
 export function DeviceTable({
   devices,
-  emptyMessage,
+  empty,
   now,
 }: {
   devices: readonly DeviceSyncRow[]
-  emptyMessage: string
+  /** 빈 자리는 `ScreenEmpty` 가 그린다 — 문구·다음 행동의 정본은 `EMPTY_PLACES` 다 (FINDINGS 133). */
+  empty: ReactNode
   /** 시험이 시계를 고정하려고 넣는다. 화면은 안 넘긴다. */
   now?: Date
 }) {
-  if (devices.length === 0) {
-    return (
-      <div className="state-box">
-        <span aria-hidden="true" className="ink-4">◌</span>
-        <p>{emptyMessage}</p>
-      </div>
-    )
-  }
+  if (devices.length === 0) return <>{empty}</>
   return (
     <div className="scroll-x">
       <table className="table">

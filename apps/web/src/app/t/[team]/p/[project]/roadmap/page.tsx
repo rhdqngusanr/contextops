@@ -9,7 +9,7 @@ import {
 import { usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { MilestoneRow, OffRoadmap, ProgressDrawer, RoadmapSummary } from '../../../../../../components/roadmap'
-import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
 //  화면 8 — Roadmap (SPEC §9 화면 8 · DESIGN_BRIEF §4 「화면 8」 · 원칙 P5)
@@ -100,16 +100,13 @@ function RoadmapView({
         road.result.data.context_version === null ? (
           //  ⚠ 「마일스톤 0개」와 구별한다 — 발행 전에는 로드맵이 **있을 수가 없다**
           //    (마일스톤의 정본은 발행된 Manifest 다 · 라우트 주석).
-          <EmptyState
-            message="아직 발행된 버전이 없습니다. 로드맵은 발행된 Pack의 마일스톤에서 옵니다."
-            action={<a className="btn btn-primary" href={`${base}/context`}>Context로 이동</a>}
-          />
+          <ScreenEmpty slot="roadmap.versions" base={base} />
         ) : (
           <>
             <RoadmapSummary roadmap={road.result.data} />
 
             {road.result.data.milestones.length === 0 ? (
-              <EmptyState message="공식 Pack에 마일스톤이 없습니다. roadmap 타입 항목을 만들면 여기 행이 생깁니다." />
+              <ScreenEmpty slot="roadmap.milestones" base={base} />
             ) : null}
 
             <div className="row items-start">

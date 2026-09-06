@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   console.log(`  ${text(renderToStaticMarkup(<SyncSummary devices={devices} />))}`)
   console.log('')
   for (const line of text(renderToStaticMarkup(
-    <DeviceTable devices={devices} emptyMessage="아직 기기가 없습니다" now={NOW} />,
+    <DeviceTable devices={devices} empty={null} now={NOW} />,
   )).split(' | 팀원 | ')) {
     console.log(`  ${line}`)
   }

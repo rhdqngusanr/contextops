@@ -15,7 +15,7 @@ import { AiBadge, ConflictKindChip } from '../../../../../../components/chips'
 import { ConflictCard } from '../../../../../../components/conflict-card'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
 //  화면 4 — 정리 (SPEC §9 화면 4 · DESIGN_BRIEF §4 「화면 4」)
@@ -173,10 +173,7 @@ function ReviewView({
         : null}
 
       {cards.result.state === 'ready' && all.length === 0 ? (
-        <EmptyState
-          message="결정할 것이 없습니다. 발행할 준비가 됐어요."
-          action={<a className="btn btn-primary" href={`${base}/context`}>Context로 이동</a>}
-        />
+        <ScreenEmpty slot="review.cards" base={base} />
       ) : null}
 
       {all.length > 0 ? <KindFilter cards={all} value={filter} onChange={setFilter} /> : null}

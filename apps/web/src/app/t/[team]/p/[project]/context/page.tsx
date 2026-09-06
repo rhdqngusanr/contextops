@@ -18,7 +18,7 @@ import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon, VersionPill } from '.
 import { EvidenceList } from '../../../../../../components/evidence'
 import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import { EmptyState, ErrorState, ReadOnlyNotice, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ReadOnlyNotice, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 import { VersionHistory } from '../../../../../../components/versions'
 
 // =====================================================================
@@ -156,8 +156,8 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
           {items.result.state === 'error' ? <ErrorState error={items.result.error} retry={items.reload} /> : null}
           {items.result.state === 'ready' ? (
             items.result.data.items.length === 0
-              //  문구 정본은 DESIGN_BRIEF §5 다 — 여기서 지어내지 않는다.
-              ? <EmptyState message="아직 항목이 없습니다. 가져오기에서 문서를 올리거나 질문에 답해보세요." />
+              //  문구도 다음 행동도 `EMPTY_PLACES` 가 정본이다 (FINDINGS 133).
+              ? <ScreenEmpty slot="context.items" base={base} />
               : <ItemTable items={items.result.data.items} selected={selected} onSelect={setSelected} />
           ) : null}
         </section>
@@ -182,7 +182,7 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
           <VersionHistory
             versions={versions.result.data.versions}
             packHref={(semver) => `${base}/packs/${semver}`}
-            emptyMessage="아직 발행된 버전이 없습니다. 항목을 확인하고 [발행하기]를 눌러보세요."
+            empty={<ScreenEmpty slot="context.versions" base={base} />}
           />
         ) : null}
       </section>
