@@ -72,6 +72,9 @@
   --drawer-w: 360px;
   --pack-tree-w: 240px;
   --pack-side-w: 320px;
+  /* 명령 팔레트(⌘K) — 모달보다 좁고, 목록은 일곱 줄쯤에서 스스로 스크롤한다 */
+  --palette-w: 480px;
+  --palette-list-h: 320px;
 }
 
 /* ── 바탕 ─────────────────────────────────────────────────────────── */
@@ -459,3 +462,39 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 }
 /* ⚠ sha 4자는 안 접는다 — `.tree-item` 의 break-all 이 `4175` 를 `41`/`75` 로 쪼갰다. */
 .tree-sha { white-space: nowrap; word-break: normal; flex: 0 0 auto; }
+
+/* ── 명령 팔레트 `⌘K` — 화면 이동과 검색만 (FINDINGS 132) ──────────
+   ⚠ accent 를 쓰지 않는다. 화면당 accent 는 **그 화면의 주요 액션 하나**이고,
+     팔레트는 어느 화면에서나 있는 도구다 (DESIGN_BRIEF §3).
+     고른 줄의 배경은 내비의 `[aria-current]` 와 **같은 `--accent-soft`** 다 —
+     「지금 여기」를 뜻하는 색이 화면마다 다르면 그때부터 두 번째 방언이 생긴다. */
+
+/* 모달은 화면 한가운데지만 팔레트는 위쪽이다 — 치는 동안 목록이 아래로 자란다. */
+.palette-backdrop { align-items: flex-start; padding-top: var(--sp-7); }
+.palette { max-width: var(--palette-w); gap: var(--sp-3); }
+
+.palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  max-height: var(--palette-list-h);
+  overflow-y: auto;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font-size: var(--fs-table);
+}
+.palette-item:hover { text-decoration: none; }
+.palette-item[aria-selected='true'] { background: var(--accent-soft); color: var(--ink); }
+/* ⚠ 화살표 자리는 고른 줄이 아니어도 남는다 — 안 그러면 화살표가 옮겨 다닐 때
+   줄 전체가 좌우로 흔들린다 (눈으로 확인했다). */
+.palette-caret { flex: 0 0 auto; white-space: pre; }
+
+/* 트리거는 내비의 한 줄이다 — 낱말은 왼쪽, `⌘K` 는 오른쪽 끝. */
+.palette-trigger { display: flex; justify-content: space-between; gap: var(--sp-3); }

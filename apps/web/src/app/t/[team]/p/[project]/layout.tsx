@@ -3,38 +3,19 @@
 import { use, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 
+import { CommandPalette } from '../../../../../components/command-palette'
 import { DemoBanner } from '../../../../../components/demo-banner'
+import { PROJECT_SCREENS, isActiveScreen, screenHref } from '../../../../../lib/web/screens'
 
 // =====================================================================
 //  앱 화면의 뼈대 — 좌측 220px 내비 + 본문 최대 1200px (DESIGN_BRIEF §3 「레이아웃」)
 //
-//  ★ 탭 목록이 **표 하나**다. 화면이 늘면 여기 한 줄이고, 링크를 화면마다 적지 않는다.
-//    ⚠ 아직 없는 화면을 표에 적지 마라 — 404 로 가는 탭은 「고장」으로 읽힌다.
-//      화면을 만들 때 같이 한 줄 더한다 (`docs/PLAN.md` P3·P4 행).
+//  ★ 탭 목록의 정본은 **`lib/web/screens.ts` 의 `PROJECT_SCREENS` 표 하나**다.
+//    여기에 목록을 적지 마라 — 명령 팔레트(⌘K)가 같은 표를 읽는다 (FINDINGS 132).
+//    화면이 늘면 그 표에 한 줄이고, 내비도 팔레트도 안 고친다.
 //
 //  ⚠ 폭·색은 전부 `globals.css` 의 토큰이다. 여기에 숫자를 적지 마라.
 // =====================================================================
-
-/** 이 프로젝트에서 **지금 열 수 있는** 화면. 순서가 곧 왼쪽 차례다. */
-const TABS: { href: (base: string) => string; label: string; match: RegExp }[] = [
-  //  ⚠ 차례가 일의 차례다 — 문서를 넣는 화면이 먼저고, 그 결과를 보는 화면이 뒤다.
-  { href: (base) => `${base}/import`, label: '가져오기', match: /\/import$/ },
-  //  ⚠ 정리가 Context 앞이다 — 결정을 끝낸 것만 발행으로 간다 (SPEC §9 화면 4 → 5).
-  { href: (base) => `${base}/review`, label: '정리', match: /\/review$/ },
-  { href: (base) => `${base}/context`, label: 'Context', match: /\/context$/ },
-  //  ⚠ 제안은 Context 뒤다 — 승인된 제안은 **발행 트랜잭션 안에서** 항목이 되므로
-  //    (SPEC §2.1 2단계), 사람은 지금 항목을 본 다음에 「무엇이 바뀌나」를 읽는다.
-  { href: (base) => `${base}/proposals`, label: '제안', match: /\/proposals(\/|$)/ },
-  //  ⚠ Pack Explorer 는 버전 하나를 가리켜야 열린다. 목록에서는 「최신」으로 보낸다 —
-  //    `latest` 는 semver 가 아니라 화면이 versions 를 읽어 고르는 자리다.
-  { href: (base) => `${base}/packs`, label: 'Pack Explorer', match: /\/packs(\/|$)/ },
-  //  ⚠ Roadmap 은 **발행된 Pack 이 있어야** 행이 생긴다 (마일스톤의 정본이 Manifest 다).
-  //    그래서 Pack Explorer 뒤다 — 차례가 일의 차례라는 위 규칙 그대로다.
-  { href: (base) => `${base}/roadmap`, label: 'Roadmap', match: /\/roadmap$/ },
-  //  ⚠ Sync 가 마지막이다 — 발행한 Pack 이 **각 기기에 실제로 닿았나**를 보는 자리라
-  //    일의 차례에서 제일 끝이다 (발행 → 로드맵이 움직임 → 기기가 받아 감).
-  { href: (base) => `${base}/sync`, label: 'Sync', match: /\/sync$/ },
-]
 
 export default function ProjectLayout({
   children,
@@ -54,15 +35,17 @@ export default function ProjectLayout({
           <span className="label">팀 · 프로젝트</span>
           <span className="mono ink">{team}/{project}</span>
         </div>
+        {/* ⚠ 내비 안이다 — 「어디로 갈 수 있나」를 말하는 자리가 둘로 갈리지 않게. */}
+        <CommandPalette base={base} pathname={path} />
         <div className="col-tight">
-          {TABS.map((tab) => (
+          {PROJECT_SCREENS.map((screen) => (
             <a
-              key={tab.label}
+              key={screen.path}
               className="nav-link"
-              href={tab.href(base)}
-              aria-current={tab.match.test(path) ? 'page' : undefined}
+              href={screenHref(base, screen)}
+              aria-current={isActiveScreen(screen, path) ? 'page' : undefined}
             >
-              {tab.label}
+              {screen.label}
             </a>
           ))}
         </div>

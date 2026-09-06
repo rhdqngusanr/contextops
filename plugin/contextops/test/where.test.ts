@@ -20,8 +20,12 @@ import { WEB_TABS, whereOnWeb } from '../src/cli/where'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const cliDir = join(here, '..', 'src', 'cli')
-/** 웹의 탭 표. 플러그인은 웹을 import 하지 못하므로(의존 방향) 파일을 글자로 읽는다. */
-const webLayout = join(here, '..', '..', '..', 'apps', 'web', 'src', 'app', 't', '[team]', 'p', '[project]', 'layout.tsx')
+/**
+ * 웹의 탭 표. 플러그인은 웹을 import 하지 못하므로(의존 방향) 파일을 글자로 읽는다.
+ * ⚠ 이 표는 `layout.tsx` 안에 있었는데, 명령 팔레트(⌘K)가 같은 목록을 읽어야 해서
+ *   `lib/web/screens.ts` 로 올라갔다 (FINDINGS 132). **정본은 거기 하나다.**
+ */
+const webScreens = join(here, '..', '..', '..', 'apps', 'web', 'src', 'lib', 'web', 'screens.ts')
 
 /** `${…origin}/` — 템플릿 문자열에서 origin 바로 뒤에 슬래시를 붙이는 자리. */
 const ORIGIN_THEN_PATH = /\$\{[^}]*origin\}\//i
@@ -40,8 +44,8 @@ describe('where.ts — 웹의 어디서 보나', () => {
   })
 
   it('② CLI 가 부르는 탭 이름은 웹의 탭 표에 있는 label 그대로다', () => {
-    const layout = readFileSync(webLayout, 'utf8')
-    const labels = [...layout.matchAll(/label: '([^']+)'/g)].map((m) => m[1])
+    const table = readFileSync(webScreens, 'utf8')
+    const labels = [...table.matchAll(/label: '([^']+)'/g)].map((m) => m[1])
     expect(labels.length).toBeGreaterThan(0)
     for (const label of Object.values(WEB_TABS)) expect(labels).toContain(label)
   })
