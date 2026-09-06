@@ -4,21 +4,11 @@
 Claude Code 세션이 열려서, 이번에 뭘 할지 문서에서 읽고, 하나를 고치고, 검사하고,
 커밋하고, 다음 바퀴를 위해 기록을 남긴다.
 
-```
-                  ┌───────────────────────────────────────────┐
-                  │  loop.ps1  (작업 스케줄러가 돌린다)        │
-                  └───────────────────────────────────────────┘
-                                     │  한 바퀴 = 새 세션
-                                     ▼
-   claude -p "Read loop/PROMPT.md and follow it exactly."
-                                     │
-        ┌────────────────────────────┼────────────────────────────┐
-        ▼                            ▼                            ▼
-  ① 읽는다                     ② 하나 고친다                ③ 남긴다
-  INBOX → FINDINGS             tools/walkthrough.ps1        docs/STATUS.md
-  → PLAN → STATUS              → 막힌 자리 하나              docs/feedback/FINDINGS.md
-  → SPEC 해당 §                → tools/ci.ps1 → 커밋         (= 다음 바퀴의 유일한 기억)
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/loop-cycle-dark.svg">
+  <img alt="자율 루프 한 바퀴 — ctl.ps1 이 보이는 터미널 창에서 loop.ps1 을 돌리고, 한 바퀴마다 새 세션이 읽고 하나만 고치고 기록을 남긴다" src="../docs/diagrams/loop-cycle-light.svg" width="100%">
+</picture>
+
 
 ---
 

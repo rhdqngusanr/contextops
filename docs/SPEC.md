@@ -36,18 +36,14 @@
 
 ## 1. 아키텍처
 
-```
-┌──────────────── 사용자 로컬 ────────────────┐   HTTPS   ┌──────────── ContextOps Cloud ───────────┐
-│ Claude Code (사용자 구독)                    │           │ Next.js (apps/web)                       │
-│  ├─ Plugin: skills/ hooks/ bin/cli.mjs       │ ──JSON──▶ │  ├─ Route Handlers /api/v1/*             │
-│  ├─ 저장소 파일 (서버로 안 감)               │           │  ├─ 서버 컴포넌트 화면 9개               │
-│  ├─ CLAUDE.md, .claude/rules (Pack 산출물)   │ ◀─Pack──  │  └─ lib/ai (Gemini API, 예산 가드)       │
-│  └─ ~/.contextops/credentials.json (0600)    │           │ Supabase: Postgres · Auth · Realtime     │
-└──────────────────────────────────────────────┘           │ Vercel 배포 · Cron 헬스핑                │
-                                                           └──────────────────────────────────────────┘
-올라가는 것: Context Item 초안 JSON · Proposal · Progress 이벤트 · sync 보고(버전·hash)
-내려오는 것: manifest · Pack 파일
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="diagrams/architecture-dark.svg">
+  <img alt="ContextOps 아키텍처 — 사용자 로컬의 Claude Code 플러그인과 서버가 JSON 과 Pack 만 주고받고, 코드 본문과 secret 은 넘어가지 않는다" src="diagrams/architecture-light.svg" width="100%">
+</picture>
+
+<sub>올라가는 것: Context Item 초안 JSON · Proposal · Progress 이벤트 · sync 보고(버전·hash) ·
+내려오는 것: manifest · Pack 파일</sub>
+
 
 ### 1.1 저장소 구조 (pnpm workspace, Turborepo 없음)
 

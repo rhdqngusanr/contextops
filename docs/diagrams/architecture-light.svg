@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" width="940" height="400" role="img" aria-label="ContextOps 아키텍처 — 사용자 로컬의 Claude Code 플러그인과 서버가 JSON 과 Pack 만 주고받고, 코드 본문과 secret 은 넘어가지 않는다">
+  <style>
+    .t { font-family:'Pretendard','Noto Sans KR','Malgun Gothic',-apple-system,system-ui,sans-serif; }
+    .m { font-family:'JetBrains Mono','Consolas',ui-monospace,monospace; }
+    .h { font-size:14px; font-weight:700; fill:#18212B; }
+    .sub { font-size:10.5px; fill:#6B7684; letter-spacing:.06em; }
+    .b { font-size:12px; fill:#38424F; }
+    .s { font-size:10.5px; fill:#6B7684; }
+  </style>
+  <rect width="940" height="400" fill="#FFFFFF"/>
+
+  <rect x="16" y="44" width="356" height="330" rx="10" fill="#F7F8FA" stroke="#DDE2E8"/>
+  <text x="32" y="34" class="t sub">사용자 로컬</text>
+  <text x="32" y="72" class="t h">Claude Code <tspan class="s" font-weight="400">(사용자 구독)</tspan></text>
+
+  <rect x="32" y="88" width="324" height="40" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="44" y="113" class="m b">Plugin — skills/ · hooks/ · bin/cli.mjs</text>
+
+  <rect x="32" y="136" width="324" height="46" rx="6" fill="#FFFFFF" stroke="#E2AFAA"/>
+  <text x="44" y="157" class="t b">저장소 파일 · <tspan class="m">.env</tspan> · 개인 Memory</text>
+  <text x="44" y="174" class="t s" fill="#B3352B">서버로 안 감</text>
+
+  <rect x="32" y="190" width="324" height="46" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="44" y="211" class="m b">CLAUDE.md · .claude/rules/*</text>
+  <text x="44" y="228" class="t s">Pack 산출물 — <tspan class="m" fill="#38424F">sync</tspan> 로만 바뀐다</text>
+
+  <rect x="32" y="244" width="324" height="46" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="44" y="265" class="m b">~/.contextops/credentials.json</text>
+  <text x="44" y="282" class="t s">권한 0600 · <tspan fill="#1F7A4D">저장소 밖</tspan></text>
+
+  <rect x="568" y="44" width="356" height="330" rx="10" fill="#F7F8FA" stroke="#DDE2E8"/>
+  <text x="584" y="34" class="t sub">ContextOps Cloud</text>
+  <text x="584" y="72" class="t h">Next.js <tspan class="s" font-weight="400">(apps/web)</tspan></text>
+
+  <rect x="584" y="88" width="324" height="40" rx="6" fill="#FFFFFF" stroke="#C3D0F0"/>
+  <text x="596" y="113" class="m b" fill="#1F4EE0">Route Handlers /api/v1/*</text>
+
+  <rect x="584" y="136" width="324" height="40" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="596" y="161" class="t b">서버 컴포넌트 화면 9개</text>
+
+  <rect x="584" y="184" width="324" height="46" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="596" y="205" class="m b">lib/ai</text>
+  <text x="596" y="222" class="t s">Gemini API · <tspan class="m" fill="#38424F">withBudget</tspan> 예산 가드</text>
+
+  <rect x="584" y="238" width="324" height="40" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="596" y="263" class="t b">Supabase — Postgres · Auth · Realtime</text>
+
+  <rect x="584" y="286" width="324" height="40" rx="6" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="596" y="311" class="t b">Vercel 배포 · Cron 헬스핑</text>
+
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#1F4EE0"/></marker>
+    <marker id="al" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#1F7A4D"/></marker>
+  </defs>
+  <text x="470" y="72" class="t sub" text-anchor="middle">HTTPS</text>
+  <text x="470" y="104" class="t s" text-anchor="middle" fill="#1F4EE0" font-weight="700">JSON</text>
+  <line x1="380" y1="118" x2="560" y2="118" stroke="#1F4EE0" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="470" y="136" class="t s" text-anchor="middle">항목 초안 · 제안 · 진행</text>
+
+  <text x="470" y="186" class="t s" text-anchor="middle" fill="#1F7A4D" font-weight="700">Pack</text>
+  <line x1="560" y1="200" x2="380" y2="200" stroke="#1F7A4D" stroke-width="1.6" marker-end="url(#al)"/>
+  <text x="470" y="218" class="t s" text-anchor="middle">manifest · 파일</text>
+
+  <text x="470" y="278" class="t s" text-anchor="middle" fill="#B3352B" font-weight="700">✕ 코드 본문 · secret</text>
+  <text x="470" y="294" class="t s" text-anchor="middle" fill="#6B7684">은 이 선을 못 넘는다</text>
+</svg>
