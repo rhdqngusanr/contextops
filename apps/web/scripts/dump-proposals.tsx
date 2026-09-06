@@ -130,10 +130,25 @@ const HEADS: [string, ProposalDetail, VersionRow | null][] = [
   ['③ 기준 버전을 찾음', detail(), VERSION],
   ['④ 기준 버전을 못 찾음', detail(), null],
   ['⑤ 기준이 아예 없음', detail({ base_version_id: null }), null],
-  ['⑥ 거절됨 · 사유', detail({
+  ['⑥ 거절됨 · 거절한 사람 · 사유', detail({
     status: 'rejected', decision_note: '근거가 한 건뿐이다. 코드 쪽 근거를 하나 더 붙여 주세요.',
+    decided_by: { id: '00000000-0000-4000-8000-0000000000f1', name: '최결정' },
     decided_at: '2026-09-05T03:00:00.000Z',
   }), VERSION],
+  ['⑭ 승인됨 — 승인한 사람 (FINDINGS 116)', detail({
+    status: 'approved',
+    decided_by: { id: '00000000-0000-4000-8000-0000000000f1', name: '최결정' },
+    decided_at: '2026-09-05T03:00:00.000Z',
+  }), VERSION],
+  ['⑮ 올라온 제안 — 「올린 사람」이지 「승인한 사람」이 아니다', detail({
+    status: 'submitted',
+    decided_by: { id: '00000000-0000-4000-8000-0000000000d1', name: '박제안' },
+    decided_at: '2026-09-05T02:30:00.000Z',
+  }), VERSION],
+  ['⑯ 결정자를 못 찾았다 — 이름을 지어내지 않는다', detail({
+    status: 'approved', decided_by: null, decided_at: '2026-09-05T03:00:00.000Z',
+  }), VERSION],
+  ['⑰ draft — 아직 아무도 옮기지 않았다 (그 줄이 없다)', detail({ status: 'draft' }), VERSION],
 ]
 for (const [what, proposal, base] of HEADS) {
   lines.push(`  ${what}`)

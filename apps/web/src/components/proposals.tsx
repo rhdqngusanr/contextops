@@ -164,7 +164,10 @@ export function ProposalHead({
 
       {/* 🔴 **누가 옮겼나**를 그 시각 옆에 적는다 (FINDINGS 116). 서버가 uuid 대신
           사람을 낸다 — 못 찾으면 「—」다 (이름을 지어내지 않는다). */}
-      {DECIDED_BY_LABEL[proposal.status] === null ? null : (
+      {DECIDED_BY_LABEL[proposal.status] === null
+        //  ⚠ 아무것도 모르면 칸을 만들지 않는다 — 「올린 사람 —」 은 사람에게
+        //    「이름이 지워졌다」로 읽힌다. 결정이 있었다는 사실 자체가 없는 상태다.
+        || (proposal.decided_by === null && proposal.decided_at === null) ? null : (
         <div className="row wrap">
           <span className="label">{DECIDED_BY_LABEL[proposal.status]}</span>
           {proposal.decided_by === null

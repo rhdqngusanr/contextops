@@ -304,6 +304,14 @@ describe('제안 머리 (DESIGN_BRIEF §4 화면 6 「상단 요약 + base v1.2.
     expect(PROPOSAL_STATUSES.length).toBe(5)
   })
 
+  it('결정이 아직 없으면 그 칸을 아예 만들지 않는다 — 「올린 사람 —」 은 이름이 지워진 것처럼 읽힌다', () => {
+    const markup = html(createElement(ProposalHead, {
+      proposal: detail({ status: 'submitted', decided_by: null, decided_at: null }),
+      base: VERSION,
+    }))
+    expect(markup).not.toContain('올린 사람')
+  })
+
   it('🔴 결정자를 못 찾으면 이름을 지어내지 않는다 (탈퇴·기기)', () => {
     const markup = html(createElement(ProposalHead, {
       proposal: detail({ status: 'approved', decided_by: null, decided_at: '2026-09-05T03:00:00.000Z' }),
