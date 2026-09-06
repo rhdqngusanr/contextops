@@ -573,6 +573,9 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 - 토큰: `ctx_` + 32바이트 base64url. DB엔 sha256만. 응답 1회 표시. 만료 90일.
 - Path allowlist(§8.5) + zip 업로드 경로 검사(`..`, 절대경로, 심볼릭 거부, 파일 2,000개·20MB 상한).
 - 로그: request_id·route·status·latency·user/team/project id만. body·token·문서 본문 금지.
+  - 오류 로그(500 이 될 예외)는 `request_id`·route·예외의 `name`·`code`·`message`(상한 있음)·stack 「at …」 3줄·`cause` 사슬만.
+    `query`·`parameters`·`detail` 등 질의문·값이 드는 필드는 안 남기고, message 가 자기 `query` 를 품으면 message 를 통째로 뺀다.
+    표는 `apps/web/src/lib/api/log.ts` 의 `ERROR_FIELD_RULES` 하나 (FINDINGS 128).
 - CORS: 웹 origin만. 플러그인은 Bearer만 사용.
 - 비용: §7.5. Supabase: Vercel Cron `/api/v1/health` 6시간마다 · `/api/v1/cron/demo-reset` 매일 18:00 UTC(03:00 KST) — 둘 다 `apps/web/vercel.json`. Cron 문의 자물쇠는 `CRON_SECRET`(Vercel 이 `Authorization: Bearer` 로 붙인다 · `lib/api/cron.ts` · 없으면 401).
 - 프롬프트 인젝션: 문서·코드 항목 텍스트는 `<untrusted>` 블록으로 감싸 data로만 취급, 도구 호출 없음.

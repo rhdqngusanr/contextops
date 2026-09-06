@@ -4,7 +4,7 @@ import { ZodError, type ZodType, type z } from 'zod'
 import { getDb, type Db } from '../../db/client'
 import { actorWrites, readBearer, resolveActor, type Actor } from './auth'
 import { ApiError } from './error'
-import { logRequest } from './log'
+import { describeError, logError, logRequest } from './log'
 import { failure, matchesEtag, noContent, notModified, ok, packText, packZip, quoteEtag } from './respond'
 
 // =====================================================================
@@ -114,7 +114,7 @@ export function route<P extends Record<string, string | string[]> = Record<strin
         note: (fields) => Object.assign(noted, fields),
       })
     } catch (err) {
-      response = failure(toApiError(err), requestId)
+      response = failure(toApiError(err, { request_id: requestId, route: name }), requestId)
     }
 
     logRequest({
@@ -154,17 +154,18 @@ function refuseWrite(method: string, actor: Actor): void {
 
 /**
  * 무엇이 던져졌든 아홉 + 하나의 코드 중 하나로 만든다.
- * ⚠ 마지막 갈래에서 `err` 의 문구를 응답에 넣지 마라 — DB 드라이버의 메시지에는
+ * ⚠ 마지막 갈래에서 `err` 의 문구를 **응답**에 넣지 마라 — DB 드라이버의 메시지에는
  *   질의문이 통째로 들어 있고, 그건 P1 이 막는 것이 새는 자리다.
+ * ★ 로그에는 남긴다 — 단, `log.ts` 의 **오류 로그 표**를 거쳐서 (FINDINGS 128). 예전엔 이름만
+ *   남겨서(`{"kind":"unhandled","error":"Error"}`) 500 의 원인을 로그로 알 길이 없었다.
+ *   여기서 `console.error(err)` 를 직접 부르지 마라 — 그 순간 표가 없는 것이 된다.
  */
-function toApiError(err: unknown): ApiError {
+function toApiError(err: unknown, where: { request_id: string; route: string }): ApiError {
   if (err instanceof ApiError) return err
   if (err instanceof ZodError) {
     return new ApiError('VALIDATION_FAILED', undefined, issuesOf(err))
   }
-  //  ⚠ 예외의 **이름만** 남긴다. 드라이버 예외의 message 에는 질의문과 매개변수가
-  //    통째로 들어 있고, 그건 P1 이 막는 것이 로그로 새는 자리다 (SPEC §11).
-  console.error(JSON.stringify({ kind: 'unhandled', error: err instanceof Error ? err.name : 'unknown' }))
+  logError({ ...where, error: describeError(err) })
   return new ApiError('INTERNAL')
 }
 

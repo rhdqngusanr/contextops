@@ -1,0 +1,24 @@
+# FINDINGS 128 — 오류 로그에 메시지도 스택도 없다 · 고치기 전/후 (68바퀴 · 2026-09-06)
+
+재현: vitest 프로세스 안에서 `route()` 로 감싼 핸들러를 진짜 `Request` 로 부르고 `console.error`/`console.log` 를 가로챘다
+(`apps/web/test/error-log.test.ts` 와 같은 길 · 아래는 그 시험의 ①·② 와 같은 두 요청을 한 번 더 돌려 그대로 복사한 것).
+⚠ 배포·`next dev` 에서 찍은 것이 아니다 — 같은 `route.ts` 가 같은 `log.ts` 를 부르므로 모양은 같다.
+
+## 고치기 전 (코드 2134011 · `docs/evidence/2026-09-06-db-pool/probe.txt` 「고치기 전」 절에서)
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"a765f388-4850-4311-aa7b-2a1ee7a7aacf","route":"GET /teams","method":"GET","status":500,"latency_ms":30024}
+
+→ 「Error」는 drizzle `DrizzleQueryError` 의 기본 name 이다 (`this.name` 을 안 정한다). 즉 저 한 낱말은 「DB 질의가 죽었다」였는데
+  읽을 수 없었고, 원인(postgres-js `CONNECT_TIMEOUT`)은 `cause` 에 있었는데 아무도 안 봤다.
+
+## 고친 뒤 — ① 진짜 drizzle 질의(없는 표 · 매개변수 'sentinel-param') · ② drizzle 이 감싼 CONNECT_TIMEOUT
+{"kind":"error","request_id":"fe5f400b-ac60-414f-9a75-6846b6dbec03","route":"GET /teams","error":{"name":"DrizzleQueryError","message":"(질의문이 든 message 는 남기지 않는다 — P1)","stack":["at PglitePreparedQuery.queryWithCache (file:///C:/dev/hackathon/node_modules/.pnpm/drizzle-orm@0.45.2_@electric-sql+pglite@0.5.8_postgres@3.4.9/node_modules/drizzle-orm/pg-core/session.js:41:15)","at C:/dev/hackathon/apps/web/test/_probe128.test.ts:13:5","at C:/dev/hackathon/apps/web/src/lib/api/route.ts:83:18"],"cause":{"name":"error","message":"relation \"no_such_table\" does not exist","code":"42P01","stack":["at pe.Ue (file:///C:/dev/hackathon/node_modules/.pnpm/@electric-sql+pglite@0.5.8/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:17959)","at pe.tt (file:///C:/dev/hackathon/node_modules/.pnpm/@electric-sql+pglite@0.5.8/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:15347)","at pe.parse (file:///C:/dev/hackathon/node_modules/.pnpm/@electric-sql+pglite@0.5.8/node_modules/@electric-sql/pglite/dist/chunk-2BOC2OMW.js:1:14021)"]}}}
+{"kind":"request","request_id":"fe5f400b-ac60-414f-9a75-6846b6dbec03","route":"GET /teams","method":"GET","status":500,"latency_ms":6}
+{"kind":"error","request_id":"0072cf4b-4690-4e0e-a23a-2e596e5d2577","route":"GET /teams","error":{"name":"DrizzleQueryError","message":"(질의문이 든 message 는 남기지 않는다 — P1)","stack":["at C:/dev/hackathon/apps/web/test/_probe128.test.ts:18:54","at C:/dev/hackathon/apps/web/src/lib/api/route.ts:83:24","at C:/dev/hackathon/apps/web/test/_probe128.test.ts:19:3"],"cause":{"name":"Error","message":"write CONNECT_TIMEOUT 127.0.0.1:5432","code":"CONNECT_TIMEOUT","stack":["at C:/dev/hackathon/apps/web/test/_probe128.test.ts:17:30","at file:///C:/dev/hackathon/node_modules/.pnpm/@vitest+runner@4.1.11/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"]}}}
+{"kind":"request","request_id":"0072cf4b-4690-4e0e-a23a-2e596e5d2577","route":"GET /teams","method":"GET","status":500,"latency_ms":0}
+
+## 읽는 법
+- 겉(`error`)은 drizzle 껍데기 — name 은 클래스 이름으로 · message 는 질의문을 품어서 **뺐다고 표시** · stack 은 「at …」 3줄
+- 속(`error.cause`)이 사람이 읽을 줄 — ① `42P01` + `relation "no_such_table" does not exist` · ② `CONNECT_TIMEOUT` + `write CONNECT_TIMEOUT 127.0.0.1:5432`
+- 두 줄 어디에도 `select` · `sentinel-param` · `Failed query` 가 없다 (시험이 직렬화된 문자열 전체로 잰다)
+- `request_id` 가 바로 다음 `request` 줄과 같다 — 둘을 맞춰 읽는다
