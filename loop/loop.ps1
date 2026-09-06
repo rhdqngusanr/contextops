@@ -113,6 +113,9 @@ Log ("  저장소: {0}" -f $root)
 
 Log ("루프 시작 — 브랜치 {0} · 모델 {1} · 노력 {2} · 최대 {3}바퀴 / {4}시간{5}" -f `
      $branchNow, $LOOP.Model, $LOOP.Effort, $LOOP.MaxCycles, $LOOP.MaxHours, $dryTag)
+if ($LOOP.FallbackModel -and $LOOP.FallbackModel -ne $LOOP.Model) {
+    Log ("  한도에 걸리면 갈아탄다 → {0} (노력 {1})" -f $LOOP.FallbackModel, $LOOP.FallbackEffort)
+}
 
 # ⚠ 홑따옴표다. PowerShell 이중 따옴표는 백슬래시를 이스케이프하지 않아서
 #   "Local\\" 는 백슬래시 **두 개**짜리 문자열이 되고, 이 비교는 영원히 거짓이 된다.
@@ -125,6 +128,12 @@ if (-not $DryRun -and $branchNow -ne $LOOP.Branch) {
     Log "⚠ 지금 브랜치가 [$branchNow] 다 — 기대한 건 [$($LOOP.Branch)]."
     Log "  ctl.ps1 start 로 켜면 브랜치를 맞춰 준다. 그대로 진행한다."
 }
+
+#  ★ 모델·노력을 변수로 든다 — 한도에 걸리면 바퀴 도중에 갈아탄다 (아래 limitHit).
+#    $LOOP 를 직접 읽으면 갈아탄 값이 다음 바퀴에 안 남는다.
+$curModel   = $LOOP.Model
+$curEffort  = $LOOP.Effort
+$didFallback = $false
 
 $deadline   = (Get-Date).AddHours($LOOP.MaxHours)
 $cycle      = 0
@@ -191,8 +200,8 @@ while ($true) {
     #
     #  ★ 그래서 **한 줄짜리 명령행**으로 만들고 프롬프트만 따옴표로 감싼다.
     $argLine = '-p "{0}" --model {1} --permission-mode {2} --output-format stream-json --verbose' -f `
-               $boot, $LOOP.Model, $mode
-    if ($LOOP.Effort) { $argLine += " --effort $($LOOP.Effort)" }
+               $boot, $curModel, $mode
+    if ($curEffort) { $argLine += " --effort $curEffort" }
 
     $proc = $null
     try {
@@ -343,6 +352,21 @@ while ($true) {
     }
 
     if ($limitHit) {
+        #  ★ 갈아탈 모델이 있으면 **물러서지 말고 갈아탄다.** 한도는 모델마다 따로
+        #    걸리므로, 물러서는 건 쓸 수 있는 걸 두고 밤을 버리는 것이다.
+        #  ⚠ 한 번만 갈아탄다. 갈아탄 모델까지 막히면 그때는 평소대로 물러선다 —
+        #    안 그러면 둘을 오가며 바퀴만 태운다.
+        if (-not $didFallback -and $LOOP.FallbackModel -and $LOOP.FallbackModel -ne $curModel) {
+            $didFallback = $true
+            $prevModel = $curModel
+            $curModel  = $LOOP.FallbackModel
+            if ($LOOP.FallbackEffort) { $curEffort = $LOOP.FallbackEffort }
+            Log "한도로 보인다 — 모델을 갈아탄다: $prevModel → $curModel (노력 $curEffort)"
+            Log "  물러서지 않는다. 한도는 모델마다 따로 걸린다."
+            $cycle--        # 갈아타느라 못 한 바퀴는 세지 않는다
+            continue
+        }
+
         Log "일시적 실패로 보인다(사용량 한도 또는 서버 과부하) — $backoffMin 분 물러선다."
         Start-Sleep -Seconds ($backoffMin * 60)
         $backoffMin = [Math]::Min($backoffMin * 2, $LOOP.BackoffMaxMin)
