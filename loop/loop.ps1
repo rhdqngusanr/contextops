@@ -287,13 +287,32 @@ while ($true) {
     #  ⚠ GIT_TERMINAL_PROMPT=0 — 자격증명이 없을 때 **묻지 말고 실패해라.**
     #    없으면 무인 세션이 프롬프트 앞에서 바퀴 시간을 통째로 날린다.
     if (-not $DryRun -and $newCommits -gt 0 -and $LOOP.AutoPush) {
+        #  🔴 2026-09-06~07 **여기서 루프가 네 번 죽었다.** 원인은 내가 넣은 `2>&1` 이다.
+        #
+        #    옛 코드:  $pushOut = & git ... push ... 2>&1
+        #
+        #    `git push` 는 **성공 메시지도 stderr 로** 낸다 ("To https://…" ·
+        #    "abc..def  main -> main"). PS 5.1 에서 네이티브 exe 에 `2>&1` 을 쓰면
+        #    그 줄들이 **ErrorRecord 로 감싸지고**, 파일 맨 위의
+        #    `$ErrorActionPreference = "Stop"` 이 그걸 **종료 예외**로 만든다.
+        #    finally 가 잠금만 풀고 루프가 끝난다 — **로그 한 줄 없이.**
+        #    ★ push 는 성공한다. 그래서 커밋은 올라가고 셸만 죽는다 —
+        #      증상이 「조용한 죽음」이라 다섯 번을 헛짚었다.
+        #    ⚠ 이건 CLAUDE.md 「이 환경에서 밟는 함정」에 **이미 적혀 있던 규칙**이다.
+        #      적어 놓고도 밟았다. 그래서 리다이렉트는 cmd.exe 를 거친다 —
+        #      tools/ci.ps1 의 Invoke-Layer 가 쓰는 것과 같은 방법이다.
         $env:GIT_TERMINAL_PROMPT = "0"
-        $pushOut = & git -C $root push origin $LOOP.Branch 2>&1
+        $pushLog = Join-Path $logDir "push.txt"
+        & cmd.exe /c "git -C ""$root"" push origin $($LOOP.Branch) > ""$pushLog"" 2>&1"
         if ($LASTEXITCODE -eq 0) {
             Log "  push 했다 — origin/$($LOOP.Branch)"
         } else {
-            $first = ($pushOut | Select-Object -First 1)
-            Log "  ⚠ push 실패 (커밋은 로컬에 있다): $first"
+            $first = ""
+            if (Test-Path $pushLog) {
+                $first = (Get-Content $pushLog -Encoding UTF8 -ErrorAction SilentlyContinue |
+                          Where-Object { $_.Trim() -ne "" } | Select-Object -Last 1)
+            }
+            Log "  ⚠ push 실패 (커밋은 로컬에 있다 · 다음 바퀴가 같이 올린다): $first"
         }
     }
 
