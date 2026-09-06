@@ -401,6 +401,11 @@ function normalizeTitle(title: string): string {
  * ★ 왜 버리지 않나 — 같은 slug 를 골랐다고 같은 항목이라는 보장이 없다. 판단은 사람이
  *   하고(병합 후보), 여기서는 **뒤에서 터지지 않게** 이름만 갈라 둔다.
  *   ⚠ 항목 id 는 프로젝트 안에서 유일하다 (`context_items` 의 unique 제약).
+ * 🔴 `taken` 은 **프로젝트에 이미 있는 id 로 시작한다** (`StructureInput.takenIds` · FINDINGS 145).
+ *   문서 안의 중복만 가르면 기존 항목과 같은 slug 를 고른 후보가 accept 에서 「이미 있다」로
+ *   거절되고, 정확히 충돌하는 두 규칙일수록 같은 이름을 고르기 쉬워 **충돌일수록 탐지에서
+ *   빠졌다.** 가르는 자리는 여기 하나다 — accept 문이 id 를 갈아 넣으면 사람이 고른 id 와
+ *   들어간 id 가 달라진다.
  */
 function uniqueId(id: string, taken: Set<string>): string {
   if (!taken.has(id)) return id
@@ -435,6 +440,13 @@ export interface StructureInput {
    */
   readonly kind: SourceDocumentKind
   readonly content: string
+  /**
+   * 🔴 프로젝트에 **이미 있는** 항목 id (`context_items.public_id` · status 무관 — unique 제약이
+   * status 를 안 본다). 후보가 이 중 하나를 고르면 문서 안 중복과 같은 `_2` 규칙으로 가른다
+   * (FINDINGS 145). 프롬프트에는 실리지 않는다 — 모델은 모르고 서버가 가른다.
+   * 러너(`lib/ai/job.ts`)가 한 번 조회해 넘긴다. 없으면 빈 목록 — 문서 안 중복만 가른다.
+   */
+  readonly takenIds?: readonly string[]
   /** 빈도 제한의 열쇠가 아니다 (`structure` 는 project 범위다) — 장부의 행위자다. */
   readonly actor?: string
   readonly now?: Date
@@ -510,7 +522,7 @@ export async function structureDocument(input: StructureInput): Promise<Structur
     },
   )
 
-  const taken = new Set<string>()
+  const taken = new Set<string>(input.takenIds ?? [])
   const items = collected.items.map((item) => {
     const id = uniqueId(item.id, taken)
     taken.add(id)

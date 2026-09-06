@@ -1135,6 +1135,25 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
     expect(await db.select().from(contextItems)).toHaveLength(0)
   })
 
+  it('🔴 러너가 기존 항목 id 를 넘긴다 — 이미 있는 id 를 고른 후보는 `_2` 가 되어 accept 에서 거절되지 않는다 (FINDINGS 145)', async () => {
+    const { owner, projectId } = await seed()
+    //  첫 문서의 후보 둘을 받아들여 `item_doc_retry`·`item_doc_card` 가 프로젝트에 **이미 있다.**
+    const first = await structured(owner, projectId)
+    await accept(owner, projectId, first.id, ['item_doc_retry', 'item_doc_card'])
+
+    //  둘째 문서(같은 스텁)가 같은 slug 둘을 다시 고른다 — old-roadmap 과 goals 가 같은 규칙을 적은 자리다.
+    const second = await structured(owner, projectId)
+    const row = await jobRow(second.id)
+    const ids = ((row.result as { items: { id: string }[] }).items).map((i) => i.id)
+    expect(ids).toEqual(['item_doc_retry_2', 'item_doc_card_2'])
+
+    //  그래서 accept 가 거절 0 이고, 충돌 탐지 재료(`context_items`)에 두 짝이 다 있다.
+    const data = await dataOf(await accept(owner, projectId, second.id, ids))
+    expect(data.rejected).toEqual([])
+    expect(data.accepted).toEqual([{ index: 0, id: 'item_doc_retry_2' }, { index: 1, id: 'item_doc_card_2' }])
+    expect(await db.select().from(contextItems)).toHaveLength(4)
+  })
+
   it('두 번 받아들이면 둘째는 「이미 있다」로 거절된다 — 조용히 덮지 않는다', async () => {
     const { owner, projectId } = await seed()
     const job = await structured(owner, projectId)

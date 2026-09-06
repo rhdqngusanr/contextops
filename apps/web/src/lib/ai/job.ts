@@ -8,6 +8,7 @@ import {
   AI_JOB_STATUS_RULES,
   aiJobs,
   conflicts,
+  contextItems,
   sourceDocumentVersions,
   sourceDocuments,
 } from '../../db/schema'
@@ -146,9 +147,19 @@ const structureJob: AiJobRunner<z.infer<typeof StructureJobInput>> = {
       .limit(1)
     if (!version) fail('NOT_FOUND', '그 프로젝트의 문서 버전이 아니다')
 
+    //  🔴 프로젝트에 이미 있는 항목 id 를 **전부**(status 무관) 넘긴다 (FINDINGS 145).
+    //     후보가 그중 하나와 같은 slug 를 고르면 `structureDocument` 가 `_2` 로 가른다 —
+    //     안 넘기면 그 후보는 accept 에서 「이미 있다」로 거절되고, 정확히 충돌하는 두 규칙은
+    //     같은 이름을 고르기 쉬워 충돌일수록 탐지 재료에서 빠진다. 본문은 안 읽는다 (P1).
+    const existing = await db
+      .select({ id: contextItems.publicId })
+      .from(contextItems)
+      .where(eq(contextItems.projectId, job.projectId))
+
     const out = await structureDocument({
       projectId: job.projectId,
       documentVersionId: version.id,
+      takenIds: existing.map((r) => r.id),
       //  🔴 사람이 올릴 때 고른 종류가 §7.1 프롬프트로 가는 길이다 (FINDINGS 82).
       //     여기서 안 넘기면 「정책」으로 올린 문서와 「메모」로 올린 문서가 똑같이 읽힌다.
       kind: version.kind,

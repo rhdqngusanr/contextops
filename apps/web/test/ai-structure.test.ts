@@ -408,6 +408,22 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
     expect(result.items.map((i) => i.id)).toEqual(['item_refund_sla', 'item_refund_sla_2'])
   })
 
+  it('🔴 프로젝트에 이미 있는 id 와 같은 후보도 `_2` 로 가른다 — 충돌하는 두 규칙이 같은 이름을 골라도 탐지 재료에서 빠지지 않는다 (FINDINGS 145)', async () => {
+    const content = doc(3, 4_000)
+    const chunks = chunkByHeading(content)
+    //  두 조각이 같은 slug 를 내고, 그 slug 는 프로젝트에 **이미** 있다 (old-roadmap 의 재시도 규칙).
+    stubAi((n) => ({ input: output([policyItem('item_psp_retry_policy', '재시도 규칙', headingOf(chunks, n))]) }))
+
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+      takenIds: ['item_psp_retry_policy', 'item_psp_retry_policy_3'],
+    })
+    //  기존 것과 같은 첫 후보부터 밀린다 · 이미 있는 `_3` 도 건너뛴다 — 문서 안 중복과 같은 규칙이다.
+    expect(result.items.map((i) => i.id)).toEqual(['item_psp_retry_policy_2', 'item_psp_retry_policy_4'])
+    //  프롬프트에는 실리지 않는다 — 모델은 모르고 서버가 가른다 (P1 · 기존 항목 id 도 안 보낸다).
+    expect(sent.every((s) => !s.user.includes('item_psp_retry_policy_3'))).toBe(true)
+  })
+
   it('같은 type·title 이 두 번 나오면 병합 후보로 표시된다 — 지우지는 않는다', async () => {
     const content = doc(3, 4_000)
     const chunks = chunkByHeading(content)
