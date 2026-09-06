@@ -11,6 +11,7 @@ import { setAiClientForTest } from '../src/lib/ai/client'
 import { stubTransport, type SentRequest, type StubReply } from './helpers/ai'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import {
+  RULE_LIST_LINES,
   SOURCE_DOCUMENT_KIND_BRIEF,
   STRUCTURE_CHUNK_MAX_CHARS,
   STRUCTURE_CHUNK_MIN_CHARS,
@@ -503,6 +504,19 @@ describe('프롬프트가 SPEC §7 · §11 을 따른다', () => {
     //  ② 🔴 여섯이 서로 **다르다.** 하나라도 겹치면 그 값은 골라도 결과가 같은 값이다.
     expect(new Set(heads.values()).size).toBe(SOURCE_DOCUMENT_KINDS.length)
   }, 30_000)
+
+  it('🔴 규칙 목록은 줄마다 항목이고 부정형도 규칙이다 — SYSTEM 에 그 문장이 산다 (FINDINGS 143)', async () => {
+    stubAi(() => ({ input: output([]) }))
+    await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: 'roadmap', content: PAYLAB_GOALS, now: NOW,
+    })
+    const { system } = sent[0]!
+    //  진짜 Gemini 가 로드맵 「운영 규칙」의 「기한은 따로 두지 않는다」 줄을 빼먹었다 — 그 줄이
+    //  없으면 픽스처의 충돌 셋째(환불 SLA)가 재료에서 사라진다. 표를 읽어서 센다.
+    expect(RULE_LIST_LINES.length).toBeGreaterThan(0)
+    for (const line of RULE_LIST_LINES) expect(system).toContain(line)
+    expect(system).toContain('부정형도 규칙')
+  })
 
   it('도구 스키마가 Zod 계약에서 나온다 — 두 벌이 아니다', async () => {
     stubAi(() => ({ input: output([]) }))

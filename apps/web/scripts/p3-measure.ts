@@ -72,6 +72,8 @@ interface RefCheck {
 interface ItemCheck {
   readonly id: string
   readonly type: string
+  /** 모델이 고른 scope — 탐지는 「같은 type/scope」만 짝짓는다 (§7.2). 갈리면 후보가 0 이다 (83바퀴). */
+  readonly scope: string
   readonly title: string
   readonly refs: readonly RefCheck[]
 }
@@ -87,6 +89,7 @@ interface StructureRun {
   readonly chunks: unknown
   readonly items: readonly ItemCheck[]
   readonly itemTypes: Record<string, number>
+  readonly itemScopes: Record<string, number>
   readonly open_questions: readonly { question: string; ref: RefCheck }[]
   readonly refsTotal: number
   readonly refsInRange: number
@@ -143,13 +146,15 @@ async function main(): Promise<void> {
       req('GET', `${P(projectId)}/jobs/${jobId}`, { auth: owner }), params({ id: projectId, jobId }),
     ))
     const result = (job.result ?? {}) as {
-      items?: { id: string; type: string; title: string; source_refs: SourceRef[] }[]
+      items?: { id: string; type: string; title: string; scope: { kind: string; value?: string }; source_refs: SourceRef[] }[]
       merge_candidates?: unknown
       chunks?: unknown
       open_question_ids?: string[]
     }
     const items: ItemCheck[] = (result.items ?? []).map((it) => ({
-      id: it.id, type: it.type, title: it.title, refs: it.source_refs.map((r) => refCheck(r, text)),
+      id: it.id, type: it.type, title: it.title,
+      scope: it.scope.kind === 'project' ? 'project' : `${it.scope.kind}:${it.scope.value}`,
+      refs: it.source_refs.map((r) => refCheck(r, text)),
     }))
     //  열린 질문은 행이 됐다 — 문장과 근거는 충돌 목록(kind=open_question)에서 읽는다.
     const oq = await dataOf(await listConflicts(
@@ -162,7 +167,7 @@ async function main(): Promise<void> {
     const refs = [...items.flatMap((i) => i.refs), ...open_questions.map((q) => q.ref)]
     return {
       file, kind, chars: text.length, jobId, status, error_code: (job.error_code as string | null) ?? null, latencyMs,
-      chunks: result.chunks, items, itemTypes: countBy(items, (i) => i.type), open_questions,
+      chunks: result.chunks, items, itemTypes: countBy(items, (i) => i.type), itemScopes: countBy(items, (i) => i.scope), open_questions,
       refsTotal: refs.length, refsInRange: refs.filter((r) => r.inRange).length,
       merge_candidates: result.merge_candidates,
     }
@@ -243,8 +248,8 @@ async function main(): Promise<void> {
 
   console.log(JSON.stringify({
     criteria: probe.criteria,
-    roadmap: { status: roadmap.status, error_code: roadmap.error_code, items: roadmap.items.length, types: roadmap.itemTypes, oq: roadmap.open_questions.length, ms: roadmap.latencyMs, activated },
-    goals: { status: goals.status, error_code: goals.error_code, items: goals.items.length, types: goals.itemTypes, oq: goals.open_questions.length, ms: goals.latencyMs, accepted: goalsAccepted.accepted.length, rejected: goalsAccepted.rejected.length },
+    roadmap: { status: roadmap.status, error_code: roadmap.error_code, items: roadmap.items.length, types: roadmap.itemTypes, scopes: roadmap.itemScopes, oq: roadmap.open_questions.length, ms: roadmap.latencyMs, activated },
+    goals: { status: goals.status, error_code: goals.error_code, items: goals.items.length, types: goals.itemTypes, scopes: goals.itemScopes, oq: goals.open_questions.length, ms: goals.latencyMs, accepted: goalsAccepted.accepted.length, rejected: goalsAccepted.rejected.length },
     conflict: { status: conflictRun.status, error_code: conflictRun.error_code, count: conflictRun.count, byKind: conflictRun.byKind, candidates: conflictRun.candidates, ms: conflictRun.latencyMs },
     usage,
     wrote: join(dir, 'probe.json'),
