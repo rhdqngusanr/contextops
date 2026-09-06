@@ -345,6 +345,14 @@ while ($true) {
     } else { $idleRun = 0 }
 
     if (Test-Path $stopFile) { Log "STOP 파일을 봤다 — 멈춘다."; break }
+
+    #  🔴 **대기에 들어가기 전에 한 줄 남긴다.**
+    #    이 루프는 「바퀴 N 끝」이 마지막 줄인 채로 조용히 죽는 일이 반복됐다
+    #    (2026-09-04 세 번 · 09-06 두 번). 그 줄만으로는 **push 중에 죽었는지
+    #    대기 중에 죽었는지 구분이 안 된다** — 원인이 다른데 증상이 같다.
+    #  ★ 이 줄이 마지막이면 「대기 중 사망」(절전·전원 등 바깥 원인)이고,
+    #    「바퀴 N 끝」이 마지막이면 「push·판정 중 사망」이다. 한 줄이 둘을 가른다.
+    Log ("다음 바퀴까지 {0}초 대기" -f $LOOP.SleepBetweenSec)
     Start-Sleep -Seconds $LOOP.SleepBetweenSec
 }
 
