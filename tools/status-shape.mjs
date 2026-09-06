@@ -32,6 +32,13 @@ const STATUS_MAX_PAST_CYCLES = 5
 const STATUS = 'docs/STATUS.md'
 const FINDINGS = 'docs/feedback/FINDINGS.md'
 const HISTORY = 'docs/history/cycles.md'
+//  🔴 「아직 못 한 것」이라며 FINDINGS 번호를 다는 문서. 여기 단 번호는 전부 **대기**여야 한다.
+//    ★ 왜 여기서도 세나 (79바퀴) — 같은 검사가 `apps/web/test/readme.test.ts` ④ 에 있는데,
+//      바퀴 끝의 **문서만 고치는 커밋**(FINDINGS 를 ✅ 로 바꾸는 그 커밋)은 test 층(85초)을
+//      다시 안 돌리고 `docs` 층만 본다. 78바퀴가 121 을 ✅ 로 바꾸며 이 문서의 줄을 안 지웠고,
+//      다음 바퀴의 관통이 api 단계에서 빨갛게 시작했다. 닫힌 번호를 「한계」로 두는 것은
+//      「닫힌 것을 다음 할 일로 가리킨다」(②)와 같은 종류의 썩음이라 같은 게이트에 둔다.
+const LIMITS = 'docs/KNOWN_LIMITATIONS.md'
 
 //  🔴 **다음 할 일을 말하는 유일한 줄의 모양.** STATUS 머리에 정확히 하나 있어야 한다.
 //
@@ -59,6 +66,15 @@ const fail = (msg) => fails.push(msg)
 
 const status = read(STATUS)
 const findings = read(FINDINGS)
+
+//  FINDINGS 의 항목 머리는 `### N. <제목>` 이고 상태는 그 아래 첫 `- **상태**:` 다.
+//  → `{ head: false }` 항목 없음 · `{ head: true, status: undefined }` 상태 줄 없음 · 아니면 상태 문자열.
+const findingStatus = (n) => {
+  const at = new RegExp(`^### ${n}\\. `, 'm').exec(findings)
+  if (!at) return { head: false }
+  const st = /^- \*\*상태\*\*: *(.+)$/m.exec(findings.slice(at.index))
+  return { head: true, status: st ? st[1].trim() : undefined }
+}
 
 // ── ① 다음 할 일을 말하는 자리가 **하나**인가 ────────────────────────
 const statusLines = status.split(/\r?\n/)
@@ -97,25 +113,39 @@ if (hits.length === 0) {
 //    자리를 하나로 만들어도 그 하나가 썩으면 같은 일이 난다.
 if (hits.length === 1 && hits[0].value !== '없음') {
   const n = hits[0].value
-  //  FINDINGS 의 항목 머리는 `### N. <제목>` 이고 상태는 그 아래 첫 `- **상태**:` 다.
-  const head = new RegExp(`^### ${n}\\. `, 'm')
-  const at = head.exec(findings)
-  if (!at) {
+  const f = findingStatus(n)
+  if (!f.head) {
     fail(`${STATUS} 가 FINDINGS ${n} 을 가리키는데 ${FINDINGS} 에 「### ${n}.」 항목이 없다`)
+  } else if (!f.status) {
+    fail(`${FINDINGS} 의 ${n} 번 항목에 「- **상태**:」 줄이 없다`)
+  } else if (!f.status.startsWith('대기')) {
+    fail(
+      `${STATUS} 가 **이미 닫힌** FINDINGS ${n} 을 다음 할 일로 가리킨다 ` +
+        `(상태: ${f.status}). 대기 중인 항목으로 바꿔라 — 이게 102 의 고장 그 자체다`,
+    )
   } else {
-    const rest = findings.slice(at.index)
-    const st = /^- \*\*상태\*\*: *(.+)$/m.exec(rest)
-    if (!st) {
-      fail(`${FINDINGS} 의 ${n} 번 항목에 「- **상태**:」 줄이 없다`)
-    } else if (!st[1].startsWith('대기')) {
-      fail(
-        `${STATUS} 가 **이미 닫힌** FINDINGS ${n} 을 다음 할 일로 가리킨다 ` +
-          `(상태: ${st[1].trim()}). 대기 중인 항목으로 바꿔라 — 이게 102 의 고장 그 자체다`,
-      )
-    } else {
-      notes.push(`FINDINGS ${n} 상태 = 대기`)
-    }
+    notes.push(`FINDINGS ${n} 상태 = 대기`)
   }
+}
+
+// ── ②-B KNOWN_LIMITATIONS 가 단 FINDINGS 번호가 전부 **대기**인가 ──────
+//  ★ 왜 — 위 LIMITS 주석. 닫힌 번호가 「한계」로 남으면 README·제출서가 거짓말을 한다.
+{
+  const limits = read(LIMITS)
+  const refs = [...new Set([...limits.matchAll(/FINDINGS (\d+)/g)].map((m) => m[1]))]
+  let ok = 0
+  for (const n of refs) {
+    const f = findingStatus(n)
+    if (!f.head) fail(`${LIMITS} 가 FINDINGS ${n} 을 다는데 ${FINDINGS} 에 「### ${n}.」 항목이 없다`)
+    else if (!f.status) fail(`${FINDINGS} 의 ${n} 번 항목에 「- **상태**:」 줄이 없다 (${LIMITS} 가 단다)`)
+    else if (!f.status.startsWith('대기')) {
+      fail(
+        `${LIMITS} 가 **이미 닫힌** FINDINGS ${n} 을 한계라고 적는다 ` +
+          `(상태: ${f.status.slice(0, 40)}…). 그 줄을 지워라 — 닫은 바퀴가 같이 지웠어야 했다`,
+      )
+    } else ok += 1
+  }
+  if (ok === refs.length) notes.push(`${LIMITS} 의 FINDINGS 번호 ${refs.length}개 전부 대기`)
 }
 
 // ── ③ `## ` 절 제목이 서로 다른가 · 「다음 바퀴」를 이름에 쓰지 않는가 ──

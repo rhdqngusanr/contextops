@@ -33,6 +33,18 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 138. ✅ **관통이 api 단계에서 빨갛게 시작한다** — 78바퀴가 121 을 ✅ 로 바꾸며 KNOWN_LIMITATIONS 의 그 줄을 안 지웠다   [고장]
+- **증상**: 79바퀴 첫 관통 `api FAIL` — `apps/web/test/readme.test.ts` ④ 「닫힌 항목을 한계라고 적지 않는다」 1 빨강 (655 초록).
+  `docs/KNOWN_LIMITATIONS.md:38-39` 가 「게스트가 누른 버튼의 403 문구가 「팀 owner만」이다 … (FINDINGS 121)」을 아직 들고 있었다.
+- **근거**: `.ci/logs/walkthrough/api.txt` · `99324a3`(78바퀴 문서 커밋)의 stat — STATUS · FINDINGS · INBOX · history 넷만 만졌다.
+  78바퀴는 코드 커밋(`816420b`) 앞에 CI GREEN 을 봤고, 그 뒤 **문서만 고치는 커밋**에서 121 을 ✅ 로 바꿨다 — test 층(85초)은 다시 안 돌았다.
+- **정본**: `loop/PROMPT.md` ⑥ (「전 층이 초록이어야 커밋」) · `docs/KNOWN_LIMITATIONS.md`
+- **왜 고장인가**: 관통 FAIL · CI RED 는 정의상 고장이다 (④3).
+- **고친 것**: ① 그 두 줄을 지웠다 ② 같은 검사를 **`docs` 층**(`tools/status-shape.mjs` ②-B)에도 뒀다 — 문서만 고치는 커밋이 보는 유일한 층이다.
+  「닫힌 것을 한계라고 적는다」는 「닫힌 것을 다음 할 일로 가리킨다」(102)와 같은 썩음이라 같은 게이트에 산다. 옛 줄을 되돌리면 `docs:check` 가 1 빨강.
+  readme.test ④ 는 그대로 둔다(README·제출서의 번호가 KNOWN_LIMITATIONS 와 같은지도 세므로).
+- **상태**: ✅ `<79바퀴 커밋>` (79바퀴 · 2026-09-06) — 잰 것: `docs:check` 「FINDINGS 번호 4개 전부 대기」 · readme.test 32/32 · CI GREEN 21:35
+
 ### 137. **데모의 `/import` 에 시드가 남긴 job 이 「⚠ 멈춘 것 같음」으로 떠 있다** — 게스트가 처음 보는 화면 3 이 고장처럼 읽힌다   [격차]
 - **증상**: `/demo` → 가져오기 화면의 「구조화 진행」 카드에 job 하나가 `차례 기다리는 중 · ⚠ 멈춘 것 같음 · 올린 지 N분 전` 으로 뜬다
   (`docs/evidence/2026-09-06-guest-door/04-import-after-structure-click.png` 오른쪽 아래). 시간이 갈수록 N 이 커진다 — 심사위원은 「AI 가 안 돈다」로 읽는다.

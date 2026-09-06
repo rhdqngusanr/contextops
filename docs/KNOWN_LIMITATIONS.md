@@ -35,8 +35,6 @@
   (`plugin/contextops/src/cli/setup.ts`). 브라우저 콜백 서버는 없다.
 - **권한이 2단계뿐** (owner / member · `packages/schema/src/api.ts` 의 `ROLE_RANK`). 세밀한 권한 모델 없음.
   게스트는 등급이 아니라 「쓸 수 없는 주체」로 만들었다 — GET·HEAD 만 지난다.
-- **게스트가 누른 버튼의 403 문구가 「팀 owner만」이다.** 게스트는 데모 팀의 member 라 버튼이 그려지고,
-  서버는 「읽기 전용」으로 막는데 화면은 코드당 문구 하나(`ERROR_HINT.FORBIDDEN`)를 옮긴다 (FINDINGS 121).
 - **실시간이 아니다** — 모든 상태는 「마지막 보고 기준」이다. 화면은 폴링으로 갱신하고 「실시간」이라는 낱말을
   쓰지 않는다 (SPEC §6 · `apps/web/test/web-landing.test.ts` 가 랜딩에서 그 낱말을 센다).
 - **서버측 AI 4종 중 둘은 문이 없다.** `apps/web/src/lib/ai/features.ts` 의 표는 `structure · conflict · ask · demo`
