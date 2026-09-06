@@ -15,6 +15,44 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (82) — 모델은 `quote` 를 내고 서버가 `indexOf` 로 offset 을 계산 · 진짜 Gemini 인용 21/21 · 145 기록 (FINDINGS 142 · `3b6ebef`)
+
+**이번 바퀴(82)는 FINDINGS 142 — 구멍(`source_ref` offset 이 「범위 안」인데 가리키는 문장이 틀리다 · P7)을 닫았다** (`3b6ebef`). INBOX 「할 것」비어 있음 · 관통 7단계 OK(994) · 고장 0 · 142 는 PLAN P3 첫 행의 완료 기준 그 자체라 ④3 ② 와 어긋나지 않는다.
+계약을 먼저 바꿨다 — `packages/schema` `AiSourceSpan` 에서 `start_char`·`end_char` 를 빼고 **`quote`**(조각의 원문 그대로 · ≤ `AI_QUOTE_MAX_CHARS` 600)를 뒀다. `structure.ts` `toSourceRef()` 가 `chunk.text.indexOf(quote)` 로 문서 offset 을 **계산**하고
+0곳(「원문에 없다」)·2곳 이상(「여러 곳」)이면 `OutputInvalid` → 오류 위치를 넣어 1회 재시도. `untrusted()` 의 `</`→`<\` 치환은 되돌려 찾는다. 프롬프트의 「offset」 문장 셋(SYSTEM 두 줄 · 머리말 한 줄 · `prompt.ts` 공통 금지 · SPEC §7)을 「원문 그대로 인용」으로. 화면·`SourceRef`·컴파일러는 손대지 않았다 — 저장되는 모양은 그대로 offset 이다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-p3-gemini/probe.txt` §5 · 진짜 gemini-3.5-flash · 세 번째 `p3:measure`):
+
+| | 전 (`314ab0e` · 81바퀴) | 후 (`3b6ebef`) |
+|---|---|---|
+| 모델에게 묻는 것 | `start_char`·`end_char` (숫자) | **`quote`** (글자) — 보내는 JSON Schema 에 start_char·end_char 0건 (시험이 센다) |
+| 인용 → 잘라 낸 원문 | 27/27 「범위 안」인데 G1 항목이 G2 줄 · 웹훅 서명이 §4 제목 · architecture 5개·질문 4개가 같은 구간 | **21/21 이 제목과 같은 문장** — G1 은 G1 표 행 · 웹훅 서명은 「서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다」 · 질문 4개는 §5 의 네 줄 각각 · old-roadmap 재시도 규칙은 「3회까지 … 0.5초 고정」 그 줄 |
+| 재시도 | — | **0** (장부 outputTokens 1,558 · 4,075 = 왕복 1 · 1) — 첫 응답에서 21개가 다 한 곳에만 있는 인용이었다 |
+| goals.md 항목 · 질문 | 18 · 4 | **12** (goal 3 · policy 5 · roadmap 3 · domain 1) · **4** — 완료 기준 12 는 넘고, architecture 0 · mission 0 은 같은 프롬프트의 실행 간 흔들림 |
+| 충돌 | 2/3 | **1/3** — goals 의 재시도 규칙 후보가 old-roadmap 과 같은 slug(`item_psp_retry_policy`)라 accept 에서 거절 → 탐지 candidates 5 → 2 → **145**(구멍). 81 은 우연히 다른 slug 였다 |
+| 시험 | ai-structure 21 | **26** (+5: 스키마에 숫자 칸 없음 · 원문에 없으면 재시도 · 여러 곳이면 재시도 · 두 번 다 없으면 `AI_OUTPUT_INVALID` · `</` 되돌리기) · ai-job·web-item-doors·dump 스텁 여섯 파일이 quote 모양 · 84/84 |
+| plugin 번들 | — | **재생성** (`bin/contextops-cli.mjs` 4줄 — schema 를 품는다 · `bundle.test` 가 바이트 대조 · 첫 CI 가 이걸로 빨갰다) |
+| CI | GREEN 23:25 | **GREEN 23:55** — principles OK 9 · typecheck 10초 · test 88초 · build 21초 · walkthrough **998** · docs OK |
+
+⚠ **PLAN 행은 열어 뒀다** — 인용 ✅ · 항목 ✅ · 예산 ✅ · 충돌 1/3 ✗ (143 + 145). 행의 ⑤ 에 수치를 적었다.
+⚠ **안 한 것** — 프롬프트의 「무엇을 항목으로 내나」는 안 건드렸다(143 의 일) · 145 는 적기만 했다 · 화면 3 을 브라우저로 본 적은 여전히 없다(아래 「눈 판정 대기」 — 이제 인용이 맞으니 볼 만하다).
+
+🔴 **배운 것 둘** — ① 「충돌 3」이 모델의 slug 선택에 달려 있었다. 정확히 충돌하는 두 규칙은 같은 이름을 고르기 쉽다 — 그래서 **충돌일수록 accept 에서 거절돼 탐지에서 빠진다.** 실행마다 갈리는 수는 완료 기준이 못 된다 → 145 를 고쳐야 3/3 이 **안정**된다.
+② `packages/schema` 를 한 글자 고치면 `plugin/contextops/bin/contextops-cli.mjs` 가 갈린다 — 번들이 schema 를 품고 `bundle.test` 가 바이트를 대조한다. **schema 커밋에는 `pnpm --filter @contextops/plugin build` 가 딸려 있다** (「앞 바퀴들이 남긴 것」에 이미 세 번 적혀 있다 — 이번에도 밟았다).
+
+🔴 **2-B 이번 라운드 — `AiSourceSpan` 의 `quote`** ① 소비처 `toSourceRef()` 하나 ② 뒤집으면 갈림: 원문에 없는 글자 → 재시도 → `AI_OUTPUT_INVALID` (잠겨 있음) · 여러 곳 → 재시도 (잠겨 있음) · 진짜 모델의 21/21 이 그 문장. `heading_path` 는 비면 chunk 의 것 (그대로). `ItemType` 10종 중 이번 실행은 **4종**(goal·policy·roadmap·domain) — 81 의 6종보다 적다. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 143 → 83바퀴가 닫았다 (`5be2611`). 아래는 82 가 남긴 지목의 원문이다.
+
+🔴 143 은 PLAN P3 첫 행의 몫이다 — 격차지만 그 행의 완료 기준 「충돌 3」의 절반이라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 **145**(나머지 절반 · 기존 항목 id 를 `uniqueId` 의 `taken` 에) → 144 → `p3:measure` 가 충돌 3/3 이면 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **143 을 하는 법** — 프롬프트만이다 (`structure.ts` · 기준을 낮추지 않는다). old-roadmap.md 「운영 규칙」 3줄 중 「환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다」가 policy 로 안 나온다 — `SOURCE_DOCUMENT_KIND_BRIEF.roadmap` 이 「마일스톤과 기한이 주로」라 규칙 절을 가볍게 읽는 듯. 그 한 줄에 「로드맵 문서 안의 운영 규칙도 항목으로 낸다」를 더하거나 SYSTEM 의 「항목 하나 = …」에 「부정형 규칙(하지 않는다 · 기한을 두지 않는다)도 규칙이다」. 시험은 `ai-structure` 의 「여섯 종류가 서로 다른 프롬프트를 만든다」가 이미 표를 읽으니 문장 존재만 한 줄. 합격은 `p3:measure` 의 roadmap items 에 환불 policy 가 있고(6개) 충돌에 환불 SLA 짝이 서는 것 — 145 를 안 고치면 재시도 규칙 짝은 여전히 실행마다 갈린다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(142 ✅ — 143·145·144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(145 · 144 · 143 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 142 ✅.
+
+---
+
 ### 지난 바퀴 (81) — PLAN P3 첫 행을 진짜 Gemini 로 잼 · 기본 thinking 이 출력 상한을 먹어 `AI_OUTPUT_INVALID` → `GEMINI_THINKING_LEVEL` · 142·143·144 기록 · `p3:measure` (FINDINGS 141 · `314ab0e`)
 
 **이번 바퀴(81)는 PLAN P3 첫 행 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」의 완료 기준을 진짜 Gemini 로 쟀다.** INBOX 「할 것」비어 있음 · 관통 7단계 OK(994) · 고장 0 이라 ④3 ② 대로 PLAN 맨 위 행이었다.
