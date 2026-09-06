@@ -59,6 +59,7 @@ function event(overrides: Partial<ProgressEventView> = {}): ProgressEventView {
 function milestone(overrides: Partial<RoadmapMilestone> = {}): RoadmapMilestone {
   return {
     milestone: 'PL-M1',
+    due: '2026-09-20',
     paths: ['src/payment/'],
     done_when: [
       { text: '재시도가 3회에서 멈춘다', evidence_count: 2, last_event: event() },
@@ -160,6 +161,30 @@ describe('없는 문을 그리지 않는다 — [완료 확인]', () => {
     const withConfirm = milestone({ status: 'done_candidate', confirmable: event({ status: 'done_candidate' }) })
     expect(row({ busy: true, milestone: withConfirm })).toContain('disabled')
     expect(row({ error: new Error('x'), milestone: withConfirm })).toContain('다시 시도')
+  })
+})
+
+describe('기한(due) — Manifest 가 나른 날짜 그대로, 없으면 칸이 없다 (FINDINGS 111)', () => {
+  it('due 가 있으면 행 머리에 `due YYYY-MM-DD` 가 선다', () => {
+    const html = row()
+    expect(html).toContain('due 2026-09-20')
+  })
+
+  it('🔴 값을 뒤집으면 글자가 갈린다 — 표시용이 아니라 실제로 읽는 칸이다', () => {
+    const a = row({ milestone: milestone({ due: '2026-09-20' }) })
+    const b = row({ milestone: milestone({ due: '2026-10-01' }) })
+    expect(a).not.toBe(b)
+    expect(b).toContain('due 2026-10-01')
+    expect(b).not.toContain('2026-09-20')
+  })
+
+  it('🔴 due 가 없으면 「기한 없음」도 「-」도 적지 않는다 — 없는 날짜를 지어내지 않는다', () => {
+    const html = row({ milestone: milestone({ due: null }) })
+    expect(html).not.toContain('due ')
+    expect(html).not.toContain('기한')
+    //  나머지는 그대로 그려진다 — 칸 하나가 없다고 행이 달라지지 않는다.
+    expect(html).toContain('PL-M1')
+    expect(html).toContain('근거 1 / 2')
   })
 })
 

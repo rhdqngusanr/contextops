@@ -191,9 +191,9 @@ const QUOTED_DATA: Record<string, readonly string[]> = {
   goal: ['outcome', 'metric', 'deadline'],
   //  §6 용어 표의 다섯 줄 — `term` 과 `meaning` 둘 다 표 안에 있다.
   domain: ['glossary'],
-  //  §4 마일스톤의 「경로」와 「완료 기준」 목록. `milestone_id`(PL-M1)는 **우리가 붙인
-  //  이름**이라 원문에 없다 — 인용 칸이 아니다.
-  roadmap: ['paths', 'done_when'],
+  //  §4 마일스톤의 「경로」와 「완료 기준」 목록 · 제목 괄호의 기한. `milestone_id`(PL-M1)는
+  //  **우리가 붙인 이름**이라 원문에 없다 — 인용 칸이 아니다.
+  roadmap: ['due', 'paths', 'done_when'],
   //  §7 그림의 대괄호 이름. `responsibility` 는 그 줄을 읽고 적은 진술이고,
   //  `paths` 는 픽스처 레포에서 잰 것(`fixtureDir`)이라 문서에 없다.
   architecture: ['component'],
@@ -486,6 +486,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
         body: '',
         data: {
           milestone_id: 'PL-M1',
+          //  제목 괄호의 날짜가 기한이다 — 화면 8 의 `due` 칸과 Pack 의 `due:` 가 여기서 온다 (FINDINGS 111).
+          due: '2026-04-30',
           paths: ['src/payment', 'src/psp'],
           done_when: [
             'PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다',

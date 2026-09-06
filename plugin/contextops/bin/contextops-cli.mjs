@@ -19482,6 +19482,8 @@ var ManifestFile = external_exports.object({
 );
 var ManifestMilestone = external_exports.object({
   id: MilestoneId,
+  /** `RoadmapData.due` 그대로 — 없으면 없다. 화면이 기한을 지어내지 않게 optional 이다 (FINDINGS 111). */
+  due: CalendarDate.optional(),
   paths: external_exports.array(RepoPath).max(20).default([]),
   done_when: external_exports.array(external_exports.string().min(3).max(200)).min(1).max(6)
 }).strict();

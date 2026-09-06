@@ -98,17 +98,21 @@ export function compile(input: CompileInput): CompileResult {
   return { files, manifest, excluded: collected.excluded, warnings: budgeted.warnings }
 }
 
+/** Manifest 의 마일스톤 한 줄 — 칸의 정본은 `packages/schema` 의 `ManifestMilestone` (칸을 더하는 절차도 거기 주석). */
+type ManifestMilestoneRow = { id: string; due?: string; paths: string[]; done_when: string[] }
+
 /**
- * Manifest 의 마일스톤 목록 — `stop.mjs` 가 이 `paths` 로 진행 보고를 만든다 (SPEC §8.6).
+ * Manifest 의 마일스톤 목록 — `stop.mjs` 가 이 `paths` 로 진행 보고를 만든다 (SPEC §8.6) ·
+ * 화면 8 이 `due` 를 읽는다 (FINDINGS 111).
  * ⚠ 제외된 항목은 빠진다. 제외 판정을 여기서 다시 쓰지 않고 `collect` 의 결과를 받는다 —
  *   같은 판정이 두 곳에 있으면 조용히 갈라진다.
  */
 function milestonesOf(
   items: readonly ContextItem[],
   excluded: readonly Excluded[],
-): { id: string; paths: string[]; done_when: string[] }[] {
+): ManifestMilestoneRow[] {
   const gone = new Set(excluded.map((e) => e.item_id))
-  const byId = new Map<string, { id: string; paths: string[]; done_when: string[] }>()
+  const byId = new Map<string, ManifestMilestoneRow>()
   // ⚠ 정렬한 뒤에 도는 이유 — 같은 milestone_id 가 둘이면 「먼저 온 것」이 이기는데,
   //   그 「먼저」가 입력 순서면 셔플했을 때 Manifest 가 달라진다 (P4).
   for (const item of sortItems(items)) {
@@ -116,6 +120,9 @@ function milestonesOf(
     if (byId.has(item.data.milestone_id)) continue      // 먼저 온 것이 이긴다 (정렬이 순서를 정한다)
     byId.set(item.data.milestone_id, {
       id: item.data.milestone_id,
+      //  기한은 `RoadmapData.due` **그대로** — 없으면 키 자체를 안 만든다 (`undefined` 키가 있으면
+      //  JSON 과 toEqual 이 다른 말을 한다 · P4). 본문(`sections.ts`)은 전부터 같은 값을 적었다 (FINDINGS 111).
+      ...(item.data.due === undefined ? {} : { due: item.data.due }),
       paths: [...item.data.paths],
       done_when: [...item.data.done_when],
     })

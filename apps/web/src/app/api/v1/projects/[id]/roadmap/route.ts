@@ -123,6 +123,9 @@ export const GET = route<{ id: string }>('GET /projects/{id}/roadmap', async (ct
 
     return {
       milestone: m.id,
+      //  기한은 **Manifest 가 나르는 값** 그대로다 — 없으면 `null` 이고 화면은 그 칸을 비운다
+      //  (없는 날짜를 지어내지 않는다 · FINDINGS 111). 칸의 정본은 schema 의 `ManifestMilestone`.
+      due: m.due ?? null,
       paths: m.paths,
       done_when: m.done_when.map((text) => {
         //  완료 조건 하나에 붙은 보고 — `criterion` 이 그 문장과 같은 것만 센다.

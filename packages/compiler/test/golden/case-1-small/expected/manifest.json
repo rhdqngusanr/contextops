@@ -100,6 +100,7 @@
   "milestones": [
     {
       "id": "PL-M1",
+      "due": "2026-10-15",
       "paths": [
         "src/payment/retry.ts",
         "src/payment/gateway.ts"
@@ -111,6 +112,7 @@
     },
     {
       "id": "PL-M2",
+      "due": "2026-11-30",
       "paths": [
         "src/refund"
       ],

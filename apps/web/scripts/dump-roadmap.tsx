@@ -42,6 +42,8 @@ function event(over: Partial<ProgressEventView> = {}): ProgressEventView {
 function milestone(over: Partial<RoadmapMilestone> = {}): RoadmapMilestone {
   return {
     milestone: 'PL-M1',
+    //  DESIGN_BRIEF §4 화면 8 의 예시 `due 09-20` 과 같은 날 — Manifest 가 나른 날짜 그대로 (FINDINGS 111).
+    due: '2026-09-20',
     paths: ['src/payment/'],
     done_when: [
       { text: '재시도가 3회에서 멈춘다', evidence_count: 2, last_event: event() },

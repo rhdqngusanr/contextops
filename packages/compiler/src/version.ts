@@ -11,4 +11,7 @@
 //    템플릿의 모양만 바뀐 것은 `TEMPLATE_VERSION` 이다. 둘은 따로 움직인다.
 // =====================================================================
 
-export const COMPILER_VERSION = '0.1.0'
+//  0.2.0 (2026-09-06) — Manifest 의 마일스톤이 `due` 를 나른다 (FINDINGS 111). Pack 파일 본문은 그대로
+//      (roadmap 절은 전부터 `due:` 를 적었다) · `manifest_hash` 도 그대로(`files` 만 센다) — 달라지는 것은
+//      `manifest.json` 의 milestones 뿐이다. 그래도 올리는 이유: 같은 snapshot 에서 나오는 **Manifest** 가 다르다.
+export const COMPILER_VERSION = '0.2.0'

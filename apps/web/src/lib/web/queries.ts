@@ -573,6 +573,8 @@ export type ProgressEventView = {
 /** 마일스톤 한 줄 — **행이 마일스톤이다** (P5). 사람이 행이 되면 이 제품은 실패다. */
 export type RoadmapMilestone = {
   milestone: string
+  /** `YYYY-MM-DD` — 발행된 Manifest 의 `due` 그대로. 없으면 `null` 이고 화면은 그 칸을 비운다 (FINDINGS 111). */
+  due: string | null
   paths: string[]
   done_when: { text: string; evidence_count: number; last_event: ProgressEventView | null }[]
   /** 프로젝트 단위의 열린 충돌 수 — 아직 마일스톤별로 못 센다 (라우트 주석). */

@@ -59,6 +59,7 @@ afterEach(async () => {
 
 const ROADMAP_DATA = {
   milestone_id: 'PL-M1',
+  due: '2026-10-15',
   paths: ['src/payment'],
   done_when: ['재시도가 3회에서 멈춘다', '실패가 로그에 남는다'],
 }
@@ -977,9 +978,11 @@ describe('progress — 멱등하고, done 은 사람만 찍는다', () => {
     const { token } = await deviceToken(owner, projectId)
 
     const before = await dataOf(await roadmap(req('GET', `/api/v1/projects/${projectId}/roadmap`, { auth: owner }), params({ id: projectId })))
-    const beforeRow = (before.milestones as { milestone: string; status: string; done_when: { text: string; evidence_count: number }[] }[])[0]
+    const beforeRow = (before.milestones as { milestone: string; due: string | null; status: string; done_when: { text: string; evidence_count: number }[] }[])[0]
     expect(before.context_version).toBe('1.0.0')
     expect(beforeRow?.milestone).toBe('PL-M1')
+    //  🔴 기한은 발행된 Manifest 에서 온다 — 라우트는 칸을 하나씩 고르므로 여기서 빠지면 화면 8 이 조용히 비운다 (FINDINGS 111).
+    expect(beforeRow?.due).toBe(ROADMAP_DATA.due)
     expect(beforeRow?.status).toBe('not_started')
     expect(beforeRow?.done_when.map((d) => d.evidence_count)).toEqual([0, 0])
 

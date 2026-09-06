@@ -140,6 +140,10 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
           <span className="mono ink">{m.milestone}</span>
         </button>
         <div className="row wrap">
+          {/* 기한은 Manifest 가 나른 날짜 **그대로**(`YYYY-MM-DD`) — Pack 본문의 `due:` 와 같은 글자다.
+              없으면 칸이 없다 — 「기한 없음」도 「-」도 적지 않는다 (없는 것을 지어내지 않는다 · FINDINGS 111).
+              ⚠ 「지났다」를 여기서 판정하지 않는다 — 지났는지는 서버도 화면도 아직 안 잰다. */}
+          {m.due === null ? null : <span className="meta mono">due {m.due}</span>}
           <MilestoneChip status={m.status} />
           {/* 🔴 「마지막 보고」는 늘 경과다 — 「지금 이렇다」를 말할 수 있는 값이 없다. */}
           <span className={stale ? 'meta mono ink-warn' : 'meta mono'}>

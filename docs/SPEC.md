@@ -236,11 +236,13 @@ export const ProgressEvent = z.object({ milestone_id: z.string(), status: z.enum
 export const Manifest = z.object({ schema_version: z.literal('1.0'), compiler_version: z.string(), template_version: z.string(),
   team_id: z.string(), project_id: z.string(), context_version: z.string(), generated_at: z.string().datetime(), snapshot_hash: z.string(),
   files: z.array(z.object({ path: z.string(), sha256: z.string(), size: z.number(), target: z.enum(['claude','agents','cursor']), source_item_ids: z.array(z.string()) })),
-  milestones: z.array(z.object({ id: z.string(), paths: z.array(z.string()), done_when: z.array(z.string()) })),
+  milestones: z.array(z.object({ id: z.string(), due: z.string().date().optional(), paths: z.array(z.string()), done_when: z.array(z.string()) })),
   excluded: z.array(z.object({ item_id: z.string(), reason: z.string() })), manifest_hash: z.string() });
 ```
 
 `manifest_hash = sha256(files를 path 순 정렬 후 "path\nsha256\n" 연결)`.
+
+`milestones[].due` 는 `RoadmapData.due` 를 **그대로** 나른다 (FINDINGS 111 · 2026-09-06). 화면 8 의 마일스톤 목록은 발행된 Manifest 에서 오므로, 여기 없는 칸은 화면이 그릴 수 없다 — `sections.ts` 가 본문에 `due:` 를 적어도 Manifest 가 안 나르면 화면은 조용히 비운다. 없으면 칸이 없다(빈 문자열·`null` 로 채우지 않는다). ⚠ `manifest_hash` 는 `files` 만 세므로 이 칸이 늘어도 해시는 그대로다 — 그래서 `COMPILER_VERSION` 을 올린다(같은 snapshot 에서 나오는 Manifest 가 다르다). 칸을 더하는 절차는 `packages/schema/src/manifest.ts` 의 `ManifestMilestone` 옆 주석.
 
 ### 3.1 업로드 payload allowlist (P1)
 
@@ -533,7 +535,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 5 | `…/context` | 항목 테이블(type/status/scope 필터) · 상세 드로어(원문 패널) · 발행 모달(semver 추천·변경 요약·영향 파일 수) · 버전 히스토리 | 409 재로드 안내 |
 | 6 | `…/proposals`, `…/proposals/[id]` | 함 목록(status/author 필터) · before/after Diff · 근거 링크 · **제안 한 장 단위** 승인/거절(사유 필수 · `PROPOSAL_DECISIONS` §5) — 항목별 결정은 없다 (FINDINGS 114 ②) | |
 | 7 | `…/packs/[semver]` Pack Explorer | 3열: 파일 트리 / 내용(줄번호, 선택 블록 하이라이트, 이전 버전 diff 토글) / 항목·원문·hash·제외 사유 · "Pack 다운로드" | |
-| 8 | `…/roadmap` | 마일스톤 행: done_when별 근거 수·마지막 보고·충돌·"완료 확인" · 로드맵 외 작업 · 근거 클릭 시 path:line·commit | Realtime |
+| 8 | `…/roadmap` | 마일스톤 행: 기한(`due` · Manifest 의 날짜 그대로 · 없으면 칸 없음 — FINDINGS 111)·done_when별 근거 수·마지막 보고·충돌·"완료 확인" · 로드맵 외 작업 · 근거 클릭 시 path:line·commit | Realtime |
 | 9 | `…/sync` | 팀원·기기별 버전/상태/마지막 보고 · 질의창(답변 + 인용 항목 칩) | Realtime |
 
 게스트 데모: `/demo` → **게스트 세션 토큰**으로 `demo` 팀 read-only + `/demo/ai-once` 호출 가능. 데모 테넌트는 production DB의 별도 team_id, 매일 03:00(KST) 리셋 — Vercel Cron(`apps/web/vercel.json`)이 `GET /cron/demo-reset` 을 부르고(§5 · `CRON_SECRET` 뒤), 그 문이 `lib/demo/reset.ts` 로 **지우고 다시 심는다**. 시드는 제품 코드다 (`lib/demo/seed.ts` · `seed-demo.ts` — 라우트를 프로세스 안에서 부른다, `inproc.ts`). 픽스처는 `next.config.ts` 의 `outputFileTracingIncludes` 로 배포 함수에 실린다.

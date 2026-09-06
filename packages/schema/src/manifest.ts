@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ItemId, MilestoneId, RepoPath, Sha256 } from './common'
+import { CalendarDate, ItemId, MilestoneId, RepoPath, Sha256 } from './common'
 
 // =====================================================================
 //  Manifest — 발행된 Pack 한 벌의 목록표. 정본은 docs/SPEC.md §3.
@@ -44,8 +44,20 @@ export const ManifestFile = z.object({
   },
 )
 
+/**
+ * Manifest 가 나르는 마일스톤 한 줄 — 화면 8(Roadmap)과 `stop.mjs` 가 읽는 **유일한 마일스톤 정본**이다.
+ *
+ * ★ 칸을 더하는 절차 (FINDINGS 111 · `due` 가 그 첫 예다): ① 여기 한 줄 ② `packages/compiler` 의
+ *   `milestonesOf()` 가 `RoadmapData` 에서 옮기는 한 줄 ③ 라우트 `GET /projects/{id}/roadmap` 이 행에
+ *   싣는 한 줄(그대로 나르지 **않는다** — 칸을 하나씩 고른다) ④ `apps/web` 의 `RoadmapMilestone` 형과
+ *   `MilestoneRow` ⑤ golden 의 `manifest.json` 갱신 + `COMPILER_VERSION` ⑥ SPEC §3 의 Manifest 정의.
+ *   ②만 빠지면 화면은 조용히 「없다」고 그린다 — `compiler/test/liveness.test.ts` 가 값을 뒤집어 센다.
+ * ⚠ `manifest_hash` 는 `files` 만 센다 — 여기 칸이 늘어도 해시는 안 변한다 (위 머리 주석).
+ */
 export const ManifestMilestone = z.object({
   id: MilestoneId,
+  /** `RoadmapData.due` 그대로 — 없으면 없다. 화면이 기한을 지어내지 않게 optional 이다 (FINDINGS 111). */
+  due: CalendarDate.optional(),
   paths: z.array(RepoPath).max(20).default([]),
   done_when: z.array(z.string().min(3).max(200)).min(1).max(6),
 }).strict()

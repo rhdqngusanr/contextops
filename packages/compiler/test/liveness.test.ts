@@ -4,7 +4,7 @@ import { compile } from '../src'
 import { SCOPE_INLINE_LABEL } from '../src/sections'
 import { SCOPE_ORDER } from '../src/sort'
 import { srcKindOf, srcTag } from '../src/tag'
-import { ALL_TYPES, ANCHOR, makeInput, makeItem } from './fixtures'
+import { ALL_TYPES, ANCHOR, SAMPLE_DATA, makeInput, makeItem } from './fixtures'
 
 // =====================================================================
 //  🔴 「표의 항목이 **전부 실제로 뭔가를 바꾼다**」를 잠근다 (loop/PROMPT.md ④2-B).
@@ -78,6 +78,38 @@ describe('enforcement 4종', () => {
       fingerprint([ANCHOR, makeItem('policy', { data: { rule: '환불은 3일 안에', severity: 'must', enforcement } })]),
     )
     expect(allDistinct(prints)).toBe(true)
+  })
+})
+
+describe('Manifest 마일스톤의 due (FINDINGS 111)', () => {
+  //  🔴 데이터는 있고 Manifest 만 안 나르던 칸이다 — Pack 본문(`sections.ts` 의 roadmap 절)은 전부터
+  //     `due:` 를 적었는데 `milestonesOf()` 가 셋(id·paths·done_when)만 옮겨서 화면 8 은 기한을 그릴
+  //     근거가 없었다. 여기서 재는 것은 **Manifest** 다 — 본문이 아니라.
+  const road = (due?: string) =>
+    compile(makeInput([ANCHOR, makeItem('roadmap', { data: { ...SAMPLE_DATA.roadmap, ...(due === undefined ? {} : { due }) } })]))
+      .manifest.milestones
+
+  it('RoadmapData.due 가 Manifest 의 마일스톤에 그대로 실린다', () => {
+    expect(road('2026-10-15')).toEqual([{ id: 'M1', due: '2026-10-15', paths: ['src/pay'], done_when: ['문서와 코드가 같다'] }])
+  })
+
+  it('🔴 값을 뒤집으면 Manifest 가 갈린다 (정의만 있는 칸이 아니다)', () => {
+    expect(JSON.stringify(road('2026-10-15'))).not.toBe(JSON.stringify(road('2026-11-30')))
+  })
+
+  it('due 가 없으면 칸 자체가 없다 — `undefined` 키도, 빈 문자열도 아니다 (P4 · JSON 과 toEqual 이 같은 말을 한다)', () => {
+    const [m] = road()
+    expect(m).toBeDefined()
+    expect(Object.keys(m ?? {})).toEqual(['id', 'paths', 'done_when'])
+  })
+
+  it('manifest_hash 는 due 에 안 흔들린다 — 해시는 files 만 센다 (SPEC §3 의 식)', () => {
+    const hashOf = (due?: string) =>
+      compile(makeInput([ANCHOR, makeItem('roadmap', { data: { ...SAMPLE_DATA.roadmap, ...(due === undefined ? {} : { due }) } })]))
+        .manifest.manifest_hash
+    //  ⚠ 본문의 `due:` 줄이 바뀌므로 파일 해시는 갈린다 — 그래서 「같은 due 두 번」만 같아야 한다.
+    expect(hashOf('2026-10-15')).toBe(hashOf('2026-10-15'))
+    expect(hashOf('2026-10-15')).not.toBe(hashOf('2026-11-30'))
   })
 })
 
