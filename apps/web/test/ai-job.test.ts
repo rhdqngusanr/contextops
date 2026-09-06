@@ -154,7 +154,7 @@ beforeEach(async () => {
   const fresh = await freshDb()
   pg = fresh.pg
   db = fresh.db
-}, 60_000)
+})
 
 afterEach(async () => {
   setAiClientForTest(undefined)

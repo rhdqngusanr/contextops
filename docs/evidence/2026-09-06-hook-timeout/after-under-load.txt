@@ -1,0 +1,15 @@
+﻿2026-09-06 17:25:03 synthetic load: 12 x node busy loop (game client gone at 17:2x) · LoadPercentage=62
+$ vitest run
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../../vitest.base" without a file extension (vitest.config.ts:2:25). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 C:/dev/hackathon/apps/web
+
+
+ Test Files  33 passed (33)
+      Tests  633 passed (633)
+   Start at  17:25:04
+   Duration  144.60s (transform 22.90s, setup 0ms, import 63.63s, tests 1269.75s, environment 5ms)
+
+17:27:29 load at end: 51

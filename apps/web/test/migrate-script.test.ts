@@ -36,12 +36,12 @@ beforeAll(async () => {
   await socket.start()
   const port = await listening
   url = `postgresql://postgres:postgres@127.0.0.1:${port}/postgres`
-}, 60_000)
+})
 
 afterAll(async () => {
   await socket.stop()
   await pg.close()
-}, 30_000)
+})
 
 /** 스키마의 모양을 한 줄씩 — 두 DB 를 대조할 때 쓴다. */
 async function shapeOf(db: PGlite): Promise<string[]> {

@@ -81,7 +81,7 @@ async function rows<T>(sql: string, params: unknown[] = []): Promise<T[]> {
 beforeAll(async () => {
   pg = new PGlite()
   await applyMigrations(pg)
-}, 60_000)
+})
 
 afterAll(async () => {
   await pg?.close()

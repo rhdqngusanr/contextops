@@ -160,7 +160,7 @@ beforeEach(async () => {
   db = fresh.db
   await pg.query(`insert into teams (id, slug, name) values ($1, 'paylab', 'paylab')`, [TEAM])
   await pg.query(`insert into projects (id, team_id, slug, name) values ($1, $2, 'api', 'api')`, [PROJECT, TEAM])
-}, 60_000)
+})
 
 afterEach(async () => {
   setAiClientForTest(undefined)

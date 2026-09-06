@@ -70,8 +70,7 @@ beforeAll(async () => {
 
   //  개발용 서버가 찍어 주는 것과 같은 모양 — `?max=1` 까지 (`scripts/dev-server.ts`).
   process.env.DATABASE_URL = `postgresql://postgres:postgres@127.0.0.1:${port}/postgres?max=1`
-//  PGlite 첫 기동 + 마이그레이션이 이 기계에서 수 초다 — 기본 10초로는 모자랄 때가 있다.
-}, 60_000)
+})
 
 afterAll(async () => {
   //  postgres-js 풀을 닫는다 — 안 닫으면 소켓 서버가 멈출 때까지 붙어 있다.
@@ -81,7 +80,7 @@ afterAll(async () => {
   delete process.env.DATABASE_URL
   await socket.stop()
   await pg.close()
-}, 30_000)
+})
 
 describe('DB 풀은 프로세스에 하나 (소켓 위에서)', () => {
   it('같은 라우트를 동시에 다섯 번 불러도 전부 200 · 소켓은 하나', async () => {

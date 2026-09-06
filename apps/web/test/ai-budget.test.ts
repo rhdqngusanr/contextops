@@ -69,7 +69,7 @@ beforeEach(async () => {
   pg = fresh.pg
   db = fresh.db
   await seedProject()
-}, 60_000)
+})
 
 afterEach(async () => {
   await closeDb(pg)

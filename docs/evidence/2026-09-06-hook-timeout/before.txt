@@ -1,0 +1,154 @@
+Sun Sep  6 17:18:20     2026
+79
+$ vitest run
+[33m(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../../vitest.base" without a file extension (vitest.config.ts:2:25). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.[39m
+
+ RUN  v4.1.11 C:/dev/hackathon/apps/web
+
+ ❯ test/web-item-doors.test.ts (4 tests | 1 failed) 35020ms
+     × 문 셋이 **각각** 항목을 낳는다 — 플러그인도 제안도 안 거쳤다 13457ms
+ ❯ test/api-pack-zip.test.ts (11 tests | 1 failed) 69031ms
+     × Manifest 의 파일 전부 + manifest.json 이 있고 본문 sha256 이 Manifest 와 같다 11605ms
+ ❯ test/api-seed-questions.test.ts (14 tests | 1 failed) 81631ms
+     × DESIGN_BRIEF 가 약속한 대로 열 개다 11943ms
+ ❯ test/demo-reset.test.ts (13 tests | 1 failed) 82768ms
+     × 환경변수가 없으면 401 이다 — 맞는 값을 보내도 열리지 않는다 (조용히 통과시키지 않는다) 12762ms
+ ❯ test/api-auth.test.ts (19 tests | 1 failed) 100223ms
+     × 헤더가 없으면 401 UNAUTHORIZED 11712ms
+ ❯ test/error-log.test.ts (21 tests | 1 failed) 104488ms
+     × 없는 표를 읽는 라우트 → 500 · 로그에 SQLSTATE 는 있고 `select` 는 없다 · request_id 가 응답과 같다 11390ms
+ ❯ test/demo-guest.test.ts (17 tests | 1 failed) 107524ms
+     × `/demo/session` 이 404 다 — 빈 화면 대신 없다고 말한다 15954ms
+ ❯ test/api-routes.test.ts (37 tests | 1 failed) 131885ms
+     × DB 가 붙어 있으면 200 · ok 와 db 가 참이다 11356ms
+ ❯ test/api-publish.test.ts (44 tests | 1 failed) 141114ms
+     × 발행하면 pack_files 행이 생기고 Manifest 가 계약을 지킨다 11560ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/api-auth.test.ts > 인증 — 자격증명이 없거나 어긋나면 401 이다 > 헤더가 없으면 401 UNAUTHORIZED
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/api-auth.test.ts:28:1
+     26| let db: Db
+     27|
+     28| beforeEach(async () => {
+       | ^
+     29|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     30|   const fresh = await freshDb()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  test/api-pack-zip.test.ts > 🔴 zip 을 되읽으면 플러그인이 받는 것과 같은 Pack 이다 > Manifest 의 파일 전부 + manifest.json 이 있고 본문 sha256 이 Manifest 와 같다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/api-pack-zip.test.ts:45:1
+     43| let db: Db
+     44|
+     45| beforeEach(async () => {
+       | ^
+     46|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     47|   const fresh = await freshDb()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  test/api-publish.test.ts > 🔴 손으로 넣은 항목이 Pack 으로 나온다 (PLAN P1 셋째 행 완료 기준 ①) > 발행하면 pack_files 행이 생기고 Manifest 가 계약을 지킨다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/api-publish.test.ts:48:1
+     46| let db: Db
+     47|
+     48| beforeEach(async () => {
+       | ^
+     49|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     50|   const fresh = await freshDb()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  test/api-routes.test.ts > health — 공개 · DB 를 실제로 두드린다 > DB 가 붙어 있으면 200 · ok 와 db 가 참이다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/api-routes.test.ts:41:1
+     39| let db: Db
+     40|
+     41| beforeEach(async () => {
+       | ^
+     42|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     43|   const fresh = await freshDb()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  test/api-seed-questions.test.ts > 씨앗 질문 표 > DESIGN_BRIEF 가 약속한 대로 열 개다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/api-seed-questions.test.ts:32:1
+     30| let db: Db
+     31|
+     32| beforeEach(async () => {
+       | ^
+     33|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     34|   ;({ pg, db } = await freshDb())
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  test/demo-guest.test.ts > 데모 테넌트가 심어져 있지 않을 때 > `/demo/session` 이 404 다 — 빈 화면 대신 없다고 말한다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/demo-guest.test.ts:38:1
+     36| const NOW = new Date('2026-09-06T09:00:00.000Z')
+     37|
+     38| beforeEach(async () => {
+       | ^
+     39|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     40|   const fresh = await freshDb()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  test/demo-reset.test.ts > ① 자물쇠 — CRON_SECRET > 환경변수가 없으면 401 이다 — 맞는 값을 보내도 열리지 않는다 (조용히 통과시키지 않는다)
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/demo-reset.test.ts:47:1
+     45| let pg: PGlite | undefined
+     46|
+     47| beforeEach(async () => {
+       | ^
+     48|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     49|   process.env.CRON_SECRET = CRON_SECRET
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  test/error-log.test.ts > 🔴 ① 진짜 drizzle 질의가 죽었을 때 — 원인은 남고 질의문은 안 남는다 > 없는 표를 읽는 라우트 → 500 · 로그에 SQLSTATE 는 있고 `select` 는 없다 · request_id 가 응답과 같다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/error-log.test.ts:40:1
+     38| let errorLines: string[] = []
+     39|
+     40| beforeEach(async () => {
+       | ^
+     41|   const fresh = await freshDb()
+     42|   pg = fresh.pg
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  test/web-item-doors.test.ts > 🔴 화면이 항목을 만드는 문 셋 (FINDINGS 35) > 문 셋이 **각각** 항목을 낳는다 — 플러그인도 제안도 안 거쳤다
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ test/web-item-doors.test.ts:88:1
+     86| }
+     87|
+     88| beforeEach(async () => {
+       | ^
+     89|   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
+     90|   ;({ pg, db } = await freshDb())
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  9 failed | 23 passed (32)
+      Tests  9 failed | 621 passed (630)
+   Start at  17:18:35
+   Duration  150.64s (transform 17.42s, setup 0ms, import 71.28s, tests 1386.32s, environment 6ms)
+
+[ELIFECYCLE] Test failed. See above for more details.
