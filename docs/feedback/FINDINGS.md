@@ -84,6 +84,9 @@
 - **96바퀴가 확인했다 (07:03 CI)**: **아직 빨갛다.** 같은 넷이고 같은 이유다. 그 세션의 마지막 커밋은 여전히 `eceaaab` 라
   **세 바퀴째 커밋이 안 늘었다**. 나머지는 전부 초록이다 (769개 중 **765 통과** · principles OK 9 · typecheck OK · build OK · docs OK).
   96바퀴도 README·랜딩을 한 줄도 안 건드렸다 (`git show --stat e3e48fe`).
+- **97바퀴가 확인했다 (07:19 CI)**: **아직 빨갛다.** 같은 넷이고 같은 이유다. 그 세션의 마지막 커밋은 여전히 `eceaaab` 라
+  **네 바퀴째 커밋이 안 늘었다**. 나머지는 전부 초록이다 (773개 중 **769 통과** · principles OK 9 · typecheck OK · docs OK · `build` 는 따로 돌려 OK).
+  97바퀴도 README·랜딩을 한 줄도 안 건드렸다 (`git show --stat fe7cc98`).
 - **상태**: 대기 (주인은 이 루프가 아니다 — 다음 바퀴도 **확인만** 한다. 고치지 마라)
 
 ### 156. **집히지 않은 채 오래 `queued` 로 남는 job 은 아무도 못 살린다**   [구멍]
@@ -351,14 +354,28 @@
   Context 의 것은 outline 이다 — 그 화면의 accent 는 머리의 [발행하기] 하나다.
 - **상태**: ✅ `e3e48fe` (96바퀴 · 못 본 자리 셋은 evidence README 의 「못 본 것」에 적었다)
 
-### 134. **`prefers-reduced-motion` 대응이 없다** — 스켈레톤·전환·터미널 재생이 항상 움직인다   [격차]
+### 134. ✅ **`prefers-reduced-motion` 대응이 없다** — 스켈레톤·전환·터미널 재생이 항상 움직인다   [격차]
 - **증상**: 움직임을 줄여 달라는 OS 설정을 화면이 안 읽는다. 접근성 점검에 잘 걸리는 항목이고 CSS 몇 줄이다 (INBOX D).
 - **근거**: INBOX 2026-09-06 🟡 D — 사람이 본 것. `apps/web/src/app/globals.css` 에 `prefers-reduced-motion` **0건** (71바퀴 `grep`).
   움직이는 곳: 스켈레톤 · 화면 1 터미널 재생(62바퀴 · `web-terminal-replay.test.ts`) · 전환.
 - **정본**: `docs/DESIGN_BRIEF.md` §3 「접근성」 절 (70바퀴가 `:focus-visible` 로 연 자리)
 - **고칠 방향**: 토큰 옆 한 곳(`globals.css`)에 `@media (prefers-reduced-motion: reduce)` 블록 하나 — 애니메이션·전환을 끈다.
   터미널 재생은 마지막 프레임을 바로 그린다. DESIGN_BRIEF 「접근성」에 한 줄 적고 `design-tokens.test.ts` 가 문서 ↔ 코드를 세게 (130 과 같은 모양).
-- **상태**: 대기 (주인은 PLAN **P4 둘째 행**)
+- **고친 것** (`fe7cc98` · 97바퀴): 포커스 링 옆 **한 곳**(`globals.css`)에 `@media (prefers-reduced-motion: reduce)` 블록 하나 —
+  `*, *::before, *::after` 의 `animation-duration: 0.01ms` · `animation-iteration-count: 1` · `transition-duration: 0.01ms` ·
+  `scroll-behavior: auto` 를 `!important` 로. 전역 선택자라 **아직 없는 애니메이션까지** 덮는다. `terminal-replay.module.css` 가
+  자기 몫으로 갖고 있던 블록은 지웠다(왜 지웠는지 그 자리에 한 줄) — 조각마다 적으면 새로 움직이는 것이 생길 때 반드시 하나를 빠뜨린다.
+  🔴 **`none` 이 아니라 `0.01ms` 인 이유** — `animation: none` 은 재생 중이던 것을 **시작 상태로 되돌린다.** 0.01ms + 1회면 끝난 상태로 서서
+  진행 막대가 지금 폭에 그대로 남는다 (아래 캡처가 그 차이다). CSS 로 못 끄는 타이머 재생은 이미 JS 가 같은 질의를 읽고 있었다.
+  `design-tokens.test.ts` **+4** — ① 블록이 전역 선택자에 세 속성을 `!important` 로 준다 ② 그 블록은 **css 를 통틀어 하나**다
+  ③ `terminal-replay.tsx` 의 `matchMedia` 가 `setPlaying(true)` 보다 앞이다 ④ DESIGN_BRIEF §3 「접근성」 ↔ 코드 양방향.
+  뒤집어 봤다: `!important` 하나를 빼면 ① 이 빨개진다.
+  🔴 **재 봤다 — 실제 브라우저다** (`docs/evidence/2026-09-07-reduced-motion/`). 이건 OS 설정을 켜야 보이므로 캡처만으로는 판정이 안 된다.
+  CDP 의 `Emulation.setEmulatedMedia` 로 같은 페이지를 두 번 열고 **계산된 값을 읽었다**: `.bar-fill` 의 `transition-duration`
+  **0.3s → 1e-05s** · `.skeleton` 의 `animation-duration` **1.4s → 1e-05s** · `iteration-count` **infinite → 1** · 커서 **1 → 0** ·
+  6초 시점 터미널 줄 **16/17(타이핑 중) → 17/17(다 선 채)** · Roadmap 「근거 0/3」 → 「근거 1/3」. 화면이 **비는 것이 아니라 끝난 상태로 선다.**
+  안 본 것: 진짜 OS 설정(에뮬레이션이다) · 화면에 실제로 뜬 스켈레톤(`.skeleton` 은 랜딩에 없어 같은 스타일시트 아래 하나 붙여 쟀다) · 375px.
+- **상태**: ✅ `fe7cc98` (97바퀴)
 
 ### 135. **`/demo` 가 「저장되지 않는다」를 충분히 말하지 않는다** — 읽기 전용 버튼이 먼저 「할 수 있다」고 한다   [격차]
 - **증상**: 배너는 있지만, 심사위원이 버튼을 눌러 보다 **「왜 저장이 안 되지」** 하고 헤맬 자리가 있다 (INBOX E). 70바퀴가 눈에 걸린

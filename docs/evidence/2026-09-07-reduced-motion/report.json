@@ -1,0 +1,18 @@
+{
+  "control": {
+    "matches": false,
+    "bar_transition_duration": "0.3s",
+    "skeleton_animation_duration": "1.4s",
+    "skeleton_animation_iteration_count": "infinite",
+    "caret_count": 1,
+    "terminal_lines": 16
+  },
+  "reduce": {
+    "matches": true,
+    "bar_transition_duration": "1e-05s",
+    "skeleton_animation_duration": "1e-05s",
+    "skeleton_animation_iteration_count": "1",
+    "caret_count": 0,
+    "terminal_lines": 17
+  }
+}
