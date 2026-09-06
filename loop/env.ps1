@@ -31,7 +31,11 @@ $LOOP = @{
     #    ★ 모델을 바꿀 때는 **한 번 부르고 나서** 켜라. 상태 페이지나 짐작은 근거가 아니다.
     #    ★ 바꾼 뒤 첫 두 바퀴의 턴 수·비용·커밋 수를 STATUS 「잰 것」에 남겨라 —
     #      모델이 바뀌면 바퀴의 값이 바뀐다. 옛 수치로 상한을 판단하면 어긋난다.
-    Model = "claude-fable-5-1"
+    #  🔴 2026-09-07 04:3x claude-fable-5-1 → **claude-opus-5** (사용자 지시가 정한 시점).
+    #    Fable 크레딧이 실제로 소진됐다 — 실측 문구:
+    #      "You're out of usage credits. Switch to another model, … to continue."
+    #    켜기 전에 Opus 를 한 번 찔러 확인했다 (is_error:False · result:OK).
+    Model = "claude-opus-5"
 
     #  추론 노력 (low | medium | high | xhigh | max — CLI `--effort`).
     #  ★ 왜 high 인가 — ContextOps 의 한 바퀴는 「화면 하나 예쁘게」가 아니라
@@ -112,7 +116,9 @@ $LOOP = @{
     #    돌아갔다가 다시 막히면 그 바퀴를 또 버린다. 되돌리려면 사람이 여기를 고친다.
     #  ⚠ 갈아탈 모델까지 막히면 그때는 평소대로 BackoffMin 으로 물러선다.
     #  ⚠ 빈 문자열이면 이 기능이 꺼진다 — 그때는 늘 물러서기만 한다.
-    FallbackModel  = "claude-opus-5"
+    #  ⚠ Opus 까지 소진되면 여기로 내려간다. **밤에 루프가 죽는 것보다 낫다**는 판단이다.
+    #    Sonnet 이 싫으면 빈 문자열("")로 두면 된다 — 그때는 물러서기만 한다.
+    FallbackModel  = "claude-sonnet-5"
     FallbackEffort = "medium"
 
     # ── 공개 저장소로 자동 push ───────────────────────────────────
