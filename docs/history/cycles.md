@@ -15,6 +15,63 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (71) — 마이그레이션을 Supabase 에 실제로 · 표 18 · 인덱스 8 (INBOX 순서 2 · PLAN P1 첫 행 · `adac632`)
+
+**71바퀴는 INBOX 순서 2 — PLAN P1 첫 행(DB 스키마 · Drizzle 마이그레이션 + Supabase 연결)을 닫았다** (`adac632`). P0 부터 열려 있던 행이다 —
+루프 몫(PGlite 적용 · `389c7f2`)은 끝나 있었고 「Supabase 연결」 한 조각이 사람 몫이었는데, 사람이 `.env.local` 에 값을 꽂아 줘서 이번에 **배포 DB 에
+실제로 적용**했다. **PLAN 이 한 칸 움직였다 — P1 은 전부 `- [x]`.** INBOX 의 다음은 순서 3(FINDINGS 126 · 제출서)이다.
+
+🔴 **잰 것 — Supabase 가 말하는 수다.** 짐작이 아니라 `information_schema.tables` · `pg_indexes` · `pg_type` 에서 셌다
+(`docs/evidence/2026-09-06-supabase-migrate/` — `status-before.txt` · `migrate.txt` · `status-after.txt` · `migrate-again.txt`).
+
+| | 전 (`db:status` · 돌리기 전) | 후 (`db:migrate`) | 다시 (`db:status` → `db:migrate`) |
+|---|---|---|---|
+| 서버 | PostgreSQL **17.6** · `aws-0-ap-northeast-2.pooler.supabase.com:5432` (Session pooler · IPv4 — 직결은 IPv6 전용이라 이 망에서 안 뚫린다) | 같음 | 같음 |
+| `drizzle.__drizzle_migrations` 장부 | **없음** (표 자체가 없다) | **7** 행 (+7) | 7 (+0) → 7 (+0) |
+| 남은 마이그레이션 (drizzle 의 셈법 — 장부 마지막 시각보다 뒤인 파일) | 7 | **0** | 0 → 0 |
+| `information_schema.tables` (public · BASE TABLE) | 0 | **18** = `src/db/schema.ts` 의 `pgTable` 18 (손으로 센 수가 아니라 `is(v, PgTable)` 로) | 18 |
+| `pg_indexes` ∩ `INDEX_NAMES` | 0/8 | **8/8** | 8/8 |
+| enum (`pg_type` typtype = e) | 0 | **17** | 17 |
+| 장부 hash ≠ 파일 hash (drifted) | 0 | 0 | 0 |
+| NOTICE | — | **1** — `source_documents_current_version_id_source_document_versions_id_fk` 66자 → Postgres 가 63자로 자른다 (참조하는 곳 0 · PGlite 도 같다 · 기능 영향 없음 · FINDINGS 로 안 올렸다) | — |
+| 문 | `db:generate` 뿐 (migrate 없음) | `db:status`(**읽기만**) · `db:migrate` — `apps/web/scripts/migrate.ts` 하나 · 접속 문자열은 호스트:포트/DB 까지만 찍는다 (P1) | |
+| 시험 | 0 — 이 길(postgres-js migrator)을 지나는 시험 없음 | `test/migrate-script.test.ts` **4** — pglite-socket → TCP → postgres-js 로 ① dryRun 은 장부 표조차 안 만든다 ② 적용 7 · 표 = TS · 인덱스 8/8 ③ **다시 돌리면 +0** ④ migrator(`--> statement-breakpoint` 로 쪼갬)와 시험 helper(통째로)가 만든 컬럼·인덱스·enum 이 같다 | |
+| 웹 시험 파일 | 92 | **93** | |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 946 · docs → GREEN (`adac632`) | |
+
+🔴 **「표 16 · 인덱스 5」는 낡은 수였다.** INBOX·PLAN 완료 기준의 수치는 P0(`389c7f2`) 때 것이고, P3 가 `ai_usage`·`ai_jobs` 표와 인덱스 셋을
+더해 정본 `INDEX_NAMES` 는 8, 표는 18 이다 (`test/migration.test.ts` 가 이미 18·8 을 센다). 요청서의 수를 그대로 「확인했다」고 적지 않고
+정본과 대조했다 — 요청서가 낡을 수 있다는 것도 「SPEC 은 의도, 코드는 현실」의 한 갈래다.
+
+🔴 **`drizzle-kit migrate` 가 아니라 drizzle-orm 의 migrator 다.** kit 는 config 에 `dbCredentials` 가 있어야 하고 그러면 `generate` 까지 env 를
+요구한다. orm 의 migrator 는 같은 `drizzle/` 폴더·같은 journal 을 읽고 `drizzle.__drizzle_migrations` 에 적는다 — 그래서 **두 번 돌려도 +0**
+이고, 스크립트는 거기에 「적용된 파일의 hash 가 장부와 다르면 멈춘다」(drizzle 자신은 마지막 시각만 본다)를 더했다. `.env.example` 의
+「pooler 로 돌리지 마라」는 반만 맞았다 — Transaction pooler(6543)만 안 되고 **Session pooler(5432)는 된다.** 고쳤다.
+
+🔴 **INBOX 가 그 사이 다섯을 더 적었다** (🟡 A~E · Linear·Vercel·Stripe 와 나란히 본 것). **FINDINGS 131~135** 로 옮겼다 — 전부 [격차] ·
+주인 PLAN P4 둘째 행. **손대지 않았다** — INBOX 순서 3(126) → 4(구멍 → 격차)가 먼저다. 70바퀴가 눈에 걸렸다고만 적은 「게스트에게 발행 모달이
+열린다」도 135(E) 안에 넣었다 (121 과 같은 바퀴에 닫는다).
+
+⚠ **안 한 것** — Supabase 위에서 `next dev` 를 띄워 화면을 연 적은 없다 (마이그레이션만 · 표는 비어 있다 — 데모 테넌트는 Cron 리셋 문이 심는다).
+`SUPABASE_JWT_SECRET` 도 꽂혀 있으니 **실제 Supabase Auth 로그인**이 이제 돌 수 있는 상태다 — 「눈 판정 대기」에 적었다.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서) → 72바퀴가 닫았다 — 만든 게 아니라 `4f90239`(67바퀴)에 **이미 있던 것**을 확인하고
+장부를 닫았다. 아래는 71 이 남긴 지목의 원문이다.
+
+🔴 **INBOX 순서 3 이 126 이다** — 제출서(SPEC §16)를 `docs/SUBMISSION.md` 로 · 🙋 공개 저장소 URL · 팀명 · 영상 링크는 **자리표시자**로 두고 그 자리를
+명시한다. 126 은 구멍이고 주인은 PLAN P6 둘째 행이라 ④3 ② 로도 맞다 (P3·P5 의 남은 행은 🙋 키·계정). 그 다음 순서 4: 미해결 FINDINGS
+**구멍**(122 · 117 · 115 · 114 · 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103 …) → **격차**(121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134 …).
+
+> **126 을 하는 법** — 재료는 `docs/SPEC.md` §16 과 README(66바퀴가 랜딩과 글자 그대로 대조해 둔 것 · `apps/web/test/readme.test.ts` 15개).
+> §16 의 「(4) 승인 항목만 근거로 답하는 질의」는 **문이 없다**(FINDINGS 117 · `POST …/ask` 0곳) — 빼거나 `docs/KNOWN_LIMITATIONS.md` 를 가리켜라.
+> 없는 것을 적지 않는다. readme.test 의 대조(랜딩 문장 · 경로 실존 · FINDINGS 번호가 대기인가)를 제출서에도 넓혀라. **한 바퀴에 하나.**
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행.
+  **P1 은 전부 닫혔다.** 사람이 막는 것은 「막힌 것」 표 — Supabase 행은 이번에 지웠다.
+- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 113 · 112 · 111 · 110 · 108 · 131~135 …)는 **PLAN 을 막지 않는다** — 고장은 없다.
+
+---
+
 ### 지난 바퀴 (70) — 키보드 포커스 링 한 곳 · 탭을 눌러 찍었다 (INBOX 2026-09-06 ④ · FINDINGS 130 · `1bc1da3`)
 
 **이번 바퀴(70)는 INBOX 순서 ④ — FINDINGS 130(격차 · 키보드 포커스가 안 보인다)을 닫았다** (`1bc1da3`). INBOX 가 옮겨 준 결함 넷

@@ -5,13 +5,64 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 76바퀴 · 코드 `4109f5e`(FINDINGS 111 · Manifest 마일스톤이 `due` 를 나른다 — 화면 8 행에 `due YYYY-MM-DD` · COMPILER_VERSION 0.2.0) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 77바퀴 · 코드 `7e29d06`(FINDINGS 108 · 답이 갈 길은 `answerSlot` 값마다 한 줄인 표 — `none` 이 `ask` 와 같던 갈래를 셋으로) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴(76)는 FINDINGS 111 — 구멍(Manifest 의 마일스톤에 `due` 가 없어 화면 8 이 기한을 말할 수 없다)을 닫았다** (`4109f5e`). INBOX 순서 4(구멍 → 격차)의
+**이번 바퀴(77)는 FINDINGS 108 — 구멍(라우트가 `answerSlot` 을 두 갈래로만 읽어 `none` 이 `ask` 와 같다)을 닫았다** (`7e29d06`). INBOX 순서 4(구멍 → 격차)의
+넷째 항목이고 **루프가 혼자 닫을 구멍의 마지막**이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 워킹트리는 깨끗한 채로 시작했다 (76 과 달리 남의 미커밋 없음).
+갈래를 `if/else` 에서 **값마다 한 줄인 표**로 옮겼다: 값 목록은 `packages/schema` 의 `ANSWER_SLOT_MODES`, 줄은 `apps/web/src/lib/api/answer-slot.ts` 의 `ANSWER_SLOT_DRAFTERS`
+(`satisfies Record<AnswerSlotMode, …>` — 값이 늘면 typecheck 가 그 표를 막는다), 라우트는 `draftForAnswer()` 한 줄만 부른다. 라우트에서 `ANSWER_MAX`·`slotDraft`·`seedDraft` import 가 사라졌다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-answer-slot/probe.txt`):
+
+| | 전 (`4109f5e`) | 후 (`7e29d06`) |
+|---|---|---|
+| 라우트의 갈래 | 2 — `slot === 'seeded'` / 나머지 | **0** — 표를 부른다. 표의 줄은 3 = `ANSWER_SLOT_MODES` (시험이 집합으로 센다) |
+| 표를 `none` 으로 뒤집고 `save_as` 를 보내면 | **200 · 항목 생성** (화면은 자리를 안 묻는데 서버는 만든다) | **400 `VALIDATION_FAILED`** 「이 질문은 답을 항목으로 만들지 않습니다」 · 항목 0 · 질문 열린 채 |
+| 뒤집고 `save_as` 없이 보내면 | 200 · 기록만 | 200 · 기록만 · 질문 `resolved` · `resolution.note` 에 답 (같음 — 「기록만」은 세 갈래 공통) |
+| 같은 답이 세 갈래에서 (`save_as='mission'`) | seeded 400 · ask draft · **none draft** | seeded 400(자리 정해짐) · ask draft:mission · **none 400(항목 안 만듦)** — 셋이 전부 다르다 |
+| 두 표의 관계 | 잠긴 시험 없음 (schema 쪽에 「none = detected」만) | `answerSlot !== 'none'` 인 종류 = `QUESTION_CONFLICT_KINDS` (API 시험) · 세 값이 표에 다 쓰인다 (schema 시험) |
+| 시험 | api-routes 37 · scope-and-enums 15 | api-routes **42** · scope-and-enums **16** · 옛 갈래로 되돌리면 **2 빨강** (`red-with-old-none-branch.txt` · 200 ≠ 400) |
+| SPEC §5 questions 행 | `seeded`·`ask` 만 | `none` 갈래 + 표의 자리(`ANSWER_SLOT_DRAFTERS`) 한 문장 |
+| CI | GREEN 20:44 | **GREEN 21:00** — principles OK 9 · typecheck 9초 · test 87초 · build 21초 · walkthrough **965** · docs OK |
+
+⚠ **안 한 것** — 화면은 안 건드렸다 (화면은 `=== 'ask'` 하나만 읽고, 그건 108 의 범위 밖 · 값을 더하는 절차 ③ 에 적어 뒀다). `none` 인 질문 종류는 여전히 없다 —
+이 바퀴는 **닿을 수 없는 갈래를 미리 잠근 것**이다. 눈 판정 대기에 새로 더한 것 없음 (API 만).
+
+🔴 **배운 것 — 「닿을 수 없는 갈래」는 표를 뒤집어서 잰다.** 라우트로는 `none` 에 갈 수 없으니 시험이 `CONFLICT_KIND_RULES.open_question.answerSlot` 을 `'none'` 으로 바꾸고
+`afterEach` 에서 되돌린다 (vitest 는 파일마다 모듈을 따로 두므로 다른 파일에 안 샌다). 「빨개지는 것을 봤나」는 `none` 줄을 옛 `ask` 와 같게 바꿔 5 중 2 가 빨간 것으로 확인했다.
+
+🔴 **2-B 이번 라운드 — `answerSlot` 3종이 그 예다.** ① 소비처: 화면 둘(`=== 'ask'`) · 라우트 표 셋 ② 뒤집으면 갈림: 「같은 답이 세 갈래에서 서로 다른 결과」 · 「표를 `none` 으로 뒤집으면 400」.
+`none` 은 이 바퀴 전에는 **①만 있고 ②가 없던 값**이었다. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**다음 바퀴의 일 — FINDINGS 121**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍은 떨어졌고 이제 격차다.** 남은 구멍 둘은 루프가 못 연다 — 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명), 117 은 절삭 1번(P3 🙋 키).
+격차의 순서: **121+135**(같은 바퀴 · 게스트가 누른 뒤에 아는 것) → 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134.
+
+> **121+135 를 하는 법** — 121: `apps/web/src/lib/web/api.ts` 의 `ERROR_HINT.FORBIDDEN` 은 코드당 문구 하나라 그대로 두고, **게스트일 때만 덮는 표**
+> `GUEST_HINT: Partial<Record<ErrorCode, string>>` 을 옆에 둔다 (지금 줄은 `FORBIDDEN` 하나 · 문구는 서버 `refuseWrite()` 와 같은 말). 세션의 `guest` 는 **문구를 고르는 데만** —
+> 그 값으로 버튼을 숨기지 마라(막는 것은 서버 · `ACTOR_RULES`). 135: 게스트가 [발행하기] 를 누르면 모달이 열린다(`docs/evidence/2026-09-06-focus-visible/control/mouse-click.png`) —
+> 화면이 「쓸 수 있는가」를 서버와 **같은 표**(`lib/api/auth.ts` `ACTOR_RULES.writes` · 지금 `demo-banner.tsx` 가 읽는다)에서 읽어, 게스트에게는 모달 대신 그 자리에서 이유를 말한다.
+> 시험은 `web-*` 렌더 시험으로 「게스트 세션이면 403 문구가 GUEST_HINT 것」·「게스트에게 발행 모달 마크업 0」. 캡처를 찍어 `docs/evidence/` 로 복사. DESIGN_BRIEF §5 먼저. **한 바퀴에 하나** — 둘이 같은 자리라 같이.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
+### 지난 바퀴 (76) — Manifest 마일스톤이 `due` 를 나른다 · 화면 8 행에 due · 75 의 미커밋 14 파일 위에 빠진 둘 (FINDINGS 111 · `4109f5e`)
+
+**76바퀴는 FINDINGS 111 — 구멍(Manifest 의 마일스톤에 `due` 가 없어 화면 8 이 기한을 말할 수 없다)을 닫았다** (`4109f5e`). INBOX 순서 4(구멍 → 격차)의
 셋째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). ⚠ **이 바퀴가 처음 연 것이 아니다** — 75 의 다음 세션이 스키마·라우트·화면·시드·시험·SPEC·DESIGN_BRIEF·번들까지 다 고쳐 놓고
 (파일 mtime 18:20~18:21) **CI 도 커밋도 없이 끝났다.** 워킹트리에 14 파일이 남아 있었다. 76 은 그 위에서 빠진 둘을 채웠다: ① `compile.ts` 의 `milestonesOf()` — 정작 `due` 를 옮기는
 한 줄(스키마 주석의 절차 ②)이 **없었다** → liveness 시험이 빨갰을 것 ② `scripts/dump-roadmap.tsx` fixture 에 `due` 가 없어 typecheck 이 빨갰다. 그 뒤 `pnpm --filter @contextops/schema schemas` 로
@@ -41,16 +92,9 @@ _마지막 갱신: 2026-09-06 · 루프 76바퀴 · 코드 `4109f5e`(FINDINGS 11
 🔴 **2-B 이번 라운드 — Manifest 마일스톤의 `due` 가 그 예다.** 「데이터는 있고 Manifest 만 안 나르던 칸」 — ① 소비처: `compile.ts` `milestonesOf()` · 라우트 · `MilestoneRow` ② 뒤집으면 갈림:
 `liveness.test.ts` 「값을 뒤집으면 Manifest 가 갈린다」 · `web-roadmap.test.ts` 「값을 뒤집으면 글자가 갈린다」. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
 
-**다음 바퀴의 일 — FINDINGS 108**
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 108 → 77바퀴가 닫았다 (`7e29d06`). 아래는 76 이 남긴 지목의 원문이다.
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
-
-🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 구멍 중 남은 것은 **108**(라우트가 `answerSlot` 을 두 갈래로만 읽는다 — `none` 과 `ask` 가 같다) 하나다. 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이
+🔴 고장은 없다. INBOX 순서 4 — 구멍 → 격차. 구멍 중 남은 것은 108(라우트가 `answerSlot` 을 두 갈래로만 읽는다 — `none` 과 `ask` 가 같다) 하나다. 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이
 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다. 108 뒤는 격차 — 121+135 · 119 · 118 · 116 · 112 · 59 · 100 · 131 · 132 · 133 · 134.
 
 > **108 을 하는 법** — `apps/web/src/app/api/v1/projects/[id]/questions/route.ts:98~115` 가 `slot === 'seeded'` 만 본다. 갈래를 `CONFLICT_KIND_RULES[kind].answerSlot` 의 값 수(3)만큼 —
@@ -60,7 +104,7 @@ _마지막 갱신: 2026-09-06 · 루프 76바퀴 · 코드 `4109f5e`(FINDINGS 11
 
 - PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
   **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
-- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 108 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 108 · 100 · 59 · 131~135)는 **PLAN 을 막지 않는다** — 고장은 없다.
 
 ### 지난 바퀴 (75) — 제안 결정은 「한 장 단위」 · DESIGN_BRIEF·SPEC §9 를 코드에 · 게이트 4 · 코드 0줄 (FINDINGS 114 ② · `e7e0513`)
 
@@ -261,61 +305,6 @@ CPU 74~80% 였고(16 논리코어 중 6코어쯤 · 사람이 쓰는 중이라 �
 그 뒤 순서로 적어 둔 것(INBOX 순서 4 · 구멍 115 부터 · 「115 를 하는 법」)은 73 의 머리로 옮겼다.
 
 ---
-
-### 지난 바퀴 (71) — 마이그레이션을 Supabase 에 실제로 · 표 18 · 인덱스 8 (INBOX 순서 2 · PLAN P1 첫 행 · `adac632`)
-
-**71바퀴는 INBOX 순서 2 — PLAN P1 첫 행(DB 스키마 · Drizzle 마이그레이션 + Supabase 연결)을 닫았다** (`adac632`). P0 부터 열려 있던 행이다 —
-루프 몫(PGlite 적용 · `389c7f2`)은 끝나 있었고 「Supabase 연결」 한 조각이 사람 몫이었는데, 사람이 `.env.local` 에 값을 꽂아 줘서 이번에 **배포 DB 에
-실제로 적용**했다. **PLAN 이 한 칸 움직였다 — P1 은 전부 `- [x]`.** INBOX 의 다음은 순서 3(FINDINGS 126 · 제출서)이다.
-
-🔴 **잰 것 — Supabase 가 말하는 수다.** 짐작이 아니라 `information_schema.tables` · `pg_indexes` · `pg_type` 에서 셌다
-(`docs/evidence/2026-09-06-supabase-migrate/` — `status-before.txt` · `migrate.txt` · `status-after.txt` · `migrate-again.txt`).
-
-| | 전 (`db:status` · 돌리기 전) | 후 (`db:migrate`) | 다시 (`db:status` → `db:migrate`) |
-|---|---|---|---|
-| 서버 | PostgreSQL **17.6** · `aws-0-ap-northeast-2.pooler.supabase.com:5432` (Session pooler · IPv4 — 직결은 IPv6 전용이라 이 망에서 안 뚫린다) | 같음 | 같음 |
-| `drizzle.__drizzle_migrations` 장부 | **없음** (표 자체가 없다) | **7** 행 (+7) | 7 (+0) → 7 (+0) |
-| 남은 마이그레이션 (drizzle 의 셈법 — 장부 마지막 시각보다 뒤인 파일) | 7 | **0** | 0 → 0 |
-| `information_schema.tables` (public · BASE TABLE) | 0 | **18** = `src/db/schema.ts` 의 `pgTable` 18 (손으로 센 수가 아니라 `is(v, PgTable)` 로) | 18 |
-| `pg_indexes` ∩ `INDEX_NAMES` | 0/8 | **8/8** | 8/8 |
-| enum (`pg_type` typtype = e) | 0 | **17** | 17 |
-| 장부 hash ≠ 파일 hash (drifted) | 0 | 0 | 0 |
-| NOTICE | — | **1** — `source_documents_current_version_id_source_document_versions_id_fk` 66자 → Postgres 가 63자로 자른다 (참조하는 곳 0 · PGlite 도 같다 · 기능 영향 없음 · FINDINGS 로 안 올렸다) | — |
-| 문 | `db:generate` 뿐 (migrate 없음) | `db:status`(**읽기만**) · `db:migrate` — `apps/web/scripts/migrate.ts` 하나 · 접속 문자열은 호스트:포트/DB 까지만 찍는다 (P1) | |
-| 시험 | 0 — 이 길(postgres-js migrator)을 지나는 시험 없음 | `test/migrate-script.test.ts` **4** — pglite-socket → TCP → postgres-js 로 ① dryRun 은 장부 표조차 안 만든다 ② 적용 7 · 표 = TS · 인덱스 8/8 ③ **다시 돌리면 +0** ④ migrator(`--> statement-breakpoint` 로 쪼갬)와 시험 helper(통째로)가 만든 컬럼·인덱스·enum 이 같다 | |
-| 웹 시험 파일 | 92 | **93** | |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough 946 · docs → GREEN (`adac632`) | |
-
-🔴 **「표 16 · 인덱스 5」는 낡은 수였다.** INBOX·PLAN 완료 기준의 수치는 P0(`389c7f2`) 때 것이고, P3 가 `ai_usage`·`ai_jobs` 표와 인덱스 셋을
-더해 정본 `INDEX_NAMES` 는 8, 표는 18 이다 (`test/migration.test.ts` 가 이미 18·8 을 센다). 요청서의 수를 그대로 「확인했다」고 적지 않고
-정본과 대조했다 — 요청서가 낡을 수 있다는 것도 「SPEC 은 의도, 코드는 현실」의 한 갈래다.
-
-🔴 **`drizzle-kit migrate` 가 아니라 drizzle-orm 의 migrator 다.** kit 는 config 에 `dbCredentials` 가 있어야 하고 그러면 `generate` 까지 env 를
-요구한다. orm 의 migrator 는 같은 `drizzle/` 폴더·같은 journal 을 읽고 `drizzle.__drizzle_migrations` 에 적는다 — 그래서 **두 번 돌려도 +0**
-이고, 스크립트는 거기에 「적용된 파일의 hash 가 장부와 다르면 멈춘다」(drizzle 자신은 마지막 시각만 본다)를 더했다. `.env.example` 의
-「pooler 로 돌리지 마라」는 반만 맞았다 — Transaction pooler(6543)만 안 되고 **Session pooler(5432)는 된다.** 고쳤다.
-
-🔴 **INBOX 가 그 사이 다섯을 더 적었다** (🟡 A~E · Linear·Vercel·Stripe 와 나란히 본 것). **FINDINGS 131~135** 로 옮겼다 — 전부 [격차] ·
-주인 PLAN P4 둘째 행. **손대지 않았다** — INBOX 순서 3(126) → 4(구멍 → 격차)가 먼저다. 70바퀴가 눈에 걸렸다고만 적은 「게스트에게 발행 모달이
-열린다」도 135(E) 안에 넣었다 (121 과 같은 바퀴에 닫는다).
-
-⚠ **안 한 것** — Supabase 위에서 `next dev` 를 띄워 화면을 연 적은 없다 (마이그레이션만 · 표는 비어 있다 — 데모 테넌트는 Cron 리셋 문이 심는다).
-`SUPABASE_JWT_SECRET` 도 꽂혀 있으니 **실제 Supabase Auth 로그인**이 이제 돌 수 있는 상태다 — 「눈 판정 대기」에 적었다.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서) → 72바퀴가 닫았다 — 만든 게 아니라 `4f90239`(67바퀴)에 **이미 있던 것**을 확인하고
-장부를 닫았다. 아래는 71 이 남긴 지목의 원문이다.
-
-🔴 **INBOX 순서 3 이 126 이다** — 제출서(SPEC §16)를 `docs/SUBMISSION.md` 로 · 🙋 공개 저장소 URL · 팀명 · 영상 링크는 **자리표시자**로 두고 그 자리를
-명시한다. 126 은 구멍이고 주인은 PLAN P6 둘째 행이라 ④3 ② 로도 맞다 (P3·P5 의 남은 행은 🙋 키·계정). 그 다음 순서 4: 미해결 FINDINGS
-**구멍**(122 · 117 · 115 · 114 · 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103 …) → **격차**(121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134 …).
-
-> **126 을 하는 법** — 재료는 `docs/SPEC.md` §16 과 README(66바퀴가 랜딩과 글자 그대로 대조해 둔 것 · `apps/web/test/readme.test.ts` 15개).
-> §16 의 「(4) 승인 항목만 근거로 답하는 질의」는 **문이 없다**(FINDINGS 117 · `POST …/ask` 0곳) — 빼거나 `docs/KNOWN_LIMITATIONS.md` 를 가리켜라.
-> 없는 것을 적지 않는다. readme.test 의 대조(랜딩 문장 · 경로 실존 · FINDINGS 번호가 대기인가)를 제출서에도 넓혀라. **한 바퀴에 하나.**
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행.
-  **P1 은 전부 닫혔다.** 사람이 막는 것은 「막힌 것」 표 — Supabase 행은 이번에 지웠다.
-- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 113 · 112 · 111 · 110 · 108 · 131~135 …)는 **PLAN 을 막지 않는다** — 고장은 없다.
 
 
 ---

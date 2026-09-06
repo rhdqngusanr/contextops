@@ -548,7 +548,7 @@ params:
   「그 행이 `- [ ]` 인가」를 세라 (닫힌 행을 가리키면 102 와 같은 고장이 된다).
 - **상태**: 기록 (다음에 `STATUS.md` 모양을 만질 때 같이)
 
-### 108. 라우트가 `answerSlot` 을 **두 갈래로만 읽는다** — `none` 과 `ask` 가 같다   [구멍]
+### 108. ✅ 라우트가 `answerSlot` 을 **두 갈래로만 읽는다** — `none` 과 `ask` 가 같다   [구멍]
 - **증상**: `POST /projects/{id}/questions` 는 `slot === 'seeded'` 인지만 보고, 아니면
   전부 「`save_as` 가 오면 그 자리로 초안을 만든다」로 간다. 표의 세 값 중 **`none` 은
   이 라우트에서 아무것도 안 바꾼다** — 「이 종류에는 자리를 안 묻는다」가 서버에서는
@@ -566,7 +566,7 @@ params:
   `ask` 만 사람이 고른 자리로 간다. ⚠ 「어느 종류가 질문인가」(`QUESTION_CONFLICT_KINDS`)와
   「그 질문이 자리를 묻나」(`answerSlot`)가 **두 표에 나뉘어** 있다 — 셋째 종류를 더할 때
   한쪽만 고치면 조용히 갈라진다. 고치는 바퀴에 그 둘의 관계를 시험으로 잠가라.
-- **상태**: 대기 (주인은 화면 3·4 를 다시 만질 때 · 지금은 닿을 수 없어 급하지 않다)
+- **상태**: ✅ `7e29d06` (77바퀴 · 2026-09-06) — 갈래를 표로: `packages/schema` 에 값 목록 `ANSWER_SLOT_MODES = ['seeded','ask','none']` · `apps/web/src/lib/api/answer-slot.ts` 의 `ANSWER_SLOT_DRAFTERS`(값마다 한 줄 · `satisfies Record<AnswerSlotMode,…>` 라 값이 늘면 typecheck 가 막는다) · 라우트는 `draftForAnswer()` 한 줄만 부른다. `none` 은 `save_as` 가 오면 400 「이 질문은 답을 항목으로 만들지 않습니다」(코드는 `VALIDATION_FAILED` · 한 곳의 표) · 안 오면 답만 기록하고 닫는다. 시험 +6: 표의 줄 = 값 목록 · 라우트가 받는 종류 = `none` 이 아닌 종류(두 표의 관계) · 같은 답이 세 갈래에서 다른 결과 · 표를 `none` 으로 뒤집고 라우트를 부르면 400/200 · schema 쪽 「세 값이 다 쓰인다」. 옛 갈래로 되돌리면 2개가 빨갛다 (`docs/evidence/2026-09-06-answer-slot/`). SPEC §5 questions 행에 `none` 을 적었다.
 
 ### 107. 25·35 의 **상태가 낡았다** — 둘 다 닫는 조건이 이미 충족돼 보인다   [기록]
 - **증상**: 이번 바퀴에 「이 PLAN 행이 주인인 대기」를 세다가 나왔다. 둘 다 `대기` 인데

@@ -1,0 +1,31 @@
+FINDINGS 108 — 라우트가 answerSlot 을 두 갈래로만 읽는다 (none == ask)
+2026-09-06 · 77바퀴 · 코드 7e29d06
+
+전 (4109f5e) — apps/web/src/app/api/v1/projects/[id]/questions/route.ts:98~115
+  if (slot === 'seeded') { … } else { if (!save_as) continue; draft = slotDraft(save_as, …) }
+  → CONFLICT_KIND_RULES[kind].answerSlot 의 세 값 중 none 이 ask 와 같은 갈래.
+  → 표를 none 으로 뒤집고 save_as 를 보내면 200 · 항목 생성 (화면은 자리를 안 묻는데 서버는 만든다).
+
+후 (7e29d06)
+  packages/schema/src/api.ts         ANSWER_SLOT_MODES = ['seeded','ask','none'] · AnswerSlotMode · ConflictKindRule.answerSlot: AnswerSlotMode
+  apps/web/src/lib/api/answer-slot.ts ANSWER_SLOT_DRAFTERS (satisfies Record<AnswerSlotMode, AnswerDrafter>) · draftForAnswer()
+  route.ts                            갈래 0 — draftForAnswer() 한 줄. ANSWER_MAX·slotDraft·seedDraft·seedQuestionOf import 사라짐.
+
+같은 답(question = 씨앗 1번 문장 · answer '결제를 만든다.')이 세 갈래에서 내는 것 (api-routes.test.ts 「같은 답이 세 갈래에서」):
+  save_as='mission'  seeded → VALIDATION_FAILED 「이 질문은 저장될 자리가 이미 정해져 있다」
+                     ask    → draft:mission
+                     none   → VALIDATION_FAILED 「이 질문은 답을 항목으로 만들지 않습니다」
+  save_as 없음       seeded → draft:<씨앗 1번의 type>
+                     ask    → record_only
+                     none   → record_only
+
+라우트를 표 뒤집고(open_question.answerSlot = 'none') 부른 것:
+  save_as 있음 → 400 VALIDATION_FAILED · 항목 0 · 질문 여전히 open
+  save_as 없음 → 200 created_item_ids [] · 항목 0 · 질문 resolved · resolution {choice:'a', note:'3회로 한다.'}
+
+빨개지는 것을 봤나 — 봤다. none 줄을 옛 ask 와 같게 바꾸면 5 중 2 가 빨갛다 (red-with-old-none-branch.txt):
+  「같은 답이 세 갈래에서」 — none 이 'draft:mission' 을 냄 (기대: VALIDATION_FAILED …)
+  「표를 none 으로 뒤집으면 … 400」 — 200 을 냄
+
+시험: api-routes 37 → 42 · scope-and-enums 15 → 16 · typecheck 0 오류
+CI GREEN 21:00 — principles OK 9 · typecheck 9초 · test 87초 · build 21초 · walkthrough 965 · docs OK
