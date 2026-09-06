@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
   PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_STATUSES, ROLE_RANK, TEAM_ROLES,
+  ProposalItem as ProposalItemSchema,
   type ContextItemDraft, type ContextItemView, type ProposalItem, type TeamRole,
 } from '@contextops/schema'
 
@@ -421,6 +424,69 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
       proposals: [row({ relates_to: [] })], hrefOf: href, emptyMessage: '없다',
     }))
     expect(markup).toContain('—')
+  })
+})
+
+// ---------------------------------------------------------------------
+//  ⑧ 🔴 결정은 **제안 한 장 단위**다 — 문서 ↔ 스키마 ↔ 화면이 같은 말을 한다 (FINDINGS 114 ②)
+//
+//  ★ 왜 시험인가 — DESIGN_BRIEF 는 56바퀴부터 「항목별 [승인] [거절]」을 적었고 코드는
+//    한 번도 그것을 담을 자리가 없었다 (`proposals.status` 한 칸 · `ProposalItem` 에 결정
+//    칸 없음). 문서만 고치면 다음 사람이 문서를 보고 **누르면 아무 일도 안 하는 버튼**을
+//    그린다. 그래서 셋을 한 자리에서 대조한다 — 항목별 결정을 **정말로** 만드는 바퀴는
+//    이 시험이 빨개지고, 그때 §2.1·스키마·문서를 같은 커밋에 고친다 (그게 의도다).
+// ---------------------------------------------------------------------
+
+const DESIGN_BRIEF = fileURLToPath(new URL('../../../docs/DESIGN_BRIEF.md', import.meta.url))
+const SPEC = fileURLToPath(new URL('../../../docs/SPEC.md', import.meta.url))
+
+/** `### 화면 6 …` 부터 다음 `### ` 전까지. */
+function screen6Of(md: string): string {
+  const start = md.indexOf('### 화면 6')
+  if (start < 0) throw new Error('DESIGN_BRIEF 에 「### 화면 6」 절이 없다')
+  const rest = md.slice(start + 1)
+  const end = rest.search(/\n### /)
+  return end < 0 ? rest : rest.slice(0, end)
+}
+
+describe('🔴 결정은 제안 한 장 단위다 — 문서 ↔ 스키마 ↔ 화면 (FINDINGS 114 ②)', () => {
+  it('DESIGN_BRIEF §4 화면 6 은 항목별 [승인]/[거절] 을 약속하지 않는다', () => {
+    const section = screen6Of(readFileSync(DESIGN_BRIEF, 'utf8'))
+    expect(section).toContain('제안 한 장 단위')
+    expect(section).toContain('PROPOSAL_DECISIONS')
+    //  「항목별 [승인]」이 약속으로 남아 있으면 안 된다. 「없다」고 말하는 줄은 된다.
+    for (const line of section.split('\n')) {
+      if (/항목별 \[승인\]/.test(line)) expect(line, line).toMatch(/없다/)
+    }
+  })
+
+  it('SPEC §9 화면 6 행도 같은 말을 한다', () => {
+    const row = readFileSync(SPEC, 'utf8').split('\n').find((l) => l.startsWith('| 6 | `…/proposals`'))
+    expect(row, 'SPEC §9 화면 표에 6번 행이 없다').toBeDefined()
+    expect(row).toContain('제안 한 장 단위')
+    expect(row).not.toContain('항목별 승인/거절')
+  })
+
+  it('🔴 스키마 — 항목에 결정 칸을 실어 보내면 받지 않는다 (`.strict()`)', () => {
+    expect(ProposalItemSchema.safeParse(item()).success).toBe(true)
+    for (const extra of ['status', 'decision', 'approved', 'decided_by']) {
+      const result = ProposalItemSchema.safeParse({ ...item(), [extra]: 'approved' })
+      expect(result.success, `ProposalItem 이 \`${extra}\` 를 받았다 — 항목별 결정 칸이 생겼으면 이 시험과 DESIGN_BRIEF 를 같이 고쳐라`).toBe(false)
+    }
+  })
+
+  it('🔴 화면 — 항목 카드에는 버튼이 없고, 결정 버튼은 제안 한 장에 한 벌뿐이다', () => {
+    const card = html(createElement(ProposalItemCard, { item: item(), target: target(), index: 0 }))
+    expect(card).not.toContain('<button')
+    expect(card).not.toContain('승인')
+    expect(card).not.toContain('거절')
+
+    const decisions = html(createElement(ProposalDecisions, {
+      state: { status: 'submitted', role: 'owner', note: '', busy: null },
+      onNote: () => {}, onDecide: () => {},
+    }))
+    const buttons = decisions.match(/<button/g) ?? []
+    expect(buttons.length).toBe(availableActions('submitted', 'owner').length)
   })
 })
 

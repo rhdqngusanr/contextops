@@ -531,7 +531,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | 3 | `…/import` 가져오기 | ~~zip 드롭존~~(아직 없다 — §11 상한이 먼저다) · 문서 붙여넣기 · **질문 카드 10장**(한 장씩 · `n / 10` · 건너뛰기 · 마지막 요약) | 구조화 진행 표시(polling) |
 | 4 | `…/review` 정리 | Conflict 카드(원문 A ↔ B/코드 라인, 선택 버튼 4개) · 병합 카드 · 질문 카드(답 칸 + **「이 답을 무엇으로 저장할까요」** — `answerSlot:'ask'` 인 종류에만 · §5) | empty("충돌 없음") |
 | 5 | `…/context` | 항목 테이블(type/status/scope 필터) · 상세 드로어(원문 패널) · 발행 모달(semver 추천·변경 요약·영향 파일 수) · 버전 히스토리 | 409 재로드 안내 |
-| 6 | `…/proposals`, `…/proposals/[id]` | 함 목록(status/author 필터) · before/after Diff · 근거 링크 · 항목별 승인/거절 | |
+| 6 | `…/proposals`, `…/proposals/[id]` | 함 목록(status/author 필터) · before/after Diff · 근거 링크 · **제안 한 장 단위** 승인/거절(사유 필수 · `PROPOSAL_DECISIONS` §5) — 항목별 결정은 없다 (FINDINGS 114 ②) | |
 | 7 | `…/packs/[semver]` Pack Explorer | 3열: 파일 트리 / 내용(줄번호, 선택 블록 하이라이트, 이전 버전 diff 토글) / 항목·원문·hash·제외 사유 · "Pack 다운로드" | |
 | 8 | `…/roadmap` | 마일스톤 행: done_when별 근거 수·마지막 보고·충돌·"완료 확인" · 로드맵 외 작업 · 근거 클릭 시 path:line·commit | Realtime |
 | 9 | `…/sync` | 팀원·기기별 버전/상태/마지막 보고 · 질의창(답변 + 인용 항목 칩) | Realtime |

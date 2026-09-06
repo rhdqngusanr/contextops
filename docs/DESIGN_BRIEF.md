@@ -215,7 +215,8 @@
 
 ### 화면 6 — Proposals `…/proposals`, `…/proposals/[id]`
 - 함 목록 테이블: 상태 chip(submitted/approved/rejected/published) | 제목 | 작성자 | 관련 마일스톤 칩 | 항목 수 | 제출 시각.
-- 상세: 상단 요약 + `base v1.2.0`. 항목별 카드: operation 배지(add/update/deprecate) · **before/after Diff**(줄 단위, 삭제 bad-soft, 추가 ok-soft) · 근거 EvidenceLink · 이유. 항목별 [승인] [거절] + 전체 [모두 승인] [거절(사유 필수)].
+- 상세: 상단 요약 + `base v1.2.0`. 항목별 카드: operation 배지(add/update/deprecate) · **before/after Diff**(줄 단위, 삭제 bad-soft, 추가 ok-soft) · 근거 EvidenceLink · 이유. **결정은 제안 한 장 단위다** — 전체 [모두 승인] / [거절(사유 필수)] 뿐이고, 누가·어떤 상태에서 누를 수 있나는 `PROPOSAL_DECISIONS`(`packages/schema`) 표 하나가 정한다.
+  ⚠ **항목별 [승인]/[거절] 은 없다** (FINDINGS 114 ②) — 상태를 담는 칸이 `proposals.status` 하나뿐이고 항목(`items`)에는 결정 칸이 없다. 항목마다 갈라 받고 싶으면 제안을 나눠 낸다. 항목별 결정을 만들려면 §2.1 발행 트랜잭션(`applyProposals`)·`packages/schema`·이 줄을 **같은 바퀴**에 고쳐야 한다 — `test/web-proposals.test.ts` 「결정은 제안 한 장 단위다」가 이 줄과 코드를 대조한다.
 - 예시 데이터: `카카오 API 검증 상태 갱신` — before `- 카카오 실제 API 응답은 아직 확인하지 못했다.` after `+ 2026-08-04 실제 API 검색 10권을 검증했다.` `+ 응답 ISBN은 13자리로 확인했다.` `+ 분야 정보는 제공되지 않는다.` 근거 `북스택 QC결과.md L12–19 · src/search/kakao.ts:88`.
 
 ### 화면 7 — Pack Explorer `…/packs/[semver]`
