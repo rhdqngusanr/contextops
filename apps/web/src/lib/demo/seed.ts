@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
+import { AI_JOB_STATUSES } from '@contextops/schema'
 
-import { contextItems } from '../../db/schema'
+import { AI_JOB_STATUS_RULES, aiJobs, contextItems } from '../../db/schema'
 import { POST as createTeam } from '../../app/api/v1/teams/route'
 import { POST as createProject } from '../../app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../../app/api/v1/projects/[id]/repos/route'
@@ -821,6 +822,12 @@ const DEFAULT_TENANT: SeedTenant = {
 }
 
 /**
+ * **아직 안 끝난 수명** — 수명 표(`AI_JOB_STATUS_RULES`)의 `finished` 축을 읽는다.
+ * 상태가 하나 늘어도 여기는 안 고친다 (그 표에 한 줄이면 따라온다).
+ */
+export const UNFINISHED_JOB_STATUSES = AI_JOB_STATUSES.filter((s) => !AI_JOB_STATUS_RULES[s].finished)
+
+/**
  * 팀 → 프로젝트 → 레포 → 문서 2개 → `paylabDrafts()` 전부 → 전부 `active`.
  * **발행은 하지 않는다** — 발행이 무엇을 하는지가 관통이 재는 것이고,
  * 여기서 미리 해 버리면 그 단계가 씨앗에 묻힌다.
@@ -892,6 +899,20 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
       auth: owner, body: { revision: 1, changes: { status: 'active' } },
     }), params({ id: projectId, itemId: row.publicId }))
   }
+
+  //  🔴 **씨앗은 「끝난 상태」만 남긴다** (FINDINGS 137). 위 라우트 셋(`POST /documents` 둘 ·
+  //     `batch-draft` 하나)은 제품이 하는 그대로 job 행을 만들고 굴린다. 그런데 이 씨앗은
+  //     그 job 이 낼 것을 **이미 손으로 심어 놓았고**(항목·근거는 `paylabDrafts()` 가 정본),
+  //     키가 없는 개발용·데모 서버에서는 그 러너가 아무것도 못 한다. 그래서 화면 3 에
+  //     `차례 기다리는 중 · ⚠ 멈춘 것 같음` 카드가 남고, 시간이 갈수록 「AI 가 안 돈다」로
+  //     읽힌다 — 게스트가 **처음 보는 화면**이 그것이다.
+  //  ⚠ **끝난 행은 안 지운다** — 키가 있는 자리에서 진짜로 끝난 job 은 결과 카드로 보여야
+  //     한다. 「끝났나」는 손으로 세지 않고 수명 표의 `finished` 축을 읽는다.
+  //  ⚠ 「멈춘 것 같음」 chip 자체는 그대로다 (FINDINGS 137 의 판단) — 진짜로 멈춘 것을
+  //     숨기지 마라. 여기서 없애는 것은 **씨앗이 만든 가짜 대기**뿐이다.
+  await getDb()
+    .delete(aiJobs)
+    .where(and(eq(aiJobs.projectId, projectId), inArray(aiJobs.status, UNFINISHED_JOB_STATUSES)))
 
   return {
     owner,

@@ -1,6 +1,8 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { AI_JOB_STATUSES } from '@contextops/schema'
+
 import { ACTOR_RULES } from '../src/lib/api/auth'
 import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_TENANT, demoBannerText } from '../src/lib/demo/tenant'
 import { POST as demoSession } from '../src/app/api/v1/demo/session/route'
@@ -10,9 +12,12 @@ import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/r
 import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
 import { GET as listProposals } from '../src/app/api/v1/projects/[id]/proposals/route'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
+import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { seedDemo, readDemoSeedFile, demoGuestMembership, type DemoSeedResult } from '../src/lib/demo/seed-demo'
+import { seedSession, UNFINISHED_JOB_STATUSES } from '../src/lib/demo/seed'
+import { AI_JOB_STATUS_RULES } from '../src/db/schema'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from './helpers/db'
 
 // =====================================================================
@@ -200,6 +205,48 @@ describe('데모 테넌트를 심으면', () => {
     expect(payload.sub).toBe(DEMO_GUEST_SUBJECT)
     expect(payload.email).toBeUndefined()
     expect(payload.name).toBeUndefined()
+  })
+
+  // -------------------------------------------------------------------
+  //  🔴 화면 3 — 씨앗이 남긴 **가짜 대기**가 없다 (FINDINGS 137)
+  //
+  //  ★ 왜 이 시험이 있나 — 게스트가 `/demo` 에서 처음 여는 화면 3 에
+  //    `차례 기다리는 중 · ⚠ 멈춘 것 같음` 카드가 떠 있었다. 게스트가 만든 것이 아니라
+  //    씨앗이 라우트로 문서를 올리며 남긴 job 이고, 키가 없는 서버에서는 영원히 그 상태다.
+  //    심사위원은 그걸 「AI 가 안 돈다」로 읽는다.
+  // -------------------------------------------------------------------
+
+  it('🔴 씨앗은 끝나지 않은 job 을 안 남긴다 — 화면 3 의 진행 목록이 비어 있다', async () => {
+    const token = await guestToken()
+    const data = await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${seeded.projectId}/jobs?limit=50`, { auth: token }),
+      params({ id: seeded.projectId }),
+    ))
+    const jobs = data.jobs as { status: string; stalled: boolean }[]
+    expect(jobs.filter((j) => UNFINISHED_JOB_STATUSES.includes(j.status as never))).toEqual([])
+    //  ⚠ 「멈춘 것 같음」 chip 을 없앤 것이 아니다 — 씨앗이 그 자리를 안 만들 뿐이다.
+    expect(jobs.filter((j) => j.stalled)).toEqual([])
+  })
+
+  it('지우는 자리는 씨앗뿐이다 — 씨앗 뒤에 올린 문서는 여전히 job 을 만든다', async () => {
+    const owner = seedSession(DEMO_TENANT.ownerSubject, DEMO_TENANT.ownerName)
+    const id = seeded.projectId
+    await dataOf(await createDocument(req('POST', `/api/v1/projects/${id}/documents`, {
+      auth: owner, body: { title: '나중에 올린 문서', kind: 'notes', content: '이 문서는 구조화를 기다린다' },
+    }), params({ id })))
+
+    const data = await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${id}/jobs?limit=50`, { auth: owner }), params({ id }),
+    ))
+    const jobs = data.jobs as { status: string; feature: string }[]
+    expect(jobs.filter((j) => j.status === 'queued' && j.feature === 'structure')).toHaveLength(1)
+  })
+
+  it('「끝났나」를 손으로 세지 않는다 — 수명 표의 `finished` 축이 정본이다', () => {
+    expect([...UNFINISHED_JOB_STATUSES]).toEqual(
+      AI_JOB_STATUSES.filter((s) => !AI_JOB_STATUS_RULES[s].finished),
+    )
+    expect([...UNFINISHED_JOB_STATUSES]).toEqual(['queued', 'running'])
   })
 
   // -------------------------------------------------------------------
