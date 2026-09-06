@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" width="920" height="300" role="img" aria-label="자율 루프 한 바퀴 — 읽는다(INBOX·FINDINGS·PLAN·STATUS) · 하나만 고친다(검사 초록이면 커밋) · 남긴다(STATUS·FINDINGS가 다음 바퀴의 유일한 기억)">
+  <style>
+    .t  { font-family: 'Pretendard','Noto Sans KR','Malgun Gothic',-apple-system,system-ui,sans-serif; }
+    .m  { font-family: 'JetBrains Mono','Consolas',ui-monospace,monospace; }
+    .h  { font-size: 14px; font-weight: 700; fill: #18212B; }
+    .b  { font-size: 12.5px; fill: #38424F; }
+    .s  { font-size: 10.5px; fill: #6B7684; }
+    .n  { font-size: 13px; font-weight: 700; fill: #1F4EE0; }
+  </style>
+  <rect width="920" height="300" fill="#FFFFFF"/>
+
+  <!-- 한 바퀴 = 새 세션 -->
+  <rect x="16" y="24" width="888" height="46" rx="9" fill="#FFFFFF" stroke="#C3D0F0"/>
+  <text x="34" y="44" class="t s">한 바퀴 = <tspan fill="#1F4EE0" font-weight="700">새 헤드리스 세션 하나</tspan> · 대화를 이어 붙이지 않는다</text>
+  <text x="34" y="62" class="m b" fill="#1F4EE0">claude -p "Read loop/PROMPT.md and follow it exactly."</text>
+
+  <!-- 세 단계 -->
+  <rect x="16" y="94" width="286" height="126" rx="9" fill="#F7F8FA" stroke="#DDE2E8"/>
+  <text x="34" y="120" class="t n">① 읽는다</text>
+  <text x="34" y="144" class="m b">INBOX → FINDINGS</text>
+  <text x="34" y="164" class="m b">→ PLAN → STATUS</text>
+  <text x="34" y="184" class="m b">→ SPEC 해당 §</text>
+  <text x="34" y="206" class="t s">이번 바퀴의 일을 여기서 고른다</text>
+
+  <rect x="318" y="94" width="286" height="126" rx="9" fill="#F7F8FA" stroke="#DDE2E8"/>
+  <text x="336" y="120" class="t n">② 고친다 — 하나만</text>
+  <text x="336" y="144" class="t b">관통이 막힌 자리 하나</text>
+  <text x="336" y="166" class="m b">tools/ci.ps1</text>
+  <text x="336" y="186" class="t b">→ 초록이면 커밋 · push</text>
+  <text x="336" y="206" class="t s">검사가 빨가면 커밋하지 않는다</text>
+
+  <rect x="620" y="94" width="284" height="126" rx="9" fill="#F7F8FA" stroke="#9CC9B0"/>
+  <text x="638" y="120" class="t n" fill="#1F7A4D">③ 남긴다</text>
+  <text x="638" y="144" class="m b">docs/STATUS.md</text>
+  <text x="638" y="164" class="m b">docs/feedback/FINDINGS.md</text>
+  <text x="638" y="192" class="t s" fill="#1F7A4D">다음 바퀴의 유일한 기억</text>
+  <text x="638" y="208" class="t s">기억은 대화가 아니라 파일에 산다</text>
+
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#6B7684"/></marker>
+  </defs>
+  <line x1="302" y1="157" x2="312" y2="157" stroke="#6B7684" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="604" y1="157" x2="614" y2="157" stroke="#6B7684" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 되돌아가는 화살표 -->
+  <path d="M762,224 L762,254 L160,254 L160,228" fill="none" stroke="#AEB6C0" stroke-width="1.6"
+        stroke-dasharray="4 4" marker-end="url(#a)"/>
+  <text x="460" y="272" class="t s" text-anchor="middle">다음 바퀴는 이 기록만 읽고 새로 시작한다 — 앞 대화를 모른다</text>
+</svg>

@@ -38,15 +38,10 @@ After 의 문장은 예시가 아니라 **게스트가 `/demo` 에서 실제로 
 2. **배포한다** — 같은 snapshot 은 언제나 같은 Pack 입니다. 모든 기기가 같은 버전·같은 해시를 받습니다.
 3. **진행이 보인다** — 각자의 AI 가 작업 끝에 근거를 보고하고, 완료는 사람이 확인합니다. 행은 마일스톤입니다.
 
-```
-사용자 로컬 (Claude Code + 플러그인)                 ContextOps (Next.js · Postgres)
-──────────────────────────────────────            ─────────────────────────────────
-저장소 파일 · .env · 개인 Memory · 대화   ─┐          /api/v1/*  ← allowlist 스키마로만 통과
-  (서버로 가지 않는다)                    │          항목 · 충돌 카드 · 제안 · 발행
-CLAUDE.md · .claude/rules/*  ◀── Pack ───┼──────    컴파일러 (LLM 없음 · 결정론)
-  (sync 할 때만 바뀐다)                   │          서버측 AI (우리 API 키 · 예산 가드)
-훅: 알리기만 한다 · 파일을 안 바꾼다      ─┘          Roadmap: 마일스톤별 근거
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/trust-boundary-dark.svg">
+  <img alt="ContextOps 신뢰 경계 — 구조화된 항목만 서버로 올라가고, 코드 본문·secret·개인 Memory·대화는 넘어가지 않는다" src="docs/diagrams/trust-boundary-light.svg" width="100%">
+</picture>
 
 **올라가는 것**: 항목 초안 JSON · Proposal · Progress 이벤트(경로·줄·커밋) · sync 보고(버전·hash)
 **내려오는 것**: manifest · Pack 파일
@@ -212,13 +207,10 @@ PGlite (시험·로컬) · Zod · vitest · Vercel (Cron 포함)
 세션이 열려서, 문서에서 이번에 뭘 할지 읽고, **하나만** 고치고, 검사하고, 커밋하고,
 다음 바퀴를 위한 기록을 남깁니다.
 
-```
-claude -p "Read loop/PROMPT.md and follow it exactly."
-   │
-   ├─ ① 읽는다   INBOX → FINDINGS → PLAN → STATUS → SPEC 해당 §
-   ├─ ② 고친다   관통 시나리오가 막힌 자리 하나 → tools/ci.ps1 → 커밋
-   └─ ③ 남긴다   docs/STATUS.md · FINDINGS.md  (= 다음 바퀴의 유일한 기억)
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/loop-cycle-dark.svg">
+  <img alt="자율 루프 한 바퀴 — ① 읽는다 ② 하나만 고친다 ③ 남긴다. 다음 바퀴는 그 기록만 읽고 새로 시작한다" src="docs/diagrams/loop-cycle-light.svg" width="100%">
+</picture>
 
 **대화를 이어 붙이지 않습니다. 기억은 파일에 삽니다.** 이 루프는 `claude -p` 로 돌지만
 P2 위반이 아닙니다 — `loop/`·`tools/` 는 배포되는 제품이 아니라 우리 자신의 구독으로 이 저장소를 만드는 개발 도구입니다.

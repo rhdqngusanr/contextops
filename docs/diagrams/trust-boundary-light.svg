@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 440" width="920" height="440" role="img" aria-label="ContextOps 신뢰 경계 — 구조화된 항목만 서버로 올라가고 코드 본문·secret·개인 Memory·대화는 넘어가지 않는다">
+  <style>
+    .t   { font-family: 'Pretendard','Noto Sans KR','Malgun Gothic',-apple-system,system-ui,sans-serif; }
+    .m   { font-family: 'JetBrains Mono','Consolas',ui-monospace,monospace; }
+    .h   { font-size: 15px; font-weight: 700; fill: #18212B; }
+    .sub { font-size: 11px; fill: #6B7684; letter-spacing: .06em; }
+    .b   { font-size: 12.5px; fill: #38424F; }
+    .s   { font-size: 10.5px; fill: #6B7684; }
+    .lbl { font-size: 11.5px; font-weight: 700; }
+  </style>
+
+  <rect width="920" height="440" fill="#FFFFFF"/>
+
+  <!-- ── 좌: 사용자 로컬 ── -->
+  <rect x="16" y="48" width="312" height="360" rx="10" fill="#F7F8FA" stroke="#DDE2E8"/>
+  <text x="32" y="36" class="t sub">사용자 로컬</text>
+  <text x="32" y="76" class="t h">Claude Code + 플러그인</text>
+
+  <rect x="32" y="94" width="280" height="62" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="44" y="116" class="t b">저장소 파일 · <tspan class="m">.env</tspan> · 개인 Memory</text>
+  <text x="44" y="138" class="t s" fill="#B3352B">서버로 가지 않는다</text>
+
+  <rect x="32" y="172" width="280" height="62" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="44" y="194" class="m b">CLAUDE.md · .claude/rules/*</text>
+  <text x="44" y="216" class="t s">Pack 을 <tspan class="m" fill="#38424F">sync</tspan> 할 때만 바뀐다</text>
+
+  <rect x="32" y="250" width="280" height="62" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="44" y="272" class="t b">훅 (SessionStart · Stop)</text>
+  <text x="44" y="294" class="t s">알리기만 한다 · <tspan fill="#1F7A4D">파일을 안 바꾼다</tspan></text>
+
+  <!-- ── 경계선 ── -->
+  <line x1="460" y1="26" x2="460" y2="414" stroke="#C3CAD3" stroke-width="2" stroke-dasharray="5 5"/>
+  <text x="460" y="18" class="t sub" text-anchor="middle">신뢰 경계</text>
+
+  <!-- ── 우: 서버 ── -->
+  <rect x="592" y="48" width="312" height="360" rx="10" fill="#F7F8FA" stroke="#DDE2E8"/>
+  <text x="608" y="36" class="t sub">ContextOps 서버</text>
+  <text x="608" y="76" class="t h">Next.js · Postgres</text>
+
+  <rect x="608" y="94" width="280" height="54" rx="7" fill="#FFFFFF" stroke="#C3D0F0"/>
+  <text x="620" y="116" class="m b" fill="#1F4EE0">/api/v1/*</text>
+  <text x="620" y="136" class="t s">allowlist 스키마로만 통과</text>
+
+  <rect x="608" y="160" width="280" height="46" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="620" y="188" class="t b">항목 · 충돌 카드 · 제안 · 발행</text>
+
+  <rect x="608" y="218" width="280" height="54" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="620" y="240" class="t b">컴파일러</text>
+  <text x="620" y="260" class="t s" fill="#1F7A4D">LLM 없음 · 같은 입력 → 같은 Pack</text>
+
+  <rect x="608" y="284" width="280" height="54" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="620" y="306" class="t b">서버측 AI</text>
+  <text x="620" y="326" class="t s">우리 API 키 · <tspan class="m">withBudget</tspan> 예산 가드</text>
+
+  <rect x="608" y="350" width="280" height="44" rx="7" fill="#FFFFFF" stroke="#DDE2E8"/>
+  <text x="620" y="377" class="t b">Roadmap — 마일스톤별 근거</text>
+
+  <defs>
+    <marker id="r" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#1F4EE0"/></marker>
+    <marker id="l" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#1F7A4D"/></marker>
+  </defs>
+
+  <!-- 올라간다 -->
+  <text x="460" y="104" class="t lbl" fill="#1F4EE0" text-anchor="middle">올라간다</text>
+  <line x1="336" y1="118" x2="600" y2="118" stroke="#1F4EE0" stroke-width="1.6" marker-end="url(#r)"/>
+  <text x="460" y="136" class="t s" text-anchor="middle">항목 초안 · 제안 · 진행 보고</text>
+  <text x="460" y="151" class="t s" text-anchor="middle">근거는 <tspan class="m" fill="#38424F">경로:줄</tspan> 뿐</text>
+
+  <!-- 내려온다 -->
+  <text x="460" y="196" class="t lbl" fill="#1F7A4D" text-anchor="middle">내려온다</text>
+  <line x1="600" y1="210" x2="332" y2="210" stroke="#1F7A4D" stroke-width="1.6" marker-end="url(#l)"/>
+  <text x="460" y="228" class="t s" text-anchor="middle">manifest · Pack 파일</text>
+
+  <!-- 막힌 것 -->
+  <line x1="336" y1="300" x2="444" y2="300" stroke="#B3352B" stroke-width="1.6"/>
+  <circle cx="460" cy="300" r="12" fill="#FFFFFF" stroke="#B3352B" stroke-width="1.8"/>
+  <path d="M454.5,294.5 L465.5,305.5 M465.5,294.5 L454.5,305.5" stroke="#B3352B" stroke-width="1.8"/>
+  <text x="460" y="336" class="t lbl" fill="#B3352B" text-anchor="middle">절대 안 넘어간다</text>
+  <text x="460" y="354" class="t s" text-anchor="middle">코드 본문 · secret</text>
+  <text x="460" y="370" class="t s" text-anchor="middle">개인 Memory · 대화</text>
+</svg>
