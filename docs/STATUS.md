@@ -5,13 +5,69 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 77바퀴 · 코드 `7e29d06`(FINDINGS 108 · 답이 갈 길은 `answerSlot` 값마다 한 줄인 표 — `none` 이 `ask` 와 같던 갈래를 셋으로) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 78바퀴 · 코드 `816420b`(FINDINGS 121 · 135 · 게스트가 누른 뒤에 아는 것을 누르기 전에 · 누른 자리에서 — 화면이 서버와 같은 표 `ACTOR_RULES` 를 읽는다) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴(77)는 FINDINGS 108 — 구멍(라우트가 `answerSlot` 을 두 갈래로만 읽어 `none` 이 `ask` 와 같다)을 닫았다** (`7e29d06`). INBOX 순서 4(구멍 → 격차)의
+**이번 바퀴(78)는 FINDINGS 121 + 135 — 격차 둘(게스트의 403 을 「팀 owner만」이라고 옮긴다 · 게스트가 [발행하기] 를 누르면 발행 모달이 열린다)을 같은 바퀴에 닫았다** (`816420b`).
+INBOX 순서 4(구멍 → 격차)의 첫 격차이고 둘 다 「게스트가 누른 뒤에 아는 것」이라 같은 자리다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 워킹트리는 깨끗한 채로 시작했다.
+뿌리는 하나였다: 화면이 「쓸 수 있나」를 읽을 표가 없었다 — `ACTOR_RULES` 가 drizzle·DB 를 import 하는 `lib/api/auth.ts` 안이라 클라이언트가 못 읽었고, 그래서 화면은 `session.guest` 를 보고
+**짐작**하거나(배너) 아예 안 보고(발행 버튼) 서버의 403 을 member 의 문구로 옮겼다. 표를 import 없는 `lib/api/actor-rules.ts` 로 옮기고(`auth.ts` 는 되내보내기 · `Actor['kind']` 와 같은 집합인지 타입으로 잠금),
+화면은 `lib/web/actor.ts` 의 `writeDoor()` 로 **서버와 같은 표**의 `writes` 를 읽는다. 403 문구는 `lib/web/api.ts` 의 **게스트일 때만 덮는 표** `GUEST_HINT`(지금 `FORBIDDEN` 한 줄) — `ERROR_HINT` 는 코드당 하나 그대로.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-guest-door/probe.txt` · 실제 브라우저 CDP · 시크릿 프로필):
+
+| | 전 (`13252a6`) | 후 (`816420b`) |
+|---|---|---|
+| 게스트가 [발행하기] 클릭 | **발행 모달**(`role=dialog`)이 열림 — 버전·요약을 받은 뒤에야 403 (70바퀴 캡처) | `role=dialog` **0** · 헤더 밑 카드(`role=status`) 「⚠ 읽기 전용으로 둘러보는 중입니다. 바꾸려면 내 팀으로 시작해야 합니다. [내 팀으로 시작하기] [닫기]」 (`02-*.png`) |
+| 게스트가 받은 403 의 화면 문구 (`/import` [구조화하기] → 서버 403) | 「이 작업은 팀 owner만 할 수 있습니다.」 — 거짓말 | 「읽기 전용으로 둘러보는 중입니다. 바꾸려면 내 팀으로 시작해야 합니다.」 + `request_id` (`04-*.png`) · 세 화면에서 「owner」 낱말 **0** |
+| 드로어의 문 없음 캡션 | 「상태를 바꾸는 것은 팀 owner 만 할 수 있습니다.」 | 게스트면 같은 이유 문장 · member 면 여전히 「owner 만」 (`03-*.png`) |
+| 화면이 「쓸 수 있나」를 읽는 표 | 없음 (`session.guest` 짐작) | `ACTOR_RULES.writes` — 서버(`refuseWrite`)와 **같은 객체** (시험 `toBe`) |
+| 판정의 출처 | — | 🔴 표의 `writes` 를 뒤집으면 같은 게스트 세션에 문이 열린다 — `session.guest` 가 아니라 표가 정한다 |
+| 게스트 세션이 통과한 쓰기 | — | **0** — 서버 로그의 non-GET 은 `POST /demo/session` 201 뿐, `POST …/documents` 403 ×2 |
+| 시험 | — | `web-write-door` **+11** · 옛 갈래(`hintText` → `ERROR_HINT` 만)로 되돌리면 **4 빨강** (`red-with-old-hint.txt`) |
+| 정본 | — | DESIGN_BRIEF §5 「403(게스트)」 줄 · SPEC §9 게스트 데모 「화면도 같은 표를 읽는다」 |
+| CI | GREEN 21:00 | **GREEN 21:22** — principles OK · typecheck 10초 · test 89초 · build 21초 · walkthrough **976** · docs OK |
+
+⚠ **안 한 것** — INBOX 🟡 E 의 「다음 리셋까지 남은 시간」은 안 붙였다 (배너가 `매일 03:00 초기화` 를 이미 말한다 · 시각을 화면이 재면 서버와 어긋난다). 버튼은 **숨기지 않았다** —
+막는 것은 서버다. 제안(`proposals.tsx` 「승인·거절은 owner만」)·로드맵(`roadmap.tsx` 「완료 확인은 owner 만」)의 등급 캡션은 손대지 않았다 — 게스트는 member 라 등급 문장 자체는 맞고, 121 의 범위는 403 번역이었다.
+눈 판정 대기에 **새로 더한 것 없음** — 세 화면 다 캡처를 직접 읽었다 (1280 · 375 는 안 봤다).
+
+🔴 **덤으로 본 것 → FINDINGS 137 [격차]** — 데모 `/import` 의 「구조화 진행」 카드에 시드가 남긴 job 이 「차례 기다리는 중 · ⚠ 멈춘 것 같음 · 올린 지 N분 전」 으로 뜬다 (`04-*.png` 오른쪽 아래).
+게스트가 만든 게 아니다(쓰기 403 뿐). 워커 없는 개발용 서버의 `queued` 는 영원히 `queued` 다 — production 데모에서도 같은지는 안 봤다.
+
+🔴 **배운 것 — 「서버와 같은 표」는 import 가 없어야 화면이 읽는다.** `ACTOR_RULES` 는 정본이었지만 DB 를 끌어오는 파일 안에 있어서 화면엔 없는 것과 같았고, 그 자리를 `session.guest` 짐작이 메웠다.
+`lib/demo/tenant.ts` 가 같은 이유로 import 없이 사는 것을 그대로 따랐다. 그리고 `api.ts ↔ actor.ts` 순환 import 를 만들었다가 풀었다 — 「세션 → 주체 종류」는 `session.ts` 가, 「코드 → 문구」는 `api.ts` 가 갖고 `actor.ts` 는 둘을 읽기만 한다.
+
+🔴 **2-B 이번 라운드 — `ACTOR_RULES` 3종(`user`·`device`·`guest`)이 그 예다.** ① 소비처: 서버 `actorCan`·`actorWrites` · 화면 `writeDoor` ② 뒤집으면 갈림: `api-auth` 「세 주체가 서로 다른 답」 ·
+`web-write-door` 「`writes` 를 뒤집으면 문이 열린다」. 화면 쪽 ② 가 이 바퀴 전에는 **없던 값**이었다(화면이 표를 안 읽었으니). 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**다음 바퀴의 일 — FINDINGS 119**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **고장은 없다. INBOX 순서 4 — 격차를 소진하는 중이다.** 남은 구멍 둘은 루프가 못 연다 — 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명), 117 은 절삭 1번(P3 🙋 키).
+격차의 순서: **119**(데모 항목 15 vs SPEC 60) → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137.
+
+> **119 를 하는 법** — 대장의 「고칠 방향」 그대로: **데모용 항목을 지어내지 마라**, 정본은 픽스처 하나다(§10.1). 먼저 판단할 것은 「얇은 Pack 이 심사에서 어떻게 읽히는가」 — 지금 데모 v1.1.0 의
+> Pack 을 열어 읽고(`/demo` → Pack Explorer) 팀 규칙으로 보이는 데 15개가 모자란지 적어라. 모자라면 `fixtures/paylab-docs/goals.md`(또는 policy 문서)를 넓히고 `apps/web/src/lib/demo/seed.ts` 의
+> `paylabDrafts()` 에 줄을 더한다 — 관통(golden · walkthrough)이 같은 픽스처를 보므로 golden expected 가 갈리면 ⑤ 규칙(TEMPLATE/COMPILER_VERSION · 이유를 커밋에)이다. 안 모자라면 SPEC §10.3 의 수를
+> 코드에 맞춰 고치고 그 이유를 적는다(코드가 현실). 어느 쪽이든 **한 바퀴에 하나** · P7 — 새 항목마다 `source_refs` 가 원문 줄을 가리켜야 한다 (FINDINGS 90 이 잰 방식).
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다 · 이 바퀴가 게스트의 쓰기 버튼 셋을 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
+### 지난 바퀴 (77) — 답이 갈 길은 `answerSlot` 값마다 한 줄인 표 · `none` 은 400 · 시험 +6 (FINDINGS 108 · `7e29d06`)
+
+**77바퀴는 FINDINGS 108 — 구멍(라우트가 `answerSlot` 을 두 갈래로만 읽어 `none` 이 `ask` 와 같다)을 닫았다** (`7e29d06`). INBOX 순서 4(구멍 → 격차)의
 넷째 항목이고 **루프가 혼자 닫을 구멍의 마지막**이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 워킹트리는 깨끗한 채로 시작했다 (76 과 달리 남의 미커밋 없음).
 갈래를 `if/else` 에서 **값마다 한 줄인 표**로 옮겼다: 값 목록은 `packages/schema` 의 `ANSWER_SLOT_MODES`, 줄은 `apps/web/src/lib/api/answer-slot.ts` 의 `ANSWER_SLOT_DRAFTERS`
 (`satisfies Record<AnswerSlotMode, …>` — 값이 늘면 typecheck 가 그 표를 막는다), 라우트는 `draftForAnswer()` 한 줄만 부른다. 라우트에서 `ANSWER_MAX`·`slotDraft`·`seedDraft` import 가 사라졌다.
@@ -38,14 +94,7 @@ _마지막 갱신: 2026-09-06 · 루프 77바퀴 · 코드 `7e29d06`(FINDINGS 10
 🔴 **2-B 이번 라운드 — `answerSlot` 3종이 그 예다.** ① 소비처: 화면 둘(`=== 'ask'`) · 라우트 표 셋 ② 뒤집으면 갈림: 「같은 답이 세 갈래에서 서로 다른 결과」 · 「표를 `none` 으로 뒤집으면 400」.
 `none` 은 이 바퀴 전에는 **①만 있고 ②가 없던 값**이었다. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
 
-**다음 바퀴의 일 — FINDINGS 121**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 121(+135) → 78바퀴가 닫았다 (`816420b`). 아래는 77 이 남긴 지목의 원문이다.
 
 🔴 **고장은 없다. INBOX 순서 4 — 구멍은 떨어졌고 이제 격차다.** 남은 구멍 둘은 루프가 못 연다 — 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명), 117 은 절삭 1번(P3 🙋 키).
 격차의 순서: **121+135**(같은 바퀴 · 게스트가 누른 뒤에 아는 것) → 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134.
@@ -254,58 +303,6 @@ policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/livenes
 - PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
   **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
 - 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 113 · 112 · 111 · 110 · 108 · 106 · 105 · 104 · 103 · 131~135 …) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
-
----
-
-### 지난 바퀴 (72) — 제출서는 이미 있었다 · 장부만 닫았다 · CI RED 를 136 으로 (INBOX 순서 3 · FINDINGS 126 · `5e3a8a8`)
-
-**72바퀴는 INBOX 순서 3 — FINDINGS 126(제출서)을 닫았다. 그런데 만든 게 아니라 「이미 있었다」를 확인한 바퀴다.**
-`docs/SUBMISSION.md` 는 67바퀴가 `4f90239`(06:30)로 올렸다 — 그 바퀴는 INBOX 의 고장(127)이 위여서 대장의 상태 줄 · PLAN · INBOX 를 안 닫았고,
-68~71 네 바퀴가 STATUS 의 「다음은 126」을 그대로 물려받았다. `tools/status-shape.mjs` 는 「대기를 가리키나」만 세므로 내내 초록이었다.
-**코드 0줄 · 문서만.** PLAN 은 안 움직였다 — P6 둘째 행은 🙋 값(URL · 팀명 · 영상)이 와야 닫힌다.
-
-🔴 **잰 것 — 제출서가 지금 코드와 맞는가.** 06:30 이후 다섯 바퀴(풀 · 오류 로그 · keep-all · focus-visible · Supabase 마이그레이션)가 지났으니
-낡았을 수 있어 주장을 하나씩 코드에서 다시 봤다.
-
-| 무엇 | 잰 값 |
-|---|---|
-| `docs/SUBMISSION.md` | 있음 · `4f90239` 는 HEAD 의 조상(`git merge-base --is-ancestor`) · 153줄 · README 저장소 지도에 한 행 |
-| `apps/web/test/readme.test.ts` | **32/32** 초록 — README·제출서를 `DOCS` 표로 묶어 ①~④ 둘 다 + ⑥ 제출서 전용 7 |
-| 크론 「매일 03:00(KST) 초기화」 | `apps/web/vercel.json` `0 18 * * *` UTC = 03:00 KST · `demo-reset.test.ts` 가 `DEMO_TENANT.resetAt` 과 대조 |
-| 「관통 7단계」 | `.ci/walkthrough.json` ran **7** · failed 0 · checks 946 (16:46 · 71바퀴) |
-| 「golden 3종」 | `packages/compiler/test/golden/` case-1-small · case-2-domains · case-3-overflow = **3** |
-| 「principles 가 P1·P2·P3·P4·P6·P7 을 센다」 | `tools/principles.ps1` 에 P7 행(템플릿 태그 자리) 있음 — P5 만 눈 판정, README·KNOWN_LIMITATIONS 와 같은 말 |
-| 「Skill 3(init · sync · propose) · 훅 2(SessionStart · Stop)」 | `plugin/contextops/skills/` 3 · `hooks.json` 이벤트 2 — 시험 ⑥ 이 디렉터리와 대조 |
-| 「Claude API tool use · `withBudget()`」 | `lib/ai/client.ts` `tools:[…]` + `tool_choice:{type:'tool'}` · `budget.ts` 있음 |
-| 「TypeScript 5 / Node 22 · Next 15 · Drizzle · PGlite · Zod · MIT」 | `engines.node >=22` · `@anthropic-ai/sdk`·`drizzle-orm`·`@electric-sql/pglite`·`zod` 의존 · `LICENSE` 첫 줄 MIT |
-| 「production 이 아직 없다 · 모든 관통·데모·캡처는 PGlite 위」 | 그대로 참 — 71 은 Supabase 에 **마이그레이션만** 적용했고 그 위에서 화면을 연 적은 없다 (「눈 판정 대기」) |
-| 제출서가 단 FINDINGS 번호 | 122 · 117 — 둘 다 **대기** (시험 ④). 126 은 제출서 본문에 없다 — 닫아도 안 빨개진다 |
-| INBOX 순서 3 의 요구 「🙋 자리표시자를 명시」 | 머리의 🙋 표 **5행**(제출 팀명 · 공개 저장소 URL · production URL · 2분 영상 · 슬라이드) · 각 행에 「어디에도 같이 적나」 |
-| 어긋난 곳 | **0** — 고칠 줄이 없어 제출서는 손대지 않았다 |
-| 장부 | FINDINGS 126 ✅ `4f90239` · PLAN P6 둘째 행 ② · INBOX 순서 3 → 「끝난 것」 · 66 바퀴 기록을 `docs/history/cycles.md` 로 |
-| CI | principles OK 9 · typecheck OK · **test FAIL** · build SKIP · walkthrough SKIP · docs OK → **RED** (17:06 · 17:10 두 번) — 아래 🔴 「CI 가 빨간 이유」. 코드 변화 0 · 같은 트리의 16:46(71바퀴)은 GREEN |
-
-🔴 **CI 가 빨간 이유 — 코드가 아니라 부하다. 그래도 RED 는 RED 라 FINDINGS 136(고장)으로 적었다.** `apps/web` 32 파일 중 같은 10 파일의
-**첫 시험**만 `Hook timed out in 10000ms` — 전부 `beforeEach` 의 `freshDb()`(PGlite 기동) 자리다. 16:50:55 에 사람의 게임 클라이언트가 떠서
-CPU 74~80% 였고(16 논리코어 중 6코어쯤 · 사람이 쓰는 중이라 건드리지 않았다), 32 파일이 한꺼번에 PGlite wasm 을 띄우니(import 90~147초) 첫 훅이
-17~18초가 됐다. **그 10 파일만 따로 돌리면 10/10 · 181개 초록 · 82초.** `vitest.base.ts` 에 `hookTimeout`·`maxWorkers` 가 없어 기본 10초다.
-⚠ **이 바퀴는 코드 0줄 · 문서만이라 커밋했다** — 빨간 층이 재는 코드는 71 의 `adac632` 그대로이고, 이 바퀴가 바꾼 것을 재는 `docs` 층은 OK 다.
-「검사를 통과하면 커밋」의 예외로 읽지 마라 — 코드를 바꾼 바퀴였다면 커밋하지 않았을 것이다.
-
-🔴 **배운 것 — 「고친 커밋」과 「장부를 닫는 커밋」은 다른 커밋이고, 둘째를 빼먹으면 게이트가 못 잡는다.** 67바퀴는 코드 커밋(`4f90239`)을
-올리고 바로 INBOX 의 고장(127)으로 갔다. status-shape 의 ② 는 「가리키는 항목이 대기인가」이지 「대기인 항목이 실은 이미 커밋됐는가」가
-아니다. 같은 일이 한 번 더 나면 게이트로 올린다 — 「FINDINGS N 이 대기인데 `git log` 의 메시지에 `FINDINGS N)` 이 든 커밋이 HEAD 에
-있으면 FAIL」. 지금은 한 번이라 규칙만 적는다 (`loop/PROMPT.md` ④3 「고친 항목은 지우지 말고 ✅ 와 커밋 해시를 적는다」가 이미 그 규칙이다).
-
-🔴 **2-B 그 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL`
-표(4/4 값 → 말) 를 policy 줄 「강제: …」 가 읽는다 ② `packages/compiler/test/liveness.test.ts:77` 이 hook·review·permission·none 넷을
-전부 돌려 출력이 갈리는지 잰다 · golden 입력은 셋(review·hook·permission)을 덮는다. 새로 적을 것 없음.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 136(고장 · CI RED) → 73바퀴가 닫았다 (`767a33e` · 훅 상한을 `vitest.base.ts` 한 곳으로 · 부하 100% 에서 33/33).
-그 뒤 순서로 적어 둔 것(INBOX 순서 4 · 구멍 115 부터 · 「115 를 하는 법」)은 73 의 머리로 옮겼다.
-
----
-
 
 ---
 

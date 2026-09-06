@@ -15,6 +15,58 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (72) — 제출서는 이미 있었다 · 장부만 닫았다 · CI RED 를 136 으로 (INBOX 순서 3 · FINDINGS 126 · `5e3a8a8`)
+
+**72바퀴는 INBOX 순서 3 — FINDINGS 126(제출서)을 닫았다. 그런데 만든 게 아니라 「이미 있었다」를 확인한 바퀴다.**
+`docs/SUBMISSION.md` 는 67바퀴가 `4f90239`(06:30)로 올렸다 — 그 바퀴는 INBOX 의 고장(127)이 위여서 대장의 상태 줄 · PLAN · INBOX 를 안 닫았고,
+68~71 네 바퀴가 STATUS 의 「다음은 126」을 그대로 물려받았다. `tools/status-shape.mjs` 는 「대기를 가리키나」만 세므로 내내 초록이었다.
+**코드 0줄 · 문서만.** PLAN 은 안 움직였다 — P6 둘째 행은 🙋 값(URL · 팀명 · 영상)이 와야 닫힌다.
+
+🔴 **잰 것 — 제출서가 지금 코드와 맞는가.** 06:30 이후 다섯 바퀴(풀 · 오류 로그 · keep-all · focus-visible · Supabase 마이그레이션)가 지났으니
+낡았을 수 있어 주장을 하나씩 코드에서 다시 봤다.
+
+| 무엇 | 잰 값 |
+|---|---|
+| `docs/SUBMISSION.md` | 있음 · `4f90239` 는 HEAD 의 조상(`git merge-base --is-ancestor`) · 153줄 · README 저장소 지도에 한 행 |
+| `apps/web/test/readme.test.ts` | **32/32** 초록 — README·제출서를 `DOCS` 표로 묶어 ①~④ 둘 다 + ⑥ 제출서 전용 7 |
+| 크론 「매일 03:00(KST) 초기화」 | `apps/web/vercel.json` `0 18 * * *` UTC = 03:00 KST · `demo-reset.test.ts` 가 `DEMO_TENANT.resetAt` 과 대조 |
+| 「관통 7단계」 | `.ci/walkthrough.json` ran **7** · failed 0 · checks 946 (16:46 · 71바퀴) |
+| 「golden 3종」 | `packages/compiler/test/golden/` case-1-small · case-2-domains · case-3-overflow = **3** |
+| 「principles 가 P1·P2·P3·P4·P6·P7 을 센다」 | `tools/principles.ps1` 에 P7 행(템플릿 태그 자리) 있음 — P5 만 눈 판정, README·KNOWN_LIMITATIONS 와 같은 말 |
+| 「Skill 3(init · sync · propose) · 훅 2(SessionStart · Stop)」 | `plugin/contextops/skills/` 3 · `hooks.json` 이벤트 2 — 시험 ⑥ 이 디렉터리와 대조 |
+| 「Claude API tool use · `withBudget()`」 | `lib/ai/client.ts` `tools:[…]` + `tool_choice:{type:'tool'}` · `budget.ts` 있음 |
+| 「TypeScript 5 / Node 22 · Next 15 · Drizzle · PGlite · Zod · MIT」 | `engines.node >=22` · `@anthropic-ai/sdk`·`drizzle-orm`·`@electric-sql/pglite`·`zod` 의존 · `LICENSE` 첫 줄 MIT |
+| 「production 이 아직 없다 · 모든 관통·데모·캡처는 PGlite 위」 | 그대로 참 — 71 은 Supabase 에 **마이그레이션만** 적용했고 그 위에서 화면을 연 적은 없다 (「눈 판정 대기」) |
+| 제출서가 단 FINDINGS 번호 | 122 · 117 — 둘 다 **대기** (시험 ④). 126 은 제출서 본문에 없다 — 닫아도 안 빨개진다 |
+| INBOX 순서 3 의 요구 「🙋 자리표시자를 명시」 | 머리의 🙋 표 **5행**(제출 팀명 · 공개 저장소 URL · production URL · 2분 영상 · 슬라이드) · 각 행에 「어디에도 같이 적나」 |
+| 어긋난 곳 | **0** — 고칠 줄이 없어 제출서는 손대지 않았다 |
+| 장부 | FINDINGS 126 ✅ `4f90239` · PLAN P6 둘째 행 ② · INBOX 순서 3 → 「끝난 것」 · 66 바퀴 기록을 `docs/history/cycles.md` 로 |
+| CI | principles OK 9 · typecheck OK · **test FAIL** · build SKIP · walkthrough SKIP · docs OK → **RED** (17:06 · 17:10 두 번) — 아래 🔴 「CI 가 빨간 이유」. 코드 변화 0 · 같은 트리의 16:46(71바퀴)은 GREEN |
+
+🔴 **CI 가 빨간 이유 — 코드가 아니라 부하다. 그래도 RED 는 RED 라 FINDINGS 136(고장)으로 적었다.** `apps/web` 32 파일 중 같은 10 파일의
+**첫 시험**만 `Hook timed out in 10000ms` — 전부 `beforeEach` 의 `freshDb()`(PGlite 기동) 자리다. 16:50:55 에 사람의 게임 클라이언트가 떠서
+CPU 74~80% 였고(16 논리코어 중 6코어쯤 · 사람이 쓰는 중이라 건드리지 않았다), 32 파일이 한꺼번에 PGlite wasm 을 띄우니(import 90~147초) 첫 훅이
+17~18초가 됐다. **그 10 파일만 따로 돌리면 10/10 · 181개 초록 · 82초.** `vitest.base.ts` 에 `hookTimeout`·`maxWorkers` 가 없어 기본 10초다.
+⚠ **이 바퀴는 코드 0줄 · 문서만이라 커밋했다** — 빨간 층이 재는 코드는 71 의 `adac632` 그대로이고, 이 바퀴가 바꾼 것을 재는 `docs` 층은 OK 다.
+「검사를 통과하면 커밋」의 예외로 읽지 마라 — 코드를 바꾼 바퀴였다면 커밋하지 않았을 것이다.
+
+🔴 **배운 것 — 「고친 커밋」과 「장부를 닫는 커밋」은 다른 커밋이고, 둘째를 빼먹으면 게이트가 못 잡는다.** 67바퀴는 코드 커밋(`4f90239`)을
+올리고 바로 INBOX 의 고장(127)으로 갔다. status-shape 의 ② 는 「가리키는 항목이 대기인가」이지 「대기인 항목이 실은 이미 커밋됐는가」가
+아니다. 같은 일이 한 번 더 나면 게이트로 올린다 — 「FINDINGS N 이 대기인데 `git log` 의 메시지에 `FINDINGS N)` 이 든 커밋이 HEAD 에
+있으면 FAIL」. 지금은 한 번이라 규칙만 적는다 (`loop/PROMPT.md` ④3 「고친 항목은 지우지 말고 ✅ 와 커밋 해시를 적는다」가 이미 그 규칙이다).
+
+🔴 **2-B 그 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL`
+표(4/4 값 → 말) 를 policy 줄 「강제: …」 가 읽는다 ② `packages/compiler/test/liveness.test.ts:77` 이 hook·review·permission·none 넷을
+전부 돌려 출력이 갈리는지 잰다 · golden 입력은 셋(review·hook·permission)을 덮는다. 새로 적을 것 없음.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 136(고장 · CI RED) → 73바퀴가 닫았다 (`767a33e` · 훅 상한을 `vitest.base.ts` 한 곳으로 · 부하 100% 에서 33/33).
+그 뒤 순서로 적어 둔 것(INBOX 순서 4 · 구멍 115 부터 · 「115 를 하는 법」)은 73 의 머리로 옮겼다.
+
+---
+
+
+---
+
 ### 지난 바퀴 (71) — 마이그레이션을 Supabase 에 실제로 · 표 18 · 인덱스 8 (INBOX 순서 2 · PLAN P1 첫 행 · `adac632`)
 
 **71바퀴는 INBOX 순서 2 — PLAN P1 첫 행(DB 스키마 · Drizzle 마이그레이션 + Supabase 연결)을 닫았다** (`adac632`). P0 부터 열려 있던 행이다 —
