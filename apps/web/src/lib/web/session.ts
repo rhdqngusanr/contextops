@@ -12,6 +12,8 @@
 //    컴포넌트라 마운트 이후에만 부른다.
 // =====================================================================
 
+import type { ActorKind } from '../api/actor-rules'
+
 const KEY = 'contextops.session'
 
 export type WebSession = {
@@ -69,4 +71,14 @@ export function writeSession(session: WebSession): void {
 
 export function clearSession(): void {
   storage()?.removeItem(KEY)
+}
+
+/**
+ * 세션 하나가 서버에서 어느 **주체 종류**(`ACTOR_KINDS`)로 앉나 — `guest` 는 여기서만 읽는다.
+ * 세션이 없으면 `user` 다: 그때 서버는 401 이고 종류를 따질 것이 없다 (`NeedsLogin` 이 먼저다).
+ * ★ 새 주체가 세션으로 들어온다면 여기가 `actor-rules.ts` 절차의 ④ 다.
+ * ⚠ 돌려주는 값은 **문구를 고르고 문을 미리 말하는 데만** 쓴다 (`lib/web/actor.ts`). 막는 것은 서버다.
+ */
+export function actorKindOf(session: Pick<WebSession, 'guest'> | null): ActorKind {
+  return session?.guest === true ? 'guest' : 'user'
 }

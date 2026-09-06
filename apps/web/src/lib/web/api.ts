@@ -1,6 +1,7 @@
 import { ERROR_CODES, type ErrorCode } from '@contextops/schema'
 
-import { clearSession, readSession } from './session'
+import type { ActorKind } from '../api/actor-rules'
+import { actorKindOf, clearSession, readSession } from './session'
 
 // =====================================================================
 //  화면이 서버로 나가는 **문 하나** (SPEC §5)
@@ -46,6 +47,31 @@ export const ERROR_HINT: Record<ErrorCode, string> = {
   AI_OUTPUT_INVALID: 'AI가 정리한 결과를 읽지 못했습니다. 다시 시도해주세요.',
 }
 
+/**
+ * 🔴 **게스트일 때만 덮는 문구** (FINDINGS 121 · DESIGN_BRIEF §5 「403(게스트)」).
+ *
+ * ★ 왜 표가 따로 있나 — `ERROR_HINT` 는 코드 하나에 문구 하나다. 그런데 같은 403 을
+ *   member 는 「owner 가 아니라서」 받고 게스트는 「읽기 전용이라서」 받는다. 게스트에게
+ *   「팀 owner만 할 수 있습니다」는 **거짓말**이다 — 로그인해도 그 팀에서는 못 한다.
+ *   여기 없는 코드는 `ERROR_HINT` 그대로다. 고르는 자리는 아래 `hintText` 하나.
+ * ★ 서버 문구(`route.ts` `refuseWrite` 「읽기 전용으로 둘러보는 중이다 — 바꾸려면 로그인해야
+ *   한다」)와 **같은 말**을 사람 말로 적는다. 「로그인」이 아니라 「내 팀으로 시작」인 이유 —
+ *   로그인해도 샘플 팀은 여전히 남의 팀이다. 배너의 버튼이 같은 말을 한다 (`demo-banner.tsx`).
+ * ⚠ 게스트에게 **보이는 코드**만 여기 둔다. 줄을 늘리기 전에 그 코드가 게스트에게
+ *   실제로 오는지 먼저 봐라 — 안 오는 코드의 문구는 아무도 못 보는 문장이다.
+ */
+export const GUEST_HINT: Partial<Record<ErrorCode, string>> = {
+  FORBIDDEN: '읽기 전용으로 둘러보는 중입니다. 바꾸려면 내 팀으로 시작해야 합니다.',
+}
+
+/**
+ * 코드 → 문구를 **주체 종류**에 따라 고른다. 두 표(`ERROR_HINT` · `GUEST_HINT`)를 읽는 자리는 여기 하나다.
+ * 게스트가 아니면 `GUEST_HINT` 는 안 본다 — member 의 403 은 여전히 「owner 만」이 맞다.
+ */
+export function hintText(code: ErrorCode, actor: ActorKind): string {
+  return (actor === 'guest' ? GUEST_HINT[code] : undefined) ?? ERROR_HINT[code]
+}
+
 /** 서버가 낸 실패 봉투를 그대로 들고 다닌다 — 화면이 `code` 로 갈래를 탄다. */
 export class ApiClientError extends Error {
   readonly code: ErrorCode
@@ -53,8 +79,12 @@ export class ApiClientError extends Error {
   readonly details: unknown
   readonly requestId: string | undefined
 
-  constructor(code: ErrorCode, status: number, details?: unknown, requestId?: string) {
-    super(ERROR_HINT[code])
+  /**
+   * @param actor 이 응답을 받은 **주체 종류** — 문구를 고르는 데만 쓴다 (`GUEST_HINT`).
+   *   `raise()` 가 세션에서 읽어 넣는다. 시험은 손으로 넣는다.
+   */
+  constructor(code: ErrorCode, status: number, details?: unknown, requestId?: string, actor: ActorKind = 'user') {
+    super(hintText(code, actor))
     this.name = 'ApiClientError'
     this.code = code
     this.status = status
@@ -92,8 +122,10 @@ async function raise(res: Response): Promise<never> {
   } catch {
     //  봉투가 아니면 코드를 지어내지 않는다 — `INTERNAL` 이 정직한 답이다.
   }
+  //  ⚠ 종류는 세션을 지우기 **전에** 읽는다 — 지운 뒤엔 누구였는지 모른다.
+  const actor = actorKindOf(readSession())
   if (code === 'UNAUTHORIZED') clearSession()
-  throw new ApiClientError(code, res.status, details, requestId)
+  throw new ApiClientError(code, res.status, details, requestId, actor)
 }
 
 /** 봉투(`{data, meta}`)를 벗겨서 `data` 만 돌려준다. */

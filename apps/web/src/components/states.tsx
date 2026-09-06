@@ -60,3 +60,22 @@ export function NeedsLogin({ next }: { next: string }) {
     </div>
   )
 }
+
+/**
+ * 🔴 읽기 전용 주체가 쓰기 버튼을 눌렀을 때 **모달 대신 그 자리에** 뜨는 이유 (FINDINGS 121·135).
+ * ★ 왜 모달이 아닌가 — 모달은 「진행할 수 있다」는 모양이다. 못 하는 일에 그 모양을 주면
+ *   사람은 칸을 다 채운 뒤에야 403 을 본다. 이유는 누른 자리 바로 밑에, 다음 걸음과 같이.
+ * ★ `role="status"` — 배너(`demo-banner.tsx`)와 같은 종류의 말이고, 오류가 아니다 (서버를 부르지 않았다).
+ * ⚠ 문장은 여기서 짓지 않는다 — `reason` 은 `writeDoor()` 가 `GUEST_HINT` 에서 읽어 온 것이다.
+ */
+export function ReadOnlyNotice({ reason, onClose }: { reason: string; onClose?: () => void }) {
+  return (
+    <div className="card pad-sm row-between" role="status">
+      <span className="row"><span aria-hidden="true" className="ink-warn">⚠</span><span className="ink">{reason}</span></span>
+      <span className="row">
+        <a className="btn btn-sm" href="/login">내 팀으로 시작하기</a>
+        {onClose ? <button type="button" className="btn btn-sm" onClick={onClose}>닫기</button> : null}
+      </span>
+    </div>
+  )
+}

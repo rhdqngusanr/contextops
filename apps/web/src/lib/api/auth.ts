@@ -4,6 +4,7 @@ import { ROLE_RANK, type TeamRole } from '@contextops/schema'
 import type { Db } from '../../db/client'
 import { devices, users } from '../../db/schema'
 import { DEMO_GUEST_SUBJECT } from '../demo/tenant'
+import { ACTOR_RULES, type ActorKind } from './actor-rules'
 import { fail } from './error'
 import { verifySessionJwt } from './session'
 import { TOKEN_PREFIX, hashToken } from './token'
@@ -25,7 +26,8 @@ export type Actor =
   | { kind: 'guest'; userId: string }
 
 /**
- * 🔴 **주체별 권한 표.** 두 축이다 — 「어느 등급까지 할 수 있나」와 「쓸 수 있나」.
+ * 🔴 **주체별 권한 표** — 정본은 `./actor-rules.ts` 다 (import 없는 파일 · 화면도 읽는다).
+ *   여기서는 되내보내기만 한다 — 시험과 라우트 주석이 이 이름으로 부른다.
  *
  * ★ 왜 있나 — 기기 토큰은 사람의 것이지만 **파일에 저장된 문자열**이다. 그 문자열을
  *   주운 사람이 승인·발행까지 할 수 있으면 토큰 하나가 팀 전체를 바꾼다.
@@ -39,14 +41,15 @@ export type Actor =
  *   축을 하나 더 두면 라우트는 한 줄도 안 고친다. 등급은 「무엇을 볼 수 있나」,
  *   `writes` 는 「바꿀 수 있나」로 뜻이 갈리는 것이 맞다.
  *
- * ★ 새 주체: ①이 유니온 ②이 표 한 줄 ③`sessionActor`/`deviceActor` 중 어디서 나오나
- *   ④`test/api-auth.test.ts` 의 「표의 세 주체」 시험. 라우트는 고칠 것이 없다.
+ * ★ 새 주체를 더하는 절차는 `./actor-rules.ts` 머리에 있다.
  */
-export const ACTOR_RULES: Record<Actor['kind'], { maxRole: TeamRole; writes: boolean }> = {
-  user: { maxRole: 'owner', writes: true },
-  device: { maxRole: 'member', writes: true },
-  guest: { maxRole: 'member', writes: false },
-}
+export { ACTOR_RULES }
+
+//  🔴 `Actor['kind']` 와 표의 키(`ACTOR_KINDS`)가 **같은 집합**인지 타입으로 잠근다.
+//     한쪽에만 값을 더하면 여기서 typecheck 가 막는다 — 표에 줄이 없는 주체는 `actorWrites` 가 못 판정한다.
+type SameKinds = [Actor['kind']] extends [ActorKind] ? ([ActorKind] extends [Actor['kind']] ? true : never) : never
+const _actorKindsMatchTable: SameKinds = true
+void _actorKindsMatchTable
 
 /**
  * 헤더에서 자격증명 문자열만 꺼낸다. **DB 를 만지지 않는다.**

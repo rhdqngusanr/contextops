@@ -1,0 +1,23 @@
+# 「빨개지는 것을 봤나」 — `hintText` 를 옛 갈래로 되돌리고 시험을 돌린 결과 (78바퀴)
+#   apps/web/src/lib/web/api.ts:72  return (actor === 'guest' ? GUEST_HINT[code] : undefined) ?? ERROR_HINT[code]
+#                                →  return ERROR_HINT[code]          (= 코드 하나에 문구 하나 · 게스트도 「owner 만」)
+#   npx vitest run test/web-write-door.test.ts
+
+ ❯ test/web-write-door.test.ts (11 tests | 4 failed) 18ms
+     × `hintText` — 게스트면 덮고, 아니면 `ERROR_HINT` 그대로. 덮는 줄이 없는 코드는 둘이 같다 4ms
+     × `ApiClientError` → `messageOf` — 같은 403 이 주체에 따라 다른 문장이 된다 1ms
+     × 게스트 세션이면 문이 닫혀 있고, 이유는 게스트의 403 문구와 **같은 문장**이다 1ms
+     × 게스트에게 뜨는 것은 모달이 아니라 이유다 — `role="status"` · 다음 걸음 · dialog 마크업 0 7ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  test/web-write-door.test.ts > 🔴 FINDINGS 121 — 게스트의 403 은 「읽기 전용」이지 「owner 만」이 아니다 > `hintText` — 게스트면 덮고, 아니면 `ERROR_HINT` 그대로. 덮는 줄이 없는 코드는 둘이 같다
+ ❯ test/web-write-door.test.ts:69:44
+ FAIL  test/web-write-door.test.ts > 🔴 FINDINGS 121 — 게스트의 403 은 「읽기 전용」이지 「owner 만」이 아니다 > `ApiClientError` → `messageOf` — 같은 403 이 주체에 따라 다른 문장이 된다
+ ❯ test/web-write-door.test.ts:82:32
+ FAIL  test/web-write-door.test.ts > 🔴 FINDINGS 135 — 쓰기 문은 누르기 전에 표를 읽는다 > 게스트 세션이면 문이 닫혀 있고, 이유는 게스트의 403 문구와 **같은 문장**이다
+ ❯ test/web-write-door.test.ts:101:25
+ FAIL  test/web-write-door.test.ts > 🔴 FINDINGS 135 — 쓰기 문은 누르기 전에 표를 읽는다 > 게스트에게 뜨는 것은 모달이 아니라 이유다 — `role="status"` · 다음 걸음 · dialog 마크업 0
+ ❯ test/web-write-door.test.ts:121:18
+      Tests  4 failed | 7 passed (11)
+
+# 되돌린 뒤 (원래 코드): 11/11 초록. 「표를 뒤집으면 문이 열린다」 시험은 옛 갈래에서도 초록이다 —
+# 그 시험이 재는 것은 문구가 아니라 판정의 출처(표)라서 맞다.

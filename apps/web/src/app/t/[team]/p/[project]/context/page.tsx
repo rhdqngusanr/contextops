@@ -5,6 +5,7 @@ import {
   ITEM_STATUSES, ITEM_TYPES, type ContextItemView, type ItemStatus, type ItemType,
 } from '@contextops/schema'
 
+import { writeDoor } from '../../../../../../lib/web/actor'
 import { ApiClientError, messageOf } from '../../../../../../lib/web/api'
 import {
   fetchItems, fetchVersions, publishVersion, updateItemStatus,
@@ -17,7 +18,7 @@ import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon, VersionPill } from '.
 import { EvidenceList } from '../../../../../../components/evidence'
 import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import { EmptyState, ErrorState, Skeleton } from '../../../../../../components/states'
+import { EmptyState, ErrorState, ReadOnlyNotice, Skeleton } from '../../../../../../components/states'
 import { VersionHistory } from '../../../../../../components/versions'
 
 // =====================================================================
@@ -54,6 +55,8 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
   const [filter, setFilter] = useState<Filter>({})
   const [selected, setSelected] = useState<ContextItemView | null>(null)
   const [publishing, setPublishing] = useState(false)
+  //  🔴 읽기 전용 주체가 [발행하기] 를 눌렀을 때 **모달 대신** 그 자리에 뜨는 이유 (FINDINGS 135).
+  const [refused, setRefused] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   //  상태를 바꾸는 중인 목적지와 실패 문구. 드로어 하나만 열리므로 항목별로 나눌 필요가 없다.
   const [statusBusy, setStatusBusy] = useState<ItemStatus | null>(null)
@@ -89,6 +92,21 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
     )
   }
 
+  /**
+   * 🔴 발행 모달을 여는 **유일한 문**. 열기 전에 서버와 같은 표(`ACTOR_RULES.writes`)를 읽는다 —
+   *   게스트에게 모달을 열어 버전·요약을 다 받은 뒤 403 을 보여 주는 것은 「할 수 있다」는 거짓말이다.
+   * ⚠ 버튼은 숨기지 않는다. 막는 것은 서버다 (`lib/web/actor.ts` 머리 주석).
+   */
+  function openPublish(): void {
+    const door = writeDoor()
+    if (door.open) {
+      setRefused(null)
+      setPublishing(true)
+      return
+    }
+    setRefused(door.reason)
+  }
+
   function afterPublish(message: string) {
     setPublishing(false)
     setToast(message)
@@ -114,12 +132,14 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
         <button
           type="button"
           className="btn btn-primary"
-          onClick={() => setPublishing(true)}
+          onClick={openPublish}
           disabled={versions.result.state !== 'ready'}
         >
           발행하기
         </button>
       </header>
+
+      {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
 
       {toast ? (
         <div className="card pad-sm row-between">
@@ -339,10 +359,18 @@ function ItemDrawer({
           onChange={onStatusChange}
         />
       ) : (
-        <span className="meta">상태를 바꾸는 것은 팀 owner 만 할 수 있습니다.</span>
+        //  🔴 게스트에게 「owner 만」은 거짓말이다 — 로그인해도 샘플 팀에서는 못 한다 (FINDINGS 121).
+        //     문구는 서버와 같은 표에서 온다 (`writeDoor`). member 에게는 여전히 「owner 만」이 맞다.
+        <span className="meta">{editCaption()}</span>
       )}
     </aside>
   )
+}
+
+/** 드로어에 문이 없을 때 적는 한 줄 — 읽기 전용 주체면 그 이유, 아니면 등급. */
+function editCaption(): string {
+  const door = writeDoor()
+  return door.open ? '상태를 바꾸는 것은 팀 owner 만 할 수 있습니다.' : door.reason
 }
 
 // ---------------------------------------------------------------------

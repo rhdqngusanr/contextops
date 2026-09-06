@@ -1,0 +1,38 @@
+# FINDINGS 121 · 135 — 게스트가 누른 뒤에 아는 것을, 누르기 전에 · 누른 자리에서 (78바퀴 · 2026-09-06)
+
+방법: `pnpm --filter web demo:db` → `next dev -p 3000`(DATABASE_URL=…55432/postgres?max=1 · SUPABASE_JWT_SECRET=contextops-test-jwt-secret)
+→ `node guest-door-cdp.mjs <이 폴더> http://127.0.0.1:3000` (Node 22 내장 WebSocket · 의존성 0 · 70바퀴 focus-cdp.mjs 와 같은 뼈대).
+headless Chrome 을 새 프로필(=시크릿 창)로 띄우고 CDP 로 ① `/demo` → context ② [발행하기] 를 **마우스로** 누름 ③ 항목 행을 눌러 드로어
+④ `/import` 문서 폼에 제목·본문을 넣고 [구조화하기] 를 누름(→ 서버 403). 매 단계 `Page.captureScreenshot` + DOM 셈(`scene.json`).
+
+## 전 (`13252a6`) — 70바퀴가 본 것
+- 게스트가 [발행하기] 를 누르면 **발행 모달이 열렸다** (`../2026-09-06-focus-visible/control/mouse-click.png` · `role="dialog"`).
+  버전을 고르고 요약을 적고 [v1.2.0 발행] 을 눌러야 403 이 왔다 — 화면이 「할 수 있다」고 먼저 말했다.
+- 그 403 의 문구는 `ERROR_HINT.FORBIDDEN` = 「이 작업은 팀 owner만 할 수 있습니다.」 — 게스트에겐 거짓말이다 (로그인해도 샘플 팀에선 못 한다).
+- 드로어의 「상태를 바꾸는 것은 팀 owner 만 할 수 있습니다.」 도 같은 거짓말.
+- 화면이 「쓸 수 있나」를 읽을 표가 없었다 — `ACTOR_RULES` 는 `lib/api/auth.ts`(drizzle·DB import) 안이라 클라이언트가 못 읽었다.
+
+## 후 (이 바퀴) — 캡처는 이 폴더
+| 파일 | 어디 | 본 것 |
+|---|---|---|
+| 01-context-before.png | `/demo` → `/t/demo/p/paylab-api/context` | 배너(role=status 1) · [발행하기] accent · 항목 15개 표 · dialog 0 |
+| 02-context-after-publish-click.png | [발행하기] 마우스 클릭 직후 | **dialog 0** · role=status **2** — 둘째가 「⚠ 읽기 전용으로 둘러보는 중입니다. 바꾸려면 내 팀으로 시작해야 합니다. [내 팀으로 시작하기] [닫기]」 가 헤더 바로 밑 카드로. 본문에 「owner」 **0** |
+| 03-context-drawer.png | 항목 행 클릭 → 드로어 | 드로어 꼬리가 「읽기 전용으로 둘러보는 중입니다. 바꾸려면 내 팀으로 시작해야 합니다.」 (전: 「팀 owner 만」) |
+| 04-import-after-structure-click.png | `/import` 제목+본문 → [구조화하기] | 서버 로그 `POST /projects/{id}/documents … status:403` · 화면 ErrorState: ✕ + 「읽기 전용으로 둘러보는 중입니다. 바꾸려면 내 팀으로 시작해야 합니다.」 + `request_id 907bd5f3-…` · 「owner」 0 |
+
+## 잰 것 (`scene.json`)
+- 게스트 세션의 쓰기 요청: `POST /demo/session` 201 (세션 발급 · 공개 문) 외에 **전부 403** — `POST /projects/{id}/documents` 403 ×2. 게스트가 통과한 쓰기 **0**.
+- [발행하기] 클릭 뒤 `[role="dialog"]` **0** (전: 1). `[role="status"]` 1 → **2**.
+- 세 화면(context 헤더 · 드로어 · import 오류)에서 `owner` 낱말 **0**.
+- 문구 정본: `GUEST_HINT.FORBIDDEN` 한 줄 — 헤더 카드 · 드로어 캡션 · 403 ErrorState 가 **같은 문장**을 낸다 (`writeDoor().reason` ≡ `messageOf(403 as guest)` — 시험이 잠근다).
+
+## 시험 (`apps/web/test/web-write-door.test.ts` · 11)
+- 표가 하나: `auth.ts` 가 되내보내는 `ACTOR_RULES` 가 `actor-rules.ts` 의 **같은 객체** · 키 = `ACTOR_KINDS` · writes=false 는 guest 뿐
+- 121: `GUEST_HINT` ⊂ 에러 코드 · 덮는 문구 ≠ 원문 · 「owner」 없음 · `hintText` 게스트만 덮음 · `ApiClientError`→`messageOf` 가 주체별로 갈림
+- 135: 게스트 문 닫힘 · 이유 = 게스트 403 문구 · 로그인/무세션은 열림 · 🔴 **표의 `writes` 를 뒤집으면 같은 게스트 세션에 문이 열린다**(판정이 `session.guest` 가 아니라 표) ·
+  `ReadOnlyNotice` 는 role=status · `/login` · dialog 0 · 화면 5 의 `setPublishing(true)` 는 1곳이고 `openPublish` 가 `writeDoor()` 를 먼저 읽는다
+- **빨개지는 것을 봤다**: `hintText` 를 옛 갈래(`return ERROR_HINT[code]`)로 되돌리면 11 중 **4 빨강** (`red-with-old-hint.txt`)
+
+## 덤으로 본 것 (고치지 않았다 → FINDINGS 137)
+- `/import` 의 「구조화 진행」 카드에 시드가 남긴 job 하나가 「차례 기다리는 중 · ⚠ 멈춘 것 같음 · 올린 지 3분 전」 으로 뜬다 (04 캡처 오른쪽 아래).
+  게스트가 만든 게 아니다(위 · 쓰기 403 ×2 뿐) — 데모 시드가 워커 없는 곳에 queued job 을 남긴 것.
