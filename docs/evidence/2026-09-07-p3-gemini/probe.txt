@@ -52,3 +52,42 @@ conflict.ts detectConflicts(): 후보 = 같은 type(DB) 이고 scopeKey 가 같�
 - 145 · 146 은 안 고쳤다 (한 바퀴에 하나).
 - 화면 3(/import) 을 브라우저로 본 적은 여전히 없다 — STATUS 「눈 판정 대기」.
 - PLAN P3 첫 행은 열어 뒀다 — 「두 번 연속 3/3」 이 체크 조건이다.
+
+# 84바퀴 · 2026-09-07 (KST 00:40~01:05) — FINDINGS 145 를 닫고 재려다 147 을 찾아 같이 닫았다
+# 전부 진짜 API(gemini-3.5-flash · 우리 키) · PGlite(freshDb) · 길은 제품 그대로 · 문 `pnpm --filter web p3:measure`
+# 파일: probe-run2.json = 83바퀴 2회차(옛 probe.json 을 옮김) · probe-84-fail.json = 145 만 고친 코드(9a5da46)의 실패
+#       probe-84-run1.json · probe-84-run2.json(= probe.json) = 145+147 을 고친 코드(147 커밋)로 두 번
+
+## 0. 무엇을 바꿨나
+- 145 (9a5da46): 러너가 프로젝트의 context_items.public_id 전부를 structureDocument({takenIds}) 로 넘기고 uniqueId() 가 그것으로 시작한다. 프롬프트 불변.
+- 147 (다음 커밋): toSourceRef 가 indexOf 대신 findFolded — 공백 연속(줄바꿈 포함)을 공백 하나로 접어 찾고 offset 은 원문 자리로 되짚는다.
+
+## 1. 145 만 고친 코드로 두 번 — goals.md 가 두 번 다 AI_OUTPUT_INVALID (probe-84-fail.json 은 둘째)
+  roadmap: 6 항목(policy 3) · 6/6 · 활성 6            goals: failed AI_OUTPUT_INVALID · 36초 · 31초 · 장부 출력 0(실패 행은 추정치)
+  일회용 진단(scripts/p3-diag-84.ts · 지움)으로 goals.md 조각 하나를 직접 불렀다 — 응답은 finishReason STOP · JSON 파싱 OK · 인용 27개 중 **5개**가 원문에 없음 · 여러 곳 0:
+    item_paylab_mission            「가맹점이 우리를 쓰는 이유는 하나다 — PSP 가 …」        원문은 「이유는」 뒤에 줄바꿈
+    item_rule_exponential_backoff  「재시도 간격은 **지수 백오프**로 1초 → …」              원문은 「백오프**로」 뒤에 줄바꿈
+    item_rule_retry_conditions     「… 4xx 는 재시도하지 않는다. 멱등키(…」                  원문은 「않는다.」 뒤에 줄바꿈
+    item_rule_refund_escalation    「… **자동으로 승인 대기 큐에서 빠져 에스컬레이션**된다. …」 원문은 「빠져」 뒤에 줄바꿈
+    item_rule_no_pii_in_logs       「… 에러 리포트· 웹훅 수신 덤프 …」                       원문은 「리포트·」 뒤에 줄바꿈 → 모델은 공백
+  재시도(불평은 첫 항목 하나만): item_paylab_mission 을 「… — **PSP 가 … 것.**」 으로 굵게까지 더해 다시 없음 → 2회 실패.
+  → 다섯 다 「줄 중간 하드 줄바꿈을 공백으로」다. 글자를 바꾼 게 아니다. 83바퀴의 24/24 는 인용이 전부 한 줄 안이었던 우연.
+
+## 2. 145+147 코드로 두 번 — 완료 기준 대 실측
+  기준                      1회차 (probe-84-run1.json)                2회차 (probe-84-run2.json = probe.json)
+  goals.md 항목 ≥ 12        24 (policy 10 · arch 5 · goal 3 · roadmap 3 · mission/domain/constraint 1)   18 (policy 10 · goal 3 · roadmap 3 · arch 2)
+  열린 질문                 4                                          4
+  인용 (goals · roadmap)    28/28 · 6/6                                22/22 · 6/6
+  accept 거절 (145)         0 (24/24 들어감)                           0 (18/18)
+  탐지 후보 {used,total}    3/3                                        3/3
+  충돌 ≥ 3                  **4** (contradiction high ×4)              **4** (contradiction high ×4)
+  장부                      3행 · 왕복 4 (goals 재시도 1 · 입력 5,257)  3행 · 왕복 3 (재시도 0 · 입력 2,591)
+  goals 시간                47초                                       20초
+  충돌 짝(두 번 같음): 환불 24h vs 기한 없음 · 고정 간격 금지 vs 0.5초 고정 · PII 금지 vs payload 로그 7일 · 재시도 5회 vs 3회 — 의도된 셋(SPEC §10.1) + 하나.
+  scope: goals policy 는 두 번 다 전부 project · 로드맵 policy 셋 project → 후보 3 (146 은 이번엔 안 갈렸다 · 여전히 열려 있다).
+  slug: 두 번 다 goals 가 로드맵과 다른 slug(item_paylab_policy_psp_retry_limit · item_psp_retry_limit)를 골라 _2 는 실제로 안 밟혔다 — 밟히는 경우는 시험이 잠근다.
+
+## 3. 이번 바퀴가 안 한 것
+- 146 은 안 고쳤다 (적기만). PLAN P3 첫 행은 두 번 연속 3 이상을 봤지만 146 이 열려 있어 아직 열어 둔다.
+- 재시도 불평이 첫 인용 하나만 말한다 — 다섯이 틀리면 다섯을 다 말해야 한 번에 고친다. 이번엔 접기로 다섯이 다 지나서 안 건드렸다.
+- 화면 3(/import) 은 여전히 브라우저로 안 봤다.

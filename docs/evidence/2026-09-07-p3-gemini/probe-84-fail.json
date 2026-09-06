@@ -1,0 +1,198 @@
+{
+  "measured_at": "2026-09-06T15:43:40.144Z",
+  "model": "gemini-3.5-flash",
+  "criteria": {
+    "goals.md 항목 ≥ 12": 0,
+    "탐지 충돌 ≥ 3": 0,
+    "offset 범위 안 (goals)": "0/0",
+    "offset 범위 안 (old-roadmap)": "6/6",
+    "withBudget 장부 행": 2
+  },
+  "roadmap": {
+    "file": "paylab-docs/old-roadmap.md",
+    "kind": "roadmap",
+    "chars": 707,
+    "jobId": "0cb9f2da-c3d2-4a23-b885-eabca53b08ea",
+    "status": "succeeded",
+    "error_code": null,
+    "latencyMs": 6657,
+    "chunks": {
+      "used": 1,
+      "total": 1
+    },
+    "items": [
+      {
+        "id": "item_paylab_m1",
+        "type": "roadmap",
+        "title": "웹훅 수신 v1",
+        "scope": "path:paylab-api/src/webhook/",
+        "refs": [
+          {
+            "start": 98,
+            "end": 215,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것"
+            ],
+            "quote": "### M1 — 웹훅 수신 v1 (2025-10-31)"
+          }
+        ]
+      },
+      {
+        "id": "item_paylab_m2",
+        "type": "roadmap",
+        "title": "원장 도입",
+        "scope": "path:paylab-api/src/ledger/",
+        "refs": [
+          {
+            "start": 217,
+            "end": 326,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것"
+            ],
+            "quote": "### M2 — 원장 도입 (2025-11-28)"
+          }
+        ]
+      },
+      {
+        "id": "item_paylab_m3",
+        "type": "roadmap",
+        "title": "PSP B 이중화",
+        "scope": "path:paylab-api/src/psp/",
+        "refs": [
+          {
+            "start": 328,
+            "end": 440,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것"
+            ],
+            "quote": "### M3 — PSP B 이중화 (2025-12-19)"
+          }
+        ]
+      },
+      {
+        "id": "item_policy_psp_retry",
+        "type": "policy",
+        "title": "PSP 호출 재시도 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 452,
+            "end": 490,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정."
+          }
+        ]
+      },
+      {
+        "id": "item_policy_refund_handling",
+        "type": "policy",
+        "title": "환불 처리 기한 정책",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 520,
+            "end": 559,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- 환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다."
+          }
+        ]
+      },
+      {
+        "id": "item_policy_webhook_logging",
+        "type": "policy",
+        "title": "웹훅 원본 payload 로그 보관 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 560,
+            "end": 603,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- 장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일."
+          }
+        ]
+      }
+    ],
+    "itemTypes": {
+      "roadmap": 3,
+      "policy": 3
+    },
+    "itemScopes": {
+      "path:paylab-api/src/webhook/": 1,
+      "path:paylab-api/src/ledger/": 1,
+      "path:paylab-api/src/psp/": 1,
+      "project": 3
+    },
+    "open_questions": [],
+    "refsTotal": 6,
+    "refsInRange": 6,
+    "merge_candidates": [],
+    "accepted": {
+      "accepted": [
+        "item_paylab_m1",
+        "item_paylab_m2",
+        "item_paylab_m3",
+        "item_policy_psp_retry",
+        "item_policy_refund_handling",
+        "item_policy_webhook_logging"
+      ],
+      "rejected": []
+    },
+    "activated": 6
+  },
+  "goals": {
+    "file": "paylab-docs/goals.md",
+    "kind": "goal",
+    "chars": 3513,
+    "jobId": "e2af0094-e6ec-4aea-9151-11c83f975230",
+    "status": "failed",
+    "error_code": "AI_OUTPUT_INVALID",
+    "latencyMs": 36063,
+    "items": [],
+    "itemTypes": {},
+    "itemScopes": {},
+    "open_questions": [],
+    "refsTotal": 0,
+    "refsInRange": 0,
+    "accepted": {
+      "accepted": [],
+      "rejected": []
+    }
+  },
+  "conflict": {
+    "skipped": "받아들인 goals 항목이 없다"
+  },
+  "usage": [
+    {
+      "feature": "structure",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 1031,
+      "outputTokens": 1679,
+      "costMicros": 4507
+    },
+    {
+      "feature": "structure",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 1406,
+      "outputTokens": 0,
+      "costMicros": 422
+    }
+  ]
+}

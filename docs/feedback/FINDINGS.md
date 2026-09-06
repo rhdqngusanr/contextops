@@ -33,13 +33,22 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 147. ✅ **인용을 `indexOf` 로 찾으면 줄 중간 줄바꿈을 공백으로 적은 quote 가 「원문에 없다」다** — 진짜 Gemini 27개 중 5개 · goals.md 전체가 `AI_OUTPUT_INVALID`   [구멍]
+- **증상**: 84바퀴 `p3:measure` 두 번 · 진단 한 번 — 셋 다 goals.md 가 `AI_OUTPUT_INVALID`(31~36초 · 장부 출력 0). 응답은 `finishReason: STOP` · JSON 정상인데 `toSourceRef` 의 `chunk.text.indexOf(quote)` 가 27개 중 5개에서 -1. 다섯 다 같은 이유 — 픽스처가 문단을 ~80자에서 하드 줄바꿈했고 모델은 그 자리를 **공백 하나**로 적었다 (「에러 리포트·\n웹훅」 → 「에러 리포트· 웹훅」). 재시도는 첫 인용만 불평해 같은 자리에서 다시 죽었고, 2회차는 `**` 까지 더해 더 틀렸다. 83바퀴의 24/24 는 우연히 한 줄 안 인용이었다.
+- **근거**: `docs/evidence/2026-09-07-p3-gemini/probe-84-fail.json` · `probe.txt` 84바퀴 §1(진단 출력 — 못 찾은 인용 다섯과 원문 줄) · `apps/web/src/lib/ai/structure.ts` `toSourceRef`
+- **정본**: `docs/SPEC.md` §7.1 (「조각 안에서 찾아 offset 을 계산」) · P7
+- **왜 고장이 아닌가**: 관통은 스텁이라 지나고 CI 도 초록이다. 진짜 모델에서만, 그것도 인용이 줄을 넘을 때만 죽는다 — 그러나 145 의 실측을 막았다.
+- **고친 것** (`e64831b` · 84바퀴): `findFolded()` — 공백 연속(줄바꿈 포함)을 공백 하나로 접은 글자열에서 찾고 접힌 자리마다 원문 자리를 적어 두어 offset 은 **원문 기준**. 글자는 그대로여야 한다(`**` 를 더하면 여전히 없다 → 재시도). 시험 +2 · SPEC §7.1. 진짜 Gemini 같은 코드로 두 번: 인용 28/28 · 22/22 · 2회차 재시도 0.
+- **상태**: ✅ `e64831b` (주인 PLAN **P3 첫 행**)
+
 ### 146. **탐지 후보가 모델이 고른 `scope` 에 달려 있다** — 같은 코드 · 같은 프롬프트에서 충돌 3/3 ↔ 0/3   [구멍]
 - **증상**: 83바퀴 `p3:measure` 두 번(코드 `5be2611` 둘 다) — 1회차 `conflict.candidates {used 0, total 0}` · 충돌 **0/3**, 2회차 `{3, 3}` · 충돌 **3/3**. `detectConflicts()` 는 「같은 type 이고 `scopeKey` 가 같은 active 항목」만 후보로 싣는데(§7.2) **scope 는 모델이 항목마다 고른다.** 2회차는 policy 6개가 전부 `project` 라 후보 3 이었고, 1회차는 probe 가 scope 를 안 적어 어느 쪽이 갈렸는지 못 봤다 — 마일스톤은 두 번 다 `path:src/…` 였으니 policy 도 그랬을 수 있다. 83 부터 `p3:measure` 가 `itemScopes` 를 적는다.
 - **근거**: `docs/evidence/2026-09-07-p3-gemini/probe-run1.json` (`conflict.candidates`) · `probe.json` (`roadmap.itemScopes`·`goals.itemScopes` · `conflict`) · `apps/web/src/lib/ai/conflict.ts` `wantedScopes`·`matched`
 - **정본**: `docs/SPEC.md` §7.2 (「같은 type/scope 의 기존 active 항목(최대 40개)」) · §3 `Scope`
 - **왜 고장이 아닌가**: 탐지는 지나고 3/3 도 나온다. 그러나 「충돌 3」이 모델의 scope 선택에 달려 있어 실행마다 갈린다 — 145(slug 선택)와 같은 종류.
 - **고칠 방향**: 둘 중 하나 — ① 후보를 「같은 type」까지만으로 고르고 scope 는 지금처럼 프롬프트 줄(`renderItem` 의 `scope=`)에 실어 모델이 견주게 한다 — 한 프로젝트의 active 는 §7.3 이 150 으로 묶었고 상한 40·우선순위 정렬은 그대로 · SPEC §7.2 의 그 구절을 고친다 ② `project` scope 항목은 모든 scope 와 짝이 되게 `wantedScopes` 를 넓힌다(`project` ⊇ 나머지 · SPEC 은 그대로). ①이 표 하나이고 단순하다 — `conflict.ts` 를 읽고 정한다. 고친 뒤 `p3:measure` **두 번 연속** 후보 ≥ 3. ⚠ 145 와 합쳐야 3/3 이 안정된다.
-- **상태**: 대기 (주인 PLAN **P3 첫 행** — 「충돌 3」이 안정되는 조건의 나머지 절반)
+- **84바퀴 실측** (145·147 을 닫은 코드 · 두 번): 후보 `{3, 3}` · `{3, 3}` · 충돌 4/3 · 4/3 — goals 의 policy 는 두 번 다 전부 `project`, 로드맵 policy 셋도 `project`. `path:src/…` 는 마일스톤뿐. 그러니 「후보 0」이 나오는 건 policy 가 `path:` 로 갈 때다 — 이번 두 번은 안 갈렸고, 그게 안 갈리게 하는 것이 이 항목이다.
+- **상태**: 대기 (주인 PLAN **P3 첫 행** — 「충돌 3」이 안정되는 조건의 나머지 절반 · 다음)
 
 ### 145. **구조화 후보가 이미 있는 항목과 같은 slug 를 고르면 accept 에서 거절되고, 그 둘의 충돌을 탐지할 기회가 사라진다** — 「충돌 3」이 모델의 id 선택에 달려 있다   [구멍]
 - **증상**: 82바퀴 `p3:measure` — goals.md 의 「외부 PSP 호출 재시도 규칙」 후보가 `POST /jobs/{id}/items` 에서 `{index 3, id: 이미 있는 항목 id 다}` 로 거절됐다. old-roadmap.md 의 재시도 규칙(이미 active)과 같은 slug(`item_psp_retry_policy`)를 골랐기 때문이다. 그래서 탐지 candidates 가 5 → 2, 「5회 지수 백오프 vs 3회 0.5초 고정」 짝이 재료에서 빠져 충돌 **1/3**. 81바퀴는 두 문서가 우연히 다른 slug 를 골라 2/3 이었다 — 같은 프롬프트에서 실행마다 갈린다.
@@ -47,7 +56,9 @@
 - **정본**: `docs/SPEC.md` §7.1 (`POST /projects/{id}/jobs/{jobId}/items` · 「고른 id 만 넣는다」) · §7.2 (탐지는 실린 항목 사이에서만) · `apps/web/src/lib/api/item.ts` `insertDrafts()` · `structure.ts` `uniqueId()`(한 문서 안의 중복만 `_2` 로 가른다)
 - **왜 고장이 아닌가**: 거절은 정직하고(조용히 덮지 않는다 · 같은 문의 시험이 그걸 잠근다) 나머지 후보는 들어간다. 그러나 **정확히 충돌하는 두 규칙이 같은 이름을 고르기 쉽다** — 같은 개념이니까 — 그래서 충돌일수록 탐지에서 빠진다.
 - **고칠 방향**: 둘 중 하나 — ① `structureDocument` 가 프로젝트의 **기존 항목 id 목록**을 받아 `uniqueId()` 의 `taken` 에 미리 넣는다(러너가 한 번 조회 · 문서 안 중복과 같은 `_2` 규칙 · 프롬프트는 안 바뀐다) ② accept 문이 충돌 id 를 `_2` 로 갈아 넣는다(사람이 고른 id 와 들어간 id 가 달라져 화면이 헷갈린다). ①이 맞다 — 가르는 자리는 이미 하나(`uniqueId`)다. 고친 뒤 `p3:measure` 로 rejected 0 · candidates 5 를 본다. ⚠ 143(환불 줄이 항목이 안 됨)과 합쳐야 3/3 이다.
-- **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「충돌 3」의 절반이 이것이다)
+- **고친 것** (`9a5da46` · 84바퀴): ① 그대로 — `StructureInput.takenIds` 로 프로젝트의 `context_items.public_id`(status 무관)를 받아 `uniqueId()` 의 `taken` 을 시작한다. 러너(`AI_JOB_RUNNERS.structure`)가 한 번 조회해 넘긴다 · 프롬프트에는 안 싣는다. 시험 +2(ai-structure: 기존 id 와 같은 후보는 `_2` · 이미 있는 `_3` 도 건너뜀 · ai-job: 둘째 문서의 같은 slug 둘이 `_2` 로 들어가 거절 0 · 항목 4).
+  진짜 Gemini 같은 코드로 두 번(147 을 닫은 뒤에야 잴 수 있었다 · `probe-84-run1.json`·`probe-84-run2.json`): accept **거절 0 · 0** · 충돌 **4/3 · 4/3**(의도된 셋 + 「5회 vs 3회」) · 후보 3/3 · 3/3. 두 번 다 모델이 로드맵과 다른 slug 를 골라 `_2` 는 실제로 안 밟혔다 — 밟히는 경우는 시험이 잠근다. 「후보 5」는 안 나왔다 — 후보 수는 로드맵 policy 수(3)이지 slug 의 일이 아니었다.
+- **상태**: ✅ `9a5da46` (주인 PLAN **P3 첫 행** — 남은 것은 146)
 
 ### 144. **`callModel()` 이 `finishReason` 을 안 읽는다** — 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도로 간다 · 429 는 `INTERNAL` 이 된다   [구멍]
 - **증상**: ① 출력 상한에 잘린 JSON 은 `undefined` → Zod 실패 → 「계약과 맞지 않는다」는 불평을 실어 **같은 상한으로** 다시 부른다 — 같은 자리에서 또 잘린다 (81바퀴 첫 실행이 정확히 이것 · 60초 · 왕복 2).
