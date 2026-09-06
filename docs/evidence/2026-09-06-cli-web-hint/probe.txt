@@ -1,0 +1,35 @@
+## 전 (5defaa7 · 고치기 전) — fakeCli 로 propose · upload-draft 를 돌린 stdout
+PROPOSE exit 0
+제안: 환불 창을 7일로 좁힌다
+  update     item_refund_window · 근거 1건
+  마일스톤 M1
+제안을 올렸다 — 항목 1개 · 기준 v22222222
+  → https://contextops.example.com/p/11111111-2222-4333-8444-555555555555/proposals/p1
+ERR: 
+
+UPLOAD exit 0
+보낼 항목 1개 · 레포 paylab · 스캔 파일 42개
+  policy         item_refund_window
+근거 경로 1곳 · 코드 본문 0건 (계약에 담을 자리가 없다)
+받아들여진 항목 1개 · 거절 0개
+  → https://contextops.example.com/p/11111111-2222-4333-8444-555555555555/context 에서 확인해라
+ERR: 
+
+
+## 후 (고친 뒤 · where.ts 한 곳) — 같은 fakeCli 시나리오
+PROPOSE exit 0
+제안: 환불 창을 7일로 좁힌다
+  update     item_refund_window · 근거 1건
+  마일스톤 M1
+제안을 올렸다 — 항목 1개 · 기준 v22222222
+  → 웹 https://contextops.example.com 에 로그인해 이 프로젝트의 「제안」 탭에서 볼 수 있다 — 「환불 창을 7일로 좁힌다」 · id p1
+ERR: 
+
+UPLOAD exit 0
+보낼 항목 1개 · 레포 paylab · 스캔 파일 42개
+  policy         item_refund_window
+근거 경로 1곳 · 코드 본문 0건 (계약에 담을 자리가 없다)
+받아들여진 항목 1개 · 거절 0개
+  → 웹 https://contextops.example.com 에 로그인해 이 프로젝트의 「Context」 탭에서 볼 수 있다 — 초안 1개
+ERR: 
+

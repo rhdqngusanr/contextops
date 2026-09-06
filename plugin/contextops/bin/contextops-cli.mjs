@@ -20002,6 +20002,18 @@ async function runProgress(cli2, flags) {
 import { randomUUID as randomUUID2 } from "node:crypto";
 import { rmSync } from "node:fs";
 import { isAbsolute as isAbsolute2, join as join4 } from "node:path";
+
+// src/cli/where.ts
+var WEB_TABS = {
+  context: "Context",
+  proposals: "\uC81C\uC548"
+};
+function whereOnWeb(origin, tab, what) {
+  const tail = what === void 0 ? "" : ` \u2014 ${what}`;
+  return `  \u2192 \uC6F9 ${origin} \uC5D0 \uB85C\uADF8\uC778\uD574 \uC774 \uD504\uB85C\uC81D\uD2B8\uC758 \u300C${WEB_TABS[tab]}\u300D \uD0ED\uC5D0\uC11C \uBCFC \uC218 \uC788\uB2E4${tail}`;
+}
+
+// src/cli/propose.ts
 var PROPOSE_FLAGS = {
   "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
   "from-pending": { kind: "bool", help: "\uBCF4\uB0B8 \uB4A4 Stop \uD6C5\uC774 \uB0A8\uAE34 \uD78C\uD2B8\uB97C \uCE58\uC6B4\uB2E4" },
@@ -20070,7 +20082,7 @@ async function runPropose(cli2, flags) {
   if (sent.kind === "failed") return reportFailure(cli2, sent.code, sent.message);
   const id = idOf(sent.data);
   cli2.io.out(`\uC81C\uC548\uC744 \uC62C\uB838\uB2E4 \u2014 \uD56D\uBAA9 ${body.items.length}\uAC1C \xB7 \uAE30\uC900 v${official.slice(0, 8)}`);
-  if (id !== void 0) cli2.io.out(`  \u2192 ${config2.api_origin}/p/${config2.project_id}/proposals/${id}`);
+  cli2.io.out(whereOnWeb(config2.api_origin, "proposals", `\u300C${draft.data.title}\u300D${id === void 0 ? "" : ` \xB7 id ${id}`}`));
   if (flags.bool("from-pending")) {
     rmSync(repoFile(root, "pendingProposal"), { force: true });
     cli2.io.out(`  ${LOCAL_FILES.pendingProposal} \uC744 \uCE58\uC6E0\uB2E4.`);
@@ -20848,7 +20860,7 @@ async function runUploadDraft(cli2, flags) {
     const id = body.items[bad.index]?.id ?? `#${bad.index}`;
     for (const issue2 of bad.issues) cli2.io.err(`  \u2717 ${id} \u2014 ${issue2.path}: ${issue2.message}`);
   }
-  if (accepted.length > 0) cli2.io.out(`  \u2192 ${config2.api_origin}/p/${config2.project_id}/context \uC5D0\uC11C \uD655\uC778\uD574\uB77C`);
+  if (accepted.length > 0) cli2.io.out(whereOnWeb(config2.api_origin, "context", `\uCD08\uC548 ${accepted.length}\uAC1C`));
   return accepted.length === 0 ? EXIT.INVALID : EXIT.OK;
 }
 function sourcePaths(body) {

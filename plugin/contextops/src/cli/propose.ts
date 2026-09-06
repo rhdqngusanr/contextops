@@ -11,6 +11,7 @@ import { readTextIfExists } from './fsx'
 import { describeIssues } from './issues'
 import { LOCAL_FILES, repoFile } from './paths'
 import { readyOrExplain, reportFailure } from './session'
+import { whereOnWeb } from './where'
 
 // =====================================================================
 //  `contextops propose [<json>] [--from-pending]` — 제안을 올린다 (docs/SPEC.md §8.3 · §8.4)
@@ -110,7 +111,8 @@ export async function runPropose(cli: Cli, flags: Flags): Promise<number> {
 
   const id = idOf(sent.data)
   cli.io.out(`제안을 올렸다 — 항목 ${body.items.length}개 · 기준 v${official.slice(0, 8)}`)
-  if (id !== undefined) cli.io.out(`  → ${config.api_origin}/p/${config.project_id}/proposals/${id}`)
+  //  ⚠ 주소를 찍지 않는다 — 설정에는 uuid 뿐이고 웹 주소는 slug 다 (where.ts · FINDINGS 115).
+  cli.io.out(whereOnWeb(config.api_origin, 'proposals', `「${draft.data.title}」${id === undefined ? '' : ` · id ${id}`}`))
 
   //  ② 힌트를 치운다. 안 치우면 SessionStart 가 **이미 처리한 초안**을 계속 알린다.
   if (flags.bool('from-pending')) {

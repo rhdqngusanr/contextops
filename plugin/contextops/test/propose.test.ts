@@ -5,7 +5,8 @@ import { Proposal } from '@contextops/schema'
 import { runCommand } from '../src/cli/commands'
 import { EXIT } from '../src/cli/exit'
 import { fakeCli, failEnvelope, okEnvelope } from './helpers/cli'
-import { connect, repoPath, world, writeJson } from './helpers/world'
+import { PROJECT } from './helpers/pack'
+import { ORIGIN, connect, repoPath, world, writeJson } from './helpers/world'
 
 // =====================================================================
 //  `propose` — **제안을 짓지 않는다** (docs/SPEC.md §8.3 · §8.4)
@@ -58,6 +59,23 @@ describe('contextops propose', () => {
     expect(body.base_version_id).toBe(OFFICIAL)
     expect(body.client_request_id).toMatch(/^[0-9a-f-]{36}$/)
     expect(body.title).toBe(DRAFT.title)
+  })
+
+  it('찍은 출력에 `/p/` 주소가 없다 — 설정에는 uuid 뿐이고 웹 주소는 slug 다 (FINDINGS 115)', async () => {
+    const { repo, home } = world(dirs)
+    seed(repo, home)
+    const cli = fakeCli({ cwd: repo, home, responses: [versions(OFFICIAL), okEnvelope({ id: 'p1' })] })
+
+    expect(await runCommand(cli, ['propose'])).toBe(EXIT.OK)
+    const out = cli.out.join('\n')
+    //  🔴 uuid 로 지은 주소는 그럴듯하게 찍히고 누르면 404 다.
+    expect(out).not.toContain('/p/')
+    expect(out).not.toContain(PROJECT)
+    //  대신 origin(설정의 진짜 값)과 웹의 탭 이름 · 제안 제목 · id 로 찾게 한다.
+    expect(out).toContain(ORIGIN)
+    expect(out).toContain('「제안」')
+    expect(out).toContain(DRAFT.title)
+    expect(out).toContain('id p1')
   })
 
   it('🔴 초안에 base_version_id 를 적어 두면 계약 위반이다 — 지어낸 기준을 막는다', async () => {

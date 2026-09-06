@@ -12,6 +12,7 @@ import { readTextIfExists } from './fsx'
 import { describeIssues } from './issues'
 import { LOCAL_FILES, repoFile } from './paths'
 import { readyOrExplain, reportFailure } from './session'
+import { whereOnWeb } from './where'
 
 // =====================================================================
 //  `contextops upload-draft <json>` — 초안을 서버로 올린다 (docs/SPEC.md §8.3 · §8.4 6단계)
@@ -136,7 +137,8 @@ export async function runUploadDraft(cli: Cli, flags: Flags): Promise<number> {
     const id = body.items[bad.index]?.id ?? `#${bad.index}`
     for (const issue of bad.issues) cli.io.err(`  ✗ ${id} — ${issue.path}: ${issue.message}`)
   }
-  if (accepted.length > 0) cli.io.out(`  → ${config.api_origin}/p/${config.project_id}/context 에서 확인해라`)
+  //  ⚠ 주소를 찍지 않는다 — 설정에는 uuid 뿐이고 웹 주소는 slug 다 (where.ts · FINDINGS 115).
+  if (accepted.length > 0) cli.io.out(whereOnWeb(config.api_origin, 'context', `초안 ${accepted.length}개`))
 
   //  ⚠ 하나도 안 들어갔으면 성공이 아니다. Skill 이 「고쳐서 한 번 더」를 판단하려면
   //    종료 코드가 갈려야 한다 (SPEC §8.4 4단계와 같은 뜻으로 `2` 를 쓴다).

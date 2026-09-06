@@ -77,7 +77,8 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" propose --dry-run
 node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" propose --from-pending
 ```
 
-- exit 0 → 링크를 그대로 보여 주고, **승인은 owner 가 웹에서 한다**고 알린다.
+- exit 0 → 「웹의 어디서 보나」 줄(주소 · 「제안」 탭 · 제목 · id)을 그대로 보여 주고, **승인은 owner 가 웹에서 한다**고 알린다.
+  ⚠ 화면 주소를 지어서 붙이지 마라 — CLI 는 uuid 만 알고 웹 주소는 slug 라, 지은 주소는 404 다.
 - exit 2 → 계약 위반이다. 사유를 보여 주고 2단계로 돌아간다.
 - exit 30 → 아직 공식 버전이 없다(첫 발행 전)거나 토큰 문제다. 출력 그대로 전한다.
 - exit 20 → 네트워크다. 초안은 그대로 있으니 나중에 5단계만 다시 하면 된다.

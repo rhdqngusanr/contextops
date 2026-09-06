@@ -471,6 +471,11 @@ sysexits 의 `EX_USAGE` 다. 없으면 그런 실수가 0(성공)이나 30(설�
 값은 직렬화된다 — 순서를 바꾸지 말고 끝에만 더해라. 정본은 `plugin/contextops/src/cli/exit.ts`.
 
 ⚠ `upload-draft`·`propose` 는 `--dry-run` 을 받는다 — 보내지 않고 **보낼 payload 를 그대로** 낸다.
+
+⚠ **CLI 는 웹 화면의 주소를 조립하지 않는다.** `project.json` 에는 uuid 뿐이고(§8.2) 웹 주소는 slug 다(§9) —
+uuid 로 지은 주소는 그럴듯하게 찍히고 누르면 404 다 (FINDINGS 115). 성공 뒤에 찍는 것은 **origin + 탭 이름**까지이고
+그 줄을 만드는 곳은 `src/cli/where.ts` 하나다. origin 뒤에 경로를 붙이는 소스는 `api.ts`(`/api/v1`) 하나여야 하고
+`test/where.test.ts` 가 그것을 센다. 서버가 slug 를 내주게 되면 `where.ts` 만 고친다.
 init Skill 5단계의 「사용자 확인」이 모델의 서술이 아니라 실제 payload 이게 하는 자리다.
 
 ### 8.4 Skills

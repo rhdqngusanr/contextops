@@ -4,7 +4,8 @@ import { ContextItemsBatchDraftEnvelope } from '@contextops/schema'
 import { runCommand } from '../src/cli/commands'
 import { EXIT } from '../src/cli/exit'
 import { fakeCli, failEnvelope, okEnvelope, tempDir } from './helpers/cli'
-import { connect, repoPath, world, writeJson } from './helpers/world'
+import { PROJECT } from './helpers/pack'
+import { ORIGIN, connect, repoPath, world, writeJson } from './helpers/world'
 
 // =====================================================================
 //  `upload-draft` — 🔴 **P1 이 걸린 명령이다** (docs/SPEC.md §8.3 · §3.1)
@@ -68,6 +69,21 @@ describe('contextops upload-draft', () => {
     expect(ContextItemsBatchDraftEnvelope.safeParse(body).success).toBe(true)
     expect(body['repo']).toBe('paylab')
     expect(body['scan_summary']).toEqual(SCAN.summary)
+  })
+
+  it('찍은 출력에 `/p/` 주소가 없다 — 설정에는 uuid 뿐이고 웹 주소는 slug 다 (FINDINGS 115)', async () => {
+    const { repo, home } = world(dirs)
+    seed(repo, home)
+    const cli = fakeCli({ cwd: repo, home, responses: [okEnvelope(ACCEPTED)] })
+
+    expect(await runCommand(cli, ['upload-draft'])).toBe(EXIT.OK)
+    const out = cli.out.join('\n')
+    //  🔴 uuid 로 지은 주소는 그럴듯하게 찍히고 누르면 404 다.
+    expect(out).not.toContain('/p/')
+    expect(out).not.toContain(PROJECT)
+    //  대신 origin(설정의 진짜 값)과 웹의 탭 이름으로 찾게 한다.
+    expect(out).toContain(ORIGIN)
+    expect(out).toContain('「Context」')
   })
 
   it('🔴 P1 — 나가는 payload 에 파일 본문이 하나도 없다', async () => {

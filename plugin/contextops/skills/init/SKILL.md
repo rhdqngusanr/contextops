@@ -75,7 +75,8 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" upload-draft --dry-run
 node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" upload-draft
 ```
 
-- exit 0 → 받아들여진 항목 수와 웹 링크를 그대로 보여 준다.
+- exit 0 → 받아들여진 항목 수와 「웹의 어디서 보나」 줄(주소 · 「Context」 탭)을 그대로 보여 준다.
+  ⚠ 화면 주소를 지어서 붙이지 마라 — CLI 는 uuid 만 알고 웹 주소는 slug 라, 지은 주소는 404 다.
 - exit 2 → 항목별 거절 사유가 나온다. 고쳐서 4단계부터 다시.
 - exit 20 → 네트워크다. 잠시 뒤 6단계만 다시 하면 된다 (초안은 그대로 있다).
 - exit 30 → 토큰·설정 문제다. `contextops setup` 을 안내한다.
