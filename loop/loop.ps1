@@ -258,6 +258,27 @@ while ($true) {
     Log ("바퀴 {0} 끝 — {1} · {2}초 · {3}턴 · 비용 {4} · 커밋 {5}개 (누적 USD {6:N2})" -f `
          $cycle, $verdict, $elapsed, $turns, $cost, $newCommits, $totalCost)
 
+    # ── 공개 저장소로 올린다 ──────────────────────────────────────
+    #  ★ 왜 PROMPT 가 아니라 여기냐 — 모델이 기억하길 기대하는 것보다 **기계가 하는 게
+    #    확실하다.** 「커밋했으면 push」는 판단이 필요 없는 일이라 여기 있어야 한다.
+    #    (같은 이유로 원칙 검사도 문서가 아니라 tools/principles.ps1 에 있다.)
+    #
+    #  ★ 커밋이 없으면 안 부른다 — 부를 이유가 없고, 로그만 더러워진다.
+    #  ⚠ 실패해도 **바퀴를 죽이지 않는다.** 네트워크는 끊길 수 있고, 커밋은 이미
+    #    로컬에 있다. 다음 바퀴가 밀린 것까지 같이 올린다.
+    #  ⚠ GIT_TERMINAL_PROMPT=0 — 자격증명이 없을 때 **묻지 말고 실패해라.**
+    #    없으면 무인 세션이 프롬프트 앞에서 바퀴 시간을 통째로 날린다.
+    if (-not $DryRun -and $newCommits -gt 0 -and $LOOP.AutoPush) {
+        $env:GIT_TERMINAL_PROMPT = "0"
+        $pushOut = & git -C $root push origin $LOOP.Branch 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Log "  push 했다 — origin/$($LOOP.Branch)"
+        } else {
+            $first = ($pushOut | Select-Object -First 1)
+            Log "  ⚠ push 실패 (커밋은 로컬에 있다): $first"
+        }
+    }
+
     # ── 일시적 실패면 물러선다 ────────────────────────────────────
     #  사용량 한도든 서버 과부하든, 안 물러서면 실패 응답만 받으며 밤을 버린다.
     #
