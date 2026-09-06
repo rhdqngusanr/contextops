@@ -1,0 +1,35 @@
+{
+  "scope": {
+    "found": true,
+    "placeholder": "project · domain:billing",
+    "font": "14.5px \"JetBrains Mono\", \"Cascadia Mono\", Consolas, D2Coding, monospace",
+    "fontFamily": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, D2Coding, monospace",
+    "fontSize": "14.5px",
+    "clientWidth": 219,
+    "offsetWidth": 221,
+    "scrollWidth": 219,
+    "paddingLeft": 12,
+    "paddingRight": 12,
+    "innerWidth": 195,
+    "textWidth": 203.91,
+    "shortfall": 8.91,
+    "cssWidth": "221px",
+    "flexBasis": "auto",
+    "labelWidth": 265,
+    "rowWidth": 1141,
+    "rowGap": "12px",
+    "otherInputs": [
+      {
+        "ph": "project · domain:billing",
+        "w": 219
+      }
+    ]
+  },
+  "typed": {
+    "found": true,
+    "value": "domain:billing",
+    "clientWidth": 219,
+    "scrollWidth": 219,
+    "clipped": false
+  }
+}
