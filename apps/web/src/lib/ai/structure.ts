@@ -62,6 +62,14 @@ export const STRUCTURE_RETRIES = 1
 /** 재시도 프롬프트에 실어 보내는 오류 개수 — 전부 실으면 프롬프트가 오류로 가득 찬다. */
 const MAX_REPORTED_ISSUES = 5
 
+/**
+ * 재시도 불평에 되비추는 인용의 글자 수 (FINDINGS 149 ③ · 152). 40자였을 때 87바퀴 run2 의 실패
+ * (「### M3 — PII 마스킹과 감사 로그 (2026-06-30)」 뒤가 잘림)는 무엇이 달랐는지 아무도 알 수 없었다 —
+ * 모델도 자기가 뭘 틀렸는지 못 보고 같은 자리에서 다시 죽는다. 모델이 낸 글자를 모델에게 돌려주는 것이라
+ * P1 과 무관하다 (문서 본문이 아니라 모델 출력이고 로그에 남지 않는다).
+ */
+const COMPLAINT_QUOTE_CHARS = 200
+
 /** 한 chunk 응답의 출력 토큰 상한. 항목 40개 + 질문 20개가 들어갈 만큼이다. */
 const CHUNK_MAX_OUTPUT_TOKENS = 8_000
 
@@ -249,7 +257,9 @@ const SYSTEM = [
   //     (`SOURCE_DOCUMENT_KIND_BRIEF`)가 아니라 여기인 이유 — 「문서 종류와 다른 종류의 항목도
   //     낸다」는 여섯 종류 전부에 해당한다.
   ...RULE_LIST_LINES,
-  '- id 는 `item_` 으로 시작하는 소문자·숫자·밑줄 slug 다 (예: item_refund_sla).',
+  //  🔴 FINDINGS 149 ① — 길이 상한은 표(`ITEM_ID_BODY_MAX`)에서 읽는다. 85바퀴 첫 응답이 id 패턴을
+  //     어겨 재시도로 갔고 항목이 줄었다 — 스키마의 pattern 만으로는 모델이 규칙을 모른다.
+  `- id 는 \`item_\` 뒤에 **소문자·숫자·밑줄만** 3~${ITEM_ID_BODY_MAX}자다 (예: item_refund_sla). 대문자·하이픈·한글은 안 된다.`,
   '- span.quote 는 그 항목의 근거 문장을 **조각의 원문 그대로** 인용한 것이다. 줄이거나 고치거나 요약하지 않는다.',
   '- 인용은 조각 안에서 **한 곳에만** 있는 길이여야 한다 (짧은 낱말 하나가 아니라 문장 하나쯤).',
   //  🔴 FINDINGS 151 — 제목 줄 + 문단을 마침표로 이은 인용.
@@ -329,10 +339,10 @@ function toSourceRef(span: AiSourceSpan, chunk: DocChunk, documentVersionId: str
   const needle = span.quote.replace(/<\\/g, '</')
   const found = findFolded(chunk.text, needle)
   if (found === 'none') {
-    throw new OutputInvalid(`${where} 의 span.quote 가 조각 원문에 없다 — 조각의 글자를 그대로 복사해라: "${needle.slice(0, 40)}"`)
+    throw new OutputInvalid(`${where} 의 span.quote 가 조각 원문에 없다 — 조각의 글자를 그대로 복사해라: "${needle.slice(0, COMPLAINT_QUOTE_CHARS)}"`)
   }
   if (found === 'many') {
-    throw new OutputInvalid(`${where} 의 span.quote 가 조각 안에 여러 곳 있다 — 한 곳에만 있도록 더 길게 인용해라: "${needle.slice(0, 40)}"`)
+    throw new OutputInvalid(`${where} 의 span.quote 가 조각 안에 여러 곳 있다 — 한 곳에만 있도록 더 길게 인용해라: "${needle.slice(0, COMPLAINT_QUOTE_CHARS)}"`)
   }
   return {
     kind: 'source_document',
