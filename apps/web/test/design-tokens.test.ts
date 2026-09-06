@@ -261,3 +261,82 @@ describe('🔴 키보드 포커스가 보인다 — `:focus-visible` 링 한 곳
     expect(a11y![1]).toContain('outline-offset: 2px')
   })
 })
+
+// ---------------------------------------------------------------------
+//  ⑦ 움직임을 줄여 달라면 줄인다 (FINDINGS 134 · INBOX 2026-09-06 🟡 D · DESIGN_BRIEF §3 「접근성」)
+//
+//  ★ 왜 이 시험이 생겼나 — 스타일시트를 통틀어 `prefers-reduced-motion` 이 **1건**뿐이었고
+//    그마저 조각 하나(터미널 커서)의 것이었다. 스켈레톤 맥박도 진행 막대도 계속 움직였다.
+//    이 설정은 취향이 아니라 **증상**이다 (전정 장애 · 편두통). 그리고 이건 캡처로 못 잡는다 —
+//    OS 설정을 바꿔야 보이므로 **규칙의 존재와 「한 곳」을 기계가 잠근다.**
+//  재는 것 넷:
+//    ① `globals.css` 에 블록이 있고 전역 선택자에 animation-duration · animation-iteration-count ·
+//       transition-duration 을 `!important` 로 준다
+//    ② 그 블록은 **css 를 통틀어 하나**다 — 조각이 자기 것을 따로 두면 빠뜨리는 자리가 생긴다
+//    ③ CSS 로 못 끄는 것(타이머 재생)은 JS 가 같은 질의를 읽는다 — `terminal-replay.tsx` 의 matchMedia
+//    ④ DESIGN_BRIEF §3 「접근성」 이 같은 값을 정본으로 적고 있다 (문서 ↔ 코드 양방향)
+// ---------------------------------------------------------------------
+describe('🔴 움직임 줄이기 — `prefers-reduced-motion` 블록 한 곳', () => {
+  const REDUCE = String.raw`@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{`
+  const cssFiles = () => sourceFiles(webSrc).filter((f) => f.endsWith('.css'))
+
+  /** 주석 속의 예시를 규칙으로 세지 않게 먼저 지운다 (⑥ 의 `rules()` 와 같은 이유). */
+  const stripComments = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '')
+
+  /** `@media (prefers-reduced-motion: reduce) { … }` 의 본문 — 중괄호 짝을 세서 자른다. */
+  function reduceBlock(text: string): string | null {
+    const stripped = stripComments(text)
+    const m = new RegExp(REDUCE).exec(stripped)
+    if (m === null) return null
+    let depth = 1
+    let i = m.index + m[0].length
+    const start = i
+    for (; i < stripped.length && depth > 0; i += 1) {
+      if (stripped[i] === '{') depth += 1
+      else if (stripped[i] === '}') depth -= 1
+    }
+    return stripped.slice(start, i - 1)
+  }
+
+  it('globals.css 의 블록이 전역 선택자의 애니메이션·전환을 `!important` 로 끈다', () => {
+    const body = reduceBlock(readFileSync(globalsCss, 'utf8'))
+    expect(body, 'globals.css 에 `@media (prefers-reduced-motion: reduce)` 블록이 없다').not.toBeNull()
+    expect(body as string, '전역 선택자가 아니면 새로 생기는 움직임을 못 덮는다')
+      .toMatch(/\*\s*,\s*\*::before\s*,\s*\*::after/)
+    for (const prop of ['animation-duration', 'animation-iteration-count', 'transition-duration']) {
+      expect(body as string, `${prop} 가 !important 로 없다`).toMatch(new RegExp(`${prop}:[^;]+!important\\s*;`))
+    }
+    //  `animation: none` 이면 재생 중이던 것이 **시작 상태로 되돌아간다** — 끝난 상태로 세워야 한다.
+    expect(body as string).not.toMatch(/animation:\s*none/)
+  })
+
+  it('그 블록은 css 를 통틀어 **하나**다 (조각이 자기 것을 따로 두지 않는다)', () => {
+    const hits: string[] = []
+    for (const file of cssFiles()) {
+      const n = stripComments(readFileSync(file, 'utf8')).match(new RegExp(REDUCE, 'g'))?.length ?? 0
+      for (let i = 0; i < n; i += 1) hits.push(file.split(/[\\/]/).pop() as string)
+    }
+    expect(hits, `정본은 globals.css 한 곳이다: ${hits.join(' · ')}`).toEqual(['globals.css'])
+  })
+
+  it('타이머로 움직이는 것(터미널 재생)은 JS 가 같은 질의를 읽고, 참이면 재생을 안 켠다', () => {
+    const tsx = readFileSync(join(webSrc, 'components', 'terminal-replay.tsx'), 'utf8')
+    const guard = tsx.indexOf("matchMedia('(prefers-reduced-motion: reduce)')")
+    expect(guard, '터미널 재생이 `prefers-reduced-motion` 을 안 읽는다').toBeGreaterThan(-1)
+    expect(tsx.indexOf('setPlaying(true)'), '재생을 켜는 자리가 질의 뒤여야 한다').toBeGreaterThan(guard)
+  })
+
+  it('DESIGN_BRIEF §3 「접근성」 이 같은 값을 정본으로 적고 있다 (문서 ↔ 코드 양방향)', () => {
+    const md = readFileSync(designBrief, 'utf8')
+    const a11y = /### 접근성([\s\S]*?)\n### /.exec(md)
+    expect(a11y, 'DESIGN_BRIEF §3 에 「### 접근성」 절이 없다').not.toBeNull()
+    for (const need of [
+      'prefers-reduced-motion: reduce',
+      'animation-duration: 0.01ms',
+      'animation-iteration-count: 1',
+      'transition-duration: 0.01ms',
+    ]) {
+      expect((a11y as RegExpExecArray)[1], `문서에 ${need} 가 없다`).toContain(need)
+    }
+  })
+})

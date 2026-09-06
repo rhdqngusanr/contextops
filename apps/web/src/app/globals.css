@@ -127,6 +127,26 @@ a:hover { text-decoration: underline; }
 /* 가로 스크롤 컨테이너(`.scroll-x`) 안의 **폭 100% 행**은 바깥쪽 링이 잘린다 — 안쪽으로 그린다. */
 .pack-line:focus-visible { outline-offset: -2px; }
 
+/* ── 움직임을 줄여 달라는 설정 — 이 한 블록이 전부 끈다 (DESIGN_BRIEF §3 「접근성」 · FINDINGS 134) ──
+   🔴 여기가 **유일한** 자리다. 조각마다 자기 `@media (prefers-reduced-motion: reduce)` 를 적지 마라 —
+     그러면 새로 움직이는 것이 하나 생길 때마다 누군가 반드시 하나를 빠뜨린다. 여기 한 블록은
+     **아직 없는 애니메이션까지** 덮는다. `design-tokens.test.ts` 가 「css 를 통틀어 이 블록이 하나」를 센다.
+   ★ 왜 `!important` 인가 — 이건 취향이 아니라 **끄는 스위치**다. 뒤에 오는 어떤 규칙보다도 세야
+     한다. 이 파일에서 `!important` 를 쓰는 자리는 여기뿐이다.
+   ★ 왜 `0.01ms` 이고 `none` 이 아닌가 — `animation: none` 은 재생 중이던 것을 **시작 상태로 되돌린다.**
+     0.01ms + 1회면 곧바로 끝난 상태가 되어, 진행 막대(`.bar-fill`)가 지금 폭에 그대로 선다.
+   ⚠ **CSS 로 못 끄는 움직임은 JS 가 같은 질의를 읽는다** — 랜딩의 터미널 재생(`terminal-replay.tsx`)은
+     `matchMedia('(prefers-reduced-motion: reduce)')` 를 보고 **재생을 안 한다**(서버가 그린 마지막
+     프레임이 그대로 남는다). 타이머로 움직이는 것을 새로 만들면 그 자리에서도 같은 질의를 읽어라. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* 버전·해시·경로·ID·수치는 모노다 — 「기계가 보증한 값」이 읽히게 (DESIGN_BRIEF §3). */
 code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 

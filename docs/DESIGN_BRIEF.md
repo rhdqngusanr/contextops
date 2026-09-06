@@ -106,6 +106,15 @@
   `outline: none` 1개). `:focus` 가 아니라 `:focus-visible` 인 이유 — 마우스 클릭엔 안 뜨고 키보드에만 뜬다.
   그래서 아무도 지우고 싶어지지 않는다.
   가로 스크롤 컨테이너 안의 폭 100% 행(Pack 줄)은 바깥 링이 잘려서 `outline-offset: -2px` 로 안쪽에 그린다.
+- **움직임을 줄여 달라면 줄인다**: `@media (prefers-reduced-motion: reduce)` 블록 **한 곳**(`globals.css`)이
+  `*, *::before, *::after` 의 `animation-duration: 0.01ms` · `animation-iteration-count: 1` ·
+  `transition-duration: 0.01ms` · `scroll-behavior: auto` 를 `!important` 로 준다.
+  ★ 왜 한 곳인가 — 조각마다 적으면 새로 움직이는 것이 하나 생길 때마다 반드시 하나를 빠뜨린다.
+  여기 한 블록은 **아직 없는 애니메이션까지** 덮는다 (FINDINGS 134 · INBOX 2026-09-06 🟡 D).
+  `!important` 를 쓰는 자리는 이 블록뿐이다 — 취향이 아니라 뒤의 어떤 규칙보다도 세야 하는 **끄는 스위치**다.
+  `none` 이 아니라 `0.01ms` 인 이유 — `none` 은 재생 중이던 것을 시작 상태로 되돌린다.
+  **CSS 로 못 끄는 움직임은 JS 가 같은 질의를 읽는다**: 랜딩의 터미널 재생은
+  `matchMedia('(prefers-reduced-motion: reduce)')` 가 참이면 재생하지 않고 마지막 프레임을 그대로 둔다.
 - 상태를 색만으로 구분하지 않는다 (위 「색」 절) · 대비는 본문 14 : 1 · 메타 8.9 : 1 (WCAG AA 4.5 를 넘는다 · 사람이 잰 것).
 
 ### 레이아웃

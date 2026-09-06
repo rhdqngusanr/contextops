@@ -48,9 +48,9 @@
   gap: var(--sp-2);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .caret { animation: none; }
-}
+/* ⚠ 「움직임 줄이기」는 여기서 다루지 않는다 — `globals.css` 의 블록 하나가 이 커서까지 멈춘다
+   (FINDINGS 134). 조각마다 적으면 새로 움직이는 것이 생길 때 누군가 하나를 빠뜨린다.
+   타이머 재생 쪽은 `terminal-replay.tsx` 가 같은 질의를 읽어 아예 재생하지 않는다. */
 
 @media (max-width: 900px) {
   .replay { grid-template-columns: 1fr; }
