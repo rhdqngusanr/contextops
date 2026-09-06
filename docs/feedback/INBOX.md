@@ -18,19 +18,7 @@
 먼저 이 넷을 `FINDINGS.md` 에 번호를 붙여 옮기고, 아래 「순서」대로 진행해라.
 
 > 루프(67바퀴): 넷을 **FINDINGS 127 · 128 · 129 · 130** 으로 옮겼다. ① 은 닫았고(아래 「끝난 것」 · `2134011`)
-> 68바퀴: ② 도 닫았다(`9319617`). ③④ 는 129 · 130 으로 대기 중이다 — 순서는 그대로 ③ → ④.
-
-#### ③ [격차] 한글이 낱말 중간에서 잘린다 — `word-break: keep-all` 이 **한 곳도 없다**
-
-- **증상**: 랜딩 헤드라인이 「팀의 지식과 Claude의 기억을 같 / 은 방향으로」로 그려진다.
-  에러 카드도 「잠시 후 다시 시 / 도해주세요」로 잘린다.
-- **근거**: `document.querySelectorAll('body *')` 중 `word-break:keep-all` 인 요소 **0개**.
-  `<html lang="ko">` 인데 `h1`·`body` 모두 `word-break: normal` 이다.
-- **왜 중요한가**: 한국어 서비스에서 이건 **기본기**다. 토스·배민·네이버·카카오가 전부
-  `keep-all` 을 쓴다. 이거 하나로 화면 전체가 아마추어처럼 읽힌다.
-- **고칠 방향**: 토큰이 사는 곳(`globals.css` 의 `:root`/`body`)에 `word-break: keep-all`
-  **한 줄**. 시안(`design/*.dc.html`)에는 이미 있다 — 구현으로 옮길 때 빠진 것이다.
-  ⚠ 코드·경로·해시(mono)에는 걸지 마라 — 거긴 `break-all` 이 맞다.
+> 68바퀴: ② 도 닫았다(`9319617` · 커밋은 69바퀴가). 69바퀴: ③ 도 닫았다(`0a3535e`). ④ 는 130 으로 대기 중이다 — 다음 바퀴의 일이다.
 
 #### ④ [격차] 키보드 포커스가 안 보인다 — `:focus-visible` 규칙 **0개**
 
@@ -67,6 +55,31 @@
 _(비어 있음)_
 
 ## 끝난 것
+
+### ✅ ③ 한글이 낱말 중간에서 잘린다 → `0a3535e` (2026-09-06 · FINDINGS 129)
+
+- 요구한 대로 토큰이 사는 곳(`globals.css` 의 `html, body`)에 `word-break: keep-all; overflow-wrap: break-word` **한 줄** — 시안의 `body` 와 같은 값.
+  mono(`.tree-item` · `.pack-linetext` · `.diff-text` · module.css 의 명령줄)에는 안 걸었다 — 자기 규칙이 덮는다.
+- 정본 `docs/DESIGN_BRIEF.md` §3 「타이포」에 같은 값을 적었고, `apps/web/test/design-tokens.test.ts` +3 이 문서 ↔ 코드 · mono 예외를 센다.
+- **눈으로 봤다** (`docs/evidence/2026-09-06-keep-all/`): 1280 헤드라인 「팀의 지식과 Claude의 기억을 / 같은 방향으로」 · 375 「팀의 지식과 /
+  Claude의 기억을 / 같은 방향으로」 · 에러 카드 「잠시 후 다시 / 시도해주세요.」 — 전부 낱말 경계, 375 가로 넘침 0.
+  같은 서버에서 ② 의 오류 로그도 `next dev` stdout 으로 확인했다 (`cause.code: ECONNREFUSED` · 질의문 0).
+
+<details><summary>원문</summary>
+
+#### ③ [격차] 한글이 낱말 중간에서 잘린다 — `word-break: keep-all` 이 **한 곳도 없다**
+
+- **증상**: 랜딩 헤드라인이 「팀의 지식과 Claude의 기억을 같 / 은 방향으로」로 그려진다.
+  에러 카드도 「잠시 후 다시 시 / 도해주세요」로 잘린다.
+- **근거**: `document.querySelectorAll('body *')` 중 `word-break:keep-all` 인 요소 **0개**.
+  `<html lang="ko">` 인데 `h1`·`body` 모두 `word-break: normal` 이다.
+- **왜 중요한가**: 한국어 서비스에서 이건 **기본기**다. 토스·배민·네이버·카카오가 전부
+  `keep-all` 을 쓴다. 이거 하나로 화면 전체가 아마추어처럼 읽힌다.
+- **고칠 방향**: 토큰이 사는 곳(`globals.css` 의 `:root`/`body`)에 `word-break: keep-all`
+  **한 줄**. 시안(`design/*.dc.html`)에는 이미 있다 — 구현으로 옮길 때 빠진 것이다.
+  ⚠ 코드·경로·해시(mono)에는 걸지 마라 — 거긴 `break-all` 이 맞다.
+
+</details>
 
 ### ✅ ② 오류 로그에 메시지도 스택도 없다 → `9319617` (2026-09-06 · FINDINGS 128)
 

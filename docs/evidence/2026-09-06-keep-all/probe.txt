@@ -1,0 +1,24 @@
+# FINDINGS 129 — 한글이 낱말 중간에서 잘린다 · 고친 뒤 눈 판정 (69바퀴 · 2026-09-06 · 코드 0a3535e)
+
+방법: `next dev` 를 띄우고(DATABASE_URL 을 닫힌 포트 127.0.0.1:1 로 꽂아 DB 문이 즉시 실패하게 —
+Supabase 를 안 건드리고 에러 카드를 보려고) headless Chrome 으로 찍었다.
+  chrome --headless=new --window-size=1280,900 --screenshot … http://127.0.0.1:3000/
+⚠ `--window-size=375,…` 는 Chrome 이 창 최소 너비(약 500px)를 강제해서 **375 가 아니라 ~504 뷰포트를 375 로 자른 그림**이 나온다
+  (가운데 정렬된 440px 카드가 x=32 에서 시작했다 → 뷰포트 ≈ 504). 그래서 375 는 **375px iframe 에 넣어** 찍었다
+  (`frame-landing-375.html` · 미디어 쿼리는 iframe 너비에 반응한다). 이 함정을 다음 사람도 밟는다 — STATUS 「밟은 함정」.
+
+## 읽은 것 (파일은 이 폴더)
+| 파일 | 뷰포트 | 본 것 |
+|---|---|---|
+| landing-1280.png | 1280 | 헤드라인 「팀의 지식과 Claude의 기억을 / 같은 방향으로」 — 낱말 경계에서 접힌다 (전: 「같 / 은」) |
+| landing-375-frame.png | 375 (iframe) | 「팀의 지식과 / Claude의 기억을 / 같은 방향으로」 · 본문 「모든 / 팀원의」 「배포하고, 로드맵이」 · 카드 「재시도합니다. / 고정 간격은」 「갇히지 / 않습니다」 — 전부 낱말 경계 · 가로 넘침 0 (카드가 16px 여백 안에 든다) |
+| demo-1280.png | 1280 | 에러 카드 「서버에서 처리하지 못했습니다. 잠시 후 다시 / 시도해주세요.」 — 낱말 경계 (전: 「다시 시 / 도해주세요」) · request_id 가 아래 로그와 같다 |
+| (demo 375 iframe) | — | 스켈레톤에서 안 넘어갔다 (iframe 안의 fetch 가 virtual-time 안에 안 끝난다) — 못 봤다. 1280 으로 판정했다 |
+
+## 같은 서버의 stdout — FINDINGS 128 의 「next dev 에서 다시 찍지 않았다」를 여기서 닫는다
+(`/demo` 가 `POST /demo/session` 을 부르고 DB 가 ECONNREFUSED)
+{"kind":"error","request_id":"c5b2f915-e981-4bb5-b96d-e49b6820e819","route":"POST /demo/session","error":{"name":"DrizzleQueryError","message":"(질의문이 든 message 는 남기지 않는다 — P1)","stack":["at PostgresJsPreparedQuery.queryWithCache (webpack-internal:///(rsc)/../../node_modules/.pnpm/drizzle-orm@0.45.2_@electric-sql+pglite@0.5.8_postgres@3.4.9/node_modules/drizzle-orm/pg-core/session.js:53:15)","at process.processTicksAndRejections (node:internal/process/task_queues:103:5)","at async eval (webpack-internal:///(rsc)/../../node_modules/.pnpm/drizzle-orm@0.45.2_@electric-sql+pglite@0.5.8_postgres@3.4.9/node_modules/drizzle-orm/postgres-js/session.js:50:20)"],"cause":{"name":"Error","message":"connect ECONNREFUSED 127.0.0.1:1","code":"ECONNREFUSED","stack":["at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)","at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)"]}}}
+{"kind":"request","request_id":"c5b2f915-e981-4bb5-b96d-e49b6820e819","route":"POST /demo/session","method":"POST","status":500,"latency_ms":18}
+
+→ 배포 드라이버(postgres-js) 길에서도 모양이 같다: 겉은 `DrizzleQueryError`(message 는 뺐다고 표시) · 속 `cause` 에 `ECONNREFUSED` 와 문장 ·
+  한 줄 어디에도 질의문 없음 · `request_id` 가 화면의 에러 카드(demo-1280.png)와 다음 `request` 줄에 그대로 있다.

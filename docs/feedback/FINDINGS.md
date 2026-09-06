@@ -42,7 +42,7 @@
   있고 `outline: none` 이 `:focus-visible` 없이 홀로 있는 선택자가 0개」 한 줄.
 - **상태**: 대기 (INBOX 순서 ④ · 129 다음 · 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다)
 
-### 129. **한글이 낱말 중간에서 잘린다** — `word-break: keep-all` 이 한 곳도 없다   [격차]
+### 129. ✅ **한글이 낱말 중간에서 잘린다** — `word-break: keep-all` 이 한 곳도 없다   [격차]
 - **증상**: 랜딩 헤드라인이 「팀의 지식과 Claude의 기억을 같 / 은 방향으로」로, 에러 카드가 「잠시 후 다시 시 /
   도해주세요」로 그려진다. 한국어 서비스의 기본기라 이거 하나로 화면 전체가 아마추어처럼 읽힌다.
 - **근거**: 사람이 브라우저에서 잰 것 (INBOX 2026-09-06 ③) — `document.querySelectorAll('body *')` 중
@@ -55,7 +55,13 @@
   값). ⚠ 코드·경로·해시(mono · `.tree-sha` · `.pack-linetext` · `.diff-text`)에는 걸지 마라 — 거긴 `break-all`/
   `break-word` 가 맞고 이미 그렇게 돼 있다 (`globals.css:378·405·433`). 시험은 `test/design-tokens.test.ts` 에
   「`body` 규칙에 `keep-all` 이 있다」 한 줄 — 토큰과 같은 파일이라 그 자리다.
-- **상태**: 대기 (INBOX 순서 ③ · 128 다음 · 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다)
+- **고친 것** (`0a3535e` · 69바퀴): `globals.css` 의 `html, body` 에 `word-break: keep-all; overflow-wrap: break-word` (시안과 같은 값) ·
+  DESIGN_BRIEF §3 「타이포」에 같은 값을 정본으로 한 줄 · `test/design-tokens.test.ts` +3 — `html, body` 규칙에 두 선언이 있다 ·
+  DESIGN_BRIEF 가 같은 값을 적고 있다(문서 ↔ 코드 양방향) · mono 예외 셋(`.tree-item` break-all · `.pack-linetext`·`.diff-text` break-word)은
+  그대로이고 어디에도 `keep-all` 이 안 들어왔다. CSS 를 stash 하고 돌리면 첫 시험이 빨갛다(직접 확인). **눈으로 봤다** — headless Chrome
+  으로 찍은 `docs/evidence/2026-09-06-keep-all/`: 1280 헤드라인 「팀의 지식과 Claude의 기억을 / 같은 방향으로」 · 375(iframe) 「팀의 지식과 /
+  Claude의 기억을 / 같은 방향으로」 · 에러 카드 「잠시 후 다시 / 시도해주세요.」 — 전부 낱말 경계 · 375 가로 넘침 0.
+- **상태**: ✅ `0a3535e` (69바퀴)
 
 ### 128. ✅ **오류 로그에 메시지도 스택도 없다** — `{"kind":"unhandled","error":"Error"}` 한 줄뿐   [고장]
 - **증상**: 127 의 500 을 **로그만으로는 알 수 없었다.** 남는 것은 저 한 줄이고, 원인(postgres-js `CONNECT_TIMEOUT`)은
@@ -82,7 +88,9 @@ params:
   <값>` 이라 `console.error(err)` 로 고쳤으면 P1 사고였다. 시험 `test/error-log.test.ts` 21개 — 진짜 drizzle 질의(PGlite · 없는 표)로
   죽인 라우트의 로그에 `42P01` 은 있고 **직렬화된 한 줄 전체**에 `select`·매개변수가 없다 · 감싼 `CONNECT_TIMEOUT` 이 `cause.code` 에 닿는다 ·
   표의 행마다 「값을 넣으면 로그가 갈린다」 · 4xx 는 error 줄 0. 실물은 `docs/evidence/2026-09-06-error-log/probe.txt`. SPEC §11 에 한 줄.
-- **상태**: ✅ `9319617` (68바퀴). ⚠ `next dev` stdout 에서 다시 찍지는 않았다 — `STATUS.md` 「눈 판정 대기」.
+- **상태**: ✅ `9319617` (68바퀴 · 커밋은 69바퀴가 앞단 CI 로). `next dev` stdout 에서도 69바퀴가 확인했다 — `/demo` 가 닫힌 DB 포트에
+  부딪히자 `kind:"error"` 줄에 `DrizzleQueryError` · message 는 뺐다고 표시 · `cause.code: "ECONNREFUSED"` · 질의문 0 · `request_id` 가 화면의
+  에러 카드와 같다 (`docs/evidence/2026-09-06-keep-all/probe.txt`).
 
 ### 127. ✅ **게스트 데모가 안 열린다 — `GET /api/v1/teams` 가 30초 뒤 500** · 풀이 라우트 수만큼 생겼다   [고장]
 - **증상**: `/demo` → `/t/demo/p/paylab-api/*` 의 모든 화면이 에러이거나 스켈레톤에서 안 넘어간다 (사람이 브라우저에서

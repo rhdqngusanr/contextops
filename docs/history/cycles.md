@@ -15,6 +15,93 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (63) — 데모 리셋 · GET /cron/demo-reset · 시드를 제품 코드로 (PLAN P5 둘째 행 ① · `f15c650`)
+
+
+**63바퀴는 `docs/PLAN.md` P5 둘째 행의 첫 조각 — Cron 이 부르는 데모 리셋 문**을 만들었다
+(FINDINGS 120 닫음). 관통은 7단계 866 검사 초록 · 고장 0 이라 ④3 의 ② 로 갔다 — PLAN 의 `- [ ]`
+중 위의 셋은 사람이 막고 있고(🙋 Supabase · 🙋 Anthropic 키 · GATE 3), P5 둘째 행에서 루프가
+계정 없이 할 수 있는 조각이 이것이었다. 그 행의 나머지(Vercel 연결 · 보안 캡처 · fresh install)는
+🙋 다.
+
+🔴 **잰 것 — 데모를 배포 DB 에 심는 문이 생겼고, 자물쇠 뒤에 있으며, 두 번 돌려도 하나다.**
+
+| | 전 | 후 |
+|---|---|---|
+| 데모를 심는 길 | `scripts/demo-server.ts`(PGlite · 개발 기계) 하나 | + **`GET /api/v1/cron/demo-reset`** — 배포 DB 에 **지우고 다시 심는다** (`lib/demo/reset.ts`) |
+| 시드가 사는 곳 | `scripts/seed.ts` · `scripts/demo-seed.ts` (`test/helpers/db` 의존 — 120 의 「유일한 걸림돌」) | `src/lib/demo/seed.ts` · `seed-demo.ts` — `src/` 에서 `test/`·`scripts/` import **0** (시험이 센다) |
+| `req/params/dataOf` 의 정본 | `test/helpers/db.ts` | `src/lib/demo/inproc.ts` — 시험 도우미는 다시 내보내기만 |
+| 세션 서명 | `signGuestJwt` (게스트 한 곳) | `signSessionJwt` — 둘째 사용자(시드)가 생겨 올렸다 · 없는 claim 은 안 적는다 |
+| 자물쇠 | — | `CRON_SECRET` (`lib/api/cron.ts`) — 없음·틀림·세션 토큰·기기 토큰 전부 **401** · `timingSafeEqual` |
+| 팀을 통째로 지우는 자리 | **0곳** (FK cascade 없음 · slug 전역 유일) | `lib/demo/teardown.ts` — `PROJECT_SCOPED` 11표 순서 · 시험이 「`project_id` 가진 표가 전부 목록에 있나」를 스키마와 대조 |
+| 심다가 던지면 | — | 다시 지운다 → `/demo/session` 404 (`demo-reset-rollback.test.ts` — 팀이 생긴 **뒤에** 던지게 갈아 끼워 잼) |
+| Cron | `vercel.json` 없음 | `apps/web/vercel.json` — health `0 */6 * * *` · demo-reset `0 18 * * *`(= 03:00 KST · 시험이 `DEMO_TENANT.resetAt` + `resetUtcOffsetHours` 로 셈) · 경로마다 `route.ts` 실존 |
+| 픽스처가 배포 함수에 | — | `next.config.ts` `outputFileTracingIncludes` + `fixturesRoot()` 가 cwd 에서 위로 찾는다 (못 찾으면 **그 줄을 가리키며 던진다**) |
+| 웹 시험 | 551 | **565** (CI test 층 실측 · `demo-reset` +13 · `demo-reset-rollback` +1) |
+| 리셋 한 번 (PGlite) | — | 첫 심기 292ms · 리셋 243ms · 팀 1 · 기기 12 · 사람 7 — **두 번 뒤에도 같다** |
+| CI | — | principles OK · typecheck · test · build · walkthrough · docs → GREEN (`f15c650`) |
+
+🔴 **GET 으로 상태를 바꾸는 유일한 문이다.** Vercel Cron 은 GET 으로만 부른다. 이 저장소의
+게스트 읽기 전용은 「GET 은 안 바꾼다」(`route.ts` 의 `SAFE_METHODS`)에 기대므로, 예외를
+`/cron/` 밑에 격리하고 주체(`ctx.actor()`)가 아니라 secret 으로 잠갔다 — 사람·기기·게스트 토큰은
+전부 401 이다. `/cron/` 밖에 이런 문을 더 만들면 그 근거가 사라진다 (route 주석에 적었다).
+
+🔴 **지우고 심는다.** 심기만 하면 둘째 날 slug 가 겹쳐 400 이고, 「있으면 건너뛰기」로 두면
+심사위원이 어제 만진 흔적이 남는다. 지우기와 심기는 한 트랜잭션이 아니다(심기는 라우트 수십 번 ·
+각자 트랜잭션) — 그래서 「실패하면 지운다」가 대신 서 있다. **반쯤 심긴 데모보다 없는 데모가 낫다** —
+없으면 `/demo/session` 이 404 로 말하고, 반쯤이면 링크는 열리는데 화면이 빈다.
+
+🔴 **시드가 `app/` 의 라우트를 import 한다 — 방향이 거꾸로로 보이지만 그게 맞다.** 시드는 화면·
+플러그인과 같은 **라우트의 클라이언트**다. 핸들러 안의 로직을 베껴 DB 에 넣으면 심어진 데모가
+제품이 만드는 것과 다른 모양이 되고 화면에서는 안 보인다. 단 `lib/api/*` 가 시드를 import 하는
+날 순환이 된다 — 부르는 쪽은 `cron/demo-reset` 라우트와 도구뿐이어야 한다 (seed.ts 머리).
+
+🔴 **`teardown.ts` 는 표다.** `project_id` 를 가진 표 11개를 FK 자식부터 늘어놓고 `for` 로 지운다.
+새 표를 더한 사람이 여기를 잊으면 리셋이 FK 위반으로 500 이 되는데, 그건 배포에서야 보인다 —
+그래서 시험이 스키마의 표 목록과 이 목록을 **양방향**으로 대조한다 (「표에 한 줄」 · CLAUDE.md).
+`project_id` 가 없는 자식 셋(pack_files · context_item_revisions · source_document_versions)과
+순환 FK 둘(`official_version_id` · `current_version_id`)은 본문이 먼저 끊는다.
+
+⚠ **배포에서 돌린 것이 아니다.** PGlite 위의 같은 라우트다. 못 잰 것 셋 — ① `/var/task` 에서
+`fixturesRoot()` 가 실제로 `fixtures/` 를 찾나(`outputFileTracingRoot` 가 모노레포 뿌리라 상대
+경로가 보존된다고 **믿고** 있다) ② Supabase 에서 리셋이 60초 안에 끝나나(라우트 ~70번 · PGlite 0.3초)
+③ Vercel 의 Root Directory 가 `apps/web` 이어야 `vercel.json` 이 읽힌다. 셋 다 🙋 첫 리셋에서 본다.
+
+**눈으로 읽었다** — `docs/evidence/2026-09-06-demo-reset/reset.txt` (`scripts/dump-demo-reset.ts`):
+secret 없음 → 401 「CRON_SECRET 가 없다 — Cron 문이 잠겨 있다」 · 틀림 → 401 · 맞음 → 200
+`{existed:false, official_version:"1.1.0", items:15, members:5, devices:12, reports:12, progress:6, proposals:4}`
+· `/demo/session` 201 · 둘째 → `existed:true` 같은 수 · DB 팀 1 · 기기 12 · 사람 7 그대로.
+응답에 `@`·`eyJ` 0 (이메일·토큰 없음 — 시험도 센다).
+
+
+
+
+> **그 바퀴가 다음으로 지목한 것 = `docs/PLAN.md` **P5 둘째 행**의 남은 조각 중 루프가 계정 없이 할 수 있는 것 —
+> **보안 캡처 증거**. 관통 payload 단계가 매번 남기는 `.ci/walkthrough-payload.json`(업로드
+> payload 10검사 · 코드 본문 0건)과 scan 단계의 `.ci/walkthrough-scan.json` 을 `docs/evidence/` 로
+> 정리해 「서버는 코드 본문·secret·기억·transcript 를 받지 않는다」(P1 · 심사 첫 질문)를 **사람이 읽는
+> 문서**로 만든다 — 어떤 필드가 나갔고 어떤 필드가 **없는지**를 표로. ⚠ 새 코드를 만들 일이 아니다 —
+> 관통이 이미 재는 것을 **증거로 굳히는** 일이다. 캡처(네트워크 탭)는 🙋 배포 뒤.
+> 그것도 끝나면 P5 둘째 행의 나머지는 전부 🙋 라, 다음은 **P6 둘째 행**(제출서 · README ·
+> KNOWN_LIMITATIONS) 중 README 다 — FINDINGS 122 의 🙋 URL 이 없어도 본문은 쓸 수 있다.
+> ⚠ 만들기 전에 `docs/SPEC.md` §11 · §3.1 · §16 · §17 을 읽고 **코드에서 그 이름을 찾아라.**
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3).
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
+
+> ⚠ 63바퀴는 CI GREEN 까지 가고 STATUS·PLAN·FINDINGS 를 다 쓴 뒤 **커밋하지 못한 채** 끝났다 —
+> 58·59·60·61 에 이어 **다섯 번째**다. 64바퀴가 같은 트리에서 전 층 CI(GREEN · 880)를 다시 돌려 그대로 올렸다
+> (`f15c650`). 증거 폴더는 UTC 날짜(`2026-09-05-demo-reset`)로 남아 있었다 — 63 의 「밟은 함정」은 「손으로 옮겼다」고
+> 적었지만 옮겨져 있지 않았다. 64 가 문서가 가리키는 `2026-09-06-demo-reset` 으로 옮겼다.
+
+
+---
+
+
+---
+
+
 ### 지난 바퀴 (62) — 터미널 재생 · 랜딩 C-3 (PLAN P5 첫 행 ③ · 행 닫음 · `8c3e8c5` `5b5b98b`)
 
 **62바퀴는 둘을 했다.** ① 61바퀴가 CI 도중에 끊긴 채 **커밋하지 못한** 거울 문서 작업을 같은
