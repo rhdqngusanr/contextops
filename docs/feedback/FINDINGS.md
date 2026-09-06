@@ -33,6 +33,14 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 153. **plugin 의 stop 훅 시험이 부하에서 5초 상한을 넘겨 CI 를 한 번 빨갛게 했다**   [구멍]
+- **증상**: 90바퀴 문서 커밋 직전 `tools/ci.ps1` 이 `test FAIL` — `plugin/contextops test/hooks.test.ts > stop 훅 … > 연결 안 된 저장소에서는 아무 일도 하지 않는다` 가 `Test timed out in 5000ms`. **그 파일만 다시 돌리니 22/22 · 2.5초**였고, 이어서 돌린 CI 는 GREEN(05:00)이다. 코드는 그 바퀴에 `plugin/` 을 한 줄도 안 건드렸다(웹 라우트·화면·문서뿐).
+- **근거**: `.ci/logs/test.txt:36` · 같은 파일 재실행 22/22 · `tools/ci.ps1` 04:56 RED → 05:00 GREEN
+- **정본**: `docs/SPEC.md` §8.6 · `vitest.base.ts`(훅 상한의 정본 — **테스트 상한은 아직 거기 없다**)
+- **왜 고장이 아닌가**: 다시 돌리면 지난다. 다만 **73바퀴의 136 과 같은 종류**다 — 부하에서 기본 상한을 넘겨 코드와 무관하게 빨개진다. 136 은 훅 상한(`hookTimeout`)을 한 곳으로 올려 닫았고, 이 시험은 **`testTimeout` 기본 5초**에 걸렸다.
+- **고칠 방향**: 상한을 그 파일에 손으로 적지 마라 — 136 이 정한 자리(`vitest.base.ts`)에 `testTimeout` 을 같이 두고 **왜 그 수인지 한 줄**. 올리기 전에 그 시험이 무엇을 기다리는지(자식 프로세스 기동인지 파일 I/O 인지) 재라 — 재지 않고 올리면 진짜로 느려진 날에 아무도 모른다.
+- **상태**: 대기 (주인 없음 — 관찰 중 · 다시 빨개지면 그때 고장으로 올린다)
+
 ### 152. **인용 실패가 실행의 약 1/3 에서 자리를 바꿔 가며 난다** — 87바퀴 run2 는 `item_roadmap_m3` 의 「### M3 — …」 인용이 원문에 없었고 40자 인용으로는 원인 미상   [구멍]
 - **증상**: 87바퀴 `probe-87-run2.json` — goals.md 두 왕복 다 `STOP` · JSON 정상(13,780자 · 10,181자)인데 「`item_roadmap_m3` 의 span.quote 가 조각 원문에 없다: "### M3 — PII 마스킹과 감사 로그 (2026-06-30)」에서 불평이 40자로 잘려 **뒤에 무엇이 달랐는지 아무도 모른다**(83바퀴부터 M1~M3 인용은 `###` 제목 줄부터 목록까지였고 그때는 6/6 이었다). 같은 코드 run1·run3 은 20/20. 84(줄바꿈) → 85(`**`) → 86(백틱 · 제목+마침표) → 87(M3 미상) — **자리는 매번 다르고 빈도는 실행의 약 1/3** 이다. 그리고 run1 의 첫 응답은 151 과 **글자 그대로 같은 인용**을 냈다 — `QUOTE_SPAN_LINES` 는 「말했다」이지 「막았다」가 아니다(재시도가 고쳤다).
 - **근거**: `probe-87-run2.json` `goals.roundTrips[1].retryOf` · `probe-87-run1.json` 같은 자리 · `fixtures/paylab-docs/goals.md` 100~106행 · `apps/web/src/lib/ai/structure.ts` `COMPLAINT_QUOTE_CHARS`(87바퀴가 40 → 200 으로 · 같은 커밋)
@@ -568,7 +576,19 @@ params:
 - **고칠 방향**: `USER_REF_COLUMNS` 를 `users` 에 **한 번 더** 별칭 join 한다 (drizzle 의
   `alias()`). ⚠ 작성자 join 과 같은 표를 두 번 붙이는 것이라 별칭 없이 쓰면 조용히
   작성자 이름이 결정자 칸에 들어간다.
-- **상태**: 대기 (주인은 화면 6 을 다시 만지는 바퀴 · **112 와 같은 바퀴**가 싸다)
+- **고친 것** (`0d60992` · `0b259ac` · 90바퀴): 칸 표가 자리 이름을 받는다
+  (`userRefColumns(자리, 표)` · `userRefOf(row, 자리)`) — 사람을 하나 더 붙이는 것이 이제
+  **`PROPOSAL_READ_COLUMNS` 에 한 줄 + `selectProposals()` 에 leftJoin 한 줄**이다.
+  결정자는 `alias(users,'deciders')` 고, join 을 거는 자리는 `selectProposals()` 하나라
+  라우트가 빠뜨릴 수 없다. `decide()` 도 갱신 뒤 그 문으로 다시 읽어 **세 문(목록·상세·결정)이
+  같은 모양**을 낸다 (`returning()` 은 join 을 못 해서 그 문만 uuid 를 내면 한 키가 갈린다).
+  화면은 `DECIDED_BY_LABEL` 표가 낱말을 정한다 — `submit` 도 `decided_*` 를 채우므로
+  `submitted` 는 「올린 사람」이지 「승인한 사람」이 아니다 · 못 찾으면 `—` ·
+  `draft` 와 「아무것도 모름」은 그 줄이 **없다**(덤프를 읽고 잡았다).
+  시험 +6 (api-publish 2 · web-proposals 4) · **별칭을 빼고 돌리면 빨개진다**(확인 후 되돌림) ·
+  덤프 `docs/evidence/2026-09-07-decided-by/proposals.txt` ⑥⑭⑮⑯⑰ · SPEC §5 두 행 ·
+  DESIGN_BRIEF §4 화면 6 · CI GREEN 04:53 (walkthrough 1027).
+- **상태**: ✅ `0d60992` (주인은 화면 6 을 다시 만지는 바퀴 · 다음은 **112**)
 
 ### 115. ✅ **CLI 가 찍는 제안 주소가 앱에 없는 주소다** — 눌러도 404   [구멍]
 - **증상**: `contextops propose` 가 성공하면 `→ {origin}/p/{project_id}/proposals/{id}` 를
