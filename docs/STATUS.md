@@ -5,11 +5,54 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 81바퀴 · 코드 `314ab0e`(PLAN P3 첫 행을 진짜 Gemini 로 잼 · FINDINGS 141 ✅ `GEMINI_THINKING_LEVEL` · 142·143·144 기록 · `p3:measure`) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 82바퀴 · 코드 `3b6ebef`(FINDINGS 142 ✅ — 모델은 `quote` 를 내고 서버가 offset 을 계산 · 진짜 Gemini 인용 21/21 · 145 기록) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(82)는 FINDINGS 142 — 구멍(`source_ref` offset 이 「범위 안」인데 가리키는 문장이 틀리다 · P7)을 닫았다** (`3b6ebef`). INBOX 「할 것」비어 있음 · 관통 7단계 OK(994) · 고장 0 · 142 는 PLAN P3 첫 행의 완료 기준 그 자체라 ④3 ② 와 어긋나지 않는다.
+계약을 먼저 바꿨다 — `packages/schema` `AiSourceSpan` 에서 `start_char`·`end_char` 를 빼고 **`quote`**(조각의 원문 그대로 · ≤ `AI_QUOTE_MAX_CHARS` 600)를 뒀다. `structure.ts` `toSourceRef()` 가 `chunk.text.indexOf(quote)` 로 문서 offset 을 **계산**하고
+0곳(「원문에 없다」)·2곳 이상(「여러 곳」)이면 `OutputInvalid` → 오류 위치를 넣어 1회 재시도. `untrusted()` 의 `</`→`<\` 치환은 되돌려 찾는다. 프롬프트의 「offset」 문장 셋(SYSTEM 두 줄 · 머리말 한 줄 · `prompt.ts` 공통 금지 · SPEC §7)을 「원문 그대로 인용」으로. 화면·`SourceRef`·컴파일러는 손대지 않았다 — 저장되는 모양은 그대로 offset 이다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-p3-gemini/probe.txt` §5 · 진짜 gemini-3.5-flash · 세 번째 `p3:measure`):
+
+| | 전 (`314ab0e` · 81바퀴) | 후 (`3b6ebef`) |
+|---|---|---|
+| 모델에게 묻는 것 | `start_char`·`end_char` (숫자) | **`quote`** (글자) — 보내는 JSON Schema 에 start_char·end_char 0건 (시험이 센다) |
+| 인용 → 잘라 낸 원문 | 27/27 「범위 안」인데 G1 항목이 G2 줄 · 웹훅 서명이 §4 제목 · architecture 5개·질문 4개가 같은 구간 | **21/21 이 제목과 같은 문장** — G1 은 G1 표 행 · 웹훅 서명은 「서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다」 · 질문 4개는 §5 의 네 줄 각각 · old-roadmap 재시도 규칙은 「3회까지 … 0.5초 고정」 그 줄 |
+| 재시도 | — | **0** (장부 outputTokens 1,558 · 4,075 = 왕복 1 · 1) — 첫 응답에서 21개가 다 한 곳에만 있는 인용이었다 |
+| goals.md 항목 · 질문 | 18 · 4 | **12** (goal 3 · policy 5 · roadmap 3 · domain 1) · **4** — 완료 기준 12 는 넘고, architecture 0 · mission 0 은 같은 프롬프트의 실행 간 흔들림 |
+| 충돌 | 2/3 | **1/3** — goals 의 재시도 규칙 후보가 old-roadmap 과 같은 slug(`item_psp_retry_policy`)라 accept 에서 거절 → 탐지 candidates 5 → 2 → **145**(구멍). 81 은 우연히 다른 slug 였다 |
+| 시험 | ai-structure 21 | **26** (+5: 스키마에 숫자 칸 없음 · 원문에 없으면 재시도 · 여러 곳이면 재시도 · 두 번 다 없으면 `AI_OUTPUT_INVALID` · `</` 되돌리기) · ai-job·web-item-doors·dump 스텁 여섯 파일이 quote 모양 · 84/84 |
+| plugin 번들 | — | **재생성** (`bin/contextops-cli.mjs` 4줄 — schema 를 품는다 · `bundle.test` 가 바이트 대조 · 첫 CI 가 이걸로 빨갰다) |
+| CI | GREEN 23:25 | **GREEN 23:55** — principles OK 9 · typecheck 10초 · test 88초 · build 21초 · walkthrough **998** · docs OK |
+
+⚠ **PLAN 행은 열어 뒀다** — 인용 ✅ · 항목 ✅ · 예산 ✅ · 충돌 1/3 ✗ (143 + 145). 행의 ⑤ 에 수치를 적었다.
+⚠ **안 한 것** — 프롬프트의 「무엇을 항목으로 내나」는 안 건드렸다(143 의 일) · 145 는 적기만 했다 · 화면 3 을 브라우저로 본 적은 여전히 없다(아래 「눈 판정 대기」 — 이제 인용이 맞으니 볼 만하다).
+
+🔴 **배운 것 둘** — ① 「충돌 3」이 모델의 slug 선택에 달려 있었다. 정확히 충돌하는 두 규칙은 같은 이름을 고르기 쉽다 — 그래서 **충돌일수록 accept 에서 거절돼 탐지에서 빠진다.** 실행마다 갈리는 수는 완료 기준이 못 된다 → 145 를 고쳐야 3/3 이 **안정**된다.
+② `packages/schema` 를 한 글자 고치면 `plugin/contextops/bin/contextops-cli.mjs` 가 갈린다 — 번들이 schema 를 품고 `bundle.test` 가 바이트를 대조한다. **schema 커밋에는 `pnpm --filter @contextops/plugin build` 가 딸려 있다** (「앞 바퀴들이 남긴 것」에 이미 세 번 적혀 있다 — 이번에도 밟았다).
+
+🔴 **2-B 이번 라운드 — `AiSourceSpan` 의 `quote`** ① 소비처 `toSourceRef()` 하나 ② 뒤집으면 갈림: 원문에 없는 글자 → 재시도 → `AI_OUTPUT_INVALID` (잠겨 있음) · 여러 곳 → 재시도 (잠겨 있음) · 진짜 모델의 21/21 이 그 문장. `heading_path` 는 비면 chunk 의 것 (그대로). `ItemType` 10종 중 이번 실행은 **4종**(goal·policy·roadmap·domain) — 81 의 6종보다 적다. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**다음 바퀴의 일 — FINDINGS 143**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 143 은 PLAN P3 첫 행의 몫이다 — 격차지만 그 행의 완료 기준 「충돌 3」의 절반이라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 **145**(나머지 절반 · 기존 항목 id 를 `uniqueId` 의 `taken` 에) → 144 → `p3:measure` 가 충돌 3/3 이면 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **143 을 하는 법** — 프롬프트만이다 (`structure.ts` · 기준을 낮추지 않는다). old-roadmap.md 「운영 규칙」 3줄 중 「환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다」가 policy 로 안 나온다 — `SOURCE_DOCUMENT_KIND_BRIEF.roadmap` 이 「마일스톤과 기한이 주로」라 규칙 절을 가볍게 읽는 듯. 그 한 줄에 「로드맵 문서 안의 운영 규칙도 항목으로 낸다」를 더하거나 SYSTEM 의 「항목 하나 = …」에 「부정형 규칙(하지 않는다 · 기한을 두지 않는다)도 규칙이다」. 시험은 `ai-structure` 의 「여섯 종류가 서로 다른 프롬프트를 만든다」가 이미 표를 읽으니 문장 존재만 한 줄. 합격은 `p3:measure` 의 roadmap items 에 환불 policy 가 있고(6개) 충돌에 환불 SLA 짝이 서는 것 — 145 를 안 고치면 재시도 규칙 짝은 여전히 실행마다 갈린다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(142 ✅ — 143·145·144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(145 · 144 · 143 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 142 ✅.
+
+### 지난 바퀴 (81) — PLAN P3 첫 행을 진짜 Gemini 로 잼 · 기본 thinking 이 출력 상한을 먹어 `AI_OUTPUT_INVALID` → `GEMINI_THINKING_LEVEL` · 142·143·144 기록 · `p3:measure` (FINDINGS 141 · `314ab0e`)
 
 **이번 바퀴(81)는 PLAN P3 첫 행 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」의 완료 기준을 진짜 Gemini 로 쟀다.** INBOX 「할 것」비어 있음 · 관통 7단계 OK(994) · 고장 0 이라 ④3 ② 대로 PLAN 맨 위 행이었다.
 재는 문을 하나 만들었다: `pnpm --filter web p3:measure`(`apps/web/scripts/p3-measure.ts` · CI 밖 · ≈ $0.02) — PGlite 위에서 **제품 길 그대로**(`POST /documents` → `ai_jobs` 러너 → `withBudget` → `callModel` → `jobs/{id}/items` → PATCH active → conflict job)
@@ -39,14 +82,7 @@ old-roadmap.md 를 active 로, goals.md 를 draft 로 넣고 탐지까지 굴린
 🔴 **2-B 이번 라운드 — `AiSourceSpan` 세 칸(`start_char`·`end_char`·`heading_path`)** ① 소비처 `structure.ts` `toSourceRef()` 하나 ② 뒤집으면 갈림: 범위 밖이면 재시도(잠겨 있음) — **그러나 범위 안의 틀린 숫자는 아무것도 못 가른다**(142). `heading_path` 는 비면 chunk 의 것으로 채운다(살아 있다).
 `ItemType` 10종 중 goals.md 하나에서 **6종**이 실제로 나왔다(mission·goal·policy·roadmap·domain·architecture) — adr·workflow·constraint·open_question 넷은 이 문서로는 안 나온다(open_question 은 항목이 아니라 질문 행으로 4개).
 
-**다음 바퀴의 일 — FINDINGS 142**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 142 → 82바퀴가 닫았다 (`3b6ebef`). 아래는 81 이 남긴 지목의 원문이다.
 
 🔴 142 는 PLAN P3 첫 행의 몫이다 — 구멍이지만 그 행의 완료 기준(「offset 이 범위 안」의 뜻) 그 자체라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 143(프롬프트 · 충돌 3/3) → 144 → `p3:measure` 로 다시 재서 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
 
@@ -232,52 +268,6 @@ INBOX 순서 4(구멍 → 격차)의 첫 격차이고 둘 다 「게스트가 �
 - PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
   **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
 - 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
-
-### 지난 바퀴 (76) — Manifest 마일스톤이 `due` 를 나른다 · 화면 8 행에 due · 75 의 미커밋 14 파일 위에 빠진 둘 (FINDINGS 111 · `4109f5e`)
-
-**76바퀴는 FINDINGS 111 — 구멍(Manifest 의 마일스톤에 `due` 가 없어 화면 8 이 기한을 말할 수 없다)을 닫았다** (`4109f5e`). INBOX 순서 4(구멍 → 격차)의
-셋째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). ⚠ **이 바퀴가 처음 연 것이 아니다** — 75 의 다음 세션이 스키마·라우트·화면·시드·시험·SPEC·DESIGN_BRIEF·번들까지 다 고쳐 놓고
-(파일 mtime 18:20~18:21) **CI 도 커밋도 없이 끝났다.** 워킹트리에 14 파일이 남아 있었다. 76 은 그 위에서 빠진 둘을 채웠다: ① `compile.ts` 의 `milestonesOf()` — 정작 `due` 를 옮기는
-한 줄(스키마 주석의 절차 ②)이 **없었다** → liveness 시험이 빨갰을 것 ② `scripts/dump-roadmap.tsx` fixture 에 `due` 가 없어 typecheck 이 빨갰다. 그 뒤 `pnpm --filter @contextops/schema schemas` 로
-`plugin/contextops/schemas/manifest.json` 을 다시 뽑아야 schema 시험이 초록이 됐다 (갈린 것은 `due` 5줄뿐).
-
-🔴 **잰 것** (`docs/evidence/2026-09-06-manifest-due/probe.txt`):
-
-| | 전 (`e65c2f8`) | 후 (`4109f5e`) |
-|---|---|---|
-| `ManifestMilestone` (schema) | `{ id, paths, done_when }` | `+ due: CalendarDate.optional()` — 없으면 없다 · 칸을 더하는 절차 ①~⑥ 을 옆 주석에 |
-| `milestonesOf()` (compiler) | 셋만 옮김 | `due` 가 있을 때만 키를 만든다 (`undefined` 키 없음 · P4 · JSON 과 toEqual 이 같은 말) |
-| 관통 실물 `.ci/walkthrough-pack/manifest.json` | PL-M1 에 due 없음 (본문 `CLAUDE.md:13` 에는 `due: 2026-04-30` 이 전부터 있었다) | **`"due": "2026-04-30"`** (128행) — 본문과 같은 글자 |
-| golden `case-1-small/expected/manifest.json` | — | PL-M1 `2026-10-15` · PL-M2 `2026-11-30` 두 줄만 갈렸다 (`UPDATE_GOLDEN=1` 로 다시 뽑아 diff 확인) · `manifest_hash` 그대로(`files` 만 센다) |
-| `COMPILER_VERSION` | 0.1.0 | **0.2.0** — 같은 snapshot 에서 나오는 Manifest 가 다르다. `TEMPLATE_VERSION` 은 그대로(본문 불변) |
-| 라우트 `GET /projects/{id}/roadmap` | 칸을 하나씩 고르므로 안 나름 | `due: m.due ?? null` 한 줄 |
-| 화면 8 `MilestoneRow` (dump 13 모양) | `▸ \| PL-M1 \| ◐ \| 진행 중 …` | `▸ \| PL-M1 \| **due 2026-09-20** \| ◐ \| 진행 중 …` — 13/13 · null 이면 「due 」·「기한」 0 |
-| 데모 시드 PL-M1 | due 없음 | `2026-04-30` (goals.md §4 제목 괄호) · `QUOTED_DATA.roadmap` 에 `due` |
-| 시험 | compiler 181 · schema 140 | compiler **185**(liveness +4: 실림 · 뒤집으면 갈림 · 없으면 키 없음 · 해시는 due 에 안 흔들림) · web-roadmap **+3** · api-publish·demo-guest 가 행의 due 를 센다 |
-| CI | GREEN 18:09 (docs FAIL 은 75 의 문서 커밋 전) | **GREEN 20:44** — principles OK 9 · typecheck 10초 · test 94초 · build 32초 · walkthrough **960** · docs OK |
-
-⚠ **안 한 것** — 브라우저로 화면 8 을 열지 않았다 (`.ci/shots/` 비어 있음 · 관통은 roadmap 화면을 안 찍는다). 글자 모양은 `dump-roadmap.tsx` 가 정본이고 픽셀은 「눈 판정 대기」.
-「지났다」(overdue) 판정은 서버도 화면도 안 잰다 — 그건 111 의 범위가 아니었고, 만들려면 `Date.now` 가 컴파일러 밖(라우트)에 있어야 한다 (P4).
-
-🔴 **배운 것 — 워킹트리에 남은 작업은 「누가 어디까지 했나」를 diff 로 먼저 센다.** 14 파일이 다 있어 보여도 정작 핵심 한 줄(`milestonesOf()`)이 없었다. ⑥ 의 「CI 를 배경으로 띄우지 마라」와
-같은 종류의 죽음이다 — 이번엔 CI 를 부르기도 전에 끝났다. 절차 주석(①~⑥)이 스키마 옆에 있었기에 **빠진 칸이 어느 것인지 바로 보였다** — 「더하는 절차를 표 옆에 적어라」가 값을 했다.
-
-🔴 **2-B 이번 라운드 — Manifest 마일스톤의 `due` 가 그 예다.** 「데이터는 있고 Manifest 만 안 나르던 칸」 — ① 소비처: `compile.ts` `milestonesOf()` · 라우트 · `MilestoneRow` ② 뒤집으면 갈림:
-`liveness.test.ts` 「값을 뒤집으면 Manifest 가 갈린다」 · `web-roadmap.test.ts` 「값을 뒤집으면 글자가 갈린다」. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 108 → 77바퀴가 닫았다 (`7e29d06`). 아래는 76 이 남긴 지목의 원문이다.
-
-🔴 고장은 없다. INBOX 순서 4 — 구멍 → 격차. 구멍 중 남은 것은 108(라우트가 `answerSlot` 을 두 갈래로만 읽는다 — `none` 과 `ask` 가 같다) 하나다. 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이
-와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다. 108 뒤는 격차 — 121+135 · 119 · 118 · 116 · 112 · 59 · 100 · 131 · 132 · 133 · 134.
-
-> **108 을 하는 법** — `apps/web/src/app/api/v1/projects/[id]/questions/route.ts:98~115` 가 `slot === 'seeded'` 만 본다. 갈래를 `CONFLICT_KIND_RULES[kind].answerSlot` 의 값 수(3)만큼 —
-> `none` 이면 `save_as` 를 400 으로 거절(문구 「이 질문은 답을 항목으로 만들지 않습니다」 · 에러 코드는 한 곳의 표에서) · `seeded` 는 지금대로 · `ask` 만 사람이 고른 자리로. ⚠ 지금 `none` 은
-> 닿을 수 없다(`QUESTION_CONFLICT_KINDS` 둘이 `seeded`·`ask`) — 시험은 규칙 표를 뒤집어(`'none'`) API 가 빨개지는 모양으로 잠근다. 「어느 종류가 질문인가」와 「자리를 묻나」가 두 표에 나뉘어 있으니
-> 둘의 관계도 같은 시험에. SPEC §5 먼저. **한 바퀴에 하나씩.**
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
-  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
-- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 108 · 100 · 59 · 131~135)는 **PLAN 을 막지 않는다** — 고장은 없다.
 
 ---
 
@@ -584,9 +574,9 @@ INBOX 순서 4(구멍 → 격차)의 첫 격차이고 둘 다 「게스트가 �
 
 ## 눈 판정 대기
 
-🟡 **화면 3(`/import`)에서 Gemini 구조화 job 을 브라우저로 본 적이 없다** (81바퀴 · `314ab0e`). `pnpm --filter web p3:measure` 는 라우트를 프로세스 안에서 불러 goals.md → `succeeded` · 항목 18 · 질문 4 · 충돌 2 까지 봤다
-(`docs/evidence/2026-09-06-p3-gemini/probe.txt`). 못 본 것: `demo:db` + `next start`(`.env.local` 의 키를 읽는다) → `/import` 에 goals.md 를 붙여 넣으면 진행 막대가 「1 조각 중 0 → 1」로 가나 · 후보 18장·질문 4장이 화면 4 에 서나 ·
-틀린 인용(FINDINGS 142)이 근거 드로어에서 어떻게 보이나 — 142 를 고친 **뒤에** 보는 것이 맞다 (지금 보면 틀린 것을 찍는다).
+🟡 **화면 3(`/import`)에서 Gemini 구조화 job 을 브라우저로 본 적이 없다** (81·82바퀴 · `3b6ebef`). `pnpm --filter web p3:measure` 는 라우트를 프로세스 안에서 불러 goals.md → `succeeded` · 항목 12 · 질문 4 · 인용 21/21 이 제목과 같은 문장까지 봤다
+(`docs/evidence/2026-09-06-p3-gemini/probe.txt` §5). 못 본 것: `demo:db` + `next start`(`.env.local` 의 키를 읽는다) → `/import` 에 goals.md 를 붙여 넣으면 진행 막대가 「1 조각 중 0 → 1」로 가나 · 후보 12장·질문 4장이 화면 4 에 서나 ·
+근거 드로어가 잘라 보이는 문장이 제목과 맞나 — 142 가 닫혔으니 이제 볼 만하다. 143·145 뒤에 한 번에.
 
 🟡 **화면 8 의 `due` 칸을 브라우저로 안 봤다** (76바퀴 · `4109f5e` · FINDINGS 111). 글자 모양은 `pnpm --filter web exec tsx scripts/dump-roadmap.tsx` 가 정본이고 13 모양 전부에
 `due 2026-09-20` 이 마일스톤 ID 뒤 · chip 앞에 선다 (`docs/evidence/2026-09-06-manifest-due/probe.txt`). 못 본 것: 그 `meta mono` 칸이 375px 에서 chip 과 줄바꿈될 때 어색하지 않은가.

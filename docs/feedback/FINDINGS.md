@@ -33,6 +33,14 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 145. **구조화 후보가 이미 있는 항목과 같은 slug 를 고르면 accept 에서 거절되고, 그 둘의 충돌을 탐지할 기회가 사라진다** — 「충돌 3」이 모델의 id 선택에 달려 있다   [구멍]
+- **증상**: 82바퀴 `p3:measure` — goals.md 의 「외부 PSP 호출 재시도 규칙」 후보가 `POST /jobs/{id}/items` 에서 `{index 3, id: 이미 있는 항목 id 다}` 로 거절됐다. old-roadmap.md 의 재시도 규칙(이미 active)과 같은 slug(`item_psp_retry_policy`)를 골랐기 때문이다. 그래서 탐지 candidates 가 5 → 2, 「5회 지수 백오프 vs 3회 0.5초 고정」 짝이 재료에서 빠져 충돌 **1/3**. 81바퀴는 두 문서가 우연히 다른 slug 를 골라 2/3 이었다 — 같은 프롬프트에서 실행마다 갈린다.
+- **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §5 · probe.json `goals.accepted.rejected` · `conflict.candidates {used 2, total 2}`.
+- **정본**: `docs/SPEC.md` §7.1 (`POST /projects/{id}/jobs/{jobId}/items` · 「고른 id 만 넣는다」) · §7.2 (탐지는 실린 항목 사이에서만) · `apps/web/src/lib/api/item.ts` `insertDrafts()` · `structure.ts` `uniqueId()`(한 문서 안의 중복만 `_2` 로 가른다)
+- **왜 고장이 아닌가**: 거절은 정직하고(조용히 덮지 않는다 · 같은 문의 시험이 그걸 잠근다) 나머지 후보는 들어간다. 그러나 **정확히 충돌하는 두 규칙이 같은 이름을 고르기 쉽다** — 같은 개념이니까 — 그래서 충돌일수록 탐지에서 빠진다.
+- **고칠 방향**: 둘 중 하나 — ① `structureDocument` 가 프로젝트의 **기존 항목 id 목록**을 받아 `uniqueId()` 의 `taken` 에 미리 넣는다(러너가 한 번 조회 · 문서 안 중복과 같은 `_2` 규칙 · 프롬프트는 안 바뀐다) ② accept 문이 충돌 id 를 `_2` 로 갈아 넣는다(사람이 고른 id 와 들어간 id 가 달라져 화면이 헷갈린다). ①이 맞다 — 가르는 자리는 이미 하나(`uniqueId`)다. 고친 뒤 `p3:measure` 로 rejected 0 · candidates 5 를 본다. ⚠ 143(환불 줄이 항목이 안 됨)과 합쳐야 3/3 이다.
+- **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「충돌 3」의 절반이 이것이다)
+
 ### 144. **`callModel()` 이 `finishReason` 을 안 읽는다** — 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도로 간다 · 429 는 `INTERNAL` 이 된다   [구멍]
 - **증상**: ① 출력 상한에 잘린 JSON 은 `undefined` → Zod 실패 → 「계약과 맞지 않는다」는 불평을 실어 **같은 상한으로** 다시 부른다 — 같은 자리에서 또 잘린다 (81바퀴 첫 실행이 정확히 이것 · 60초 · 왕복 2).
   ② Gemini 가 429 를 내면 `client.ts` 가 `Error('Gemini generateContent 429')` 를 던지고 `runJob` 은 `ApiError` 가 아니라서 `INTERNAL` 로 적는다 — 화면은 「분당 제한」이 아니라 「서버 오류」를 본다 (`KNOWN_LIMITATIONS` 는 429 → 픽스처 결과라고 적어 두었다).
@@ -49,13 +57,15 @@
 - **고칠 방향**: 프롬프트다 — 기준을 낮추지 않는다 (STATUS 80 의 규칙). `roadmap` 종류의 안내가 「마일스톤과 기한이 주로」라서 규칙 절을 가볍게 읽는 듯하다 — 「로드맵 문서 안의 운영 규칙도 policy 로 낸다」 한 줄, 또는 SYSTEM 의 「항목 하나 = 실제로 적힌 목표·규칙·결정·절차 하나」에 「부정형 규칙(기한을 두지 않는다 · 하지 않는다)도 규칙이다」. 고친 뒤 `p3:measure` 로 3/3 을 본다.
 - **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「충돌 3」이 이것이다)
 
-### 142. **`source_ref` offset 이 「범위 안」인데 가리키는 문장이 틀리다** — 모델은 글자를 못 센다 · P7 이 여기서 끊긴다   [구멍]
+### 142. ✅ **`source_ref` offset 이 「범위 안」인데 가리키는 문장이 틀리다** — 모델은 글자를 못 센다 · P7 이 여기서 끊긴다   [구멍]
 - **증상**: goals.md 18항목 + 질문 4 의 span 27개가 전부 `0 ≤ start < end ≤ 문서 길이` 를 지나는데, 잘라 보면 G1 항목이 G2 줄을, PII 금지 항목이 §3.4 를, 웹훅 서명 항목이 §4 의 제목을 가리킨다. architecture 5개와 질문 4개는 각각 **같은 구간 하나**를 낸다. `heading_path` 는 18/18 맞다.
 - **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §4 · probe.json 의 `quote`(span 을 원문에서 자른 첫 줄) — 진짜 API 두 번 다 같은 모양.
 - **정본**: `docs/SPEC.md` §7.1 (「chunk offset 을 문서 offset 으로 변환해 검증(범위 밖이면 재시도)」) · §0.1 **P7** · `packages/schema` `AiSourceSpan`
 - **왜 고장이 아닌가**: 관통·발행은 지나고 화면도 뜬다. 그러나 이 근거로 Pack 을 내면 **태그를 따라간 심사자가 다른 문장을 본다** — 「환각 차단」 주장이 무너지는 자리라 구멍 중 맨 위다.
 - **고칠 방향**: 모델에게 숫자 대신 **원문 인용(quote)** 을 내게 하고 서버가 조각 안에서 `indexOf` 로 offset 을 **계산**한다 — 못 찾으면 계약 위반으로 1회 재시도. 바뀌는 곳: `AiSourceSpan`(`packages/schema` — 계약이 먼저) · `structure.ts` 의 `toSourceRef()` · SYSTEM 의 span 문장 · `ai-structure.test.ts`. heading_path 는 지금처럼 모델이 내도 된다(맞는다). ⚠ 「범위 안」 검사는 남기되 그것만으로 통과시키지 마라.
-- **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「offset 이 범위 안」의 뜻이 이것이다)
+- **고친 것** (`3b6ebef` · 82바퀴): 계약이 먼저 — `packages/schema` `AiSourceSpan` 에서 `start_char`·`end_char` 를 빼고 `quote`(원문 그대로 · ≤ `AI_QUOTE_MAX_CHARS` 600)를 뒀다. `structure.ts` `toSourceRef()` 가 `chunk.text.indexOf(quote)` 로 문서 offset 을 **계산**하고 0곳(「원문에 없다」)·2곳 이상(「여러 곳」)이면 `OutputInvalid` → 오류 위치를 넣어 1회 재시도. `untrusted()` 의 `</`→`<\` 치환은 되돌려 찾는다. SYSTEM·머리말·공통 금지(`prompt.ts` · SPEC §7)의 「offset」 문장을 「원문 그대로 인용」으로. 시험 `ai-structure` +5(보내는 스키마에 start_char·end_char 0 · 원문에 없으면 재시도 · 여러 곳이면 재시도 · 두 번 다 없으면 `AI_OUTPUT_INVALID` · `</` 되돌리기) · 스텁 여섯 파일을 quote 모양으로 · plugin 번들 재생성.
+  **진짜 Gemini 로 다시 쟀다** (`probe.txt` §5): 인용 **21/21** 이 제목과 같은 문장(G1 은 G1 줄 · 웹훅 서명은 그 규칙 문장 · 질문 4개는 §5 의 네 줄 각각) · 재시도 0 · goals 12 항목 · 질문 4 · ≈ $0.016.
+- **상태**: ✅ (주인 PLAN **P3 첫 행** — 남은 것은 143 · 144 · 145)
 
 ### 141. ✅ **진짜 Gemini 에서 구조화 job 이 두 문서 모두 `AI_OUTPUT_INVALID`** — 기본 thinking 이 `maxOutputTokens` 를 먹어 JSON 이 잘린다   [고장]
 - **증상**: `p3:measure` 첫 실행 — old-roadmap.md · goals.md 둘 다 `failed / AI_OUTPUT_INVALID` · 각 60초(재시도 포함 왕복 2) · 장부 outputTokens 0. 화면 3 으로 문서를 올려도 같은 길이다 — **P3 첫 행을 아무도 잴 수 없었다.**

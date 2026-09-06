@@ -15,6 +15,52 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (76) — Manifest 마일스톤이 `due` 를 나른다 · 화면 8 행에 due · 75 의 미커밋 14 파일 위에 빠진 둘 (FINDINGS 111 · `4109f5e`)
+
+**76바퀴는 FINDINGS 111 — 구멍(Manifest 의 마일스톤에 `due` 가 없어 화면 8 이 기한을 말할 수 없다)을 닫았다** (`4109f5e`). INBOX 순서 4(구멍 → 격차)의
+셋째 항목이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). ⚠ **이 바퀴가 처음 연 것이 아니다** — 75 의 다음 세션이 스키마·라우트·화면·시드·시험·SPEC·DESIGN_BRIEF·번들까지 다 고쳐 놓고
+(파일 mtime 18:20~18:21) **CI 도 커밋도 없이 끝났다.** 워킹트리에 14 파일이 남아 있었다. 76 은 그 위에서 빠진 둘을 채웠다: ① `compile.ts` 의 `milestonesOf()` — 정작 `due` 를 옮기는
+한 줄(스키마 주석의 절차 ②)이 **없었다** → liveness 시험이 빨갰을 것 ② `scripts/dump-roadmap.tsx` fixture 에 `due` 가 없어 typecheck 이 빨갰다. 그 뒤 `pnpm --filter @contextops/schema schemas` 로
+`plugin/contextops/schemas/manifest.json` 을 다시 뽑아야 schema 시험이 초록이 됐다 (갈린 것은 `due` 5줄뿐).
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-manifest-due/probe.txt`):
+
+| | 전 (`e65c2f8`) | 후 (`4109f5e`) |
+|---|---|---|
+| `ManifestMilestone` (schema) | `{ id, paths, done_when }` | `+ due: CalendarDate.optional()` — 없으면 없다 · 칸을 더하는 절차 ①~⑥ 을 옆 주석에 |
+| `milestonesOf()` (compiler) | 셋만 옮김 | `due` 가 있을 때만 키를 만든다 (`undefined` 키 없음 · P4 · JSON 과 toEqual 이 같은 말) |
+| 관통 실물 `.ci/walkthrough-pack/manifest.json` | PL-M1 에 due 없음 (본문 `CLAUDE.md:13` 에는 `due: 2026-04-30` 이 전부터 있었다) | **`"due": "2026-04-30"`** (128행) — 본문과 같은 글자 |
+| golden `case-1-small/expected/manifest.json` | — | PL-M1 `2026-10-15` · PL-M2 `2026-11-30` 두 줄만 갈렸다 (`UPDATE_GOLDEN=1` 로 다시 뽑아 diff 확인) · `manifest_hash` 그대로(`files` 만 센다) |
+| `COMPILER_VERSION` | 0.1.0 | **0.2.0** — 같은 snapshot 에서 나오는 Manifest 가 다르다. `TEMPLATE_VERSION` 은 그대로(본문 불변) |
+| 라우트 `GET /projects/{id}/roadmap` | 칸을 하나씩 고르므로 안 나름 | `due: m.due ?? null` 한 줄 |
+| 화면 8 `MilestoneRow` (dump 13 모양) | `▸ \| PL-M1 \| ◐ \| 진행 중 …` | `▸ \| PL-M1 \| **due 2026-09-20** \| ◐ \| 진행 중 …` — 13/13 · null 이면 「due 」·「기한」 0 |
+| 데모 시드 PL-M1 | due 없음 | `2026-04-30` (goals.md §4 제목 괄호) · `QUOTED_DATA.roadmap` 에 `due` |
+| 시험 | compiler 181 · schema 140 | compiler **185**(liveness +4: 실림 · 뒤집으면 갈림 · 없으면 키 없음 · 해시는 due 에 안 흔들림) · web-roadmap **+3** · api-publish·demo-guest 가 행의 due 를 센다 |
+| CI | GREEN 18:09 (docs FAIL 은 75 의 문서 커밋 전) | **GREEN 20:44** — principles OK 9 · typecheck 10초 · test 94초 · build 32초 · walkthrough **960** · docs OK |
+
+⚠ **안 한 것** — 브라우저로 화면 8 을 열지 않았다 (`.ci/shots/` 비어 있음 · 관통은 roadmap 화면을 안 찍는다). 글자 모양은 `dump-roadmap.tsx` 가 정본이고 픽셀은 「눈 판정 대기」.
+「지났다」(overdue) 판정은 서버도 화면도 안 잰다 — 그건 111 의 범위가 아니었고, 만들려면 `Date.now` 가 컴파일러 밖(라우트)에 있어야 한다 (P4).
+
+🔴 **배운 것 — 워킹트리에 남은 작업은 「누가 어디까지 했나」를 diff 로 먼저 센다.** 14 파일이 다 있어 보여도 정작 핵심 한 줄(`milestonesOf()`)이 없었다. ⑥ 의 「CI 를 배경으로 띄우지 마라」와
+같은 종류의 죽음이다 — 이번엔 CI 를 부르기도 전에 끝났다. 절차 주석(①~⑥)이 스키마 옆에 있었기에 **빠진 칸이 어느 것인지 바로 보였다** — 「더하는 절차를 표 옆에 적어라」가 값을 했다.
+
+🔴 **2-B 이번 라운드 — Manifest 마일스톤의 `due` 가 그 예다.** 「데이터는 있고 Manifest 만 안 나르던 칸」 — ① 소비처: `compile.ts` `milestonesOf()` · 라우트 · `MilestoneRow` ② 뒤집으면 갈림:
+`liveness.test.ts` 「값을 뒤집으면 Manifest 가 갈린다」 · `web-roadmap.test.ts` 「값을 뒤집으면 글자가 갈린다」. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 108 → 77바퀴가 닫았다 (`7e29d06`). 아래는 76 이 남긴 지목의 원문이다.
+
+🔴 고장은 없다. INBOX 순서 4 — 구멍 → 격차. 구멍 중 남은 것은 108(라우트가 `answerSlot` 을 두 갈래로만 읽는다 — `none` 과 `ask` 가 같다) 하나다. 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이
+와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다. 108 뒤는 격차 — 121+135 · 119 · 118 · 116 · 112 · 59 · 100 · 131 · 132 · 133 · 134.
+
+> **108 을 하는 법** — `apps/web/src/app/api/v1/projects/[id]/questions/route.ts:98~115` 가 `slot === 'seeded'` 만 본다. 갈래를 `CONFLICT_KIND_RULES[kind].answerSlot` 의 값 수(3)만큼 —
+> `none` 이면 `save_as` 를 400 으로 거절(문구 「이 질문은 답을 항목으로 만들지 않습니다」 · 에러 코드는 한 곳의 표에서) · `seeded` 는 지금대로 · `ask` 만 사람이 고른 자리로. ⚠ 지금 `none` 은
+> 닿을 수 없다(`QUESTION_CONFLICT_KINDS` 둘이 `seeded`·`ask`) — 시험은 규칙 표를 뒤집어(`'none'`) API 가 빨개지는 모양으로 잠근다. 「어느 종류가 질문인가」와 「자리를 묻나」가 두 표에 나뉘어 있으니
+> 둘의 관계도 같은 시험에. SPEC §5 먼저. **한 바퀴에 하나씩.**
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 108 · 100 · 59 · 131~135)는 **PLAN 을 막지 않는다** — 고장은 없다.
+
 ### 지난 바퀴 (75) — 제안 결정은 「한 장 단위」 · DESIGN_BRIEF·SPEC §9 를 코드에 · 게이트 4 · 코드 0줄 (FINDINGS 114 ② · `e7e0513`)
 
 **이번 바퀴(75)는 FINDINGS 114 — 구멍(DESIGN_BRIEF §4 화면 6 이 「항목별 [승인] [거절]」을 약속하는데 서버에 담을 자리가 없다)을 ② 로 닫았다** (`e7e0513`). INBOX 순서 4(구멍 → 격차)의
