@@ -247,6 +247,24 @@ while ($true) {
     if ($timedOut)  { $verdict = "TIMEOUT" }
     elseif ($isErr) { $verdict = "ERROR($subtype)" }
 
+    #  🔴 **결과 줄이 없으면 그건 「끝난 것」이 아니라 「잘린 것」이다.**
+    #    stream-json 은 정상 종료할 때 반드시 type:result 를 마지막에 낸다.
+    #    그게 없다는 건 세션이 **도중에 끊겼다**는 뜻이다 (2026-09-06 실측:
+    #    바퀴 1 이 43턴·툴 34번·648KB 를 쓰고 result 없이 130초에 끝났다).
+    #  ★ 그때 「?턴 · 비용 ?」만 찍으면 **죽은 건지 그냥 끝난 건지 구분이 안 된다.**
+    #    자식의 종료 코드가 그 둘을 가른다 — 0 이 아니면 죽은 것이고,
+    #    0xC000013A(-1073741510)면 콘솔 종료 신호를 맞은 것이다.
+    if ($turns -eq "?" -and -not $timedOut) {
+        $ec = "?"
+        try { $ec = $proc.ExitCode } catch { }
+        $verdict = "CUT(exit=$ec)"
+        Log "  ⚠ 결과 줄이 없다 — 세션이 도중에 잘렸다. 자식 종료 코드 $ec"
+        if ($ec -eq -1073741510) {
+            Log "  ⚠ 0xC000013A = 콘솔 종료 신호(Ctrl+C 계열). 창이 닫혔거나 밖에서 끊었다."
+        }
+        Log "  로그: logs\cycles\$tag.jsonl ($([int]((Get-Item $outFile).Length/1KB))KB)"
+    }
+
     # ── 이번 바퀴가 실제로 뭘 남겼나 ──────────────────────────────
     #  "OK" 는 「세션이 안 죽었다」지 「일했다」가 아니다. 커밋으로 잰다.
     $headAfter  = Get-LoopHead $root
