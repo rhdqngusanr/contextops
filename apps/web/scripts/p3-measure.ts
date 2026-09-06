@@ -27,6 +27,7 @@ import { eq } from 'drizzle-orm'
 import { CONFLICT_KIND_RULES, type SourceDocumentKind, type SourceRef } from '@contextops/schema'
 
 import { aiUsage } from '../src/db/schema'
+import { geminiTransport, setAiClientForTest, type AiTransport, type GenerateResponse } from '../src/lib/ai/client'
 import { createJob, runJob } from '../src/lib/ai/job'
 import { fixtureText } from '../src/lib/demo/fixtures'
 import { seedSession } from '../src/lib/demo/seed'
@@ -72,7 +73,7 @@ interface RefCheck {
 interface ItemCheck {
   readonly id: string
   readonly type: string
-  /** 모델이 고른 scope — 탐지는 「같은 type/scope」만 짝짓는다 (§7.2). 갈리면 후보가 0 이다 (83바퀴). */
+  /** 모델이 고른 scope — 83바퀴까지 탐지가 「같은 type/scope」만 짝지어 갈리면 후보가 0 이었다. 146 뒤로는 거르지 않고 프롬프트 줄로만 (§7.2). */
   readonly scope: string
   readonly title: string
   readonly refs: readonly RefCheck[]
@@ -94,6 +95,8 @@ interface StructureRun {
   readonly refsTotal: number
   readonly refsInRange: number
   readonly merge_candidates: unknown
+  /** 이 문서의 LLM 왕복 (재시도 포함). 실패했으면 여기가 유일한 이유다. */
+  readonly roundTrips: readonly RoundTrip[]
 }
 
 function refCheck(ref: SourceRef, text: string): RefCheck {
@@ -103,6 +106,43 @@ function refCheck(ref: SourceRef, text: string): RefCheck {
   const inRange = ref.start_char >= 0 && ref.end_char > ref.start_char && ref.end_char <= text.length
   const quote = inRange ? text.slice(ref.start_char, ref.end_char).split('\n')[0]!.slice(0, 100) : ''
   return { start: ref.start_char, end: ref.end_char, inRange, heading_path: ref.heading_path, quote }
+}
+
+// ---------------------------------------------------------------------
+//  왕복 기록 — 실패한 job 의 **이유**는 DB 에 없다 (P1 · job.ts 의 catch). 여기서만 본다
+// ---------------------------------------------------------------------
+
+/**
+ * 왕복 하나. 응답 본문은 안 남긴다 — 남기는 것은 「끝난 이유 · 글자수 · JSON 인가 · 재시도라면
+ * 그 불평」뿐이다. 불평은 우리 코드가 만든 문장이고, 인용 40자는 픽스처(공개 자료)다.
+ * ★ 왜 — 84바퀴가 같은 자리에서 일회용 진단을 만들었다 지웠다. 두 번째면 문이어야 한다.
+ */
+interface RoundTrip {
+  readonly finishReason: string | undefined
+  readonly outputChars: number
+  readonly json: boolean
+  readonly ms: number
+  /** 재시도 요청이면 앞선 응답에 대한 불평 (`⚠ 직전 응답이 …` 줄). 첫 요청이면 없다. */
+  readonly retryOf?: string
+}
+
+const COMPLAINT_PREFIX = '⚠ 직전 응답이 계약과 맞지 않았다'
+
+/** 진짜 transport 를 감싸 왕복마다 `RoundTrip` 하나를 `sink` 에 민다. 응답은 손대지 않는다. */
+function recording(real: AiTransport, sink: RoundTrip[]): AiTransport {
+  return {
+    async generate(model, body) {
+      const user = body.contents[0]?.parts.map((p) => p.text).join('') ?? ''
+      const retryOf = user.split('\n').find((l) => l.startsWith(COMPLAINT_PREFIX))
+      const t0 = Date.now()
+      const res: GenerateResponse = await real.generate(model, body)
+      const text = res.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
+      let json = false
+      try { JSON.parse(text); json = true } catch { /* 산문이거나 잘렸다 */ }
+      sink.push({ finishReason: res.candidates?.[0]?.finishReason, outputChars: text.length, json, ms: Date.now() - t0, ...(retryOf ? { retryOf } : {}) })
+      return res
+    },
+  }
 }
 
 function countBy<T>(xs: readonly T[], key: (x: T) => string): Record<string, number> {
@@ -121,6 +161,8 @@ async function main(): Promise<void> {
   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
 
   const { pg, db } = await freshDb()
+  const trips: RoundTrip[] = []
+  setAiClientForTest(recording(geminiTransport(), trips))
   const owner = seedSession('p3-owner')
   const P = (projectId: string) => `/api/v1/projects/${projectId}`
 
@@ -170,6 +212,7 @@ async function main(): Promise<void> {
       chunks: result.chunks, items, itemTypes: countBy(items, (i) => i.type), itemScopes: countBy(items, (i) => i.scope), open_questions,
       refsTotal: refs.length, refsInRange: refs.filter((r) => r.inRange).length,
       merge_candidates: result.merge_candidates,
+      roundTrips: trips.splice(0),
     }
   }
 
@@ -217,6 +260,7 @@ async function main(): Promise<void> {
       count: detected.length,
       byKind: countBy(detected, (c) => c.kind),
       conflicts: detected.map((c) => ({ kind: c.kind, a: c.a_item_id, b: c.b_item_id, severity: c.severity, question: c.question })),
+      roundTrips: trips.splice(0),
     }
   }
 
@@ -249,7 +293,7 @@ async function main(): Promise<void> {
   console.log(JSON.stringify({
     criteria: probe.criteria,
     roadmap: { status: roadmap.status, error_code: roadmap.error_code, items: roadmap.items.length, types: roadmap.itemTypes, scopes: roadmap.itemScopes, oq: roadmap.open_questions.length, ms: roadmap.latencyMs, activated },
-    goals: { status: goals.status, error_code: goals.error_code, items: goals.items.length, types: goals.itemTypes, scopes: goals.itemScopes, oq: goals.open_questions.length, ms: goals.latencyMs, accepted: goalsAccepted.accepted.length, rejected: goalsAccepted.rejected.length },
+    goals: { status: goals.status, error_code: goals.error_code, items: goals.items.length, types: goals.itemTypes, scopes: goals.itemScopes, oq: goals.open_questions.length, ms: goals.latencyMs, accepted: goalsAccepted.accepted.length, rejected: goalsAccepted.rejected.length, roundTrips: goals.roundTrips },
     conflict: { status: conflictRun.status, error_code: conflictRun.error_code, count: conflictRun.count, byKind: conflictRun.byKind, candidates: conflictRun.candidates, ms: conflictRun.latencyMs },
     usage,
     wrote: join(dir, 'probe.json'),

@@ -1,0 +1,530 @@
+{
+  "measured_at": "2026-09-06T16:13:32.803Z",
+  "model": "gemini-3.5-flash",
+  "criteria": {
+    "goals.md 항목 ≥ 12": 11,
+    "탐지 충돌 ≥ 3": 3,
+    "offset 범위 안 (goals)": "15/15",
+    "offset 범위 안 (old-roadmap)": "6/6",
+    "withBudget 장부 행": 3
+  },
+  "roadmap": {
+    "file": "paylab-docs/old-roadmap.md",
+    "kind": "roadmap",
+    "chars": 707,
+    "jobId": "0d484fd4-16fd-4bd7-91cc-6d7508ea45a1",
+    "status": "succeeded",
+    "error_code": null,
+    "latencyMs": 6906,
+    "chunks": {
+      "used": 1,
+      "total": 1
+    },
+    "items": [
+      {
+        "id": "item_paylab_m1",
+        "type": "roadmap",
+        "title": "M1 — 웹훅 수신 v1",
+        "scope": "path:src/webhook/",
+        "refs": [
+          {
+            "start": 98,
+            "end": 215,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것"
+            ],
+            "quote": "### M1 — 웹훅 수신 v1 (2025-10-31)"
+          }
+        ]
+      },
+      {
+        "id": "item_paylab_m2",
+        "type": "roadmap",
+        "title": "M2 — 원장 도입",
+        "scope": "path:src/ledger/",
+        "refs": [
+          {
+            "start": 217,
+            "end": 326,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것"
+            ],
+            "quote": "### M2 — 원장 도입 (2025-11-28)"
+          }
+        ]
+      },
+      {
+        "id": "item_paylab_m3",
+        "type": "roadmap",
+        "title": "M3 — PSP B 이중화",
+        "scope": "path:src/psp/",
+        "refs": [
+          {
+            "start": 328,
+            "end": 440,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것"
+            ],
+            "quote": "### M3 — PSP B 이중화 (2025-12-19)"
+          }
+        ]
+      },
+      {
+        "id": "item_psp_retry_policy",
+        "type": "policy",
+        "title": "PSP 호출 재시도 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 452,
+            "end": 490,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정."
+          }
+        ]
+      },
+      {
+        "id": "item_refund_sla_policy",
+        "type": "policy",
+        "title": "환불 처리 기한 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 520,
+            "end": 559,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- 환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다."
+          }
+        ]
+      },
+      {
+        "id": "item_webhook_logging_policy",
+        "type": "policy",
+        "title": "웹훅 원본 payload 로그 기록 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 560,
+            "end": 603,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- 장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일."
+          }
+        ]
+      }
+    ],
+    "itemTypes": {
+      "roadmap": 3,
+      "policy": 3
+    },
+    "itemScopes": {
+      "path:src/webhook/": 1,
+      "path:src/ledger/": 1,
+      "path:src/psp/": 1,
+      "project": 3
+    },
+    "open_questions": [],
+    "refsTotal": 6,
+    "refsInRange": 6,
+    "merge_candidates": [],
+    "roundTrips": [
+      {
+        "finishReason": "STOP",
+        "outputChars": 4232,
+        "json": true,
+        "ms": 6886
+      }
+    ],
+    "accepted": {
+      "accepted": [
+        "item_paylab_m1",
+        "item_paylab_m2",
+        "item_paylab_m3",
+        "item_psp_retry_policy",
+        "item_refund_sla_policy",
+        "item_webhook_logging_policy"
+      ],
+      "rejected": []
+    },
+    "activated": 6
+  },
+  "goals": {
+    "file": "paylab-docs/goals.md",
+    "kind": "goal",
+    "chars": 3513,
+    "jobId": "243bbf29-a319-4608-8d06-3a6ef48d93bc",
+    "status": "succeeded",
+    "error_code": null,
+    "latencyMs": 31527,
+    "chunks": {
+      "used": 1,
+      "total": 1
+    },
+    "items": [
+      {
+        "id": "item_goal_g1",
+        "type": "goal",
+        "title": "G1: 결제 승인 성공률 99.5%",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 501,
+            "end": 560,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-06-30 |"
+          }
+        ]
+      },
+      {
+        "id": "item_goal_g2",
+        "type": "goal",
+        "title": "G2: 환불 접수→종결 24시간 이내 95%",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 563,
+            "end": 648,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "G2 | 환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95 | 2026-06-30 |"
+          }
+        ]
+      },
+      {
+        "id": "item_goal_g3",
+        "type": "goal",
+        "title": "G3: 정산 오차 0원",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 651,
+            "end": 697,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |"
+          }
+        ]
+      },
+      {
+        "id": "item_policy_retry",
+        "type": "policy",
+        "title": "외부 PSP 호출 재시도 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 841,
+            "end": 942,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "PSP 호출이 실패하면 **최대 5회까지 재시도**한다. 재시도 간격은 **지수 백오프**로"
+          }
+        ]
+      },
+      {
+        "id": "item_policy_refund_sla",
+        "type": "policy",
+        "title": "환불 SLA",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 1140,
+            "end": 1223,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "환불 요청은 **접수 후 24시간 안에 종결**한다. 종결은 `승인` 또는 `거절` 둘 중 하나이고,"
+          }
+        ]
+      },
+      {
+        "id": "item_policy_pii",
+        "type": "policy",
+        "title": "로그에 PII 를 남기지 않는다",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 1431,
+            "end": 1497,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "다음은 **어떤 로그에도** 남기지 않는다. 애플리케이션 로그·접근 로그·에러 리포트·"
+          }
+        ]
+      },
+      {
+        "id": "item_policy_integer_only",
+        "type": "policy",
+        "title": "금액은 정수(원)로만 다룬다",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 1692,
+            "end": 1730,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "`number` 부동소수 연산 금지. 원 단위 정수로만 더하고 뺀다."
+          }
+        ]
+      },
+      {
+        "id": "item_policy_webhook_signature",
+        "type": "policy",
+        "title": "웹훅은 서명 검증 후에만 처리한다",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 1790,
+            "end": 1826,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다."
+          }
+        ]
+      },
+      {
+        "id": "item_roadmap_m1",
+        "type": "roadmap",
+        "title": "M1 — 재시도·타임아웃 정리",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 1880,
+            "end": 1913,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "### M1 — 재시도·타임아웃 정리 (2026-04-30)"
+          }
+        ]
+      },
+      {
+        "id": "item_roadmap_m2",
+        "type": "roadmap",
+        "title": "M2 — 환불 SLA 계측",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 2058,
+            "end": 2089,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "### M2 — 환불 SLA 계측 (2026-05-29)"
+          }
+        ]
+      },
+      {
+        "id": "item_roadmap_m3",
+        "type": "roadmap",
+        "title": "M3 — PII 마스킹과 감사 로그",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 2219,
+            "end": 2255,
+            "inRange": true,
+            "heading_path": [
+              "paylab 결제 서비스 — 팀 목표와 규칙"
+            ],
+            "quote": "### M3 — PII 마스킹과 감사 로그 (2026-06-30)"
+          }
+        ]
+      }
+    ],
+    "itemTypes": {
+      "goal": 3,
+      "policy": 5,
+      "roadmap": 3
+    },
+    "itemScopes": {
+      "project": 11
+    },
+    "open_questions": [
+      {
+        "question": "재시도를 다 쓰고도 실패한 결제를 자동으로 취소할지, 수동 확인 큐에 넣을지 여부",
+        "ref": {
+          "start": 2480,
+          "end": 2531,
+          "inRange": true,
+          "heading_path": [
+            "paylab 결제 서비스 — 팀 목표와 규칙"
+          ],
+          "quote": "재시도를 다 쓰고도 실패한 결제를 **자동 취소할지, 수동 확인 큐에 넣을지** 못 정했다."
+        }
+      },
+      {
+        "question": "부분 환불 건에 대해서도 24시간 환불 SLA 를 적용할지 여부",
+        "ref": {
+          "start": 2584,
+          "end": 2615,
+          "inRange": true,
+          "heading_path": [
+            "paylab 결제 서비스 — 팀 목표와 규칙"
+          ],
+          "quote": "**부분 환불도 24시간 SLA 인지** 정하지 않았다."
+        }
+      },
+      {
+        "question": "웹훅 재전송 요청을 며칠까지 수신 허용할지 및 멱등 테이블 보관 주기",
+        "ref": {
+          "start": 2673,
+          "end": 2704,
+          "inRange": true,
+          "heading_path": [
+            "paylab 결제 서비스 — 팀 목표와 규칙"
+          ],
+          "quote": "웹훅 **재전송을 며칠까지 받아 줄지** 정하지 않았다."
+        }
+      },
+      {
+        "question": "정산 화폐가 KRW 외(예: USD)로 늘어날 경우의 반올림 처리 규칙",
+        "ref": {
+          "start": 2757,
+          "end": 2797,
+          "inRange": true,
+          "heading_path": [
+            "paylab 결제 서비스 — 팀 목표와 규칙"
+          ],
+          "quote": "정산 화폐가 KRW 외로 늘어날 때 **반올림 규칙**을 정하지 않았다."
+        }
+      }
+    ],
+    "refsTotal": 15,
+    "refsInRange": 15,
+    "merge_candidates": [],
+    "roundTrips": [
+      {
+        "finishReason": "STOP",
+        "outputChars": 12816,
+        "json": true,
+        "ms": 20492
+      },
+      {
+        "finishReason": "STOP",
+        "outputChars": 7031,
+        "json": true,
+        "ms": 11014,
+        "retryOf": "⚠ 직전 응답이 계약과 맞지 않았다. 아래를 고쳐서 다시 내라: items.0.id: Invalid string: must match pattern /^item_[a-z0-9_]{3,40}$/ · items.1.id: Invalid string: must match pattern /^item_[a-z0-9_]{3,40}$/ · items.2.id: Invalid string: must match pattern /^item_[a-z0-9_]{3,40}$/"
+      }
+    ],
+    "accepted": {
+      "accepted": [
+        "item_goal_g1",
+        "item_goal_g2",
+        "item_goal_g3",
+        "item_policy_retry",
+        "item_policy_refund_sla",
+        "item_policy_pii",
+        "item_policy_integer_only",
+        "item_policy_webhook_signature",
+        "item_roadmap_m1",
+        "item_roadmap_m2",
+        "item_roadmap_m3"
+      ],
+      "rejected": []
+    }
+  },
+  "conflict": {
+    "jobId": "f2ab8046-6ca2-4857-a08f-daa469aacfcb",
+    "status": "succeeded",
+    "error_code": null,
+    "latencyMs": 2534,
+    "candidates": {
+      "used": 6,
+      "total": 6
+    },
+    "count": 3,
+    "byKind": {
+      "contradiction": 3
+    },
+    "conflicts": [
+      {
+        "kind": "contradiction",
+        "a": "item_policy_pii",
+        "b": "item_webhook_logging_policy",
+        "severity": "high",
+        "question": "바뀐 항목에서는 PII 제거 정책의 일환으로 'PSP 원본 payload 등의 개인정보를 로그에 남기지 않는다'고 명시했으나, 기존 항목에서는 '장애 조사를 위해 웹훅 원본 payload를 로그에 남긴다'고 규정하여 충돌합니다. 어느 정책이 유효합니까?"
+      },
+      {
+        "kind": "contradiction",
+        "a": "item_policy_refund_sla",
+        "b": "item_refund_sla_policy",
+        "severity": "high",
+        "question": "환불 처리 기한과 관련하여 새로 바뀐 항목에는 '24시간 이내 종결 및 미처리 건 에스컬레이션' 규칙이 신설되었으나, 기존 항목에는 '기한을 따로 두지 않는다'고 되어 있어 모순됩니다. 어느 정책이 맞습니까?"
+      },
+      {
+        "kind": "contradiction",
+        "a": "item_policy_retry",
+        "b": "item_psp_retry_policy",
+        "severity": "high",
+        "question": "외부 PSP 호출 재시도 규칙이 새로 바뀐 항목에서는 '최대 5회, 지수 백오프 및 지터 적용'으로 정의되었으나, 기존 항목에는 '3회 재시도, 0.5초 고정 간격'으로 명시되어 있어 모순됩니다. 어느 규칙을 적용해야 합니까?"
+      }
+    ],
+    "roundTrips": [
+      {
+        "finishReason": "STOP",
+        "outputChars": 941,
+        "json": true,
+        "ms": 2524
+      }
+    ]
+  },
+  "usage": [
+    {
+      "feature": "structure",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 1031,
+      "outputTokens": 1761,
+      "costMicros": 4712
+    },
+    {
+      "feature": "structure",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 5293,
+      "outputTokens": 8635,
+      "costMicros": 23176
+    },
+    {
+      "feature": "conflict",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 1687,
+      "outputTokens": 411,
+      "costMicros": 1534
+    }
+  ]
+}

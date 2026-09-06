@@ -69,6 +69,8 @@ export const GEMINI_THINKING_LEVEL: GeminiThinkingLevel = 'low'
 export interface GenerateResponse {
   readonly candidates?: readonly {
     readonly content?: { readonly parts?: readonly { readonly text?: string }[] }
+    /** `STOP` · `MAX_TOKENS` · … — ⚠ `callModel()` 은 아직 안 읽는다 (FINDINGS 144). 측정 문이 기록만 한다. */
+    readonly finishReason?: string
   }[]
   readonly usageMetadata?: {
     readonly promptTokenCount?: number
@@ -86,14 +88,19 @@ export interface AiTransport {
 
 let cached: AiTransport | undefined
 
-function transport(): AiTransport {
-  if (cached) return cached
+/**
+ * 진짜 Gemini 로 가는 transport. `callModel()` 은 이것을 한 번 만들어 붙들고 쓴다.
+ * ⚠ 제품 코드는 이것을 직접 부르지 않는다 — 부르면 예산 가드를 우회한다 (P3).
+ *   밖에서 쓰는 곳은 `scripts/p3-measure.ts` 하나다: 진짜 응답을 **기록만** 하는 껍데기로
+ *   감싸 `setAiClientForTest` 로 꽂는다 (실패한 job 의 이유는 P1 때문에 DB 에 없다 · 84바퀴).
+ */
+export function geminiTransport(): AiTransport {
   const apiKey = process.env.GEMINI_API_KEY
   //  🔴 조용히 undefined 로 돌지 않게 여기서 죽인다 (.env.example ③).
   //     ⚠ 키가 없는 배포는 **고장이 아니다** — SPEC §7.5 의 「픽스처 결과로 떨어지는」
   //        갈래가 그 경우를 받는다. 부르는 쪽이 이 오류를 잡아 픽스처로 내려간다.
   if (!apiKey) throw new Error('GEMINI_API_KEY 가 없다 — apps/web/.env.example 을 보고 .env.local 을 만들어라')
-  cached = {
+  return {
     async generate(model, body) {
       const res = await fetch(`${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',
@@ -106,6 +113,10 @@ function transport(): AiTransport {
       return (await res.json()) as GenerateResponse
     },
   }
+}
+
+function transport(): AiTransport {
+  if (!cached) cached = geminiTransport()
   return cached
 }
 

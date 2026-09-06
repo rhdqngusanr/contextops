@@ -22,7 +22,8 @@ import { AI_SYSTEM_COMMON, untrusted } from './prompt'
 // =====================================================================
 //  apps/web/src/lib/ai/conflict.ts — 충돌·오래됨 탐지 (SPEC §7.2 · P3)
 //
-//  바뀐 항목 + 같은 type/scope 의 기존 active 항목 → **질문 카드**.
+//  바뀐 항목 + 같은 type 의 기존 active 항목 → **질문 카드**.
+//  (scope 는 후보를 거르는 조건이 아니라 프롬프트의 `scope=` 줄이다 — FINDINGS 146)
 //
 //  🔴 **LLM 은 「어느 쪽이 맞다」를 판단하지 않는다** (SPEC §7.2 마지막 줄).
 //     질문만 만든다. 고르는 것은 사람이고 그 결정은 `conflicts.resolution` 에 남는다.
@@ -44,7 +45,7 @@ import { AI_SYSTEM_COMMON, untrusted } from './prompt'
 //  §7.2 의 수치 — 여기가 정본이다. 라우트·시험은 이 상수를 읽는다
 // ---------------------------------------------------------------------
 
-/** SPEC §7.2 「같은 type/scope 의 기존 active 항목(**최대 40개**)」. */
+/** SPEC §7.2 「같은 type 의 기존 active 항목(**최대 40개**)」. */
 export const CONFLICT_MAX_CANDIDATES = 40
 
 /** SPEC §7.2 「body 요약 **300자**」. 넘으면 잘라서 싣는다. */
@@ -122,7 +123,8 @@ const SYSTEM = [
 
 function toolRequest(changed: readonly ItemBrief[], candidates: readonly ItemBrief[], complaint?: string): ToolCallRequest {
   const head = [
-    `바뀐 항목 ${changed.length}개와, 같은 type/scope 의 기존 항목 ${candidates.length}개가 아래에 있다.`,
+    `바뀐 항목 ${changed.length}개와, 같은 type 의 기존 항목 ${candidates.length}개가 아래에 있다.`,
+    '각 항목의 scope= 줄이 그 규칙이 미치는 범위다 — scope 가 다른 둘은 범위가 안 겹치면 어긋난 것이 아니다.',
     '바뀐 항목이 **적어도 한쪽에 있는** 짝만 낸다.',
   ]
   if (complaint) {
@@ -216,7 +218,7 @@ export interface ConflictResult {
   /** **심각도가 높은 것부터.** 화면 4 는 카드 10장만 보여 준다 (§9). */
   readonly conflicts: AiConflict[]
   /**
-   * 견줄 상대로 실은 기존 항목 수와, 같은 type/scope 로 찾은 전체 수.
+   * 견줄 상대로 실은 기존 항목 수와, 같은 type 으로 찾은 전체 수.
    * **`used < total` 이면 뒤를 안 본 것이다** — 화면이 그 사실을 사람에게 말해야 한다.
    */
   readonly candidates: { readonly used: number; readonly total: number }
@@ -258,10 +260,12 @@ export async function detectConflicts(input: ConflictInput): Promise<ConflictRes
   //  없는 항목을 물어봤다면 부를 것이 없다. **지어내지 않는다** — 빈 결과가 답이다.
   if (changed.length === 0) return empty
 
-  //  🔴 SPEC §7.2 「같은 type/scope 의 기존 active 항목」. type 은 DB 가 좁히고,
-  //     scope 는 jsonb 라 여기서 견준다 — 한 프로젝트의 active 항목 수는 §7.3 이
-  //     150개로 묶어 두었으므로 전부 읽어도 한 줌이다.
-  const wantedScopes = new Set(changed.map((c) => scopeKey(c.scope)))
+  //  🔴 SPEC §7.2 「같은 type 의 기존 active 항목」. type 만 DB 가 좁힌다 — 한 프로젝트의
+  //     active 항목 수는 §7.3 이 150개로 묶어 두었으므로 전부 읽어도 한 줌이다.
+  //  ⚠ scope 로는 거르지 않는다 (FINDINGS 146). scope 는 §7.1 에서 **모델이 항목마다
+  //     고르는** 값이라, 그것으로 후보를 거르면 같은 규칙이 실행마다 `project` 와
+  //     `path:src/…` 사이를 오가며 후보가 3 ↔ 0 으로 갈렸다. scope 는 `renderItem` 의
+  //     `scope=` 줄에 실려 모델이 견준다 — 범위가 안 겹치는 둘은 모델이 짝으로 내지 않는다.
   const changedIds = new Set(changed.map((c) => c.id))
   const sameType = (await db
     .select(ITEM_BRIEF_COLUMNS)
@@ -276,7 +280,7 @@ export async function detectConflicts(input: ConflictInput): Promise<ConflictRes
     //     항목부터 싣고, 같으면 id 순으로 고정한다 (같은 입력 → 같은 프롬프트).
     .orderBy(desc(contextItems.priority), asc(contextItems.publicId))) as ItemBrief[]
 
-  const matched = sameType.filter((i) => !changedIds.has(i.id) && wantedScopes.has(scopeKey(i.scope)))
+  const matched = sameType.filter((i) => !changedIds.has(i.id))
   const candidates = matched.slice(0, CONFLICT_MAX_CANDIDATES)
 
   //  견줄 상대가 없고 바뀐 항목도 하나뿐이면 짝이 나올 수 없다 — 부르지 않는다.

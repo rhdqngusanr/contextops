@@ -27,7 +27,7 @@ import type { Db } from '../src/db/client'
 //  충돌 탐지 (SPEC §7.2 · P3) — 「부르는가」가 아니라 **「무엇이 갈리는가」**를 잰다
 //
 //  🔴 여기서 재는 것 다섯:
-//    ① 후보를 고르는 규칙 — 같은 type/scope 의 **active** 항목만, 40개까지
+//    ① 후보를 고르는 규칙 — 같은 type 의 **active** 항목만, 40개까지 (scope 는 거르지 않는다 · FINDINGS 146)
 //    ② 모델이 **지어낸 항목 id** 는 통과하지 못한다 (P7 이 무너지는 자리)
 //    ③ `CONFLICT_KIND_RULES` 표가 프롬프트·검증을 **둘 다** 정한다
 //    ④ 탐지 한 번 = 장부 **한 줄** (SPEC §7.5 의 「시간당 10회」가 세는 단위)
@@ -191,7 +191,7 @@ describe('표가 실제로 프롬프트와 검증을 정한다 (SPEC §7.2)', ()
 })
 
 // ---------------------------------------------------------------------
-describe('후보를 고르는 규칙 (SPEC §7.2 「같은 type/scope 의 기존 active 항목」)', () => {
+describe('후보를 고르는 규칙 (SPEC §7.2 「같은 type 의 기존 active 항목」)', () => {
   it('type 이 다르면 후보가 아니다', async () => {
     await seedItem({ id: 'item_changed', type: 'policy' })
     await seedItem({ id: 'item_other', type: 'constraint' })
@@ -203,14 +203,21 @@ describe('후보를 고르는 규칙 (SPEC §7.2 「같은 type/scope 의 기존
     expect(sent.length).toBe(0)
   })
 
-  it('scope 가 다르면 후보가 아니다', async () => {
+  it('scope 가 달라도 같은 type 이면 후보다 — scope 는 프롬프트 줄로 모델이 견준다 (FINDINGS 146)', async () => {
+    //  ★ 왜 — scope 는 §7.1 에서 모델이 항목마다 고르는 값이다. 그것으로 후보를 거르면
+    //    같은 규칙이 실행마다 `project` ↔ `path:src/…` 를 오가며 후보가 3 ↔ 0 으로 갈렸다.
     await seedItem({ id: 'item_changed', scope: { kind: 'domain', value: 'refund' } })
     await seedItem({ id: 'item_other', scope: { kind: 'domain', value: 'billing' } })
+    await seedItem({ id: 'item_wide', scope: { kind: 'project' } })
     stubAi(() => ({ input: { conflicts: [] } }))
 
     const out = await detectConflicts({ projectId: PROJECT, changedItemIds: ['item_changed'], now: NOW })
-    expect(out.candidates.total).toBe(0)
-    expect(sent.length).toBe(0)
+    expect(out.candidates).toEqual({ used: 2, total: 2 })
+    expect(sent.length).toBe(1)
+    //  거르지 않는 대신 **보여 준다** — 모델이 범위를 견줄 수 있게 scope 가 줄마다 실린다.
+    expect(sent[0]!.user).toContain('[item_changed] type=policy scope=domain:refund')
+    expect(sent[0]!.user).toContain('[item_other] type=policy scope=domain:billing')
+    expect(sent[0]!.user).toContain('[item_wide] type=policy scope=project')
   })
 
   it('active 가 아닌 항목은 후보가 아니다 — 초안과 다투게 하지 않는다', async () => {
