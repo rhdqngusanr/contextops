@@ -1,0 +1,235 @@
+{
+  "landed": "/t/demo/p/paylab-api/context",
+  "wide": {
+    "url": "/t/demo/p/paylab-api/import",
+    "viewport": {
+      "w": 1425,
+      "h": 900
+    },
+    "docScrollWidth": 1425,
+    "horizontalScroll": false,
+    "overflowPx": 0,
+    "shellDirection": "row",
+    "navWidth": 219,
+    "navDirection": "column",
+    "navLinksDisplay": "flex",
+    "navLinksVisible": true,
+    "mainInnerWidth": 1141,
+    "paletteTriggerVisible": true,
+    "paletteTriggerText": "화면 이동 ⌘K",
+    "projectNameVisible": true
+  },
+  "narrow": {
+    "url": "/t/demo/p/paylab-api/import",
+    "viewport": {
+      "w": 375,
+      "h": 812
+    },
+    "docScrollWidth": 375,
+    "horizontalScroll": false,
+    "overflowPx": 0,
+    "shellDirection": "column",
+    "navWidth": 375,
+    "navDirection": "row",
+    "navLinksDisplay": "none",
+    "navLinksVisible": false,
+    "mainInnerWidth": 343,
+    "paletteTriggerVisible": true,
+    "paletteTriggerText": "화면 이동 ⌘K",
+    "projectNameVisible": true
+  },
+  "palette": {
+    "open": true,
+    "dialogWidth": 309,
+    "fitsViewport": true,
+    "itemCount": 8,
+    "firstItems": [
+      "› 가져오기 지금 여기",
+      "정리 review",
+      "Context context",
+      "제안 proposals",
+      "Pack Explorer packs"
+    ]
+  },
+  "narrowContext": {
+    "url": "/t/demo/p/paylab-api/context",
+    "viewport": {
+      "w": 375,
+      "h": 812
+    },
+    "docScrollWidth": 375,
+    "horizontalScroll": false,
+    "overflowPx": 0,
+    "shellDirection": "column",
+    "navWidth": 375,
+    "navDirection": "row",
+    "navLinksDisplay": "none",
+    "navLinksVisible": false,
+    "mainInnerWidth": 343,
+    "paletteTriggerVisible": true,
+    "paletteTriggerText": "화면 이동 ⌘K",
+    "projectNameVisible": true
+  },
+  "sweep": [
+    {
+      "screen": "import",
+      "url": "/t/demo/p/paylab-api/import",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "review",
+      "url": "/t/demo/p/paylab-api/review",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "context",
+      "url": "/t/demo/p/paylab-api/context",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "proposals",
+      "url": "/t/demo/p/paylab-api/proposals",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "packs",
+      "url": "/t/demo/p/paylab-api/packs",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "packs/1.1.0",
+      "url": "/t/demo/p/paylab-api/packs/1.1.0",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "roadmap",
+      "url": "/t/demo/p/paylab-api/roadmap",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    },
+    {
+      "screen": "sync",
+      "url": "/t/demo/p/paylab-api/sync",
+      "viewport": {
+        "w": 375,
+        "h": 812
+      },
+      "docScrollWidth": 375,
+      "horizontalScroll": false,
+      "overflowPx": 0,
+      "shellDirection": "column",
+      "navWidth": 375,
+      "navDirection": "row",
+      "navLinksDisplay": "none",
+      "navLinksVisible": false,
+      "mainInnerWidth": 343,
+      "paletteTriggerVisible": true,
+      "paletteTriggerText": "화면 이동 ⌘K",
+      "projectNameVisible": true
+    }
+  ]
+}

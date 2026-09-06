@@ -428,13 +428,32 @@ describe('🔴 좁은 폭에서 껍데기가 내비를 접는다 · 경계는 �
     const block = /@media\s*\(\s*max-width:\s*\d+px\s*\)\s*\{([\s\S]*?\n\})/.exec(css)
     expect(block, '폭 질의 블록을 못 찾았다').not.toBeNull()
     const body = (block as RegExpExecArray)[1] as string
-    expect(body, '좁은 폭에서 `.nav-links` 를 안 접는다').toMatch(/\.nav-links\s*\{[^}]*display:\s*none/)
+    expect(body, '좁은 폭에서 `.nav .nav-links` 를 안 접는다')
+      .toMatch(/\.nav\s+\.nav-links\s*\{[^}]*display:\s*none/)
     expect(body, '내비가 세로 220px 그대로다 — 가로 막대로 접어야 한다').toMatch(/\.nav\s*\{[^}]*flex-direction:\s*row/)
     //  ⛔ 접은 자리에 두 번째 내비를 만들지 마라 — 갈 곳은 이미 있는 ⌘K 팔레트가 받는다.
     const tsx = readFileSync(shellLayout, 'utf8')
     expect(tsx, '뼈대의 탭 줄이 `nav-links` 를 안 달았다 — 규칙이 아무것도 안 접는다')
       .toMatch(/className="col-tight nav-links"/)
     expect(tsx, '접힌 뒤 갈 곳(⌘K 팔레트)이 내비 안에 없다').toMatch(/<CommandPalette/)
+  })
+
+  it('그 블록이 파일의 **맨 끝**이다 — 같은 특정도면 뒤가 이긴다', () => {
+    //  ★ 왜 이걸 재나 — 처음엔 이 블록을 `.main-inner` 옆(파일 가운데)에 뒀다. 그러자 아래에 있는
+    //    `.col-tight`(`display: flex`)와 `.row`(`display: flex`)가 같은 특정도로 이겨서
+    //    **아무것도 안 접혔다** — 규칙은 있는데 화면은 그대로였다 (진짜 브라우저로 봤다).
+    //    「정의만 있고 아무 일도 안 하는 코드」의 CSS 판이고, 눈으로만 보면 다음에 또 난다.
+    const css = readFileSync(globalsCss, 'utf8')
+    //  ⚠ `lastIndexOf` 다 — 토큰 옆 주석에도 같은 글자가 있다.
+    const at = css.lastIndexOf('@media (max-width:')
+    expect(at, '폭 질의를 못 찾았다').toBeGreaterThan(-1)
+    for (const later of ['.col-tight {', '.row {']) {
+      expect(
+        css.indexOf(later),
+        `\`${later}\` 가 폭 질의보다 뒤에 있다 — 그러면 좁은 폭 규칙이 밀린다`,
+      ).toBeLessThan(at)
+    }
+    expect(css.slice(at).trimEnd().endsWith('}'), '폭 질의 뒤에 다른 규칙이 있다').toBe(true)
   })
 
   it('DESIGN_BRIEF §3 「레이아웃」 이 같은 규칙을 정본으로 적고 있다 (문서 ↔ 코드 양방향)', () => {
