@@ -15,6 +15,45 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (80) — 값이 생겼다 · 공개 저장소 URL · 제출 팀명을 정본 하나 `SUBMISSION_IDENTITY` 로 · 푸터 셋 · 140 기록 (INBOX · FINDINGS 122 · `846530a`)
+
+**이번 바퀴(80)는 INBOX 지시 「값이 생겼다」— FINDINGS 122 를 닫았다.** 공개 저장소 URL 과 제출 팀명이 왔고, 관통은 시작부터 7단계 OK(985)라 고장은 없었다.
+두 값의 **정본은 `apps/web/src/components/landing.tsx` 의 `SUBMISSION_IDENTITY` 하나**다 — 푸터(`LANDING_FOOT`)는 그것을 읽어 팀명 · GitHub · Known limitations 셋을 내고, README 머리와 `docs/SUBMISSION.md` 의 🙋 표는
+마크다운이라 import 를 못 하니 **글자 그대로** 적되 `apps/web/test/readme.test.ts` ①-B 가 세 곳이 같은 문자열인지 센다. Known limitations 는 앱에 페이지를 또 만들지 않고 저장소의 `docs/KNOWN_LIMITATIONS.md` 로 건다 (같은 문서가 두 곳이 되지 않게).
+
+🔴 **잰 것** (전부 시험·grep · 브라우저 픽셀은 아래 「눈 판정 대기」):
+
+| | 전 (`836a0a9`) | 후 |
+|---|---|---|
+| 우리 저장소 URL 이 든 곳 | README·docs·plugin·web 에 **0건** (122 의 근거 그대로) | `SUBMISSION_IDENTITY.repoUrl` 1 + 그것을 글자로 적는 문서 3(README 머리 · SUBMISSION 🙋 표 · KNOWN_LIMITATIONS 140 줄) — `.git/config` 의 origin 과 같은지 시험이 센다 |
+| 랜딩 푸터 (`renderToStaticMarkup`) | brand · event · 서버 상태 | + `팀 퇴직했는데저좀이직시켜주세요` · `GitHub` → repoUrl · `Known limitations` → `${repoUrl}/blob/main/docs/KNOWN_LIMITATIONS.md` · 밖 링크 둘만 `rel="noreferrer"`(정확히 2) |
+| 랜딩의 밖 링크 규칙 (`web-landing.test.ts` ④) | 「모든 링크가 `/` 로 시작」 | 「`/` 이거나 repoUrl 아래」— 다른 밖 주소는 여전히 빨갛다 |
+| SUBMISSION 🙋 표 | 5행 전부 🙋 | 팀명 · URL 채움(🙋 0) · production URL · 영상 · 슬라이드는 🙋 그대로 — 시험이 「채운 둘은 정본과 같고, 남은 셋은 🙋」를 따로 센다 |
+| README 머리 | 「🙋 공개 저장소 URL · 제출 팀명 · production URL 은 아직 없습니다」 | 팀명 · URL · 정본이 어디인지 한 줄 · 🙋 production URL 만 남음 — 「저장소 URL … 아직 없」 문장은 시험이 막는다 |
+| `<marketplace>` 자리표시자 | 4곳 (landing `INSTALL_STEPS` · README · SUBMISSION · `setup.ts:150`) | **그대로 4곳** — 저장소에 `.claude-plugin/marketplace.json` 이 **0건**이라 URL 을 넣으면 첫 명령이 죽는다 → FINDINGS **140**(구멍 · 주인 P5 둘째 행) · KNOWN_LIMITATIONS 의 122 줄을 140 줄로 |
+| 시험 | readme 32 · web-landing 20 | readme **40** · web-landing **21** (따로 돌려 잰 수 · 둘 다 초록) |
+| 눈 (`docs/evidence/2026-09-06-landing-foot/` · `next start` + headless Chrome) | — | 1280: 여섯 항목이 한 줄(글자가 x≈750 에서 끝남) · 375(iframe): 세 줄로 접힘, 팀명이 낱말 중간에서 안 잘림 · 가로 넘침 0 → **통과**. 본 김에: 링크 셋이 밑줄 없는 `meta` 색 — 「서버 상태」가 원래 그랬으니 새 격차는 아님(122-B 에 적음) |
+| CI | GREEN 21:56 | **GREEN 22:14** — principles OK 9 · typecheck · test 95초 · build 30초 · walkthrough **994** · docs OK |
+
+⚠ **안 한 것** — ① 푸터 링크의 hover 색은 안 봤다(헤드리스). ② `<marketplace>` 는 못 채웠다 — 값이 없어서가 아니라 **그 값이 가리킬 파일이 없어서**다. 있는 것처럼 적지 않았다.
+③ FINDINGS 109(「다음 바퀴의 일」 줄이 PLAN 행을 못 가리킨다)는 이번에도 안 고쳤다 — 그래서 아래 줄이 「없음」인데, 대기가 없다는 뜻이 아니라 **다음 일이 PLAN 행**이라는 뜻이다.
+
+🔴 **배운 것** — 「값이 생겼다」와 「자리를 채울 수 있다」는 다르다. URL 은 왔지만 `<marketplace>` 가 가리키는 건 URL 이 아니라 **그 URL 에 있어야 할 파일**이고, 그 파일은 없다. 채웠으면 심사위원의 첫 명령이 실패했을 것이다.
+
+🔴 **2-B 이번 라운드 — `LANDING_FOOT` 6항목**: ① 소비처 `Foot()`(5) + `Landing()` 머리글(brand) ② 뒤집으면 갈림 — `team.name`·`github.href`·`limits.href` 는 `web-landing` 푸터 시험이 마크업에서 직접 찾고 `readme` ①-B 가 정본과 대조 · `health.href` 는 「모든 링크가 `/` 이거나 repoUrl」 규칙 안. `ItemType` 10종은 여전히 다음 라운드.
+
+**그 바퀴가 다음으로 지목한 것**: PLAN P3 첫 행 (FINDINGS 109 — 그 줄은 PLAN 행을 못 가리켜 「없음」이었다). 81바퀴가 쟀다.
+
+🔴 **「없음」은 대기가 없다는 뜻이 아니다 (FINDINGS 109 — 이 줄은 PLAN 행을 못 가리킨다).** 고장 0 · INBOX 「할 것」비어 있음 → ④3 ② 에 따라 다음은 **PLAN P3 첫 행** 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」다.
+완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `fixtures/paylab-docs/goals.md` → job `succeeded` → 항목 수·충돌 수·offset · 429 면 픽스처 결과로 떨어지나).
+키는 `.env.local` 에 있고 `pnpm --filter web ai:smoke` 가 `callModel()` 까지는 지났다 (79바퀴). 그 행이 닫히면 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **P3 첫 행을 재는 법** — ① `pnpm --filter web demo:db`(PGlite · 씨앗) 와 `next dev` 를 띄운다(`.env.local` 의 `GEMINI_*` 를 읽는다) ② 로그인 없이 되는 길이 없으면 `dev:db` 의 owner 세션으로 ③ `/import` 에서 `goals.md` 를 올려 job 을 만들고 `ai_jobs` 가 `succeeded` 가 될 때까지 폴링
+> ④ `structure-candidates` 의 개수 · 충돌 카드 수 · 각 `source_ref.offset` 이 문서 길이 안인지 ⑤ 수치를 `docs/evidence/2026-09-06-p3-gemini/` 에 남기고 PLAN 행의 완료 기준 옆에 적는다. 12+3 에 못 미치면 **프롬프트(`structure.ts`)를 고치는 게 그 바퀴의 일**이지 기준을 낮추는 게 아니다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 122 ✅ · 122-B 는 기록.
+
 ### 지난 바퀴 (79) — 관통 api RED 를 docs 층 게이트로 (FINDINGS 138 · `bd003a5`) · 서버측 AI Anthropic → Gemini · client.ts 한 문 (INBOX · FINDINGS 139 · `836a0a9`)
 
 **이번 바퀴(79)는 둘이다 — ① 고장 FINDINGS 138(관통이 api 단계에서 빨갛게 시작 · `bd003a5`) ② INBOX 지시 「서버측 AI 를 Anthropic → Gemini」(`836a0a9`).**

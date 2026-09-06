@@ -33,6 +33,22 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 151. **모델이 제목 줄과 다음 문단을 마침표로 이어 인용한다** — 글자를 더한 인용 하나로 goals.md 전체가 `AI_OUTPUT_INVALID`   [구멍]
+- **증상**: 86바퀴 `probe-86-run1.json` — goals.md 두 왕복 다 `STOP` · JSON 정상인데 「`item_webhook_signature_verification` 의 span.quote 가 조각 원문에 없다: "웹훅은 서명 검증 후에만 처리한다. 서명 검증 전에는 payload 를 "」. 픽스처는 `### 3.5 웹훅은 서명 검증 후에만 처리한다` **제목 줄**과 빈 줄 뒤 `서명 검증 전에는 payload 를 …` 문단이고, 모델이 제목의 `### 3.5 ` 를 빼고 **마침표를 더해** 한 문장으로 붙였다. 재시도도 같은 자리(추정 — 둘째 불평은 안 남는다). 같은 코드의 다음 실행(`probe-86-run2.json`)은 인용 27/27 · 항목 23 이라 실행마다 갈린다 (147·148·150 과 같은 종류 · 2회 중 1회).
+- **근거**: `probe-86-run1.json` `goals.roundTrips[1].retryOf` · `fixtures/paylab-docs/goals.md` 74~76행 · `apps/web/src/lib/ai/structure.ts` `findFolded`
+- **정본**: `docs/SPEC.md` §7.1 · P7
+- **왜 고장이 아닌가**: 관통은 스텁이라 지나고 CI 도 초록이다. 진짜 모델에서 제목과 본문을 합쳐 인용할 때만 죽는다.
+- **고칠 방향**: 접기로는 못 고친다 — 마침표는 **글자**이고 「글자 하나 바꾼 인용은 여전히 없다」가 148 의 시험으로 잠겨 있다. 기준을 낮추지 않는 길은 프롬프트다: SYSTEM 의 span 문장에 「인용은 **한 문단(또는 한 제목 줄) 안**에서만 · 제목과 본문을 잇지 마라 · 문장부호를 더하거나 빼지 마라」 한 줄(표가 아니라 SYSTEM — 여섯 종류 전부). 같이 149 ②(재시도 불평이 같은 종류를 「N개, 예: …」로 접어 전부 말한다)를 하면 둘째 왕복이 같은 자리에서 안 죽는다. 고친 뒤 `p3:measure` 두 번 연속 인용 전부 원문.
+- **상태**: 대기 (주인 없음 — P3 첫 행은 닫혔다 · 구멍 → 격차 순)
+
+### 150. ✅ **인용에서 모델이 인라인 코드 표시(백틱)를 빼면 「원문에 없다」** — 표 칸 하나로 goals.md 전체가 `AI_OUTPUT_INVALID`   [구멍]
+- **증상**: 86바퀴 144 를 닫은 코드(`2c69316`)로 첫 실측(`probe-86-fail.json`) — goals.md 두 왕복 다 `STOP` · JSON 정상인데 「`item_g2_refund_sla` 의 span.quote 가 조각 원문에 없다: "환불 접수→종결 24시간 이내 95% | refund.closed_at "」. 픽스처 G2 행은 「| `refund.closed_at - refund.created_at` p95 |」이고 모델이 백틱을 뺐다 — 148(`**`)과 같은 종류.
+- **근거**: `probe-86-fail.json` `goals.roundTrips` · `fixtures/paylab-docs/goals.md` 25행 · `structure.ts` `QUOTE_FOLDED_CHARS`
+- **정본**: `docs/SPEC.md` §7.1 · P7
+- **왜 고장이 아닌가**: 관통은 스텁이라 지나고 CI 도 초록이다. 진짜 모델에서 인라인 코드를 품은 칸을 인용할 때만 죽는다.
+- **고친 것** (`4d8ea74` · 86바퀴): 표 한 줄 — `QUOTE_FOLDED_CHARS = ['*', '`']`. 백틱은 마크다운의 꾸밈이지 글자가 아니다(코드의 글자 `refund.closed_at` 는 그대로 · offset 은 원문의 백틱 포함 자리). 시험 +1(ai-structure 38) · SPEC §7.1. 진짜 Gemini 같은 코드로 두 번: run1 은 **151** 로 죽었고(다른 자리) run2 는 인용 27/27.
+- **상태**: ✅ `4d8ea74` (주인 없음 — P3 첫 행은 닫혔다)
+
 ### 149. **구조화 첫 응답의 id 가 패턴을 어겨 재시도로 갔고, 재시도 응답은 항목이 줄었다** — 항목 11 (기준 12 아래)   [격차]
 - **증상**: 85바퀴 `probe-85-run1.json` — goals.md 첫 응답 12,816자 · JSON 정상 · `finishReason STOP` 인데 `items.0~2.id` 가 `/^item_[a-z0-9_]{3,40}$/` 를 어겨 Zod 실패 → 재시도 응답은 7,031자 · 항목 **11**. 같은 코드의 다른 실행은 14 · 17 · 25 다. 첫 응답이 무엇을 냈는지는 안 남겼다(응답 본문은 기록하지 않는다) — 아마 대문자·하이픈. 그리고 재시도 불평은 `MAX_REPORTED_ISSUES`(5)까지만 실어 오류가 그보다 많으면 두 번째도 죽을 수 있다 (84바퀴가 「첫 인용 하나만 불평한다」로 적어 둔 것과 같은 자리).
 - **근거**: `docs/evidence/2026-09-07-p3-gemini/probe-85-run1.json` `goals.roundTrips[1].retryOf` · `apps/web/src/lib/ai/structure.ts` `issueText` · `MAX_REPORTED_ISSUES` · `packages/schema` 의 `ContextItemId` 패턴
@@ -78,14 +94,15 @@
   진짜 Gemini 같은 코드로 두 번(147 을 닫은 뒤에야 잴 수 있었다 · `probe-84-run1.json`·`probe-84-run2.json`): accept **거절 0 · 0** · 충돌 **4/3 · 4/3**(의도된 셋 + 「5회 vs 3회」) · 후보 3/3 · 3/3. 두 번 다 모델이 로드맵과 다른 slug 를 골라 `_2` 는 실제로 안 밟혔다 — 밟히는 경우는 시험이 잠근다. 「후보 5」는 안 나왔다 — 후보 수는 로드맵 policy 수(3)이지 slug 의 일이 아니었다.
 - **상태**: ✅ `9a5da46` (주인 PLAN **P3 첫 행** — 남은 것은 146)
 
-### 144. **`callModel()` 이 `finishReason` 을 안 읽는다** — 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도로 간다 · 429 는 `INTERNAL` 이 된다   [구멍]
+### 144. ✅ **`callModel()` 이 `finishReason` 을 안 읽는다** — 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도로 간다 · 429 는 `INTERNAL` 이 된다   [구멍]
 - **증상**: ① 출력 상한에 잘린 JSON 은 `undefined` → Zod 실패 → 「계약과 맞지 않는다」는 불평을 실어 **같은 상한으로** 다시 부른다 — 같은 자리에서 또 잘린다 (81바퀴 첫 실행이 정확히 이것 · 60초 · 왕복 2).
   ② Gemini 가 429 를 내면 `client.ts` 가 `Error('Gemini generateContent 429')` 를 던지고 `runJob` 은 `ApiError` 가 아니라서 `INTERNAL` 로 적는다 — 화면은 「분당 제한」이 아니라 「서버 오류」를 본다 (`KNOWN_LIMITATIONS` 는 429 → 픽스처 결과라고 적어 두었다).
 - **근거**: `apps/web/src/lib/ai/client.ts` `callModel()`·`transport()` · `docs/evidence/2026-09-06-p3-gemini/probe.txt` §1·§2 (finishReason MAX_TOKENS · candidates 301 인데 장부는 0).
 - **정본**: `docs/SPEC.md` §7 (「실패 시 오류 위치를 넣어 1회 재시도」) · §7.5 (`RATE_LIMITED`)
 - **왜 고장이 아닌가**: 141 을 고친 뒤 정상 경로는 지난다. 이건 실패 경로가 **틀린 이름**으로 끝나는 문제다.
 - **고칠 방향**: `GenerateResponse` 에 `finishReason` 을 읽어 `MAX_TOKENS` 면 불평 문장을 「출력이 상한에서 잘렸다 — 더 짧게」로 바꾸거나 상한을 올려 재시도 · `transport()` 의 429 는 `ApiError('RATE_LIMITED')` 로. 둘 다 `client.ts` 한 파일.
-- **상태**: 대기 (주인 PLAN **P3 첫 행**)
+- **고친 것** (`2c69316` · 86바퀴): `client.ts` 한 파일이 정본 — `callModel()` 이 `ModelCall { truncated }` 를 낸다(`candidates[0].finishReason === GEMINI_TRUNCATED_FINISH_REASON` = `MAX_TOKENS`) · `OUTPUT_TRUNCATED_COMPLAINT` 한 문장(「출력이 상한에서 잘렸다 — 항목 수는 그대로 두고 body 와 인용을 더 짧게」)을 `structure.ts`·`conflict.ts` 의 재시도 루프가 Zod 를 보기 전에 `truncated` 부터 보고 싣는다(상한은 그대로 — 올리면 생각 토큰이 먹는다 · 141) · `GEMINI_HTTP_ERROR_CODES { 429: RATE_LIMITED }` 표 — 표의 상태만 `ApiError`, 401/403·5xx 는 Error 그대로(job 은 `INTERNAL`). 스텁이 `finishReason` 을 받는다(기본 STOP). 시험 +8(ai-client 14 · ai-structure · ai-conflict) · SPEC §7 · KNOWN_LIMITATIONS 의 「429 → 픽스처 결과」는 거짓이었다(픽스처 갈래는 §7.4 뿐) → 「RATE_LIMITED」로. 진짜 Gemini 세 번은 전부 `STOP` 이라 잘린 길은 스텁으로만 밟았다.
+- **상태**: ✅ `2c69316` (주인 PLAN P3 첫 행 — 행은 85바퀴에 닫혔다)
 
 ### 143. ✅ **old-roadmap.md 의 「운영 규칙」 3줄 중 환불 줄이 항목이 안 된다** — 그래서 충돌이 3 이 아니라 2 다   [격차]
 - **증상**: §7.1 이 `old-roadmap.md` 에서 policy 를 둘(재시도 3회 고정 · 웹훅 원본 로그 7일)만 뽑고 「환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다」는 빠뜨린다. §7.2 는 실린 항목 사이에서만 짝을 내므로 SPEC §10.1 의 「의도된 어긋남 3곳」 중 환불 SLA 가 카드로 안 선다.

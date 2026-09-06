@@ -1,0 +1,224 @@
+{
+  "measured_at": "2026-09-06T16:59:27.524Z",
+  "model": "gemini-3.5-flash",
+  "criteria": {
+    "goals.md 항목 ≥ 12": 0,
+    "탐지 충돌 ≥ 3": 0,
+    "offset 범위 안 (goals)": "0/0",
+    "offset 범위 안 (old-roadmap)": "6/6",
+    "withBudget 장부 행": 2
+  },
+  "roadmap": {
+    "file": "paylab-docs/old-roadmap.md",
+    "kind": "roadmap",
+    "chars": 707,
+    "jobId": "4aba9e50-94ac-457f-8a3e-3d210466bfa2",
+    "status": "succeeded",
+    "error_code": null,
+    "latencyMs": 6775,
+    "chunks": {
+      "used": 1,
+      "total": 1
+    },
+    "items": [
+      {
+        "id": "item_m1_webhook_v1",
+        "type": "roadmap",
+        "title": "M1 — 웹훅 수신 v1",
+        "scope": "path:src/webhook/",
+        "refs": [
+          {
+            "start": 98,
+            "end": 215,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것",
+              "M1 — 웹훅 수신 v1 (2025-10-31)"
+            ],
+            "quote": "### M1 — 웹훅 수신 v1 (2025-10-31)"
+          }
+        ]
+      },
+      {
+        "id": "item_m2_ledger",
+        "type": "roadmap",
+        "title": "M2 — 원장 도입",
+        "scope": "path:src/ledger/",
+        "refs": [
+          {
+            "start": 217,
+            "end": 326,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것",
+              "M2 — 원장 도입 (2025-11-28)"
+            ],
+            "quote": "### M2 — 원장 도입 (2025-11-28)"
+          }
+        ]
+      },
+      {
+        "id": "item_m3_psp_b",
+        "type": "roadmap",
+        "title": "M3 — PSP B 이중화",
+        "scope": "path:src/psp/",
+        "refs": [
+          {
+            "start": 328,
+            "end": 440,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "이번 반기에 할 것",
+              "M3 — PSP B 이중화 (2025-12-19)"
+            ],
+            "quote": "### M3 — PSP B 이중화 (2025-12-19)"
+          }
+        ]
+      },
+      {
+        "id": "item_policy_psp_retry",
+        "type": "policy",
+        "title": "PSP 호출 재시도 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 452,
+            "end": 519,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정."
+          }
+        ]
+      },
+      {
+        "id": "item_policy_refund_handling",
+        "type": "policy",
+        "title": "환불 처리 기한 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 520,
+            "end": 559,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- 환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다."
+          }
+        ]
+      },
+      {
+        "id": "item_policy_webhook_logging",
+        "type": "policy",
+        "title": "장애 조사용 웹훅 로깅 규칙",
+        "scope": "project",
+        "refs": [
+          {
+            "start": 560,
+            "end": 603,
+            "inRange": true,
+            "heading_path": [
+              "paylab 로드맵 (2025 하반기)",
+              "운영 규칙"
+            ],
+            "quote": "- 장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일."
+          }
+        ]
+      }
+    ],
+    "itemTypes": {
+      "roadmap": 3,
+      "policy": 3
+    },
+    "itemScopes": {
+      "path:src/webhook/": 1,
+      "path:src/ledger/": 1,
+      "path:src/psp/": 1,
+      "project": 3
+    },
+    "open_questions": [],
+    "refsTotal": 6,
+    "refsInRange": 6,
+    "merge_candidates": [],
+    "roundTrips": [
+      {
+        "finishReason": "STOP",
+        "outputChars": 4043,
+        "json": true,
+        "ms": 6757
+      }
+    ],
+    "accepted": {
+      "accepted": [
+        "item_m1_webhook_v1",
+        "item_m2_ledger",
+        "item_m3_psp_b",
+        "item_policy_psp_retry",
+        "item_policy_refund_handling",
+        "item_policy_webhook_logging"
+      ],
+      "rejected": []
+    },
+    "activated": 6
+  },
+  "goals": {
+    "file": "paylab-docs/goals.md",
+    "kind": "goal",
+    "chars": 3513,
+    "jobId": "8b4f5415-5349-439a-bbc7-527731e02cdc",
+    "status": "failed",
+    "error_code": "AI_OUTPUT_INVALID",
+    "latencyMs": 30821,
+    "items": [],
+    "itemTypes": {},
+    "itemScopes": {},
+    "open_questions": [],
+    "refsTotal": 0,
+    "refsInRange": 0,
+    "roundTrips": [
+      {
+        "finishReason": "STOP",
+        "outputChars": 11487,
+        "json": true,
+        "ms": 16937
+      },
+      {
+        "finishReason": "STOP",
+        "outputChars": 9169,
+        "json": true,
+        "ms": 13863,
+        "retryOf": "⚠ 직전 응답이 계약과 맞지 않았다. 아래를 고쳐서 다시 내라: 항목 item_webhook_signature_verification 의 span.quote 가 조각 원문에 없다 — 조각의 글자를 그대로 복사해라: \"웹훅은 서명 검증 후에만 처리한다. 서명 검증 전에는 payload 를 \""
+      }
+    ],
+    "accepted": {
+      "accepted": [],
+      "rejected": []
+    }
+  },
+  "conflict": {
+    "skipped": "받아들인 goals 항목이 없다"
+  },
+  "usage": [
+    {
+      "feature": "structure",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 1031,
+      "outputTokens": 1758,
+      "costMicros": 4705
+    },
+    {
+      "feature": "structure",
+      "model": "gemini-3.5-flash",
+      "inputTokens": 1406,
+      "outputTokens": 0,
+      "costMicros": 422
+    }
+  ]
+}

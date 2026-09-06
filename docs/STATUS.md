@@ -5,11 +5,52 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-07 · 루프 85바퀴 · 코드 `f487d67`(FINDINGS 146 ✅ — 후보를 scope 로 거르지 않는다 · 후보 6/6) + `b1f7d3c`(FINDINGS 148 ✅ — 인용의 `**` 를 뺀다) · **PLAN P3 첫 행 닫음** (진짜 Gemini 두 번 연속 항목 17·25 · 충돌 4·5) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-07 · 루프 86바퀴 · 코드 `2c69316`(FINDINGS 144 ✅ — `callModel` 이 `finishReason` 을 읽는다 · 429 는 `RATE_LIMITED`) + `4d8ea74`(FINDINGS 150 ✅ — 인용의 백틱을 뺀다) · 진짜 Gemini 세 번(실패 · 실패(→151) · 항목 23 · 충돌 4) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(86)는 FINDINGS 144 — 구멍(`callModel()` 이 `finishReason` 을 안 읽어 잘린 응답과 계약 위반이 같은 재시도로 가고 · Gemini 429 가 `INTERNAL` 이 된다)을 닫았다** (`2c69316`). 재려니 goals.md 가 `AI_OUTPUT_INVALID` — 왕복 기록이 이유를 바로 말했다(표 칸의 백틱을 모델이 뺐다) → **별개의 구멍 150**, 같은 바퀴에 따로 닫았다 (`4d8ea74`). 그 코드로 두 번: run1 은 **또 다른 자리**에서 죽었고(제목 줄 + 마침표 → **151** · 적기만) run2 는 항목 23 · 충돌 4 · 인용 27/27. INBOX 「할 것」비어 있음 · 관통 7단계 OK(1005→1013) · 고장 0.
+**144** — `client.ts` 한 파일이 정본이고 두 루프는 읽기만: `callModel()` 이 `ModelCall { truncated }` 를 낸다(`finishReason === GEMINI_TRUNCATED_FINISH_REASON` = `MAX_TOKENS`) · `OUTPUT_TRUNCATED_COMPLAINT`(「출력이 상한에서 잘렸다 — 항목 수는 그대로 두고 body 와 인용을 더 짧게」) 한 문장을 `structure.ts`·`conflict.ts` 의 재시도 루프가 **Zod 를 보기 전에** 싣는다 — 상한은 그대로(올리면 생각 토큰이 먹는다 · 141) · `GEMINI_HTTP_ERROR_CODES { 429: 'RATE_LIMITED' }` 표 — 표의 상태만 `ApiError`, 401/403·5xx 는 Error(job 은 `INTERNAL`). 스텁이 `finishReason` 을 받는다(기본 STOP). 시험 +8 · SPEC §7 · KNOWN_LIMITATIONS 의 「429 → 픽스처 결과」는 **거짓이었다**(픽스처 갈래는 §7.4 뿐) → 「RATE_LIMITED」로.
+**150** — `QUOTE_FOLDED_CHARS = ['*', '`']` 표 한 줄. 148 과 같은 판단 — 인라인 코드 표시는 꾸밈이지 글자가 아니다 · 코드의 글자(`refund.closed_at`)는 그대로 · offset 은 원문(백틱 포함) 자리. 시험 +1(ai-structure 38) · SPEC §7.1.
+
+🔴 **잰 것** (`docs/evidence/2026-09-07-p3-gemini/probe.txt` 86바퀴 절 · 진짜 gemini-3.5-flash):
+
+| | 144 만 (`2c69316` · `probe-86-fail.json`) | 144+150 run1 (`probe-86-run1.json`) | 144+150 run2 (`probe-86-run2.json`) |
+|---|---|---|---|
+| goals.md 항목 | **실패** `AI_OUTPUT_INVALID` (31초 · 왕복 2 · 둘 다 STOP · JSON) — 「`item_g2_refund_sla` … "환불 접수→종결 24시간 이내 95% \| refund.closed_at "」 → **150** | **실패** (31초 · 왕복 2 · 둘 다 STOP · JSON) — 「`item_webhook_signature_verification` … "웹훅은 서명 검증 후에만 처리한다. 서명 검증 전에는 payload 를 "」 → **151** | **23** (policy 8 · architecture 5 · goal 3 · roadmap 3 · constraint 2 · mission 1 · domain 1) |
+| 인용 · 재시도 | 0/0 · 1 | 0/0 · 1 | **27/27** · 0 |
+| accept 거절 | — | — | 0 (23/23) |
+| 탐지 후보 · 충돌 | — | — | **6/6** · **4** (contradiction high ×4) |
+| finishReason | STOP · STOP | STOP · STOP | STOP ×3 |
+| 장부 | 2행 | 2행 | 3행 ≈ $0.024 |
+| 시험 · CI | ai-client 14 · ai-structure 37 · ai-conflict 25 · **GREEN 01:50** (walkthrough 1013) | — | ai-structure **38** · **GREEN 01:58** |
+
+⚠ **144 의 두 길(MAX_TOKENS · 429)은 세 실행 어디에서도 안 밟혔다** — 전부 `STOP` 이라 스텁 시험으로만 잠갔다. 「잘리면 더 짧게」가 진짜 모델에서 실제로 짧아지는지는 실측이 없다 (밟히면 `p3:measure` 의 `roundTrips[].finishReason` 이 말한다).
+⚠ **안 한 것** — 151 은 적기만(SYSTEM 한 줄 「인용은 한 문단 안에서만 · 제목과 본문을 잇지 마라 · 문장부호를 더하지 마라」 + 149 ② 불평 접기) · 149 그대로 · 화면 3 은 여전히 브라우저로 안 봤다 · 인용 실패가 세 실행 중 둘이라 「두 번 연속」은 이번엔 못 봤다.
+
+🔴 **배운 것 둘** — ① **실패 경로에 이름을 붙이는 일은 정상 경로가 그 길을 안 밟는 동안엔 스텁으로만 증명된다.** 그래도 해야 한다 — 밟히는 날은 데모 중이다. 상수 셋(`GEMINI_TRUNCATED_FINISH_REASON` · `OUTPUT_TRUNCATED_COMPLAINT` · `GEMINI_HTTP_ERROR_CODES`)을 `client.ts` 에 두고 루프는 읽기만 하게 해서 「새 상태를 가르려면 표에 한 줄」이 됐다. ② **「원문 그대로」의 꾸밈 목록은 실측이 채운다** — `*`(148) 다음이 백틱(150)이었고, 그 다음(151)은 꾸밈이 아니라 **글자를 더한 것**이라 접기의 경계 밖이다. 경계 밖은 프롬프트로 간다 — 검사를 더 느슨하게 하지 않는다.
+
+🔴 **2-B 이번 라운드 — `GEMINI_HTTP_ERROR_CODES` · `truncated`** ① 소비처: 표는 `geminiTransport` 하나 · `truncated` 는 두 루프 ② 뒤집으면 갈림: 시험 「표의 값은 전부 코드를 바꾼다」 · 「401/500 은 ApiError 가 아니다」 · 「잘리면 불평이 다르고 상한은 같다」. `ItemType` 10종 중 run2 는 **7종**(policy·architecture·goal·roadmap·constraint·mission·domain) — 10종 전수는 다음 라운드.
+
+**다음 바퀴의 일 — FINDINGS 151**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 PLAN 의 `- [ ]` 맨 위는 **P4 둘째 행**(GATE 3 · 눈 판정)이다 — ④3 ② 로는 그 행이 다음이지만, 그 행의 몫인 격차보다 **구멍 151** 이 순서상 위이고(구멍 → 격차) 진짜 모델에서 goals.md 를 2회 중 1회 죽이는 자리라 먼저 닫는다. 그 다음 149(격차 · 같은 파일 · 151 과 같이 해도 된다) → 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **151 을 하는 법** — 대장의 「고칠 방향」: 접기로는 못 고친다(마침표는 글자 · 148 의 「글자 하나 바꾼 인용은 여전히 없다」 시험이 잠근다). `structure.ts` SYSTEM 의 span 문장에 「인용은 한 문단(또는 한 제목 줄) 안에서만 · 제목과 본문을 잇지 마라 · 문장부호를 더하거나 빼지 마라」 한 줄 — 표가 아니라 SYSTEM(여섯 종류 전부). 시험은 SYSTEM 에 그 문장이 산다(83바퀴 `RULE_LIST_LINES` 와 같은 모양). 같이 149 ②(`issueText` 가 같은 종류의 오류를 「N개, 예: …」로 접어 전부 말한다)를 하면 둘째 왕복이 같은 자리에서 안 죽는다. 합격은 `p3:measure` **두 번 연속** 인용 전부 원문 · 재시도 0.
+
+- PLAN 의 `- [ ]` 중 남은 것 **넷**: P4 둘째 행(GATE 3 · 눈 판정 — 다음 PLAN 행) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(151 · 149 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 144 ✅ · 150 ✅.
+
+### 지난 바퀴 (85) — 후보를 scope 로 거르지 않는다 · 인용의 `**` 를 뺀다 · 진짜 Gemini 두 번 연속 항목 17·25 · 충돌 4·5 · **PLAN P3 첫 행 닫음** · 149 기록 (FINDINGS 146 · 148 · `f487d67` · `b1f7d3c`)
 
 **이번 바퀴(85)는 FINDINGS 146 — 구멍(탐지 후보가 모델이 고른 scope 에 달려 있어 같은 코드로 충돌 3/3 ↔ 0/3)을 닫았다** (`f487d67`). 재려니 셋째 실행에서 goals.md 가 `AI_OUTPUT_INVALID` — 이번 바퀴가 `p3:measure` 에 넣은 **왕복 기록**이 이유를 바로 말했다(모델이 인용에서 `**` 를 뺐다) → **별개의 구멍 148**, 같은 바퀴에 따로 닫았다 (`b1f7d3c`). 그 코드로 두 번 연속 완료 기준을 넘어 **PLAN P3 첫 행을 닫았다** (⑧). INBOX 「할 것」비어 있음 · 관통 7단계 OK(1003→1005) · 고장 0.
 **146** — `detectConflicts()` 의 `wantedScopes` 조건을 뺐다: 후보 = 같은 type 의 active 항목(상한 40 · 우선순위 정렬 그대로). scope 는 `renderItem` 의 `scope=` 줄에 실려 **모델이 견준다** — 프롬프트 머리에 「scope 가 다른 둘은 범위가 안 겹치면 어긋난 것이 아니다」 한 줄. 시험은 「scope 가 다르면 후보가 아니다」를 뒤집어 세 scope 가 전부 실리는 것을 센다(24/24) · SPEC §7.2.
@@ -37,14 +78,7 @@ _마지막 갱신: 2026-09-07 · 루프 85바퀴 · 코드 `f487d67`(FINDINGS 14
 
 🔴 **2-B 이번 라운드 — `scope.kind` 3종** ① 소비처: `conflict.ts` 는 이제 **읽기만**(프롬프트 줄) · `scopeKey` 하나 ② 뒤집으면 갈림: 시험 「세 scope 가 전부 프롬프트에 실린다」 · 진짜 모델 run1 에서 `path:`·`domain:` 넷이 후보에 들었다. `ItemType` 10종 중 이번 두 실행은 **5종 · 6종**(mission·architecture 가 2회차에) — 10종 전수는 다음 라운드.
 
-**다음 바퀴의 일 — FINDINGS 144**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+그 바퀴가 다음으로 지목한 것은 FINDINGS 144 였다 — 86바퀴가 닫았다 (`2c69316`) · 재다가 150 을 찾아 같은 바퀴에 따로 닫았고(`4d8ea74`) 151 을 적었다.
 
 🔴 PLAN 의 `- [ ]` 맨 위는 이제 **P4 둘째 행**(GATE 3 · 눈 판정)이다 — ④3 ② 로는 그 행이 다음이지만, 그 행의 몫인 격차(119 · 118 · 116 · 112 · 131~134 · 137)보다 **구멍 144** 가 순서상 위이고(구멍 → 격차) 한 파일(`client.ts`)이라 먼저 닫는다. 그 다음 149(격차 · `structure.ts` 프롬프트 한 줄 + 불평 접기) → 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
 
@@ -197,46 +231,6 @@ old-roadmap.md 를 active 로, goals.md 를 draft 로 넣고 탐지까지 굴린
 
 - PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(쟀다 — 142·143·144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
 - 대장의 대기(144 · 143 · 142 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 141 ✅.
-
-### 지난 바퀴 (80) — 값이 생겼다 · 공개 저장소 URL · 제출 팀명을 정본 하나 `SUBMISSION_IDENTITY` 로 · 푸터 셋 · 140 기록 (INBOX · FINDINGS 122 · `846530a`)
-
-**이번 바퀴(80)는 INBOX 지시 「값이 생겼다」— FINDINGS 122 를 닫았다.** 공개 저장소 URL 과 제출 팀명이 왔고, 관통은 시작부터 7단계 OK(985)라 고장은 없었다.
-두 값의 **정본은 `apps/web/src/components/landing.tsx` 의 `SUBMISSION_IDENTITY` 하나**다 — 푸터(`LANDING_FOOT`)는 그것을 읽어 팀명 · GitHub · Known limitations 셋을 내고, README 머리와 `docs/SUBMISSION.md` 의 🙋 표는
-마크다운이라 import 를 못 하니 **글자 그대로** 적되 `apps/web/test/readme.test.ts` ①-B 가 세 곳이 같은 문자열인지 센다. Known limitations 는 앱에 페이지를 또 만들지 않고 저장소의 `docs/KNOWN_LIMITATIONS.md` 로 건다 (같은 문서가 두 곳이 되지 않게).
-
-🔴 **잰 것** (전부 시험·grep · 브라우저 픽셀은 아래 「눈 판정 대기」):
-
-| | 전 (`836a0a9`) | 후 |
-|---|---|---|
-| 우리 저장소 URL 이 든 곳 | README·docs·plugin·web 에 **0건** (122 의 근거 그대로) | `SUBMISSION_IDENTITY.repoUrl` 1 + 그것을 글자로 적는 문서 3(README 머리 · SUBMISSION 🙋 표 · KNOWN_LIMITATIONS 140 줄) — `.git/config` 의 origin 과 같은지 시험이 센다 |
-| 랜딩 푸터 (`renderToStaticMarkup`) | brand · event · 서버 상태 | + `팀 퇴직했는데저좀이직시켜주세요` · `GitHub` → repoUrl · `Known limitations` → `${repoUrl}/blob/main/docs/KNOWN_LIMITATIONS.md` · 밖 링크 둘만 `rel="noreferrer"`(정확히 2) |
-| 랜딩의 밖 링크 규칙 (`web-landing.test.ts` ④) | 「모든 링크가 `/` 로 시작」 | 「`/` 이거나 repoUrl 아래」— 다른 밖 주소는 여전히 빨갛다 |
-| SUBMISSION 🙋 표 | 5행 전부 🙋 | 팀명 · URL 채움(🙋 0) · production URL · 영상 · 슬라이드는 🙋 그대로 — 시험이 「채운 둘은 정본과 같고, 남은 셋은 🙋」를 따로 센다 |
-| README 머리 | 「🙋 공개 저장소 URL · 제출 팀명 · production URL 은 아직 없습니다」 | 팀명 · URL · 정본이 어디인지 한 줄 · 🙋 production URL 만 남음 — 「저장소 URL … 아직 없」 문장은 시험이 막는다 |
-| `<marketplace>` 자리표시자 | 4곳 (landing `INSTALL_STEPS` · README · SUBMISSION · `setup.ts:150`) | **그대로 4곳** — 저장소에 `.claude-plugin/marketplace.json` 이 **0건**이라 URL 을 넣으면 첫 명령이 죽는다 → FINDINGS **140**(구멍 · 주인 P5 둘째 행) · KNOWN_LIMITATIONS 의 122 줄을 140 줄로 |
-| 시험 | readme 32 · web-landing 20 | readme **40** · web-landing **21** (따로 돌려 잰 수 · 둘 다 초록) |
-| 눈 (`docs/evidence/2026-09-06-landing-foot/` · `next start` + headless Chrome) | — | 1280: 여섯 항목이 한 줄(글자가 x≈750 에서 끝남) · 375(iframe): 세 줄로 접힘, 팀명이 낱말 중간에서 안 잘림 · 가로 넘침 0 → **통과**. 본 김에: 링크 셋이 밑줄 없는 `meta` 색 — 「서버 상태」가 원래 그랬으니 새 격차는 아님(122-B 에 적음) |
-| CI | GREEN 21:56 | **GREEN 22:14** — principles OK 9 · typecheck · test 95초 · build 30초 · walkthrough **994** · docs OK |
-
-⚠ **안 한 것** — ① 푸터 링크의 hover 색은 안 봤다(헤드리스). ② `<marketplace>` 는 못 채웠다 — 값이 없어서가 아니라 **그 값이 가리킬 파일이 없어서**다. 있는 것처럼 적지 않았다.
-③ FINDINGS 109(「다음 바퀴의 일」 줄이 PLAN 행을 못 가리킨다)는 이번에도 안 고쳤다 — 그래서 아래 줄이 「없음」인데, 대기가 없다는 뜻이 아니라 **다음 일이 PLAN 행**이라는 뜻이다.
-
-🔴 **배운 것** — 「값이 생겼다」와 「자리를 채울 수 있다」는 다르다. URL 은 왔지만 `<marketplace>` 가 가리키는 건 URL 이 아니라 **그 URL 에 있어야 할 파일**이고, 그 파일은 없다. 채웠으면 심사위원의 첫 명령이 실패했을 것이다.
-
-🔴 **2-B 이번 라운드 — `LANDING_FOOT` 6항목**: ① 소비처 `Foot()`(5) + `Landing()` 머리글(brand) ② 뒤집으면 갈림 — `team.name`·`github.href`·`limits.href` 는 `web-landing` 푸터 시험이 마크업에서 직접 찾고 `readme` ①-B 가 정본과 대조 · `health.href` 는 「모든 링크가 `/` 이거나 repoUrl」 규칙 안. `ItemType` 10종은 여전히 다음 라운드.
-
-**그 바퀴가 다음으로 지목한 것**: PLAN P3 첫 행 (FINDINGS 109 — 그 줄은 PLAN 행을 못 가리켜 「없음」이었다). 81바퀴가 쟀다.
-
-🔴 **「없음」은 대기가 없다는 뜻이 아니다 (FINDINGS 109 — 이 줄은 PLAN 행을 못 가리킨다).** 고장 0 · INBOX 「할 것」비어 있음 → ④3 ② 에 따라 다음은 **PLAN P3 첫 행** 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」다.
-완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `fixtures/paylab-docs/goals.md` → job `succeeded` → 항목 수·충돌 수·offset · 429 면 픽스처 결과로 떨어지나).
-키는 `.env.local` 에 있고 `pnpm --filter web ai:smoke` 가 `callModel()` 까지는 지났다 (79바퀴). 그 행이 닫히면 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
-
-> **P3 첫 행을 재는 법** — ① `pnpm --filter web demo:db`(PGlite · 씨앗) 와 `next dev` 를 띄운다(`.env.local` 의 `GEMINI_*` 를 읽는다) ② 로그인 없이 되는 길이 없으면 `dev:db` 의 owner 세션으로 ③ `/import` 에서 `goals.md` 를 올려 job 을 만들고 `ai_jobs` 가 `succeeded` 가 될 때까지 폴링
-> ④ `structure-candidates` 의 개수 · 충돌 카드 수 · 각 `source_ref.offset` 이 문서 길이 안인지 ⑤ 수치를 `docs/evidence/2026-09-06-p3-gemini/` 에 남기고 PLAN 행의 완료 기준 옆에 적는다. 12+3 에 못 미치면 **프롬프트(`structure.ts`)를 고치는 게 그 바퀴의 일**이지 기준을 낮추는 게 아니다.
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
-- 대장의 대기(140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 122 ✅ · 122-B 는 기록.
-
 
 ---
 

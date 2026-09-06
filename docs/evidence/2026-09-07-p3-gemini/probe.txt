@@ -135,3 +135,40 @@ conflict.ts detectConflicts(): 후보 = 같은 type(DB) 이고 scopeKey 가 같�
 - 144(finishReason · 429 → RATE_LIMITED)는 그대로다 — 타입에 finishReason 칸만 더했고 callModel 은 아직 안 읽는다.
 - 149(첫 응답 id 패턴 위반 → 재시도 → 항목이 준다 · 재시도 불평이 첫 오류 하나만 말한다)는 적기만 했다.
 - 화면 3(/import) 은 여전히 브라우저로 안 봤다.
+
+# ===================================================================== 86바퀴 (2026-09-07 01:5x)
+# 전부 진짜 API(gemini-3.5-flash · 우리 키) · PGlite(freshDb) · 길은 제품 그대로 · 문 `pnpm --filter web p3:measure`
+# 파일: probe-86-fail.json = 144 만 고친 코드(2c69316) 한 번(실패)
+#       probe-86-run1.json · probe-86-run2.json(= probe.json) = 144+150 을 고친 코드(4d8ea74)로 두 번
+
+## 0. 무엇을 바꿨나
+- 144 (2c69316): callModel() 이 finishReason 을 읽어 truncated 를 낸다 · 두 재시도 루프가 Zod 앞에서 그것부터 봐 OUTPUT_TRUNCATED_COMPLAINT(「더 짧게」)로 재시도 ·
+  geminiTransport 의 429 는 GEMINI_HTTP_ERROR_CODES 표로 ApiError RATE_LIMITED (401/403·5xx 는 Error → INTERNAL).
+- 150 (4d8ea74): QUOTE_FOLDED_CHARS 에 백틱 — 인라인 코드 표시도 꾸밈이지 글자가 아니다.
+
+## 1. 144 만 고친 코드로 한 번 — goals.md 가 AI_OUTPUT_INVALID (probe-86-fail)
+  goals.md          failed AI_OUTPUT_INVALID (31초) · 왕복 2 · 둘 다 STOP · JSON (10,532자 · 10,303자) — 144 의 잘린 길이 아니다
+  불평              「item_g2_refund_sla 의 span.quote 가 조각 원문에 없다: "환불 접수→종결 24시간 이내 95% | refund.closed_at "」
+  원인              픽스처 G2 행 「| `refund.closed_at - refund.created_at` p95 |」의 백틱을 모델이 뺐다 → 150 (148 의 `**` 와 같은 종류)
+  old-roadmap       6 항목 · 6/6 · 장부 2행(실패 행은 추정치 · 출력 0)
+
+## 2. 144+150 코드로 두 번
+  기준                      run1 (probe-86-run1)                                   run2 (probe-86-run2 = probe.json)
+  goals.md 항목 ≥ 12        **failed AI_OUTPUT_INVALID** (31초 · 왕복 2 · STOP · JSON 11,487자 · 9,169자)   **23** (policy 8 · architecture 5 · goal 3 · roadmap 3 · constraint 2 · mission 1 · domain 1)
+  불평 (run1)               「item_webhook_signature_verification 의 span.quote 가 조각 원문에 없다: "웹훅은 서명 검증 후에만 처리한다. 서명 검증 전에는 payload 를 "」
+                            → 픽스처는 「### 3.5 웹훅은 서명 검증 후에만 처리한다」 제목 줄 + 빈 줄 + 「서명 검증 전에는 …」 문단. 모델이 제목을 벗기고 **마침표를 더해** 이었다 → 151 (글자를 더한 것 · 접기로 못 고친다)
+  인용 (goals · roadmap)    0/0 · 6/6                                              **27/27** · 6/6
+  재시도                    1 (그리고 둘째도 죽음)                                  0
+  accept 거절               —                                                      0 (23/23)
+  scope                     —                                                      전부 project
+  탐지 후보 {used,total}    —                                                      **6/6**
+  충돌 ≥ 3                  —                                                      **4** (contradiction high ×4)
+  finishReason              STOP · STOP                                            STOP (roadmap 6,374ms · goals 22,726ms · conflict 2,801ms)
+  장부                      2행                                                    3행 ≈ $0.024 (structure 4,447 + 17,755 · conflict 2,120 micros)
+  → 144 의 두 길(MAX_TOKENS · 429)은 세 실행 어디에서도 안 밟혔다 — 스텁 시험으로만 잠갔다. 「잘리면 더 짧게」가 진짜 모델에서 어떻게 되는지는 아직 실측이 없다.
+  → 인용 실패는 세 실행 중 둘 — 150 은 닫혔고 151 은 프롬프트의 일이다. 두 번 연속 기준은 이번엔 못 봤다 (run2 만 통과).
+
+## 3. 이번 바퀴가 안 한 것
+- 151 은 적기만 했다 (SYSTEM 한 줄 + 149 ② 의 불평 접기).
+- 149 는 그대로다.
+- 화면 3(/import) 은 여전히 브라우저로 안 봤다.
