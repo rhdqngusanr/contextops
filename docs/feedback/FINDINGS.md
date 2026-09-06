@@ -33,7 +33,7 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
-### 136. **CI 의 test 층이 코드와 무관하게 빨개진다** — 부하에서 `freshDb()` 첫 `beforeEach` 가 10초 훅 상한을 넘긴다   [고장]
+### 136. ✅ **CI 의 test 층이 코드와 무관하게 빨개진다** — 부하에서 `freshDb()` 첫 `beforeEach` 가 10초 훅 상한을 넘긴다   [고장]
 - **증상**: `tools/ci.ps1` 가 test 층에서 RED 인데 코드 변화는 0 이다. `apps/web` 32 파일 중 **같은 10 파일**(api-auth · api-pack-zip ·
   api-publish · api-routes · api-seed-questions · demo-guest · demo-reset-rollback · demo-reset · error-log · web-item-doors)의 **첫 시험**만
   `Error: Hook timed out in 10000ms` — 전부 `beforeEach` 의 `freshDb()`(PGlite 기동) 자리다. 나머지 620개는 초록.
@@ -48,7 +48,16 @@
   30초면 「PGlite 가 안 뜬다」와 「느리다」를 여전히 가른다). 또는 `maxWorkers` 로 동시 기동 수를 줄인다 — 둘 중 하나만, 이유를 옆에 적는다.
   ⚠ 시험 파일마다 `beforeEach(…, 30_000)` 을 붙이지 마라 — 32 파일에 흩어진 수치는 갈라진다.
   잠그는 법: 고친 뒤 `pnpm --filter web test` 를 부하 상태에서 한 번, 없을 때 한 번 — 둘 다 초록이어야 닫는다.
-- **상태**: 대기 (고장 — INBOX 순서 4 보다 위 · 72바퀴는 문서만 바꾼 바퀴라 이 항목을 적고 다음 바퀴에 넘긴다)
+- **고친 것** (`767a33e` · 73바퀴): `vitest.base.ts` 에 `HOOK_TIMEOUT_MS = 30_000` **하나** · `test.hookTimeout` 이 그것을 읽는다 — 왜 30초인가(잰 최악 18초의
+  1.7배 · 「안 뜬다」와 「느리다」는 여전히 갈린다) · 왜 `maxWorkers` 가 아닌가(한가할 때도 느려진다)를 옆에 적었다. 그런데 **이미 7 파일이 저마다
+  훅에 `60_000`·`30_000` 을 들고 있었다**(ai-budget · ai-conflict · ai-job · ai-structure · migration · db-pool · migrate-script — 같은 PGlite 기동인데
+  수치가 흩어져 갈린 상태) — 9곳을 지워 정본을 하나로. `apps/web/test/hook-timeout.test.ts` 3개: ① 설정의 `hookTimeout` 이 상수와 같다(정의만 있는 상태가
+  아니다) ② 잰 최악·기본값보다 크다 ③ 워크스페이스 전 `*.test.ts` 를 TS 로 파싱해 훅에 둘째 인자를 준 곳 **0** — `migration.test.ts` 의 옛 `60_000` 을
+  되돌리면 그 줄(`:81`)을 집어 빨개진다(직접 확인). `it(…, N)` 시험 본문 상한(`testTimeout`)은 다른 개념이라 손대지 않았다.
+  **잰 것** (`docs/evidence/2026-09-06-hook-timeout/`): 전 — 실제 게임 부하 79% 에서 **9 failed / 32** · `Hook timed out` 9 · 150초. 후 — 게임이
+  꺼져서 `node -e "while(true){}"` 합성 부하로: 12개(62%) **33/33 · 633/633** · 145초 → 15개(**100%**) **33/33 · 633/633** · 194초 → 부하 없음(CI test 층)
+  **OK 84초**. CI 전 층 GREEN (17:34 · walkthrough 949).
+- **상태**: ✅ `767a33e` (73바퀴)
 
 ### 131. **랜딩 첫 화면에 제품이 움직이는 그림이 없다** — Before/After 가 텍스트 카드다   [격차]
 - **증상**: 랜딩의 첫 스크롤 안에 제품 화면이 없다. Linear·Vercel·Supabase 랜딩의 공통점은 **제품 화면이 첫 스크롤 안에**

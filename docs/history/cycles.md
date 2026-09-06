@@ -15,6 +15,44 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (67) — 게스트 데모의 30초 500 · 풀을 프로세스에 하나로 (INBOX 2026-09-06 ① · FINDINGS 127 · `2134011`)
+
+**67바퀴는 INBOX(2026-09-06 · 사람이 브라우저로 QC 한 결함 넷)를 FINDINGS 127~130 으로 옮기고, ① 을 닫았다** (`2134011`).
+INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면이 빈 화면)이라 ④3 의 ① 이다. PLAN 은 이 바퀴에 안 움직였다 —
+`- [ ]` 중 위의 셋은 사람이 막고 있고(🙋 Supabase · 🙋 Anthropic 키 · GATE 3), INBOX 가 그 다음 순서(P1 첫 행 마이그레이션 →
+126 제출서 → 미해결 FINDINGS)를 적어 두었다.
+
+🔴 **잰 것 — 게스트 데모의 500 은 「동시 요청」이 아니라 「라우트마다 풀 하나」였다.** 짐작이 아니라 재현했다
+(`docs/evidence/2026-09-06-db-pool/probe.txt`).
+
+| | 전 (`eb7794c`) | 후 (`2134011`) |
+|---|---|---|
+| `demo:db` + `next dev` · `POST /demo/session` 뒤 `GET /teams` 순차 3번 | **500 · 30.0초 × 3** (INBOX 는 「단독은 200」이라 했지만 순차도 죽었다) | 200 · 625 / 18 / 19ms |
+| `GET /teams` 동시 8번 | 500 · 30/60/90/120/150초 (postgres-js 가 한 풀 안에서 줄을 서고 매번 30초 CONNECT_TIMEOUT) | 전부 200 · 27~64ms |
+| 화면 5·7 이 던지는 문 5개 동시 (각각 첫 컴파일) | — | 전부 200 · 1.4초 |
+| next 로그 | `{"kind":"unhandled","error":"Error"}` 만 반복 (FINDINGS 128) | unhandled 0 · 5xx 0 |
+| `demo:db` 로그 | (아무 말 없음) | 「둘째 소켓이 줄을 섰다」 0 — 새로 찍는 경고 |
+| 풀이 사는 곳 | `client.ts` 모듈 변수 `let cached` — Next dev 가 **라우트마다** 모듈을 새로 평가해 컴파일된 라우트 수만큼 `postgres()` 풀 | `globalThis[Symbol.for('contextops.db')]` — 프로세스에 하나 |
+| 잠근 시험 | 0 (모든 시험이 `setDbForTest` 로 PGlite 를 직접 꽂아 `postgres()` 를 만드는 길을 한 번도 안 지났다) | `test/db-pool.test.ts` 2개 — PGlite → pglite-socket → TCP → postgres-js `?max=1` → 진짜 라우트. ① 동시 5번 ② `vi.resetModules()` 뒤 새 모듈 인스턴스. **고치기 전 코드로 돌리면 ② 가 26ms 만에 빨갛다**(직접 확인) · ① 은 전에도 초록 |
+| 웹 시험 파일 | 90 | **91** |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 915 · docs → GREEN (`2134011`) |
+
+🔴 **관통이 이걸 못 잡은 이유는 동시성이 아니다.** 관통·시험은 라우트를 프로세스 안에서 `setDbForTest` 로 부른다 —
+`getDb()` 가 실제로 `postgres()` 를 만드는 길은 **개발용 서버와 배포만** 지났다. 그 길 위의 시험이 이제 하나 있다(`db-pool`).
+「시험이 우회하는 문」은 ④2-B 의 「정의만 있고 아무도 안 읽는 것」의 사촌이다 — 정의도 있고 배포도 읽는데 **시험만 안 읽는다.**
+
+🔴 **`?max=1` 은 반이었다.** 풀 하나 안의 연결 수는 막았지만 풀의 수는 못 막는다. 개발용 서버의 주석이 「두 요청이 동시에
+나가면」이라고 원인을 잘못 적고 있었다 — 고쳤다. pglite-socket 0.0.14 는 한 번에 한 소켓만 붙이고 둘째부터 60초 줄에 세운다
+(`connectionQueueTimeout` 기본값) — postgres-js 의 `connect_timeout` 30초가 먼저 끝나서 30초가 됐다.
+
+⚠ **브라우저로는 아직 안 봤다.** probe 는 API 만 쳤다. 「눈 판정 대기」에 적었다 — 시크릿 창에서 `/demo` 가 열리고 Roadmap 이
+`aria-busy` 에서 내려오는지는 사람이 본다.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 128(오류 로그에 메시지·스택 없음). 68바퀴가 닫았다 (`9319617`).
+
+---
+
+
 ### 지난 바퀴 (66) — README · KNOWN_LIMITATIONS 본문 (PLAN P6 둘째 행 ① · `0dc2e93`)
 
 **66바퀴는 PLAN P6 둘째 행의 첫 조각 — README 와 KNOWN_LIMITATIONS 의 본문**을 만들었다. README 는 「루프와 명세만 있다」고
