@@ -15,6 +15,45 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (68) — 오류 로그의 표 · 원인은 남고 질의문은 안 남는다 (INBOX 2026-09-06 ② · FINDINGS 128 · `9319617`)
+
+**68바퀴는 INBOX 순서 ② — FINDINGS 128(고장 · 오류 로그에 메시지도 스택도 없다)을 닫았다** (`9319617`).
+INBOX 가 PLAN 보다 위고, 128 은 사람이 고장으로 분류했다(127 에서 그 대가를 치렀다). PLAN 은 이 바퀴에 안 움직였다 —
+INBOX 의 다음은 129(`keep-all`) → 130(`:focus-visible`) → PLAN P1 첫 행(마이그레이션을 Supabase 에) → 126(제출서) 다.
+
+🔴 **잰 것 — 127 의 로그 `{"kind":"unhandled","error":"Error"}` 에서 「Error」는 drizzle `DrizzleQueryError` 의 기본 name 이었다.**
+drizzle 0.45 는 **모든** 드라이버 예외를 `DrizzleQueryError(query, params, cause)` 로 감싸고 `this.name` 을 안 정한다. 그래서 저 한 낱말은
+「DB 질의가 죽었다」였고 원인(`CONNECT_TIMEOUT`)은 `cause` 에 있었는데 아무도 못 읽었다. 그리고 그 껍데기의 **message 가
+`Failed query: <sql>
+params: <값>`** 이다 — `console.error(err)` 한 줄로 고쳤으면 질의문이 로그로 새는 P1 사고였다.
+그 사이의 자리가 `lib/api/log.ts` 의 **오류 로그 표**다 (`docs/evidence/2026-09-06-error-log/probe.txt`).
+
+| | 전 (`2134011`) | 후 (`9319617`) |
+|---|---|---|
+| 500 이 될 예외의 로그 | `{"kind":"unhandled","error":"Error"}` — 이름 한 낱말 | `{"kind":"error", request_id, route, error:{name, code?, message, stack[≤3], cause?{…}}}` — `request_id` 가 바로 다음 `request` 줄과 같다 |
+| drizzle 껍데기의 `name` | `Error` (클래스가 `this.name` 을 안 정한다) | 클래스 이름 `DrizzleQueryError` (`name` 이 기본값이면 `constructor.name`) |
+| 원인 | 어디에도 없음 | `error.cause` — ① 없는 표: `code: "42P01"` + `relation "no_such_table" does not exist` ② 연결: `code: "CONNECT_TIMEOUT"` + `write CONNECT_TIMEOUT 127.0.0.1:5432` |
+| 질의문·매개변수 | 0 (이름만 남겨서) | **0** — 껍데기의 message 는 자기 `query` 를 품어서 통째로 뺀다(뺐다고 표시) · `query`·`params`·`parameters`·`detail`·`hint`·`where`·`internal_query` 는 `drop` · 시험이 **직렬화된 한 줄 전체**에 `select`·매개변수·`Failed query` 가 없음을 잰다 |
+| 표 | 없음 (`toApiError()` 안의 `console.error` 한 줄) | `ERROR_FIELD_RULES` **12행** — keep 2 · scrub 1 · frames 1 · chain 1 · drop 7 · 표에 없는 필드는 안 남는다(allowlist). `toApiError()` 는 `logError(describeError(err))` 만 부른다 |
+| 시험 | 0 | `test/error-log.test.ts` **21개** — 진짜 drizzle 질의(PGlite)로 죽인 라우트 1 · 연결 오류 2 · **표의 행마다 「값을 넣으면 로그가 갈린다」 12** · allowlist · scrub 양면 · 200자 · cause 깊이 3(순환) · non-Error · 4xx 는 error 줄 0 |
+| 상수 | — | `MESSAGE_MAX_CHARS` 200 · `STACK_FRAMES` 3 · `CAUSE_DEPTH` 3 · `MESSAGE_SCRUBBED` — 한 곳 |
+| SPEC §11 | 「로그: request_id·route·status·latency·id 만」 | 오류 로그 한 줄 추가 — 남기는 것·안 남기는 것·표의 자리 |
+| 웹 시험 파일 | 91 | **92** |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 936 · docs → GREEN (`9319617` · 69바퀴가 앞단에서 돌려 확인) |
+
+🔴 **PGlite 의 예외는 name 이 소문자 `error` 다** — 로그의 `cause.name: "error"` 는 오타가 아니다. 배포(postgres-js)에서는 `PostgresError` 다.
+
+⚠ **`next dev` 서버에서 다시 찍지는 않았다** (68바퀴 시점). → **69바퀴가 찍었다** — 같은 모양 · `cause.code: ECONNREFUSED` · `request_id` 가 화면의 에러 카드와 같다 (`docs/evidence/2026-09-06-keep-all/probe.txt`). 아래는 68 의 원문이다. 위 두 줄은 vitest 프로세스 안에서 같은 `route()` → 같은 `log.ts` 로 찍은 것이다
+(INBOX 가 본 로그는 `next dev` stdout). 같은 코드 길이라 모양은 같지만, 「눈 판정 대기」에 한 줄 남겼다 — 129·130 을 브라우저로 볼 때
+`demo:db` 를 끄고 화면을 열어 보면 `kind:"error"` 줄에 `CONNECT_TIMEOUT` 이 찍히는지 같이 보면 된다.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 129(한글 `keep-all`). 69바퀴가 닫았다 (`0a3535e`). 68 자신은 CI 를 배경으로 띄운 채 끝나
+커밋을 못 했고, 69 가 같은 트리로 올렸다 (`9319617` · `a1a26af`).
+
+
+---
+
+
 ### 지난 바퀴 (67) — 게스트 데모의 30초 500 · 풀을 프로세스에 하나로 (INBOX 2026-09-06 ① · FINDINGS 127 · `2134011`)
 
 **67바퀴는 INBOX(2026-09-06 · 사람이 브라우저로 QC 한 결함 넷)를 FINDINGS 127~130 으로 옮기고, ① 을 닫았다** (`2134011`).

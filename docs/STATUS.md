@@ -5,11 +5,69 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 73바퀴 · 코드 `767a33e`(FINDINGS 136 · 훅 상한 한 곳) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 74바퀴 · 코드 `4d0ba9a`(FINDINGS 115 · CLI 가 웹 주소를 안 짓는다 · where.ts 한 곳) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(74)는 FINDINGS 115 — 구멍(CLI 가 찍는 제안 주소가 앱에 없는 `/p/{uuid}/…` 라 눌러도 404)을 닫았다** (`4d0ba9a`). INBOX 순서 4(구멍 → 격차)의 첫 항목이다 —
+고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 115 의 「고칠 방향」 **①(주소를 안 찍는다)** 을 골랐다 — 설정(`project.json`)에는 uuid 뿐이고 웹 주소는 slug 라(SPEC §8.2 · §9)
+CLI 는 그 주소를 **알 수 없다**. ② 전달 라우트는 주소를 둘로 만든다. 열어 보니 **같은 줄이 `upload-draft` 에도 있었다**(`…/p/{project_id}/context 에서 확인해라`) —
+대장은 propose 만 적었지만 같은 개념이라 같이 닫았다. 「어디서 보나」 줄은 `plugin/contextops/src/cli/where.ts` **한 곳**이 만들고 두 명령은 읽기만 한다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-cli-web-hint/probe.txt` · fakeCli 로 같은 시나리오를 전/후로 찍었다):
+
+| | 전 (`5defaa7`) | 후 (`4d0ba9a`) |
+|---|---|---|
+| `propose` 성공 뒤 마지막 줄 | `→ https://…/p/11111111-…/proposals/p1` — 앱에 `/p/` 라우트가 없다 → 404 | `→ 웹 https://… 에 로그인해 이 프로젝트의 「제안」 탭에서 볼 수 있다 — 「환불 창을 7일로 좁힌다」 · id p1` |
+| `upload-draft` 성공 뒤 마지막 줄 | `→ https://…/p/11111111-…/context 에서 확인해라` — 같은 404 | `→ 웹 https://… 에 로그인해 이 프로젝트의 「Context」 탭에서 볼 수 있다 — 초안 1개` |
+| origin 뒤에 경로를 붙이는 CLI 소스 | **3곳** (api.ts · propose.ts:113 · upload-draft.ts:139) | **1곳** (`api.ts` 의 `/api/v1`) — `test/where.test.ts` ① 이 `src/cli/*.ts` 를 훑어 센다 · bait 파일을 넣으면 `_bad.ts:2` 를 집어 빨개진다(직접 확인) |
+| CLI 가 부르는 탭 이름 ↔ 웹 `layout.tsx` 의 `TABS` label | — | 「제안」·「Context」 둘 다 있음 — 시험 ② 가 그 파일을 글자로 읽어 센다 (플러그인은 웹을 import 못 한다 · 의존 방향 `schema ← compiler ← web/plugin`) |
+| 안내 줄에 경로가 있나 | `/p/` 1 | `/p/` 0 · `/t/` 0 · project uuid 0 — 시험 ③ 과 propose·upload-draft 의 +1 씩 |
+| 플러그인 시험 파일 / 시험 | 15 / 173 | **16 / 178** (where 3 · propose +1 · upload-draft +1 · skipped 1 그대로) |
+| 번들 `bin/contextops-cli.mjs` | 옛 줄 | 다시 만듦 · `bundle.test` 바이트 동일 |
+| Skill 문서 (init · propose) | 「웹 링크를 보여 준다」 · 「링크를 그대로」 | 「어디서 보나 줄」 + ⚠ 화면 주소를 지어 붙이지 마라 |
+| SPEC §8.3 | — | ⚠ 한 문단 — CLI 는 웹 주소를 조립하지 않는다 · 만드는 곳은 `where.ts` 하나 · 서버가 slug 를 내주면 거기만 |
+| CI | GREEN (17:43) | principles OK 9 · typecheck 9초 · test 89초 · build 21초 · walkthrough **949** · docs → **GREEN** (17:55) |
+
+⚠ **관통은 `propose`·`upload-draft` 를 안 부른다** — 그래서 위 전/후는 관통 산출물이 아니라 시험 helper(fakeCli)의 stdout 이다. 진짜 서버에 대고 찍은 적은 없다 (줄 하나라 모양은 같다).
+탭 이름은 사람이 로그인한 뒤 프로젝트 안에서 누르는 글자 그대로다 — 그 탭이 실제로 그 이름으로 뜨는 것은 70바퀴의 캡처(`docs/evidence/2026-09-06-focus-visible/`)에 있다.
+
+🔴 **배운 것 — 「주소를 찍는다」는 「주소를 안다」가 아니다.** uuid 로 지은 주소는 시험에서도 화면에서도 그럴듯하다. 그래서 게이트는 「올바른 주소인가」(CLI 는 알 수 없다)가 아니라
+**「origin 뒤에 경로를 붙이는 소스가 `api.ts` 하나인가」**를 센다 — 다음 사람이 세 번째 자리를 만들면 그 파일:줄이 찍힌다. 같은 줄이 이미 두 파일에 있었으니 「두 번이면 게이트」 그대로다.
+
+🔴 **2-B 이번 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL` 표(4행 · `satisfies Record<…>` 라 하나 빠지면 컴파일이 깨진다)가
+policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/liveness.test.ts` 「enforcement 4종」이 넷을 돌려 가며 fingerprint 가 넷 다 다름을 센다. 새로 적을 것 없음.
+
+**다음 바퀴의 일 — FINDINGS 114**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **114**
+(항목별 [승인]/[거절] 을 담을 자리가 서버에 없다). 114 는 「둘 중 하나를 **고르고** 손대라」다 — ① 항목별 결정 표(`proposal_item_decisions`)를 만들고 발행 `applyProposals` 를
+「승인된 항목만」으로(§2.1 발행 트랜잭션을 건드린다) · ② 안 만든다 — `docs/DESIGN_BRIEF.md` §4 화면 6 의 그 줄을 「제안은 한 장 단위로 승인한다」로 고친다.
+**제출일을 보면 ② 다** — 관통이 지나는 전체 결정을 그대로 두고 문서가 코드와 같은 말을 하게 한다(「코드가 현실」). ① 은 §2.1 · `packages/schema` · 화면 6 · 발행 시험을
+한 바퀴에 다 건드리므로 **사람이 ① 을 원하면 INBOX 에 한 줄** — 그 전까지는 ②. 그 다음 구멍 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103 → 격차 121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134.
+
+> **114 ② 를 하는 법** — `docs/DESIGN_BRIEF.md` §4 화면 6 에서 「항목별 [승인] [거절]」 줄을 찾아 「제안은 한 장 단위 · 전체 [승인] / [거절(사유 필수)]」로 고친다. 정본은 SPEC §5 의
+> `PROPOSAL_DECISIONS`(제안 한 장을 옮기는 표 · `packages/schema`). 화면 6(`apps/web/src/app/t/[team]/p/[project]/proposals/[id]/page.tsx`)이 항목별 버튼을 그리지 않는 것을 먼저
+> 눈으로 확인하고, `apps/web/test/` 에 DESIGN_BRIEF ↔ 코드를 대조하는 시험이 있으면(`design-tokens.test.ts` 가 그 모양) 같은 모양으로 한 줄 — 「화면 6 에 항목별 결정 버튼 0개」.
+> FINDINGS 114 의 상태 줄과 DESIGN_BRIEF 의 줄을 **같은 커밋**에. ⚠ SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고친다 — 코드와 같다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 114 · 113 · 112 · 111 · 110 · 108 · 106 · 105 · 104 · 103 · 131~135 …) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
+---
+
+### 지난 바퀴 (73) — 훅 상한을 vitest.base.ts 한 곳으로 · 부하 100% 에서 33/33 (FINDINGS 136 · `767a33e`)
+
 
 **이번 바퀴(73)는 FINDINGS 136 — 고장(CI 의 test 층이 부하에서 코드와 무관하게 빨개진다)을 닫았다** (`767a33e`). 고장은 INBOX 순서보다 위라(④3 ①) 먼저 했다.
 훅 상한을 `vitest.base.ts` 의 `HOOK_TIMEOUT_MS = 30_000` **한 곳**으로 모았다 — 열어 보니 **이미 7 파일이 저마다 훅에 `60_000`·`30_000` 을 들고 있었다**
@@ -43,14 +101,8 @@ _마지막 갱신: 2026-09-06 · 루프 73바퀴 · 코드 `767a33e`(FINDINGS 13
 = 코드 전부 `ApiError` 를 던지는 자리가 있다(「모든 코드가 실제로 내는 자리를 가졌다」) ② 「코드를 바꾸면 응답이 갈린다」 — 응답의 status·message 가
 `ERROR_STATUS` 표를 따라간다. 새로 적을 것 없음.
 
-**다음 바퀴의 일 — FINDINGS 115**
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 115(CLI 가 찍는 제안 주소가 앱에 없는 주소). 74바퀴가 닫았다 (`4d0ba9a`).
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 **고장은 없다. INBOX 순서 4 — 미해결 FINDINGS 를 구멍 → 격차 순으로.** 구멍 중 **122** 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고,
 **117**(`POST …/ask`)은 SPEC §14 **절삭 1번**이자 P3(🙋 Anthropic 키)의 몫이라 지금 만들면 픽스처 답만 내는 문이 된다 — 그래서 그 다음 구멍
@@ -273,43 +325,6 @@ PLAN 은 이 바퀴에 안 움직였다.
 ---
 
 
-### 지난 바퀴 (68) — 오류 로그의 표 · 원인은 남고 질의문은 안 남는다 (INBOX 2026-09-06 ② · FINDINGS 128 · `9319617`)
-
-**68바퀴는 INBOX 순서 ② — FINDINGS 128(고장 · 오류 로그에 메시지도 스택도 없다)을 닫았다** (`9319617`).
-INBOX 가 PLAN 보다 위고, 128 은 사람이 고장으로 분류했다(127 에서 그 대가를 치렀다). PLAN 은 이 바퀴에 안 움직였다 —
-INBOX 의 다음은 129(`keep-all`) → 130(`:focus-visible`) → PLAN P1 첫 행(마이그레이션을 Supabase 에) → 126(제출서) 다.
-
-🔴 **잰 것 — 127 의 로그 `{"kind":"unhandled","error":"Error"}` 에서 「Error」는 drizzle `DrizzleQueryError` 의 기본 name 이었다.**
-drizzle 0.45 는 **모든** 드라이버 예외를 `DrizzleQueryError(query, params, cause)` 로 감싸고 `this.name` 을 안 정한다. 그래서 저 한 낱말은
-「DB 질의가 죽었다」였고 원인(`CONNECT_TIMEOUT`)은 `cause` 에 있었는데 아무도 못 읽었다. 그리고 그 껍데기의 **message 가
-`Failed query: <sql>
-params: <값>`** 이다 — `console.error(err)` 한 줄로 고쳤으면 질의문이 로그로 새는 P1 사고였다.
-그 사이의 자리가 `lib/api/log.ts` 의 **오류 로그 표**다 (`docs/evidence/2026-09-06-error-log/probe.txt`).
-
-| | 전 (`2134011`) | 후 (`9319617`) |
-|---|---|---|
-| 500 이 될 예외의 로그 | `{"kind":"unhandled","error":"Error"}` — 이름 한 낱말 | `{"kind":"error", request_id, route, error:{name, code?, message, stack[≤3], cause?{…}}}` — `request_id` 가 바로 다음 `request` 줄과 같다 |
-| drizzle 껍데기의 `name` | `Error` (클래스가 `this.name` 을 안 정한다) | 클래스 이름 `DrizzleQueryError` (`name` 이 기본값이면 `constructor.name`) |
-| 원인 | 어디에도 없음 | `error.cause` — ① 없는 표: `code: "42P01"` + `relation "no_such_table" does not exist` ② 연결: `code: "CONNECT_TIMEOUT"` + `write CONNECT_TIMEOUT 127.0.0.1:5432` |
-| 질의문·매개변수 | 0 (이름만 남겨서) | **0** — 껍데기의 message 는 자기 `query` 를 품어서 통째로 뺀다(뺐다고 표시) · `query`·`params`·`parameters`·`detail`·`hint`·`where`·`internal_query` 는 `drop` · 시험이 **직렬화된 한 줄 전체**에 `select`·매개변수·`Failed query` 가 없음을 잰다 |
-| 표 | 없음 (`toApiError()` 안의 `console.error` 한 줄) | `ERROR_FIELD_RULES` **12행** — keep 2 · scrub 1 · frames 1 · chain 1 · drop 7 · 표에 없는 필드는 안 남는다(allowlist). `toApiError()` 는 `logError(describeError(err))` 만 부른다 |
-| 시험 | 0 | `test/error-log.test.ts` **21개** — 진짜 drizzle 질의(PGlite)로 죽인 라우트 1 · 연결 오류 2 · **표의 행마다 「값을 넣으면 로그가 갈린다」 12** · allowlist · scrub 양면 · 200자 · cause 깊이 3(순환) · non-Error · 4xx 는 error 줄 0 |
-| 상수 | — | `MESSAGE_MAX_CHARS` 200 · `STACK_FRAMES` 3 · `CAUSE_DEPTH` 3 · `MESSAGE_SCRUBBED` — 한 곳 |
-| SPEC §11 | 「로그: request_id·route·status·latency·id 만」 | 오류 로그 한 줄 추가 — 남기는 것·안 남기는 것·표의 자리 |
-| 웹 시험 파일 | 91 | **92** |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough 936 · docs → GREEN (`9319617` · 69바퀴가 앞단에서 돌려 확인) |
-
-🔴 **PGlite 의 예외는 name 이 소문자 `error` 다** — 로그의 `cause.name: "error"` 는 오타가 아니다. 배포(postgres-js)에서는 `PostgresError` 다.
-
-⚠ **`next dev` 서버에서 다시 찍지는 않았다** (68바퀴 시점). → **69바퀴가 찍었다** — 같은 모양 · `cause.code: ECONNREFUSED` · `request_id` 가 화면의 에러 카드와 같다 (`docs/evidence/2026-09-06-keep-all/probe.txt`). 아래는 68 의 원문이다. 위 두 줄은 vitest 프로세스 안에서 같은 `route()` → 같은 `log.ts` 로 찍은 것이다
-(INBOX 가 본 로그는 `next dev` stdout). 같은 코드 길이라 모양은 같지만, 「눈 판정 대기」에 한 줄 남겼다 — 129·130 을 브라우저로 볼 때
-`demo:db` 를 끄고 화면을 열어 보면 `kind:"error"` 줄에 `CONNECT_TIMEOUT` 이 찍히는지 같이 보면 된다.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 129(한글 `keep-all`). 69바퀴가 닫았다 (`0a3535e`). 68 자신은 CI 를 배경으로 띄운 채 끝나
-커밋을 못 했고, 69 가 같은 트리로 올렸다 (`9319617` · `a1a26af`).
-
-
----
 
 
 
@@ -613,6 +628,11 @@ params: <값>`** 이다 — `console.error(err)` 한 줄로 고쳤으면 질의�
 (**67 ①** 과 같은 자리다). ✅ **31·65 는 닫혔다** (`c57b3fb`·`5fe0068`).
 
 ## 눈 판정 대기
+
+🟡 **CLI 의 「어디서 보나」 줄을 진짜 서버에 대고 찍은 적이 없다** (74바퀴 · `4d0ba9a` · FINDINGS 115). 전/후는 fakeCli 의 stdout 이다
+(`docs/evidence/2026-09-06-cli-web-hint/probe.txt`) — 코드 길은 같으니 모양은 같다. 확인하려면 `demo:db` + `next dev` 위에서 기기 토큰을 하나 발급해
+`.contextops/project.json` 에 꽂고 `node plugin/contextops/bin/contextops-cli.mjs propose` — 마지막 줄이 `→ 웹 http://localhost:3000 에 로그인해 … 「제안」 탭 …` 이고
+브라우저의 그 탭에 제목이 같은 제안이 뜨면 끝. 관통이 `propose` 를 안 부르는 것은 그대로다 (부르게 하려면 sync 단계처럼 `scripts/walkthrough-*.ts` 한 파일).
 
 🔴 **Supabase 위에서 화면을 연 적이 없다** (71바퀴 · `adac632`). 마이그레이션만 적용했고 표는 비어 있다. 못 잰 것: ① `.env.local` 그대로 `next dev` 를 띄우고
 **실제 Supabase Auth 로 로그인**이 도나 (`SUPABASE_JWT_SECRET` 도 꽂혀 있다 — 지금까지 로그인은 전부 시험용 JWT 였다) ② `CRON_SECRET` 을 `.env.local` 에 넣고(아직 없다 · 아무 난수)

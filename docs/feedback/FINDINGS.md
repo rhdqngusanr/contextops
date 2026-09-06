@@ -397,7 +397,7 @@ params:
   작성자 이름이 결정자 칸에 들어간다.
 - **상태**: 대기 (주인은 화면 6 을 다시 만지는 바퀴 · **112 와 같은 바퀴**가 싸다)
 
-### 115. **CLI 가 찍는 제안 주소가 앱에 없는 주소다** — 눌러도 404   [구멍]
+### 115. ✅ **CLI 가 찍는 제안 주소가 앱에 없는 주소다** — 눌러도 404   [구멍]
 - **증상**: `contextops propose` 가 성공하면 `→ {origin}/p/{project_id}/proposals/{id}` 를
   찍는다. 그런데 웹의 주소는 **`/t/{team}/p/{project}/proposals/{id}`** 다 (§9 는 slug 로
   적는다). 사람이 그 줄을 누르면 404 다.
@@ -412,7 +412,14 @@ params:
   **주소를 안 찍고** 「웹의 제안 탭에서 볼 수 있다」로 바꾼다 · ② 웹에 uuid 로 여는
   전달 라우트(`/p/{project_id}/…` → slug 로 302)를 만든다. ⚠ ②를 고르면 주소가 둘이
   되므로 「이 주소를 공유하면 같은 것을 본다」를 지키는 쪽(slug)이 정본이어야 한다.
-- **상태**: 대기 (주인은 플러그인·CLI 를 다시 만지는 바퀴 · PLAN P5 첫 행)
+- **고친 것** (`4d0ba9a` · 74바퀴): ① 을 골랐다 — 설정에는 uuid 뿐이라 CLI 는 slug 주소를 **알 수 없다.** 열어 보니 **같은 줄이 `upload-draft` 에도**
+  있었다(`…/p/{project_id}/context 에서 확인해라`) — 같이 닫았다. `plugin/contextops/src/cli/where.ts` **한 곳**의 `whereOnWeb(origin, tab, what)` 이
+  「→ 웹 {origin} 에 로그인해 이 프로젝트의 「제안」 탭에서 볼 수 있다 — 「{제목}」 · id {id}」 를 만들고(경로 없음 · 탭 이름은 웹 `TABS` 의 label 그대로)
+  두 명령은 읽기만 한다. 서버가 slug 를 내주게 되면 그 파일만 고친다. 시험: `test/where.test.ts` 3개 — ① `src/cli/*.ts` 에서 origin 뒤에 경로를 붙이는
+  곳은 `api.ts`(`/api/v1`) **하나**(bait 파일을 넣으면 `_bad.ts:2` 를 집어 빨개진다 · 직접 확인) ② 부르는 탭 이름이 웹 `layout.tsx` 의 label 에 실제로 있다
+  ③ 안내 줄에 `/p/`·`/t/` 없음. `propose.test.ts`·`upload-draft.test.ts` 각 +1(출력에 `/p/`·project uuid 없음). Skill(init · propose)·SPEC §8.3 에 같은 말.
+  번들 다시 만듦. **잰 것** (`docs/evidence/2026-09-06-cli-web-hint/probe.txt`): 전 — 두 명령 모두 `…/p/11111111-…/…` · 후 — 위 모양. 플러그인 16 파일 · 178 통과 · CI GREEN (17:55).
+- **상태**: ✅ `4d0ba9a` (74바퀴)
 
 ### 114. **항목별 [승인]/[거절] 을 담을 자리가 서버에 없다**   [구멍]
 - **증상**: `docs/DESIGN_BRIEF.md` §4 화면 6 은 「항목별 [승인] [거절] + 전체 [모두 승인]
