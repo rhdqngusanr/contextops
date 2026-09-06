@@ -461,8 +461,12 @@
       manifest 서명 없음 · e2e 없음 · 게스트 403 문구)을 더했다. `apps/web/test/readme.test.ts` 가
       README ↔ 랜딩 표(문장 글자 그대로) · README 가 가리키는 경로 전부 실존 · KNOWN_LIMITATIONS 가 단
       FINDINGS 번호가 전부 **대기**인지를 잰다 — 닫힌 것을 한계라고 적으면 빨개진다.
-      → 남은 것: **제출서**(FINDINGS 126 · 루프가 할 수 있다) · 🙋 공개 저장소 URL · 제출 팀명 (FINDINGS 122) ·
-      🙋 영상 링크 (첫 행이 끝나야).
+      → ② **제출서도 됐다** (67바퀴 `4f90239` · FINDINGS 126 — 장부는 72바퀴가 닫았다). `docs/SUBMISSION.md` 는 SPEC §16
+      초안을 **지금 코드에 있는 것**으로 다시 썼다 — 없는 문(질의 · §7.3)은 적지 않고 KNOWN_LIMITATIONS 를 가리킨다 ·
+      P1~P7 행은 README 와 글자 그대로 · 🙋 표 5행(팀명 · 공개 저장소 URL · production URL · 영상 · 슬라이드)은 값 없이
+      자리만. `readme.test.ts` 32 가 README·제출서 둘 다 랜딩 표·경로 실존·FINDINGS 번호 대기·Skill/훅 수를 잰다.
+      → 남은 것은 전부 🙋: 공개 저장소 URL · 제출 팀명 (FINDINGS 122) · 영상·슬라이드 링크 (첫 행이 끝나야).
+      값이 오면 제출서의 🙋 표 · README 머리 · `LANDING_FOOT` · KNOWN_LIMITATIONS 의 `<marketplace>` 줄에 같이 적고 행을 닫는다.
 
 ---
 

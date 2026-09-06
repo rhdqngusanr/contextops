@@ -5,13 +5,87 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 71바퀴 · 코드 `adac632` · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 72바퀴 · 코드 커밋 없음(문서만) · 제출서는 `4f90239`(67바퀴)_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴(71)는 INBOX 순서 2 — PLAN P1 첫 행(DB 스키마 · Drizzle 마이그레이션 + Supabase 연결)을 닫았다** (`adac632`). P0 부터 열려 있던 행이다 —
+**이번 바퀴(72)는 INBOX 순서 3 — FINDINGS 126(제출서)을 닫았다. 그런데 만든 게 아니라 「이미 있었다」를 확인한 바퀴다.**
+`docs/SUBMISSION.md` 는 67바퀴가 `4f90239`(06:30)로 올렸다 — 그 바퀴는 INBOX 의 고장(127)이 위여서 대장의 상태 줄 · PLAN · INBOX 를 안 닫았고,
+68~71 네 바퀴가 STATUS 의 「다음은 126」을 그대로 물려받았다. `tools/status-shape.mjs` 는 「대기를 가리키나」만 세므로 내내 초록이었다.
+**코드 0줄 · 문서만.** PLAN 은 안 움직였다 — P6 둘째 행은 🙋 값(URL · 팀명 · 영상)이 와야 닫힌다.
+
+🔴 **잰 것 — 제출서가 지금 코드와 맞는가.** 06:30 이후 다섯 바퀴(풀 · 오류 로그 · keep-all · focus-visible · Supabase 마이그레이션)가 지났으니
+낡았을 수 있어 주장을 하나씩 코드에서 다시 봤다.
+
+| 무엇 | 잰 값 |
+|---|---|
+| `docs/SUBMISSION.md` | 있음 · `4f90239` 는 HEAD 의 조상(`git merge-base --is-ancestor`) · 153줄 · README 저장소 지도에 한 행 |
+| `apps/web/test/readme.test.ts` | **32/32** 초록 — README·제출서를 `DOCS` 표로 묶어 ①~④ 둘 다 + ⑥ 제출서 전용 7 |
+| 크론 「매일 03:00(KST) 초기화」 | `apps/web/vercel.json` `0 18 * * *` UTC = 03:00 KST · `demo-reset.test.ts` 가 `DEMO_TENANT.resetAt` 과 대조 |
+| 「관통 7단계」 | `.ci/walkthrough.json` ran **7** · failed 0 · checks 946 (16:46 · 71바퀴) |
+| 「golden 3종」 | `packages/compiler/test/golden/` case-1-small · case-2-domains · case-3-overflow = **3** |
+| 「principles 가 P1·P2·P3·P4·P6·P7 을 센다」 | `tools/principles.ps1` 에 P7 행(템플릿 태그 자리) 있음 — P5 만 눈 판정, README·KNOWN_LIMITATIONS 와 같은 말 |
+| 「Skill 3(init · sync · propose) · 훅 2(SessionStart · Stop)」 | `plugin/contextops/skills/` 3 · `hooks.json` 이벤트 2 — 시험 ⑥ 이 디렉터리와 대조 |
+| 「Claude API tool use · `withBudget()`」 | `lib/ai/client.ts` `tools:[…]` + `tool_choice:{type:'tool'}` · `budget.ts` 있음 |
+| 「TypeScript 5 / Node 22 · Next 15 · Drizzle · PGlite · Zod · MIT」 | `engines.node >=22` · `@anthropic-ai/sdk`·`drizzle-orm`·`@electric-sql/pglite`·`zod` 의존 · `LICENSE` 첫 줄 MIT |
+| 「production 이 아직 없다 · 모든 관통·데모·캡처는 PGlite 위」 | 그대로 참 — 71 은 Supabase 에 **마이그레이션만** 적용했고 그 위에서 화면을 연 적은 없다 (「눈 판정 대기」) |
+| 제출서가 단 FINDINGS 번호 | 122 · 117 — 둘 다 **대기** (시험 ④). 126 은 제출서 본문에 없다 — 닫아도 안 빨개진다 |
+| INBOX 순서 3 의 요구 「🙋 자리표시자를 명시」 | 머리의 🙋 표 **5행**(제출 팀명 · 공개 저장소 URL · production URL · 2분 영상 · 슬라이드) · 각 행에 「어디에도 같이 적나」 |
+| 어긋난 곳 | **0** — 고칠 줄이 없어 제출서는 손대지 않았다 |
+| 장부 | FINDINGS 126 ✅ `4f90239` · PLAN P6 둘째 행 ② · INBOX 순서 3 → 「끝난 것」 · 66 바퀴 기록을 `docs/history/cycles.md` 로 |
+| CI | principles OK 9 · typecheck OK · **test FAIL** · build SKIP · walkthrough SKIP · docs OK → **RED** (17:06 · 17:10 두 번) — 아래 🔴 「CI 가 빨간 이유」. 코드 변화 0 · 같은 트리의 16:46(71바퀴)은 GREEN |
+
+🔴 **CI 가 빨간 이유 — 코드가 아니라 부하다. 그래도 RED 는 RED 라 FINDINGS 136(고장)으로 적었다.** `apps/web` 32 파일 중 같은 10 파일의
+**첫 시험**만 `Hook timed out in 10000ms` — 전부 `beforeEach` 의 `freshDb()`(PGlite 기동) 자리다. 16:50:55 에 사람의 게임 클라이언트가 떠서
+CPU 74~80% 였고(16 논리코어 중 6코어쯤 · 사람이 쓰는 중이라 건드리지 않았다), 32 파일이 한꺼번에 PGlite wasm 을 띄우니(import 90~147초) 첫 훅이
+17~18초가 됐다. **그 10 파일만 따로 돌리면 10/10 · 181개 초록 · 82초.** `vitest.base.ts` 에 `hookTimeout`·`maxWorkers` 가 없어 기본 10초다.
+⚠ **이 바퀴는 코드 0줄 · 문서만이라 커밋했다** — 빨간 층이 재는 코드는 71 의 `adac632` 그대로이고, 이 바퀴가 바꾼 것을 재는 `docs` 층은 OK 다.
+「검사를 통과하면 커밋」의 예외로 읽지 마라 — 코드를 바꾼 바퀴였다면 커밋하지 않았을 것이다. 다음 바퀴는 136 을 먼저 닫아야 CI 가 다시 말을 한다.
+
+🔴 **배운 것 — 「고친 커밋」과 「장부를 닫는 커밋」은 다른 커밋이고, 둘째를 빼먹으면 게이트가 못 잡는다.** 67바퀴는 코드 커밋(`4f90239`)을
+올리고 바로 INBOX 의 고장(127)으로 갔다. status-shape 의 ② 는 「가리키는 항목이 대기인가」이지 「대기인 항목이 실은 이미 커밋됐는가」가
+아니다. 같은 일이 한 번 더 나면 게이트로 올린다 — 「FINDINGS N 이 대기인데 `git log` 의 메시지에 `FINDINGS N)` 이 든 커밋이 HEAD 에
+있으면 FAIL」. 지금은 한 번이라 규칙만 적는다 (`loop/PROMPT.md` ④3 「고친 항목은 지우지 말고 ✅ 와 커밋 해시를 적는다」가 이미 그 규칙이다).
+
+🔴 **2-B 이번 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL`
+표(4/4 값 → 말) 를 policy 줄 「강제: …」 가 읽는다 ② `packages/compiler/test/liveness.test.ts:77` 이 hook·review·permission·none 넷을
+전부 돌려 출력이 갈리는지 잰다 · golden 입력은 셋(review·hook·permission)을 덮는다. 새로 적을 것 없음.
+
+**다음 바퀴의 일 — FINDINGS 136**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **136 이 먼저다 — 고장(CI RED)은 INBOX 순서보다 위다 (④3 ①).** `vitest.base.ts` 한 곳에 `hookTimeout`(또는 `maxWorkers`) — 이유를 옆에 적고,
+부하 있을 때·없을 때 각 한 번 `pnpm --filter web test` 초록이면 닫는다. ⚠ 파일마다 상한을 흩지 마라. 게임이 꺼져 있어 첫 CI 가 그냥 초록이어도
+**136 은 닫히지 않는다** — 재현이 안 되면 `Start-Job` 으로 CPU 를 바쁘게 만들어서라도 「부하에서도 초록」을 한 번 봐라.
+
+그 다음이 **INBOX 순서 4 — 미해결 FINDINGS 를 구멍 → 격차 순으로.** 구멍 중 **122** 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고,
+**117**(`POST …/ask`)은 SPEC §14 **절삭 1번**이자 P3(🙋 Anthropic 키)의 몫이라 지금 만들면 픽스처 답만 내는 문이 된다 — 그래서 그 다음 구멍
+**115**(CLI 가 찍는 제안 주소가 앱에 없는 `/p/{id}/…` 라 눌러도 404)부터. 115 의 「고칠 방향」 ①(주소를 안 찍고 「웹의 제안 탭에서 볼 수 있다」)이
+싸고 주소 정본(slug)을 하나로 지킨다 — ② 전달 라우트는 주소를 둘로 만든다. 그 다음 구멍 114 · 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103
+→ 격차 121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134.
+
+> **115 를 하는 법** — `plugin/contextops/src/cli/propose.ts`(번들 `bin/contextops-cli.mjs` 는 빌드 산출물 · 직접 고치지 마라)에서
+> `${config.api_origin}/p/${config.project_id}/proposals/${id}` 줄을 찾아 정본은 SPEC §8.4 · §9(주소는 slug). 시험은 `plugin/contextops/test/`
+> 의 `propose.test.ts` 에 「찍은 출력에 `/p/` 주소가 없다」 한 줄. 번들은 `plugin/contextops/package.json` 의 `build`(`tsx scripts/build.ts`) 로 다시 만든다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 이제 없다** — 그래서 INBOX 순서 4 가 이 바퀴 뒤의 일이다.
+- 대장의 대기(**136 고장** · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 113 · 112 · 111 · 110 · 108 · 131~135 …) — 136 만 고장이고 나머지는
+  **PLAN 을 막지 않는다.**
+
+---
+
+### 지난 바퀴 (71) — 마이그레이션을 Supabase 에 실제로 · 표 18 · 인덱스 8 (INBOX 순서 2 · PLAN P1 첫 행 · `adac632`)
+
+**71바퀴는 INBOX 순서 2 — PLAN P1 첫 행(DB 스키마 · Drizzle 마이그레이션 + Supabase 연결)을 닫았다** (`adac632`). P0 부터 열려 있던 행이다 —
 루프 몫(PGlite 적용 · `389c7f2`)은 끝나 있었고 「Supabase 연결」 한 조각이 사람 몫이었는데, 사람이 `.env.local` 에 값을 꽂아 줘서 이번에 **배포 DB 에
 실제로 적용**했다. **PLAN 이 한 칸 움직였다 — P1 은 전부 `- [x]`.** INBOX 의 다음은 순서 3(FINDINGS 126 · 제출서)이다.
 
@@ -49,14 +123,8 @@ _마지막 갱신: 2026-09-06 · 루프 71바퀴 · 코드 `adac632` · 문서�
 ⚠ **안 한 것** — Supabase 위에서 `next dev` 를 띄워 화면을 연 적은 없다 (마이그레이션만 · 표는 비어 있다 — 데모 테넌트는 Cron 리셋 문이 심는다).
 `SUPABASE_JWT_SECRET` 도 꽂혀 있으니 **실제 Supabase Auth 로그인**이 이제 돌 수 있는 상태다 — 「눈 판정 대기」에 적었다.
 
-**다음 바퀴의 일 — FINDINGS 126**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서) → 72바퀴가 닫았다 — 만든 게 아니라 `4f90239`(67바퀴)에 **이미 있던 것**을 확인하고
+장부를 닫았다. 아래는 71 이 남긴 지목의 원문이다.
 
 🔴 **INBOX 순서 3 이 126 이다** — 제출서(SPEC §16)를 `docs/SUBMISSION.md` 로 · 🙋 공개 저장소 URL · 팀명 · 영상 링크는 **자리표시자**로 두고 그 자리를
 명시한다. 126 은 구멍이고 주인은 PLAN P6 둘째 행이라 ④3 ② 로도 맞다 (P3·P5 의 남은 행은 🙋 키·계정). 그 다음 순서 4: 미해결 FINDINGS
@@ -244,35 +312,6 @@ INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면
 `aria-busy` 에서 내려오는지는 사람이 본다.
 
 **그 바퀴가 다음으로 지목한 것**: FINDINGS 128(오류 로그에 메시지·스택 없음). 68바퀴가 닫았다 (`9319617`).
-
----
-
-
-### 지난 바퀴 (66) — README · KNOWN_LIMITATIONS 본문 (PLAN P6 둘째 행 ① · `0dc2e93`)
-
-**66바퀴는 PLAN P6 둘째 행의 첫 조각 — README 와 KNOWN_LIMITATIONS 의 본문**을 만들었다. README 는 「루프와 명세만 있다」고
-거짓말을 하고 있었고, 이제 랜딩과 같은 문장을 말하며 `apps/web/test/readme.test.ts` 15개가 그것을 잰다(헤드라인 · Before/After ·
-3단계 · 신뢰 경계 · 설치 4줄 · 저장소 지도 40행의 경로 실존 · KNOWN_LIMITATIONS 가 단 FINDINGS 번호 5개가 전부 대기인가).
-
-| | 전 | 후 |
-|---|---|---|
-| README 머리 | 「🚧 지금 이 저장소에는 **자율 개발 루프와 명세만** 있습니다」 — 제품 코드가 295파일(principles P2 셈)인데 | 지금 도는 것 — 신뢰 경계 7줄에 「무엇이 잰다」 칸 · Before/After · 3단계 · 설치 4줄 · CLI 8 · 검사 층 6 · 저장소 지도 |
-| README 의 기술 스택 | Tailwind 4 + shadcn/ui · Node 20 — 둘 다 **코드에 없다** (`apps/web/package.json` 에 tailwind 0 · `engines.node >=22`) | 실제 의존만 (Next 15 · Drizzle · postgres · PGlite · Zod · vitest · Node 22) |
-| README ↔ 랜딩 | 대조 없음 (Before/After 문장도 없었다) | `apps/web/test/readme.test.ts` **15개** — 헤드라인 · Before/After(질문 · 두 답 · Pack 의 그 줄 · `ctx:item_policy_retry`) · 3단계 · 신뢰 경계 10행 · 설치 4줄(같은 순서 · 같은 설명) · 마무리 문장을 **랜딩 표에서 들여와** 글자 그대로 대조 |
-| README 가 가리키는 경로 | 아무도 안 셈 (옛 트리는 `src/app/(marketing)` 처럼 없는 경로였다) | 저장소 지도 표 **40행** · 마크다운 링크 · 백틱 경로 전부 `existsSync` — 첫 실행에서 CLI 표의 `scan` 이 걸려 절 범위를 좁혔다 |
-| KNOWN_LIMITATIONS | 8줄 — SPEC §17 을 옮긴 것 · 코드 근거 없음 | 줄마다 코드에서 이름을 찾았다. **P1 이 못 막는 것** 절 신설(P1 근거 문서 §7 의 두 줄 + 문서 원문은 의도적으로 올라간다 + manifest 서명 없음) · 제품 절에 코드에서 확인한 아홉을 더했다 (production 없음 · `npx contextops` 없음 · `ask`·`demo` 문 없음 · 데모 항목 15 · zip 드롭존 없음 · `manual` 보고 없음 · e2e 없음 · 게스트 403 문구 · Codex/Cursor 는 거울 문서) |
-| KNOWN_LIMITATIONS 가 단 FINDINGS 번호 | — | 5개(122 · 121 · 117 · 119 · 69) 전부 **대기**인지 시험이 센다 — 닫힌 것을 한계라고 적으면 빨개진다. 백틱 경로 실존도 |
-| 서버측 AI 「4개 기능」의 실체 | README 는 「4개 기능 한정」만 | `features.ts` 표는 넷인데 라우트가 부르는 것은 **둘**(structure · conflict) — KNOWN_LIMITATIONS 에 적었다 (FINDINGS 117 · 126) |
-| 웹 시험 | 565 | **580** (`readme` +15) |
-| CI | — | principles OK 9 · typecheck · test · build · walkthrough 881 · docs → GREEN (`0dc2e93`) |
-
-🔴 **「알려진 한계」는 코드에서 이름을 찾은 뒤에 적었다** — SPEC §17 의 여덟 줄 중 절반만 맞는 것이 있었고(거울 문서는 생겼다),
-코드에만 있고 §17 에 없는 것이 아홉이었다. 특히 「서버측 AI 4종 중 둘은 문이 없다」는 principles 의 P3 줄이 매 바퀴 찍고 있었는데
-아무도 한계로 읽지 않았다.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서). 67바퀴는 INBOX 의 고장이 위여서 127 로 갔다 — 126 은 그대로 대기다.
-
-
 
 ---
 
@@ -812,6 +851,11 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 > 같은 벽에 두 번 부딪히면 `loop/PROMPT.md` ③ 의 규칙으로, 기계가 잴 수 있으면
 > `tools/principles.ps1` 의 검사로 올린다.
 
+- 🔴 **CI 가 빨개지면 「무엇이 빨간가」보다 「무엇이 바뀌었나」를 먼저 봐라 — 코드 변화 0 인데 빨가면 기계다.** 72바퀴: 같은 트리가 16:46 GREEN,
+  17:06·17:10 RED. 차이는 16:50:55 에 뜬 사람의 게임(CPU 74~80%)뿐이었고, 빨간 10 파일은 전부 `freshDb()` 첫 훅의 10초 상한이었다.
+  잰 방법: `Get-Process` 3초 델타로 누가 CPU 를 먹는지 · 게임 프로세스의 `StartTime` · 빨간 파일만 `npx vitest run <files>` 로 따로(10/10 초록).
+  ⚠ 사람이 쓰는 프로세스는 죽이지 마라. 게이트 쪽을 고친다 (FINDINGS 136) — 그리고 `loop/PROMPT.md` ③ 「한 번에 하나」처럼 **CI 는 한 번 더
+  돌려 보고** 같은 자리에서 같은 모양이면 그때 기계로 본다.
 - **탭 포커스·클릭·계산된 스타일은 `--screenshot` 이 아니라 CDP 로 잰다.** headless Chrome 을 `--remote-debugging-port` 로 띄우고 Node 22 의 내장
   WebSocket 으로 `Input.dispatchKeyEvent`(Tab) · `Runtime.evaluate` · `Page.captureScreenshot` — 의존성 0 (`docs/evidence/2026-09-06-focus-visible/focus-cdp.mjs`).
   ⚠ 마우스 대조군으로 **링크**를 누르면 화면이 넘어가 대조군이 없어진다 — 버튼을 눌러라 (70바퀴가 밟았다). `nextjs-portal` 이 탭 순서에 끼는 것은 dev 오버레이다.

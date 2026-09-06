@@ -15,6 +15,32 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (66) — README · KNOWN_LIMITATIONS 본문 (PLAN P6 둘째 행 ① · `0dc2e93`)
+
+**66바퀴는 PLAN P6 둘째 행의 첫 조각 — README 와 KNOWN_LIMITATIONS 의 본문**을 만들었다. README 는 「루프와 명세만 있다」고
+거짓말을 하고 있었고, 이제 랜딩과 같은 문장을 말하며 `apps/web/test/readme.test.ts` 15개가 그것을 잰다(헤드라인 · Before/After ·
+3단계 · 신뢰 경계 · 설치 4줄 · 저장소 지도 40행의 경로 실존 · KNOWN_LIMITATIONS 가 단 FINDINGS 번호 5개가 전부 대기인가).
+
+| | 전 | 후 |
+|---|---|---|
+| README 머리 | 「🚧 지금 이 저장소에는 **자율 개발 루프와 명세만** 있습니다」 — 제품 코드가 295파일(principles P2 셈)인데 | 지금 도는 것 — 신뢰 경계 7줄에 「무엇이 잰다」 칸 · Before/After · 3단계 · 설치 4줄 · CLI 8 · 검사 층 6 · 저장소 지도 |
+| README 의 기술 스택 | Tailwind 4 + shadcn/ui · Node 20 — 둘 다 **코드에 없다** (`apps/web/package.json` 에 tailwind 0 · `engines.node >=22`) | 실제 의존만 (Next 15 · Drizzle · postgres · PGlite · Zod · vitest · Node 22) |
+| README ↔ 랜딩 | 대조 없음 (Before/After 문장도 없었다) | `apps/web/test/readme.test.ts` **15개** — 헤드라인 · Before/After(질문 · 두 답 · Pack 의 그 줄 · `ctx:item_policy_retry`) · 3단계 · 신뢰 경계 10행 · 설치 4줄(같은 순서 · 같은 설명) · 마무리 문장을 **랜딩 표에서 들여와** 글자 그대로 대조 |
+| README 가 가리키는 경로 | 아무도 안 셈 (옛 트리는 `src/app/(marketing)` 처럼 없는 경로였다) | 저장소 지도 표 **40행** · 마크다운 링크 · 백틱 경로 전부 `existsSync` — 첫 실행에서 CLI 표의 `scan` 이 걸려 절 범위를 좁혔다 |
+| KNOWN_LIMITATIONS | 8줄 — SPEC §17 을 옮긴 것 · 코드 근거 없음 | 줄마다 코드에서 이름을 찾았다. **P1 이 못 막는 것** 절 신설(P1 근거 문서 §7 의 두 줄 + 문서 원문은 의도적으로 올라간다 + manifest 서명 없음) · 제품 절에 코드에서 확인한 아홉을 더했다 (production 없음 · `npx contextops` 없음 · `ask`·`demo` 문 없음 · 데모 항목 15 · zip 드롭존 없음 · `manual` 보고 없음 · e2e 없음 · 게스트 403 문구 · Codex/Cursor 는 거울 문서) |
+| KNOWN_LIMITATIONS 가 단 FINDINGS 번호 | — | 5개(122 · 121 · 117 · 119 · 69) 전부 **대기**인지 시험이 센다 — 닫힌 것을 한계라고 적으면 빨개진다. 백틱 경로 실존도 |
+| 서버측 AI 「4개 기능」의 실체 | README 는 「4개 기능 한정」만 | `features.ts` 표는 넷인데 라우트가 부르는 것은 **둘**(structure · conflict) — KNOWN_LIMITATIONS 에 적었다 (FINDINGS 117 · 126) |
+| 웹 시험 | 565 | **580** (`readme` +15) |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 881 · docs → GREEN (`0dc2e93`) |
+
+🔴 **「알려진 한계」는 코드에서 이름을 찾은 뒤에 적었다** — SPEC §17 의 여덟 줄 중 절반만 맞는 것이 있었고(거울 문서는 생겼다),
+코드에만 있고 §17 에 없는 것이 아홉이었다. 특히 「서버측 AI 4종 중 둘은 문이 없다」는 principles 의 P3 줄이 매 바퀴 찍고 있었는데
+아무도 한계로 읽지 않았다.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서). 67바퀴는 INBOX 의 고장이 위여서 127 로 갔다 — 126 은 그대로 대기다.
+
+---
+
 ### 지난 바퀴 (65) — scan 단계의 env 값 검사 · 64바퀴 미커밋 올림 (PLAN P5 둘째 행 ③ · `8d29737`)
 
 

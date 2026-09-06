@@ -33,6 +33,23 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 136. **CI 의 test 층이 코드와 무관하게 빨개진다** — 부하에서 `freshDb()` 첫 `beforeEach` 가 10초 훅 상한을 넘긴다   [고장]
+- **증상**: `tools/ci.ps1` 가 test 층에서 RED 인데 코드 변화는 0 이다. `apps/web` 32 파일 중 **같은 10 파일**(api-auth · api-pack-zip ·
+  api-publish · api-routes · api-seed-questions · demo-guest · demo-reset-rollback · demo-reset · error-log · web-item-doors)의 **첫 시험**만
+  `Error: Hook timed out in 10000ms` — 전부 `beforeEach` 의 `freshDb()`(PGlite 기동) 자리다. 나머지 620개는 초록.
+- **근거**: 72바퀴 실측 — 17:06 · 17:10 두 번 연속 같은 10 파일 · 같은 줄 (`.ci/logs/test.txt`). 같은 트리에서 16:46(71바퀴)은 GREEN 이었고,
+  그 사이 16:50:55 에 사람의 게임 클라이언트가 떠서 CPU 74~80%(16 논리코어 중 6코어쯤). **그 10 파일만 따로 돌리면 10/10 · 181개 초록 · 82초.**
+  `vitest.base.ts` 에 `hookTimeout` · `maxWorkers` 설정이 없다 — 훅 상한은 vitest 기본 10초이고 32 파일이 한꺼번에 PGlite wasm 을 띄운다
+  (import 90~147초).
+- **정본**: `loop/PROMPT.md` ⑥ (「전 층이 초록이어야 커밋」) · `vitest.base.ts` (전 패키지 설정의 정본 — 패키지 쪽에 적지 마라)
+- **왜 고장인가**: CI RED 는 정의상 고장이다 (④3). 그리고 **사람이 게임을 켜면 빨개지는 게이트는 곧 무시되는 게이트**다 — 게이트가
+  거짓 빨강을 내기 시작하면 다음 사람은 게이트를 끈다.
+- **고칠 방향**: `vitest.base.ts` **한 곳**에 `test.hookTimeout` 을 PGlite 기동에 맞게 올린다(정상 부하에서 2~3초 · 부하에서 17~18초 —
+  30초면 「PGlite 가 안 뜬다」와 「느리다」를 여전히 가른다). 또는 `maxWorkers` 로 동시 기동 수를 줄인다 — 둘 중 하나만, 이유를 옆에 적는다.
+  ⚠ 시험 파일마다 `beforeEach(…, 30_000)` 을 붙이지 마라 — 32 파일에 흩어진 수치는 갈라진다.
+  잠그는 법: 고친 뒤 `pnpm --filter web test` 를 부하 상태에서 한 번, 없을 때 한 번 — 둘 다 초록이어야 닫는다.
+- **상태**: 대기 (고장 — INBOX 순서 4 보다 위 · 72바퀴는 문서만 바꾼 바퀴라 이 항목을 적고 다음 바퀴에 넘긴다)
+
 ### 131. **랜딩 첫 화면에 제품이 움직이는 그림이 없다** — Before/After 가 텍스트 카드다   [격차]
 - **증상**: 랜딩의 첫 스크롤 안에 제품 화면이 없다. Linear·Vercel·Supabase 랜딩의 공통점은 **제품 화면이 첫 스크롤 안에**
   있다는 것이고 심사위원은 10초 안에 판단한다 (INBOX A).
@@ -178,7 +195,7 @@ params:
   (`docs/evidence/2026-09-06-focus-visible/probe.txt`): 새 프로필(= 시크릿 창)로 `/demo` → context 가 **항목 15개 표 · v1.1.0 공식 칩**
   (`context/tab-09.png`) · packs/1.1.0 본문 · next 로그 5xx 0 · `GET /teams` 4~9ms · demo:db 「줄을 섰다」 0. 못 본 것: proposals · roadmap · sync.
 
-### 126. **제출서(SPEC §16)가 저장소에 문서로 없다** — 랜딩·README 와 대조되지 않는다   [구멍]
+### 126. ✅ **제출서(SPEC §16)가 저장소에 문서로 없다** — 랜딩·README 와 대조되지 않는다   [구멍]
 - **증상**: `docs/PLAN.md` P6 둘째 행은 「제출서 · README · KNOWN_LIMITATIONS」인데 제출서는 `docs/SPEC.md` §16 의
   초안 세 문단뿐이고, 그 문단은 코드가 생기기 전의 문장이라 지금과 어긋난 곳이 있다 — 「(4) 승인 항목만 근거로
   답하는 질의」는 **문이 없다** (`POST …/ask` 0곳 · FINDINGS 117 · `docs/KNOWN_LIMITATIONS.md`). 제출서에 없는
@@ -191,7 +208,16 @@ params:
   README(66바퀴가 랜딩 표와 글자 그대로 대조해 둔 것)다. ⚠ §16 의 (4) 는 빼거나 KNOWN_LIMITATIONS 를 가리켜라 —
   없는 것을 적지 않는다. `apps/web/test/readme.test.ts` 의 대조(랜딩 문장 · 경로 실존 · FINDINGS 번호가 대기인가)를
   제출서에도 넓혀라.
-- **상태**: 대기 (주인은 PLAN **P6 둘째 행** · 🙋 값 없이 본문은 쓸 수 있다)
+- **고친 것** (`4f90239` · 67바퀴 · **장부는 72바퀴가 닫았다**): `docs/SUBMISSION.md` 153줄 — 한 줄 · 문제(Before/After 표는 랜딩 표와
+  글자 그대로) · 해결 3단계 · AI 활용 **셋**(서버측 둘 + 사용자 로컬 하나 · §16 의 (4) 질의는 「문이 없다」로 KNOWN_LIMITATIONS 를 가리킨다) ·
+  신뢰 경계 P1~P7(README 행과 글자 그대로) · 도구 · 어떻게 보나(설치 4줄) · 검증 · 한계 넷 · 🙋 표 5행(팀명 · 공개 저장소 URL · production URL ·
+  영상 · 슬라이드 — 값 없이 자리와 「어디에도 같이 적나」만). `apps/web/test/readme.test.ts` 15 → **32**: README·SUBMISSION 을 `DOCS` 표로 묶어
+  ①~④ 를 둘 다 재고(문서를 하나 더하면 표에 한 줄) ⑥ 제출서 전용 7 — P1~P7 행이 README 와 같다 · Skill·훅 수가 플러그인 디렉터리·`hooks.json`
+  과 같다 · 「질의」가 든 줄은 전부 「없」을 말한다 · AI 활용은 셋만 번호 · 🙋 행 넷 · 한계 문장이 KNOWN_LIMITATIONS 에도 있다.
+  ⚠ 67바퀴는 INBOX 의 고장(127)이 위여서 이 항목의 상태 줄을 안 닫았고, 68~71 네 바퀴가 STATUS 의 「다음은 126」을 그대로 물려받았다.
+  72바퀴가 제출서의 주장을 코드와 다시 대조했다 — 크론 `0 18 * * *` UTC = 03:00 KST · 관통 7단계 · golden 3 · principles 가 P7 도 센다 ·
+  Skill 3 · 훅 2 · Node ≥22 · MIT — **어긋난 곳 0** · 시험 32/32.
+- **상태**: ✅ `4f90239` (67바퀴 올림 · 72바퀴 장부 닫음)
 
 ### 125. ✅ **scan 단계의 「env 값 0건」 검사가 잰 값이 0개다** — 픽스처 규칙이 값을 금지한다   [구멍]
 - **증상**: `plugin/contextops/scripts/walkthrough-scan.ts` 는 픽스처 `.env.example` 의 **값**이 `scan.json` 에
