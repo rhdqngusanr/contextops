@@ -5,13 +5,65 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 78바퀴 · 코드 `816420b`(FINDINGS 121 · 135 · 게스트가 누른 뒤에 아는 것을 누르기 전에 · 누른 자리에서 — 화면이 서버와 같은 표 `ACTOR_RULES` 를 읽는다) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 79바퀴 · 코드 `bd003a5`(FINDINGS 138 · 관통 api RED — KNOWN_LIMITATIONS 의 닫힌 121 줄 · docs 층 게이트) + `836a0a9`(INBOX · 서버측 AI Anthropic → Gemini) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴(78)는 FINDINGS 121 + 135 — 격차 둘(게스트의 403 을 「팀 owner만」이라고 옮긴다 · 게스트가 [발행하기] 를 누르면 발행 모달이 열린다)을 같은 바퀴에 닫았다** (`816420b`).
+**이번 바퀴(79)는 둘이다 — ① 고장 FINDINGS 138(관통이 api 단계에서 빨갛게 시작 · `bd003a5`) ② INBOX 지시 「서버측 AI 를 Anthropic → Gemini」(`836a0a9`).**
+시작하자마자 관통이 `api FAIL` 이었다: 78 의 **문서만 고치는 커밋**(`99324a3`)이 121 을 ✅ 로 바꾸며 `docs/KNOWN_LIMITATIONS.md` 의 그 줄을 안 지웠고, 그 커밋은 test 층을 다시 안 돌렸다
+(`readme.test.ts` ④ 1 빨강). 줄을 지우고 **같은 검사를 `docs` 층(`tools/status-shape.mjs` ②-B)에도** 뒀다 — 문서만 고치는 커밋이 보는 유일한 층이 거기다. 옛 줄을 되돌리면 `docs:check` 1 빨강.
+그 다음 119 로 가려는데 INBOX 에 새 지시가 와 있었다(INBOX 는 PLAN·FINDINGS 보다 위) — Gemini 로 바꿨다. 부르는 자리가 `client.ts` 하나라 「접근은 한 문으로」가 값을 했다.
+
+🔴 **잰 것 — Gemini** (`docs/evidence/2026-09-06-gemini/probe.txt` · 전부 진짜 API · gemini-3.5-flash · 우리 키):
+
+| | 전 (`bd003a5`) | 후 (`836a0a9`) |
+|---|---|---|
+| 부르는 문 | `@anthropic-ai/sdk` `messages.create` + tool use | **SDK 없이 `fetch`** → `generateContent` · `responseMimeType: application/json` + `responseJsonSchema` (`callClaude` → `callModel` · `ToolCallRequest` 의 죽은 `toolName`·`toolDescription` 둘을 뺐다) |
+| 스키마를 받나 | — | `responseJsonSchema` 는 `$schema`·`$defs`·`$ref`·`const`·`oneOf`·`pattern`·`format`·`additionalProperties`·`min/maxLength`·`minimum/maximum`·`default` 전부 받고 **`minItems`·`maxItems` 만 400** (낱개 bisect a~e · `responseSchema` 는 `$ref` 부터 못 받는다) |
+| `const` | — | 받지만 **지키지 않는다** — `type` 이 표 밖 낱말로 와서 Zod 「Invalid discriminator value」 → `const` → `enum: [v]` 로 바꾸니 통과 |
+| 끝까지 (`pnpm --filter web ai:smoke`) | — | 문서 2문장 → **policy 2 · Zod 통과** · 토큰 83/252 · 11~12초 |
+| 변환이 사는 자리 | — | `client.ts` `toGeminiSchema()` 순수 함수 하나 + `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS` 두 줄 — **스키마(`packages/schema`)는 안 고쳤다**(플러그인 검증·문서 산출이 같이 읽는다) |
+| P3 게이트 | `messages\.create|messages\.stream` | `+generateContent` — `withBudget` 없는 rogue 파일을 두고 **FAIL 을 봤다**(OK 8 · FAIL 1) · 지운 뒤 OK 9. ⚠ 첫 probe 는 주석에 「withBudget 없이」라고 적어 게이트가 정당하게 통과시켰다 — 문자열 게이트는 낱말 하나로 만족된다 |
+| 모델·정가 | `AI_MODELS` claude-* 3줄 · `ANTHROPIC_MODEL` | `gemini-3.5-flash`·`gemini-3.6-flash` 2줄 · `GEMINI_MODEL` · 🙋 정가는 **2.5 flash 공개가를 임시로**(0 은 예산을 무한으로 만든다 · 아래 「막힌 것」) |
+| 시험 스텁 | 다섯 파일이 각자 `messages.create` 를 흉내 | `test/helpers/ai.ts` **한 곳**(`stubTransport`) · 새 `ai-client.test.ts` 9 · 여섯 파일 154/154 |
+| 의존 | `@anthropic-ai/sdk` catalog·package·lock | **0** (lock -60줄) |
+| 문서 | SPEC §1.2·§7·§16 · README · SUBMISSION 이 「Claude API · tool use」 | Gemini · `responseJsonSchema` · KNOWN_LIMITATIONS 에 **무료 티어 분당 제한** 한 줄 |
+| CI | GREEN 21:35 (138 뒤) | **GREEN 21:56** — principles OK 9 · typecheck 11초 · test 92초 · build 22초 · walkthrough **985** · docs OK |
+
+⚠ **안 한 것** — 화면에서 실제 구조화 job 을 Gemini 로 돌려 보지는 않았다 (`ai:smoke` 는 `callModel` 직접 · 아래 「눈 판정 대기」). `structure.ts`·`conflict.ts` 의 프롬프트는 한 글자도 안 바꿨다 —
+프롬프트가 Gemini 에서 어떤 품질인지는 **PLAN P3 첫 행의 완료 기준**(「paylab 문서 → 항목 12 + 충돌 3」)을 재는 바퀴가 본다. 그 행은 이제 **루프가 혼자 잴 수 있다** (키가 생겼다).
+
+🔴 **배운 것 둘** — ① 문서만 고치는 커밋도 게이트를 돌려라. 78 은 코드 커밋 앞에 CI 를 봤고 그 뒤 문서 커밋에서 121 을 닫으며 KNOWN_LIMITATIONS 를 안 지웠다. 「닫힌 것을 다음 할 일로 가리킨다」(102)와
+「닫힌 것을 한계라고 적는다」(138)는 같은 썩음이라 같은 게이트(`status-shape`)에 뒀다. ② 공급자를 바꿀 때 「스키마를 받나」와 「스키마를 지키나」는 다른 질문이다 — `const` 는 200 인데 안 지켰다. 끝까지 Zod 를 통과시켜 봐야 안다.
+
+🔴 **2-B 이번 라운드 — `AI_MODELS` 표(이제 2줄)와 `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS`(2줄)** ① 소비처: `currentModel()`·`costMicros()` / `toGeminiSchema()` ② 뒤집으면 갈림: 표에 없는 이름은 죽는다(`ai-budget`) ·
+정가 0 이면 시험이 막는다(새) / 키워드를 안 벗기면 진짜 API 가 400(실측 · 시험은 「모든 깊이에서 빠졌나」). `ItemType` 10종은 여전히 다음 라운드.
+
+**다음 바퀴의 일 — FINDINGS 122**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **고장은 없다. INBOX 「할 것」에 하나 남았다 — 「값이 생겼다」(공개 저장소 URL · 제출 팀명 · 2026-09-06)** → FINDINGS **122**(+126 의 팀명 자리 · README 머리 문단). INBOX 는 PLAN 보다 위다.
+그 다음은 **PLAN P3 첫 행**이 열렸다 — 완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `goals.md` → job `succeeded` →
+항목 수·충돌 수·offset). 🙋 없이 루프가 할 수 있는 첫 PLAN 행이다 (FINDINGS 109 — 이 줄은 PLAN 행을 못 가리키므로 122 다음에 여기서 읽어라). 그 뒤 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137.
+
+> **122 를 하는 법** — INBOX 의 값 둘을 **정본 하나**에 둔다: 랜딩 푸터는 `LANDING_FOOT`(`apps/web/src/components/landing.tsx` · 59바퀴가 만든 상수)이 읽고, README·SUBMISSION·KNOWN_LIMITATIONS 의 `<marketplace>`·🙋 자리는
+> 그 값을 **글자 그대로** 적되 `readme.test.ts` 가 세 문서와 상수가 같은 문자열인지 센다(지금 「P1~P7 행 동일」을 세는 방식 그대로). README 머리의 「🙋 … 아직 없습니다」 문단은 지운다. production URL·영상은 자리표시자 그대로.
+> 팀명은 띄어쓰기까지 그대로 `퇴직했는데저좀이직시켜주세요`. KNOWN_LIMITATIONS 의 122 줄을 지우는 것을 잊지 마라 — `docs:check` 가 잡는다(138).
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다 · 78 이 게스트의 쓰기 버튼 셋을 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · URL·팀명은 왔다 → 122).
+- 대장의 대기(122 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 138 ✅ · 139 는 기록.
+
+### 지난 바퀴 (78) — 화면이 서버와 같은 표 `ACTOR_RULES` 를 읽는다 · 게스트 [발행하기] 는 모달 대신 그 자리에 이유 · 403 문구는 `GUEST_HINT` (FINDINGS 121 · 135 · `816420b`)
+
+**78바퀴는 FINDINGS 121 + 135 — 격차 둘(게스트의 403 을 「팀 owner만」이라고 옮긴다 · 게스트가 [발행하기] 를 누르면 발행 모달이 열린다)을 같은 바퀴에 닫았다** (`816420b`).
 INBOX 순서 4(구멍 → 격차)의 첫 격차이고 둘 다 「게스트가 누른 뒤에 아는 것」이라 같은 자리다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 워킹트리는 깨끗한 채로 시작했다.
 뿌리는 하나였다: 화면이 「쓸 수 있나」를 읽을 표가 없었다 — `ACTOR_RULES` 가 drizzle·DB 를 import 하는 `lib/api/auth.ts` 안이라 클라이언트가 못 읽었고, 그래서 화면은 `session.guest` 를 보고
 **짐작**하거나(배너) 아예 안 보고(발행 버튼) 서버의 403 을 member 의 문구로 옮겼다. 표를 import 없는 `lib/api/actor-rules.ts` 로 옮기고(`auth.ts` 는 되내보내기 · `Actor['kind']` 와 같은 집합인지 타입으로 잠금),
@@ -44,14 +96,7 @@ INBOX 순서 4(구멍 → 격차)의 첫 격차이고 둘 다 「게스트가 �
 🔴 **2-B 이번 라운드 — `ACTOR_RULES` 3종(`user`·`device`·`guest`)이 그 예다.** ① 소비처: 서버 `actorCan`·`actorWrites` · 화면 `writeDoor` ② 뒤집으면 갈림: `api-auth` 「세 주체가 서로 다른 답」 ·
 `web-write-door` 「`writes` 를 뒤집으면 문이 열린다」. 화면 쪽 ② 가 이 바퀴 전에는 **없던 값**이었다(화면이 표를 안 읽었으니). 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
 
-**다음 바퀴의 일 — FINDINGS 119**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 119 → 79바퀴는 거기 못 갔다 — 관통이 api 에서 빨갛게 시작했고(138 · 78 의 문서 커밋이 남긴 것) 그 뒤 INBOX 에 새 지시(Gemini)가 왔다. 아래는 78 이 남긴 지목의 원문이다.
 
 🔴 **고장은 없다. INBOX 순서 4 — 격차를 소진하는 중이다.** 남은 구멍 둘은 루프가 못 연다 — 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명), 117 은 절삭 1번(P3 🙋 키).
 격차의 순서: **119**(데모 항목 15 vs SPEC 60) → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137.
@@ -250,59 +295,6 @@ policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/livenes
 - 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 114 · 113 · 112 · 111 · 110 · 108 · 106 · 105 · 104 · 103 · 131~135 …) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
 
 ---
-
-### 지난 바퀴 (73) — 훅 상한을 vitest.base.ts 한 곳으로 · 부하 100% 에서 33/33 (FINDINGS 136 · `767a33e`)
-
-
-**이번 바퀴(73)는 FINDINGS 136 — 고장(CI 의 test 층이 부하에서 코드와 무관하게 빨개진다)을 닫았다** (`767a33e`). 고장은 INBOX 순서보다 위라(④3 ①) 먼저 했다.
-훅 상한을 `vitest.base.ts` 의 `HOOK_TIMEOUT_MS = 30_000` **한 곳**으로 모았다 — 열어 보니 **이미 7 파일이 저마다 훅에 `60_000`·`30_000` 을 들고 있었다**
-(ai-budget · ai-conflict · ai-job · ai-structure · migration · db-pool · migrate-script — 전부 같은 PGlite 기동인데 수치가 흩어져 갈린 상태). 그 9곳을 지웠다.
-`apps/web/test/hook-timeout.test.ts` 3개가 ① 설정의 `test.hookTimeout` 이 실제로 그 상수인가(정의만 있는 상태가 아닌가) ② 잰 최악(18초)·vitest 기본(10초)보다 큰가
-③ 워크스페이스 전 `*.test.ts` 를 TS 파서로 읽어 훅에 둘째 인자(자기 상한)를 준 곳이 **0** 인가를 센다 — `migration.test.ts` 의 옛 `60_000` 을 되돌리면 그 줄(`:81`)을
-집어 빨개진다(직접 확인). **PLAN 은 안 움직였다** — 루프가 혼자 닫을 수 있는 행이 없다 (아래).
-
-🔴 **잰 것 — 부하에서 빨강 → 초록.** 이 바퀴가 시작할 때는 게임 클라이언트가 떠 있어(CPU 79%) 옛 설정으로 **먼저 한 번 더 재현**했고, 고친 뒤에는 게임이
-꺼져(17:2x · CPU 8%) 진짜 부하가 사라졌기에 `node -e "while(true){}"` 를 12개·15개 띄운 **합성 부하**로 쟀다 (`docs/evidence/2026-09-06-hook-timeout/`).
-
-| | 전 (`5e3a8a8` · 기본 10초) | 후 (`767a33e` · 30초) |
-|---|---|---|
-| 실제 게임 부하 (LoadPercentage **79** · 17:18) | **9 failed / 32 files** · `Hook timed out in 10000ms` 9 · 150초 (`before.txt`) | — (게임이 꺼져 못 쟀다) |
-| 합성 부하 12 loop (62%) | — | **33/33 · 633/633** · 145초 (`after-under-load.txt`) |
-| 합성 부하 15 loop (**100%**) | — | **33/33 · 633/633** · 194초 (`after-under-load-2.txt`) |
-| 부하 없음 (CI test 층 · 멤버 4) | 16:46 GREEN (71바퀴) | **OK 84초** |
-| 훅에 자기 상한을 준 시험 파일 | **7** (9곳) | **0** — 시험 ③ 이 센다 |
-| vitest 파일 / 시험 (apps/web) | 32 / 630 | **33 / 633** |
-| 손대지 않은 것 | — | `it(…, 15_000·30_000·60_000)` 시험 **본문** 상한 7곳 — `testTimeout` 이라 다른 개념 (흩어져 있긴 하다 · 필요해지면 같은 모양으로) · `maxWorkers` |
-| 합성 부하 프로세스 | — | 끝난 뒤 `while(true)` node **0** (`try/finally` 로 거뒀다) |
-| CI | **RED** (17:06 · 17:10) | principles OK 9 · typecheck 10초 · test 84초 · build 27초 · walkthrough **949** · docs → **GREEN** (17:34) |
-
-🔴 **왜 30초이고 왜 `maxWorkers` 가 아닌가** — 잰 최악 18초의 1.7배라 「PGlite 가 안 뜬다」(영원히 안 끝남)와 「느리다」는 여전히 갈린다. `maxWorkers` 는 한가할
-때도 늘 느리게 만들고, 상한은 실패 판정선만 옮긴다. 이유는 상수 옆(`vitest.base.ts`)에 적혀 있다 — 다음 사람이 「왜 30」을 묻지 않게.
-
-🔴 **배운 것 — 「한 곳에 두라」는 지시가 왔을 때 그 값이 이미 몇 곳에 있는지 먼저 세라.** 136 의 「고칠 방향」은 「파일마다 붙이지 마라」였는데, 붙어 있는 것이
-이미 7 파일이었다. 정본을 더하기만 하고 흩어진 것을 안 지우면 정본은 **여덟째 사본**이 된다. 그래서 시험 ③ 은 「정본이 있는가」가 아니라 **「사본이 0 인가」**를 센다.
-
-🔴 **2-B 이번 라운드 — 에러 코드(`ERROR_CODES`)는 살아 있고 잠겨 있다.** ① 소비처: `apps/web/test/error-codes.test.ts` 의 `WITHOUT_OWNER` 표가 **비어 있다**
-= 코드 전부 `ApiError` 를 던지는 자리가 있다(「모든 코드가 실제로 내는 자리를 가졌다」) ② 「코드를 바꾸면 응답이 갈린다」 — 응답의 status·message 가
-`ERROR_STATUS` 표를 따라간다. 새로 적을 것 없음.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 115(CLI 가 찍는 제안 주소가 앱에 없는 주소). 74바퀴가 닫았다 (`4d0ba9a`).
-
-
-🔴 **고장은 없다. INBOX 순서 4 — 미해결 FINDINGS 를 구멍 → 격차 순으로.** 구멍 중 **122** 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고,
-**117**(`POST …/ask`)은 SPEC §14 **절삭 1번**이자 P3(🙋 Anthropic 키)의 몫이라 지금 만들면 픽스처 답만 내는 문이 된다 — 그래서 그 다음 구멍
-**115**(CLI 가 찍는 제안 주소가 앱에 없는 `/p/{id}/…` 라 눌러도 404)부터. 115 의 「고칠 방향」 ①(주소를 안 찍고 「웹의 제안 탭에서 볼 수 있다」)이
-싸고 주소 정본(slug)을 하나로 지킨다 — ② 전달 라우트는 주소를 둘로 만든다. 그 다음 구멍 114 · 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103
-→ 격차 121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134.
-
-> **115 를 하는 법** — `plugin/contextops/src/cli/propose.ts`(번들 `bin/contextops-cli.mjs` 는 빌드 산출물 · 직접 고치지 마라)에서
-> `${config.api_origin}/p/${config.project_id}/proposals/${id}` 줄을 찾아 정본은 SPEC §8.4 · §9(주소는 slug). 시험은 `plugin/contextops/test/`
-> 의 `propose.test.ts` 에 「찍은 출력에 `/p/` 주소가 없다」 한 줄. 번들은 `plugin/contextops/package.json` 의 `build`(`tsx scripts/build.ts`) 로 다시 만든다.
-> 73바퀴가 확인했다 — 그 줄은 `plugin/contextops/src/cli/propose.ts:113` 에 **아직 있다** (56바퀴 근거는 번들 줄 번호였다).
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
-  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
-- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 113 · 112 · 111 · 110 · 108 · 106 · 105 · 104 · 103 · 131~135 …) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
 
 ---
 
@@ -607,6 +599,10 @@ policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/livenes
 
 ## 눈 판정 대기
 
+🟡 **Gemini 로 화면의 구조화 job 을 돌린 적이 없다** (79바퀴 · `836a0a9`). `ai:smoke` 는 `callModel()` 을 직접 불러 문서 2문장 → policy 2 · Zod 통과까지 봤다(`docs/evidence/2026-09-06-gemini/probe.txt`).
+못 본 것: `demo:db` + `next dev`(`.env.local` 의 키를 읽는다) → `/import` 에 `fixtures/paylab-docs/goals.md` 를 올려 job 이 `queued → running → succeeded` 로 가나 · 항목 수·충돌 수가 PLAN P3 첫 행의 완료 기준(12 + 3)에 닿나 ·
+분당 제한에 걸리면 429 → 화면이 픽스처 결과로 떨어지나(SPEC §7.5). 이게 곧 **PLAN P3 첫 행을 재는 일**이라 122 다음 바퀴의 몫이다.
+
 🟡 **화면 8 의 `due` 칸을 브라우저로 안 봤다** (76바퀴 · `4109f5e` · FINDINGS 111). 글자 모양은 `pnpm --filter web exec tsx scripts/dump-roadmap.tsx` 가 정본이고 13 모양 전부에
 `due 2026-09-20` 이 마일스톤 ID 뒤 · chip 앞에 선다 (`docs/evidence/2026-09-06-manifest-due/probe.txt`). 못 본 것: 그 `meta mono` 칸이 375px 에서 chip 과 줄바꿈될 때 어색하지 않은가.
 `demo:db` + `next dev` → `/demo` → roadmap 탭에서 PL-M1 행에 `due 2026-04-30` 이 보이면 끝 — 아래 「게스트 데모」 항목(roadmap 미확인)과 같은 스크립트로 한 번에.
@@ -837,7 +833,7 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 | 무엇 | 왜 루프가 못 하나 | 언제 필요한가 |
 |---|---|---|
 | ~~Supabase 프로젝트 생성 · `DATABASE_URL` · `SUPABASE_JWT_SECRET`~~ | ✅ **2026-09-06 사람이 꽂았다** (`.env.local` · Session pooler · IPv4) | 71바퀴가 마이그레이션을 실제로 적용했다 (`adac632` · 표 18 · 인덱스 8). **표는 비어 있다** — 데모 테넌트는 Cron 리셋 문(`/api/v1/cron/demo-reset`)이 심는다. 같은 값을 Vercel 에도 꽂는 것은 아래 행 |
-| Anthropic API 키 (서버측 AI 용, 종량제) | 키 발급은 사람이 | P3 시작할 때 |
+| ~~Anthropic API 키~~ → **Gemini 키** | ✅ **2026-09-06 사람이 꽂았다** (`GEMINI_API_KEY`·`GEMINI_MODEL=gemini-3.5-flash` · 79바퀴가 `836a0a9` 로 갈아끼웠다 · 진짜 호출 통과) | 🙋 남은 것 하나: **`gemini-3.5-flash`·`3.6-flash` 의 정가**를 `apps/web/src/lib/ai/features.ts` `AI_MODELS` 에 — 지금은 2.5 flash 공개가(0.30/2.50 USD/M)가 임시로 있다. 틀리면 하루 예산(`AI_DAILY_BUDGET_USD=3`)의 셈이 틀린다. 같은 값을 Vercel 에도 |
 | Vercel 프로젝트 연결 · 환경변수 (**Root Directory `apps/web`** · `CRON_SECRET` · `SUPABASE_JWT_SECRET` · `DATABASE_URL`) → 첫 리셋 한 번 (`curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset`) → `/demo` 가 열리나 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처 한 장(P1 증거의 나머지 절반 · `docs/evidence/2026-09-06-p1-payload/` 옆에) | 계정 연결이 필요하다 | **🔴 지금.** 코드 쪽(Cron · 리셋 문 · `vercel.json`)은 63바퀴에, P1 증거의 코드 쪽은 64·65바퀴에 다 됐다 — 값만 꽂으면 데모가 production 에서 매일 03:00 KST 에 다시 선다 |
 | 실데이터 픽스처(`brain`) 공개 가능 여부 판단 | 제품 결정이다 | P5 (안 되면 paylab 만 · SPEC §14 절삭 6번) |
 
@@ -850,6 +846,10 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 > 같은 벽에 두 번 부딪히면 `loop/PROMPT.md` ③ 의 규칙으로, 기계가 잴 수 있으면
 > `tools/principles.ps1` 의 검사로 올린다.
 
+- 🔴 **FINDINGS 를 ✅ 로 바꾸는 문서 커밋은 `KNOWN_LIMITATIONS.md` 의 그 번호 줄을 같이 지워야 한다 — 그리고 `pnpm docs:check` 를 돌려라** (79바퀴 · 138). 78 의 문서 커밋이 121 을 닫으며 그 줄을 남겨
+  다음 바퀴의 관통이 api 단계에서 빨갛게 시작했다. 이제 `docs` 층(`tools/status-shape.mjs` ②-B)이 잡는다 — test 층(85초)까지 안 돌려도 된다.
+- **문자열 게이트를 확인할 probe 파일에 게이트가 찾는 낱말을 주석으로도 적지 마라** (79바퀴). `withBudget 없이` 라고 적은 주석이 P3 검사(`-notmatch "withBudget"`)를 통과시켰다. 확인이 「통과」로 끝나면 먼저 probe 를 의심해라.
+- **Gemini `responseJsonSchema` 는 `$ref`·`const` 를 받되 `const` 는 안 지키고 `minItems`·`maxItems` 는 이유 없이 400 이다** (79바퀴 · 실측). 새 키워드가 거절되면 `client.ts` 의 `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS` 한 줄 — 스키마를 고치지 마라. `pnpm --filter web ai:smoke` 가 진짜 호출 한 번의 문이다(돈이 든다 · CI 밖).
 - **「부하에서도 초록」을 재야 하는데 부하가 사라졌으면 합성 부하로 잰다** (73바퀴). `Start-Process node -ArgumentList '-e','"while(true){}"' -PassThru` 를
   N 개(16 논리코어에 12개 ≈ 62% · 15개 = 100%) 띄우고 `try { … } finally { Stop-Process }` 로 반드시 거둔다 — 끝난 뒤 `Get-Process node | ? CommandLine -like '*while(true)*'`
   로 0 을 확인해라. 부하는 `(Get-CimInstance Win32_Processor).LoadPercentage` 로 읽는다. ⚠ Bash 도구에서 `cmd.exe /c "pnpm test >> file 2>&1"` 은 **pnpm 을 안 돌리고

@@ -33,6 +33,15 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 139. ✅ **서버측 AI 공급자를 Anthropic → Gemini 로 바꿨다** — INBOX 지시 · 문은 `client.ts` 하나 그대로   [기록]
+- **무엇**: `apps/web/src/lib/ai/client.ts` 가 Gemini `generateContent` 를 SDK 없이 `fetch` 로 부른다 (`responseMimeType: application/json` + `responseJsonSchema`). `callClaude` → `callModel`.
+  `AI_MODELS` 는 `gemini-3.5-flash`·`gemini-3.6-flash` 두 줄(claude-* 는 지웠다 — 문이 못 부른다) · env 는 `GEMINI_API_KEY`·`GEMINI_MODEL`.
+- **근거**: `docs/evidence/2026-09-06-gemini/probe.txt` — 진짜 API 로 `AiStructureOutput` 전체 스키마: `minItems`·`maxItems` 만 400 · `const` 는 받되 안 지킴 → `toGeminiSchema()` 뒤 policy 2 · Zod 통과.
+  P3 게이트(`tools/principles.ps1`)에 `generateContent` 를 더하고 `withBudget` 없는 rogue 파일로 FAIL 을 봤다.
+- **정본**: `docs/SPEC.md` §1.2 · §7 (P2 · P3 의 뜻은 그대로 — 「우리 API 키(종량제) · withBudget() 경유」)
+- **남은 것**: 🙋 3.5/3.6 flash 의 정가(지금 2.5 flash 공개가) · 화면의 구조화 job 을 Gemini 로 돌린 캡처 없음(`docs/STATUS.md` 「눈 판정 대기」) — 그건 PLAN P3 첫 행을 재는 바퀴의 몫.
+- **상태**: ✅ `836a0a9` (79바퀴 · 2026-09-06) — 시험 154 + 9 · CI GREEN 21:56 · 관통 985
+
 ### 138. ✅ **관통이 api 단계에서 빨갛게 시작한다** — 78바퀴가 121 을 ✅ 로 바꾸며 KNOWN_LIMITATIONS 의 그 줄을 안 지웠다   [고장]
 - **증상**: 79바퀴 첫 관통 `api FAIL` — `apps/web/test/readme.test.ts` ④ 「닫힌 항목을 한계라고 적지 않는다」 1 빨강 (655 초록).
   `docs/KNOWN_LIMITATIONS.md:38-39` 가 「게스트가 누른 버튼의 403 문구가 「팀 owner만」이다 … (FINDINGS 121)」을 아직 들고 있었다.
@@ -43,7 +52,7 @@
 - **고친 것**: ① 그 두 줄을 지웠다 ② 같은 검사를 **`docs` 층**(`tools/status-shape.mjs` ②-B)에도 뒀다 — 문서만 고치는 커밋이 보는 유일한 층이다.
   「닫힌 것을 한계라고 적는다」는 「닫힌 것을 다음 할 일로 가리킨다」(102)와 같은 썩음이라 같은 게이트에 산다. 옛 줄을 되돌리면 `docs:check` 가 1 빨강.
   readme.test ④ 는 그대로 둔다(README·제출서의 번호가 KNOWN_LIMITATIONS 와 같은지도 세므로).
-- **상태**: ✅ `<79바퀴 커밋>` (79바퀴 · 2026-09-06) — 잰 것: `docs:check` 「FINDINGS 번호 4개 전부 대기」 · readme.test 32/32 · CI GREEN 21:35
+- **상태**: ✅ `bd003a5` (79바퀴 · 2026-09-06) — 잰 것: `docs:check` 「FINDINGS 번호 4개 전부 대기」 · 옛 줄을 되돌리면 `docs:check` 1 빨강 · readme.test 32/32 · CI GREEN 21:35
 
 ### 137. **데모의 `/import` 에 시드가 남긴 job 이 「⚠ 멈춘 것 같음」으로 떠 있다** — 게스트가 처음 보는 화면 3 이 고장처럼 읽힌다   [격차]
 - **증상**: `/demo` → 가져오기 화면의 「구조화 진행」 카드에 job 하나가 `차례 기다리는 중 · ⚠ 멈춘 것 같음 · 올린 지 N분 전` 으로 뜬다
