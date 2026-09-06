@@ -1,3 +1,6 @@
+import type { ErrorCode } from '@contextops/schema'
+
+import { ApiError } from '../api/error'
 import type { AiCall } from './budget'
 import { currentModel } from './model'
 
@@ -69,7 +72,7 @@ export const GEMINI_THINKING_LEVEL: GeminiThinkingLevel = 'low'
 export interface GenerateResponse {
   readonly candidates?: readonly {
     readonly content?: { readonly parts?: readonly { readonly text?: string }[] }
-    /** `STOP` · `MAX_TOKENS` · … — ⚠ `callModel()` 은 아직 안 읽는다 (FINDINGS 144). 측정 문이 기록만 한다. */
+    /** `STOP` · `MAX_TOKENS` · … — `callModel()` 이 `GEMINI_TRUNCATED_FINISH_REASON` 과 견줘 `truncated` 를 낸다 (FINDINGS 144). */
     readonly finishReason?: string
   }[]
   readonly usageMetadata?: {
@@ -108,12 +111,45 @@ export function geminiTransport(): AiTransport {
         body: JSON.stringify(body),
       })
       //  ⚠ 응답 본문을 오류 메시지에 싣지 않는다 — 오류 메시지는 로그로 간다 (SPEC §11).
-      //    상태 코드만으로 「키가 틀렸다(400/403)」·「분당 제한(429)」을 가른다.
-      if (!res.ok) throw new Error(`Gemini generateContent ${res.status}`)
+      //    상태 코드만으로 가른다 — 표(`GEMINI_HTTP_ERROR_CODES`)에 있는 상태는 그 코드의
+      //    `ApiError`, 없는 것(키가 틀린 400/403 · 5xx)은 그냥 Error → job 은 `INTERNAL`.
+      if (!res.ok) {
+        const code = GEMINI_HTTP_ERROR_CODES[res.status]
+        if (code) throw new ApiError(code, `Gemini generateContent ${res.status}`)
+        throw new Error(`Gemini generateContent ${res.status}`)
+      }
       return (await res.json()) as GenerateResponse
     },
   }
 }
+
+/**
+ * 🔴 Gemini 의 HTTP 상태 → 우리 에러 코드. **표에 있는 상태만** `ApiError` 가 된다.
+ *
+ * ★ 왜 (FINDINGS 144 · 2026-09-07) — 429 가 그냥 `Error` 로 가면 `runJob` 의 catch 가 `INTERNAL`
+ *   로 적어 화면이 「서버 오류」를 본다. 분당 제한은 우리 예산 가드(`withBudget` 의 `RATE_LIMITED`)와
+ *   **같은 뜻**이라 같은 코드여야 화면이 같은 갈래(「요청이 너무 잦습니다」)를 탄다.
+ * ⚠ 401/403(키가 틀렸다)·5xx 는 표에 넣지 않는다 — 그건 운영자의 일이지 사용자가 기다릴 일이 아니다.
+ *   새 상태를 가르려면 여기 한 줄이다.
+ */
+export const GEMINI_HTTP_ERROR_CODES: Readonly<Record<number, ErrorCode>> = { 429: 'RATE_LIMITED' }
+
+/**
+ * 출력이 `maxOutputTokens` 에서 잘렸을 때 Gemini 가 적는 `finishReason`.
+ * `callModel()` 은 이것을 읽어 `truncated` 를 낸다 — 잘린 JSON 은 어차피 파싱이 안 돼 `value` 가
+ * `undefined` 인데, 그것만 보면 「계약과 다르다」와 구분이 안 된다 (FINDINGS 144).
+ */
+export const GEMINI_TRUNCATED_FINISH_REASON = 'MAX_TOKENS'
+
+/**
+ * 🔴 잘린 응답에 대한 재시도 불평 — `structure.ts`·`conflict.ts` 의 재시도 루프가 **같은 문장**을 싣는다.
+ *
+ * ★ 왜 — 잘린 응답을 「계약과 맞지 않는다」로 불평하면 모델은 같은 길이로 다시 내고 **같은 자리에서
+ *   또 잘린다** (81바퀴 첫 실행 · 60초 · 왕복 2 · 둘 다 MAX_TOKENS). 상한은 그대로 두고 모델이
+ *   줄일 수 있는 것(본문·인용 길이)을 말한다 — 상한을 올리면 생각 토큰이 그만큼 더 먹는다 (141).
+ */
+export const OUTPUT_TRUNCATED_COMPLAINT =
+  '출력이 상한에서 잘렸다 — 항목 수는 그대로 두고 body 와 인용(span.quote)을 더 짧게 내라'
 
 function transport(): AiTransport {
   if (!cached) cached = geminiTransport()
@@ -175,13 +211,19 @@ export interface ToolCallRequest {
   readonly maxTokens: number
 }
 
+/** `callModel()` 이 내는 것 — 장부가 읽는 `AiCall` 에 「잘렸나」 한 칸을 더했다. */
+export interface ModelCall extends AiCall<unknown> {
+  /** `finishReason` 이 `GEMINI_TRUNCATED_FINISH_REASON` 이었다. 부르는 쪽은 `value` 를 보기 전에 이것부터 본다. */
+  readonly truncated: boolean
+}
+
 /**
  * 모델을 한 번 부르고 **구조화된 객체** 와 실제 토큰 사용량을 낸다.
  *
  * ⚠ 반환값은 검증되지 않은 `unknown` 이다. 부르는 쪽이 **해당 Zod 로 다시 판다** —
  *   그게 SPEC §7 의 「출력은 Zod 로 재검증」이고, 그 자리가 P1 의 방어선이다.
  */
-export async function callModel(req: ToolCallRequest): Promise<AiCall<unknown>> {
+export async function callModel(req: ToolCallRequest): Promise<ModelCall> {
   const model = currentModel()
   const res = await transport().generate(model, {
     systemInstruction: { parts: [{ text: req.system }] },
@@ -200,6 +242,9 @@ export async function callModel(req: ToolCallRequest): Promise<AiCall<unknown>> 
     //    쪽의 Zod 가 「계약과 다르다」로 잡고 SPEC §7 의 1회 재시도를 돌리는 것이 정본
     //    흐름이다. 여기서 던지면 그 재시도가 토큰 사용량을 잃는다 (장부가 0으로 남는다).
     value: parseJsonOrUndefined(res.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('')),
+    //  🔴 잘렸는지는 `finishReason` 이 말한다 — `value` 가 `undefined` 인 것만으로는 「산문을 냈다」와
+    //     같아 보이고, 그러면 재시도 불평이 틀린 것을 고치라고 한다 (FINDINGS 144).
+    truncated: res.candidates?.[0]?.finishReason === GEMINI_TRUNCATED_FINISH_REASON,
     model,
     inputTokens: res.usageMetadata?.promptTokenCount ?? 0,
     outputTokens: res.usageMetadata?.candidatesTokenCount ?? 0,

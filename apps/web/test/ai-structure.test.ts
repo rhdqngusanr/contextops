@@ -7,7 +7,7 @@ import { SOURCE_DOCUMENT_KINDS, type SourceDocumentKind } from '@contextops/sche
 
 import { closeDb, freshDb } from './helpers/db'
 import { aiUsage } from '../src/db/schema'
-import { setAiClientForTest } from '../src/lib/ai/client'
+import { GEMINI_TRUNCATED_FINISH_REASON, OUTPUT_TRUNCATED_COMPLAINT, setAiClientForTest } from '../src/lib/ai/client'
 import { stubTransport, type SentRequest, type StubReply } from './helpers/ai'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import {
@@ -383,6 +383,34 @@ describe('계약과 다른 응답은 AI_OUTPUT_INVALID 다 (SPEC §7)', () => {
     await expect(structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })).rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID' })
+    expect(sent.length).toBe(STRUCTURE_RETRIES + 1)
+  })
+
+  it('🔴 상한에서 잘린 응답(MAX_TOKENS)은 「더 짧게」로 재시도한다 — 계약 위반의 불평이면 같은 자리에서 또 잘린다 (FINDINGS 144)', async () => {
+    const content = '# 규칙\n\n환불 요청은 접수 후 24시간 안에 종결한다.\n'
+    stubAi((n) => n === 0
+      //  잘린 JSON — `value` 는 undefined 라 Zod 만 보면 「계약과 다르다」와 같아 보인다.
+      ? { text: '{"items":[{"id":"item_refund","type":"policy","ti', finishReason: GEMINI_TRUNCATED_FINISH_REASON }
+      : { input: output([policyItem('item_refund', '환불 SLA', '환불 요청은 접수 후 24시간 안에 종결한다.')]) })
+
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    expect(sent.length).toBe(2)
+    //  재시도의 불평은 잘렸다는 사실이지 계약 위치가 아니다.
+    expect(sent[1]!.user).toContain(OUTPUT_TRUNCATED_COMPLAINT)
+    expect(sent[1]!.user).not.toContain('items:')
+    //  상한은 그대로다 — 올리면 생각 토큰이 그만큼 더 먹는다 (FINDINGS 141).
+    expect(sent[1]!.maxOutputTokens).toBe(sent[0]!.maxOutputTokens)
+    expect(result.items.map((i) => i.id)).toEqual(['item_refund'])
+  })
+
+  it('두 번 다 잘리면 AI_OUTPUT_INVALID 이고 그 문구가 「잘렸다」를 말한다 (FINDINGS 144)', async () => {
+    stubAi(() => ({ text: '{"items":[', finishReason: GEMINI_TRUNCATED_FINISH_REASON }))
+
+    await expect(structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })).rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID', message: expect.stringContaining(OUTPUT_TRUNCATED_COMPLAINT) })
     expect(sent.length).toBe(STRUCTURE_RETRIES + 1)
   })
 

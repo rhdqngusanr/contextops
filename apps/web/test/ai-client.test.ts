@@ -1,14 +1,18 @@
-import { describe, expect, it, afterEach } from 'vitest'
-import { AiConflictOutput, AiStructureOutput, toJsonSchemaOf } from '@contextops/schema'
+import { describe, expect, it, afterEach, vi } from 'vitest'
+import { AiConflictOutput, AiStructureOutput, ERROR_STATUS, toJsonSchemaOf } from '@contextops/schema'
 
 import {
+  GEMINI_HTTP_ERROR_CODES,
   GEMINI_THINKING_LEVEL,
+  GEMINI_TRUNCATED_FINISH_REASON,
   GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS,
   callModel,
+  geminiTransport,
   setAiClientForTest,
   toGeminiSchema,
   type GenerateBody,
 } from '../src/lib/ai/client'
+import { ApiError } from '../src/lib/api/error'
 import { stubTransport } from './helpers/ai'
 
 // =====================================================================
@@ -116,6 +120,22 @@ describe('callModel — 요청·응답의 모양', () => {
     expect(call.outputTokens).toBe(0)
   })
 
+  it('🔴 finishReason 이 MAX_TOKENS 면 truncated — 값이 undefined 인 것만으로는 「산문」과 구분이 안 된다 (FINDINGS 144)', async () => {
+    setAiClientForTest(stubTransport(() => ({ text: '{"items":[{"id":"item_', finishReason: GEMINI_TRUNCATED_FINISH_REASON, inputTokens: 9, outputTokens: 8000 })))
+    const call = await callModel({ system: 'S', user: 'U', inputSchema: { type: 'object' }, maxTokens: 8000 })
+    expect(call.truncated).toBe(true)
+    expect(call.value).toBeUndefined()
+    //  잘린 토큰도 장부에 간다.
+    expect(call.outputTokens).toBe(8000)
+  })
+
+  it('STOP 이거나 finishReason 이 없으면 truncated 가 아니다 — 산문·후보 없음은 여전히 계약 위반의 길이다', async () => {
+    setAiClientForTest(stubTransport(() => ({ text: '네, 정리해 드리겠습니다.' })))
+    expect((await callModel({ system: 'S', user: 'U', inputSchema: { type: 'object' }, maxTokens: 10 })).truncated).toBe(false)
+    setAiClientForTest({ async generate() { return {} } })
+    expect((await callModel({ system: 'S', user: 'U', inputSchema: { type: 'object' }, maxTokens: 10 })).truncated).toBe(false)
+  })
+
   it('키가 없으면 켜질 때 죽는다 — 조용히 undefined 로 돌지 않는다 (.env.example ③)', async () => {
     const saved = process.env.GEMINI_API_KEY
     delete process.env.GEMINI_API_KEY
@@ -125,5 +145,54 @@ describe('callModel — 요청·응답의 모양', () => {
     } finally {
       if (saved !== undefined) process.env.GEMINI_API_KEY = saved
     }
+  })
+})
+
+describe('geminiTransport — HTTP 상태를 이름으로 (FINDINGS 144 · SPEC §7.5)', () => {
+  const KEY = 'GEMINI_API_KEY'
+  let saved: string | undefined
+
+  function withStatus(status: number): void {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(status === 200 ? '{}' : '', { status })))
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    if (saved === undefined) delete process.env[KEY]
+    else process.env[KEY] = saved
+  })
+
+  it('표(GEMINI_HTTP_ERROR_CODES)의 429 는 ApiError RATE_LIMITED — 예산 가드와 같은 코드라 화면이 같은 갈래를 탄다', async () => {
+    saved = process.env[KEY]
+    process.env[KEY] = 'test-key'
+    withStatus(429)
+    const body = { systemInstruction: { parts: [] }, contents: [], generationConfig: {} } as unknown as GenerateBody
+    const err = await geminiTransport().generate('m', body).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect((err as ApiError).code).toBe('RATE_LIMITED')
+    expect((err as ApiError).status).toBe(ERROR_STATUS.RATE_LIMITED.status)
+    //  본문은 오류 메시지에 싣지 않는다 (SPEC §11) — 상태 숫자뿐이다.
+    expect((err as ApiError).message).toBe('Gemini generateContent 429')
+  })
+
+  it('표에 없는 상태(401 · 500)는 ApiError 가 아니다 — job 은 INTERNAL 로 끝난다 (운영자의 일)', async () => {
+    saved = process.env[KEY]
+    process.env[KEY] = 'test-key'
+    for (const status of [401, 500]) {
+      expect(GEMINI_HTTP_ERROR_CODES[status]).toBeUndefined()
+      withStatus(status)
+      const body = { systemInstruction: { parts: [] }, contents: [], generationConfig: {} } as unknown as GenerateBody
+      const err = await geminiTransport().generate('m', body).catch((e: unknown) => e)
+      expect(err).toBeInstanceOf(Error)
+      expect(err).not.toBeInstanceOf(ApiError)
+      expect((err as Error).message).toBe(`Gemini generateContent ${status}`)
+    }
+  })
+
+  it('표의 값은 전부 실제로 코드를 바꾼다 — 표 한 줄이 곧 갈래다', () => {
+    for (const [status, code] of Object.entries(GEMINI_HTTP_ERROR_CODES)) {
+      expect(ERROR_STATUS[code].status, `${status} → ${code}`).toBeGreaterThanOrEqual(400)
+    }
+    expect(Object.keys(GEMINI_HTTP_ERROR_CODES).length).toBeGreaterThan(0)
   })
 })

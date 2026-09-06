@@ -11,7 +11,7 @@ import {
 
 import { closeDb, freshDb } from './helpers/db'
 import { aiUsage, contextItemRevisions, contextItems } from '../src/db/schema'
-import { setAiClientForTest } from '../src/lib/ai/client'
+import { GEMINI_TRUNCATED_FINISH_REASON, OUTPUT_TRUNCATED_COMPLAINT, setAiClientForTest } from '../src/lib/ai/client'
 import { stubTransport, type SentRequest, type StubReply } from './helpers/ai'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import { AI_FEATURE_LIMITS } from '../src/lib/ai/features'
@@ -286,6 +286,19 @@ describe('계약과 다른 응답 → 오류 위치를 넣어 1회 재시도 (SP
     expect(sent.length).toBe(2)
     expect(sent[1]!.user).toContain('직전 응답이 계약과 맞지 않았다')
     expect(sent[1]!.user).toContain('item_invented')
+    expect(out.conflicts.length).toBe(1)
+  })
+
+  it('🔴 상한에서 잘린 응답(MAX_TOKENS)은 「더 짧게」로 재시도한다 — `structure.ts` 와 같은 문장 (FINDINGS 144)', async () => {
+    await seedPair()
+    stubAi((n) => n === 0
+      ? { text: '{"conflicts":[{"kind":"contradiction","a_item_id":"item_ch', finishReason: GEMINI_TRUNCATED_FINISH_REASON }
+      : { input: { conflicts: [conflict()] } })
+
+    const out = await detectConflicts({ projectId: PROJECT, changedItemIds: ['item_changed'], now: NOW })
+    expect(sent.length).toBe(2)
+    expect(sent[1]!.user).toContain(OUTPUT_TRUNCATED_COMPLAINT)
+    expect(sent[1]!.maxOutputTokens).toBe(sent[0]!.maxOutputTokens)
     expect(out.conflicts.length).toBe(1)
   })
 

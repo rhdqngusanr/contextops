@@ -24,9 +24,13 @@ export interface StubReply {
   input?: unknown
   /** 모델이 JSON 대신 산문을 낸 경우를 흉내 낼 때 (옛 스텁의 `blocks: [{type:'text'}]`). */
   text?: string
+  /** `candidates[0].finishReason`. 안 주면 `STOP` — 잘린 응답은 `MAX_TOKENS` 로 (FINDINGS 144). */
+  finishReason?: string
   inputTokens?: number
   outputTokens?: number
 }
+
+const DEFAULT_FINISH_REASON = 'STOP'
 
 const DEFAULT_INPUT_TOKENS = 100
 const DEFAULT_OUTPUT_TOKENS = 50
@@ -51,7 +55,7 @@ export function stubTransport(reply: (sent: SentRequest, n: number) => StubReply
       const r = await reply(sentOf(body), n++)
       const text = r.text ?? JSON.stringify(r.input)
       return {
-        candidates: [{ content: { parts: [{ text }] } }],
+        candidates: [{ content: { parts: [{ text }] }, finishReason: r.finishReason ?? DEFAULT_FINISH_REASON }],
         usageMetadata: {
           promptTokenCount: r.inputTokens ?? DEFAULT_INPUT_TOKENS,
           candidatesTokenCount: r.outputTokens ?? DEFAULT_OUTPUT_TOKENS,

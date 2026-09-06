@@ -41,7 +41,8 @@
   쓰지 않는다 (SPEC §6 · `apps/web/test/web-landing.test.ts` 가 랜딩에서 그 낱말을 센다).
 - **서버측 AI 는 Gemini 무료 티어의 분당 요청 제한 안에서 돈다.** 키는 우리 것이고(P3) 호출은 전부 `withBudget()` 을
   거치지만, 무료 티어의 **분당 요청 제한**은 우리 예산 가드 바깥의 상한이다 — 데모 중 여러 사람이 동시에 구조화를 누르면
-  429 로 돌아오고 그 화면은 픽스처 결과로 떨어진다 (`apps/web/src/lib/ai/client.ts` · SPEC §7.5).
+  429 로 돌아오고 그 job 은 `RATE_LIMITED` 로 끝나 화면은 「요청이 너무 잦습니다」를 본다 — 픽스처 결과로 떨어지는 갈래는
+  게스트 데모(§7.4)에만 있다 (`apps/web/src/lib/ai/client.ts` 의 `GEMINI_HTTP_ERROR_CODES` · SPEC §7.5).
 - **서버측 AI 4종 중 둘은 문이 없다.** `apps/web/src/lib/ai/features.ts` 의 표는 `structure · conflict · ask · demo`
   넷인데, 라우트에서 `withBudget()` 을 부르는 자리는 문서 구조화와 충돌 탐지 둘뿐이다. **질의창(§7.3 ·
   `POST …/ask`)과 「AI 한 번 실행해보기」(§7.4 · `POST /demo/ai-once`)는 없다** — 화면 9 에 질의창이 없고 게스트

@@ -12,7 +12,7 @@ import {
 
 import { ApiError } from '../api/error'
 import { withBudget } from './budget'
-import { callModel, type ToolCallRequest } from './client'
+import { OUTPUT_TRUNCATED_COMPLAINT, callModel, type ToolCallRequest } from './client'
 import { currentModel } from './model'
 import { AI_SYSTEM_COMMON, untrusted } from './prompt'
 
@@ -420,6 +420,9 @@ async function structureChunk(
     outputTokens += call.outputTokens
     model = call.model
     try {
+      //  🔴 잘린 응답은 계약 위반보다 **먼저** 가른다 — 잘린 JSON 도 Zod 에 걸리지만 그 불평(「계약과
+      //     다르다」)으로 재시도하면 같은 길이로 다시 내 같은 자리에서 또 잘린다 (FINDINGS 144).
+      if (call.truncated) throw new OutputInvalid(OUTPUT_TRUNCATED_COMPLAINT)
       const { items, questions } = convert(call.value, chunk, documentVersionId)
       return { items, questions, model, inputTokens, outputTokens }
     } catch (err) {

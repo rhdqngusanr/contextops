@@ -15,7 +15,7 @@ import { contextItemRevisions, contextItems, REVISION_ORIGINS } from '../../db/s
 import { ApiError } from '../api/error'
 import { CURRENT_REVISION_JOIN } from '../api/item'
 import { withBudget } from './budget'
-import { callModel, type ToolCallRequest } from './client'
+import { OUTPUT_TRUNCATED_COMPLAINT, callModel, type ToolCallRequest } from './client'
 import { currentModel } from './model'
 import { AI_SYSTEM_COMMON, untrusted } from './prompt'
 
@@ -313,6 +313,8 @@ export async function detectConflicts(input: ConflictInput): Promise<ConflictRes
         outputTokens += call.outputTokens
         model = call.model
         try {
+          //  🔴 잘린 응답은 계약 위반보다 먼저 가른다 — `structure.ts` 와 같은 판단 (FINDINGS 144).
+          if (call.truncated) throw new OutputInvalid(OUTPUT_TRUNCATED_COMPLAINT)
           return { value: convert(call.value, known, changedIds), model, inputTokens, outputTokens }
         } catch (err) {
           if (!(err instanceof OutputInvalid)) throw err
