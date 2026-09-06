@@ -11,6 +11,67 @@
 
 ## 할 것
 
+### 🔴 서버측 AI 를 Anthropic → **Gemini** 로 바꾼다 (사용자 지시 · 2026-09-06)
+
+사람이 이미 쓰고 있는 키를 재사용한다. **`apps/web/.env.local` 에 값이 이미 들어 있다** —
+`GEMINI_API_KEY` · `GEMINI_MODEL=gemini-3.5-flash`. 너는 키를 만들 필요도, 볼 필요도 없다.
+
+**사람이 미리 확인한 것** (짐작 아님 · 그대로 믿어라):
+- `gemini-3.5-flash` · `gemini-3.6-flash` 둘 다 `generateContent` **HTTP 200**
+- **구조화 출력이 된다** — `generationConfig.responseMimeType:"application/json"` +
+  `responseSchema` 로 `{"colors":["blue","red"]}` 를 받았다. 지금 코드의 **tool use 자리를
+  그대로 대체**할 수 있다
+- 엔드포인트: `POST https://generativelanguage.googleapis.com/v1beta/models/<모델>:generateContent`
+  헤더 `x-goog-api-key`
+
+#### 왜 바꿀 수 있나 — 한 파일이다
+
+```
+@anthropic-ai/sdk 를 import 하는 파일 : 1개  (apps/web/src/lib/ai/client.ts · 86줄)
+messages.create 부르는 곳             : 1곳  (client.ts:63)
+```
+
+「접근은 한 문으로」가 여기서 값을 한다. **`client.ts` 하나만 갈아끼운다.**
+`structure.ts`·`conflict.ts`·`job.ts`·`budget.ts`(1,800줄)는 **손대지 마라** —
+`callClaude(...)` 의 **입출력 모양을 그대로 유지**하면 그대로 돈다.
+⚠ 이름이 `callClaude` 라 헷갈리면 함수명만 바꾸고 호출부를 따라 고쳐라. 동작은 그대로다.
+
+#### ⛔ 반드시 같이 고쳐야 하는 것 — **안 고치면 P3 가 눈을 감는다**
+
+`tools/principles.ps1` 의 P3 검사가 이렇게 돼 있다:
+
+```powershell
+if ($raw -match "messages\.create|messages\.stream") { $callers += $f }
+...
+if ($callers.Count -eq 0) { Add-Row "P3" "..." "SKIP" "아직 LLM 호출 없음" }
+```
+
+**Gemini 로 바꾸면 `messages.create` 가 사라져서 이 검사가 「LLM 호출 없음」으로 SKIP 한다.**
+예산 가드가 통째로 안 지켜져도 초록이 된다 — 우리가 이미 **두 번 잡은
+「가짜 OK」와 똑같은 종류**다 (FINDINGS 1 · 15).
+
+→ 정규식에 `generateContent` 를 **같이** 넣어라. 그리고 **이번 바퀴에 그 게이트가
+   실제로 무는지 확인해라** — 일부러 `withBudget` 없이 부르는 파일을 하나 만들어
+   FAIL 이 나는지 보고, 확인 뒤 지워라. 안 해 보면 안 무는 게이트가 남는다.
+
+#### 같이 맞출 것 (한쪽만 고치면 갈라진다)
+
+| 어디 | 무엇 |
+|---|---|
+| `apps/web/.env.example` | `ANTHROPIC_*` → `GEMINI_API_KEY`·`GEMINI_MODEL`. **값은 적지 마라** |
+| `docs/SPEC.md` §1.2 | 「`@anthropic-ai/sdk`, 모델 `claude-sonnet-4-5`」 → Gemini. **버전 숫자는 한 곳에만** |
+| `docs/SPEC.md` §7 | 「tool use 로 구조화 출력」 → `responseSchema` 로 |
+| `docs/SPEC.md` §16 제출서 | 「Claude API(tool use)」 문구 |
+| `README.md` 신뢰 경계 표 P3 | 「우리 API 키」는 그대로 · 공급자 이름만 |
+| `docs/KNOWN_LIMITATIONS.md` | 무료 티어 **분당 요청 제한**이 있다 — 데모 중 걸릴 수 있다고 적어라 |
+
+⚠ **P2·P3 의 뜻은 안 바뀐다.** P3 는 「서버측 LLM 은 **API 키(종량제)로만** ·
+4개 기능 한정 · `withBudget()` 경유」다 — 공급자를 안 박아뒀다. Gemini 키도 이 조건을 만족한다.
+P2 는 여전히 「사용자의 Claude 구독을 대신 부르지 않는다」이고, 그건 더 확실해진다.
+
+⚠ **한 바퀴에 이것만 해라.** 끝나면 `pnpm --filter web test` 와 `tools/ci.ps1` 이 초록이어야 하고,
+관통의 `api` 단계가 여전히 지나야 한다.
+
 ### 🔴 사람이 화면을 직접 열어 QC 했다 — 확인된 결함 넷 (2026-09-06)
 
 `pnpm --filter web demo:db` + `next dev` 로 **실제로 띄워서** 브라우저로 봤다.
