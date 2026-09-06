@@ -295,6 +295,43 @@ describe('근거는 모델의 숫자가 아니라 **인용에서 계산한 문�
     expect(sent.length).toBe(STRUCTURE_RETRIES + 1)
   })
 
+  it('🔴 줄 중간에서 줄바꿈된 문장을 한 줄로 인용해도 찾는다 — offset 은 원문 기준이다 (FINDINGS 147)', async () => {
+    //  goals.md 처럼 문단을 ~80자에서 하드 줄바꿈한 문서. 모델은 그 자리를 공백 하나로 적는다.
+    const content = '# 규칙\n\n재시도 대상은 네트워크 오류와 5xx 뿐이다. 4xx 는 재시도하지 않는다.\n멱등키가 없는 요청은  재시도하지 않는다.\n\n다른 문단이다.\n'
+    const quoted = '재시도 대상은 네트워크 오류와 5xx 뿐이다. 4xx 는 재시도하지 않는다. 멱등키가 없는 요청은 재시도하지 않는다.'
+    stubAi(() => ({ input: output([policyItem('item_retry_scope', '재시도 대상', quoted)]) }))
+
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    //  재시도 없이 한 번에 지난다.
+    expect(sent.length).toBe(1)
+    const ref = result.items[0]!.source_refs[0]!
+    expect(ref.kind).toBe('source_document')
+    if (ref.kind !== 'source_document') return
+    //  근거를 잘라 내면 **원문 그대로**(줄바꿈·겹공백 포함)이고, 인용 끝의 공백은 안 들어간다.
+    expect(content.slice(ref.start_char, ref.end_char)).toBe(
+      '재시도 대상은 네트워크 오류와 5xx 뿐이다. 4xx 는 재시도하지 않는다.\n멱등키가 없는 요청은  재시도하지 않는다.',
+    )
+  })
+
+  it('공백을 접어도 **글자**는 그대로여야 한다 — `**` 를 더한 인용은 여전히 원문에 없다 (FINDINGS 147)', async () => {
+    const content = '# 사명\n\n가맹점이 우리를 쓰는 이유는\n하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.\n'
+    stubAi((n) => ({
+      input: output([
+        n === 0
+          ? policyItem('item_bold', '굵게 더함', '가맹점이 우리를 쓰는 이유는 하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**')
+          : policyItem('item_plain', '그대로', '가맹점이 우리를 쓰는 이유는 하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.'),
+      ]),
+    }))
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    expect(sent.length).toBe(2)
+    expect(sent[1]!.user).toContain('item_bold')
+    expect(result.items.map((i) => i.id)).toEqual(['item_plain'])
+  })
+
   it('원문에 `</` 가 있어도 찾는다 — untrusted 블록의 치환을 되돌린다', async () => {
     const content = '# 규칙\n\n응답 본문은 `</body>` 로 닫는다. 그 뒤에는 아무것도 붙이지 않는다.\n'
     //  모델은 `<\body>` 로 바뀐 글을 읽었으니 그대로 인용해 온다.

@@ -283,25 +283,60 @@ function issueText(issues: readonly { readonly path: readonly PropertyKey[]; rea
  *
  * 조각에 없거나(0곳) 여러 곳(2곳 이상)이면 어느 문장인지 정할 수 없으므로 계약 위반 →
  * 오류 위치를 넣어 1회 재시도 (SPEC §7).
+ *
+ * 🔴 **공백은 접어서 찾는다** (FINDINGS 147). 문서는 문단을 줄 중간에서 하드 줄바꿈하고(픽스처
+ *   goals.md 는 ~80자마다), 모델은 그 자리를 공백 하나로 적는다 — 진짜 Gemini 인용 27개 중 5개가
+ *   그것 하나로 「원문에 없다」였고 재시도도 같은 자리에서 죽어 문서 전체가 `AI_OUTPUT_INVALID` 였다.
+ *   마크다운에서 문단 안의 줄바꿈은 공백과 뜻이 같다. **글자는 여전히 그대로여야 한다** —
+ *   `**` 를 더하거나 빼면 여전히 없다. offset 은 접은 자리를 **원문 자리로 되짚어** 낸다.
  */
 function toSourceRef(span: AiSourceSpan, chunk: DocChunk, documentVersionId: string, where: string): SourceRef {
   //  ⚠ 모델은 `untrusted()` 가 `</` → `<\` 로 바꾼 글을 읽는다 — 인용에 그 글자가 섞여
   //     오면 되돌려서 찾는다 (길이가 같은 치환이라 offset 은 안 흔들린다).
   const needle = span.quote.replace(/<\\/g, '</')
-  const at = chunk.text.indexOf(needle)
-  if (at < 0) {
+  const found = findFolded(chunk.text, needle)
+  if (found === 'none') {
     throw new OutputInvalid(`${where} 의 span.quote 가 조각 원문에 없다 — 조각의 글자를 그대로 복사해라: "${needle.slice(0, 40)}"`)
   }
-  if (chunk.text.indexOf(needle, at + 1) >= 0) {
+  if (found === 'many') {
     throw new OutputInvalid(`${where} 의 span.quote 가 조각 안에 여러 곳 있다 — 한 곳에만 있도록 더 길게 인용해라: "${needle.slice(0, 40)}"`)
   }
   return {
     kind: 'source_document',
     document_version_id: documentVersionId,
-    start_char: chunk.startChar + at,
-    end_char: chunk.startChar + at + needle.length,
+    start_char: chunk.startChar + found.at,
+    end_char: chunk.startChar + found.end,
     heading_path: span.heading_path.length > 0 ? span.heading_path : [...chunk.headingPath],
   }
+}
+
+/**
+ * 공백을 접은 글자열에서 `needle` 을 찾고 **원문 offset** 을 돌려준다. 순수 함수.
+ * 접기 = 공백 문자의 연속(줄바꿈 포함)을 공백 하나로. 접힌 자리마다 원문 자리를 적어 두고 되짚는다.
+ * `end` 는 마지막 글자의 원문 자리 + 1 — 인용 끝의 공백은 근거에 들어가지 않는다.
+ */
+function findFolded(haystack: string, needle: string): { readonly at: number; readonly end: number } | 'none' | 'many' {
+  const target = needle.trim().replace(/\s+/g, ' ')
+  if (target.length === 0) return 'none'
+  const back: number[] = []
+  let folded = ''
+  let inSpace = false
+  for (let i = 0; i < haystack.length; i++) {
+    const ch = haystack[i]!
+    if (/\s/.test(ch)) {
+      if (inSpace) continue
+      inSpace = true
+      folded += ' '
+    } else {
+      inSpace = false
+      folded += ch
+    }
+    back.push(i)
+  }
+  const at = folded.indexOf(target)
+  if (at < 0) return 'none'
+  if (folded.indexOf(target, at + 1) >= 0) return 'many'
+  return { at: back[at]!, end: back[at + target.length - 1]! + 1 }
 }
 
 /** 열린 질문 하나 — SPEC §7.1 출력의 `open_questions` 다. */
