@@ -274,7 +274,13 @@ while ($true) {
     #    ★ 첫 바퀴(58턴·677초)는 **실제로 일을 했는데** 커밋 직전에 500 을 맞아
     #      끊겼다 — 그 결과가 워킹트리에 그대로 남는다(다음 바퀴가 이어받는다).
     $limitHit = $false
-    if ($isErr -and $resultText -match "usage limit|rate limit|quota exceeded|too many requests|429|API Error:\s*5\d\d|Overloaded|Internal server error") {
+    #  🔴 2026-09-06 **`session limit` 을 놓쳤다** (실측). 바퀴 11·12 가
+    #    "You've hit your session limit · resets 8:30am" 로 **4초 만에** 끝났는데
+    #    옛 정규식이 `usage limit`·`rate limit` 만 봐서 안 걸렸다 — 물러서지 않고
+    #    바퀴 둘을 그냥 태웠고 MaxCycles 를 채워 판이 끝났다.
+    #  ★ 한도 문구는 제품이 바꾼다. **`limit` 이 들어간 문구는 넓게 잡아라** —
+    #    오탐(20분 손해)보다 미탐(밤을 통째로 버림)이 훨씬 비싸다.
+    if ($isErr -and $resultText -match "usage limit|rate limit|session limit|quota exceeded|too many requests|429|API Error:\s*5\d\d|Overloaded|Internal server error") {
         $limitHit = $true
     }
 
