@@ -20,6 +20,10 @@ export { parseTraceTag, srcKindOf, traceLines, type TraceTag } from './tag'
 //     ⚠ 관통이 이걸 들여오는 이유는 하나다 — 「데모가 scope 3종을 다 보여 주나」를
 //       세려면 파일 이름이 필요한데, 그 이름을 검사 쪽에 적으면 표가 갈라진다.
 export { scopePackPath } from './partition'
+//  🔴 「이 타입은 Pack 에 안 나간다」의 정본 (partition 표가 `exclude` 로 보내는 타입).
+//     관통이 「기대한 근거가 전부 종이에서 역추적됐나」에서 그 타입의 근거를 빼려고 읽는다 —
+//     검사 쪽에 타입 이름을 적으면 표와 갈라진다.
+export { PACK_EXCLUDED_TYPES } from './partition'
 //  🔴 「이 정책을 무엇이 강제하나」의 **말 정본** (`enforcement` 4종 · SPEC §3).
 //     ⚠ 이 문자열들을 밖에 **복사하지 마라.** 관통이 이걸 들여오는 이유는 하나다 —
 //       「데모 Pack 이 표의 몇 갈래를 실제로 보여 주나」를 세려면 네 갈래의 말을

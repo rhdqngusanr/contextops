@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Manifest, PRODUCT_TEXT_PACK_FILES } from '@contextops/schema'
-import { parseTraceTag, PROGRESS_REPORT, srcKindOf, type TraceTag } from '@contextops/compiler'
+import { PACK_EXCLUDED_TYPES, parseTraceTag, PROGRESS_REPORT, srcKindOf, type TraceTag } from '@contextops/compiler'
 
 import { measureCoverage } from './pack-coverage'
 import { findEchoes } from './pack-echo'
@@ -317,24 +317,30 @@ async function main(): Promise<void> {
     //  ⚠ 이 초안도 씨앗과 **같은 문**(`fromDoc`)으로 만든다. 근거를 손으로 적는 자리를
     //    여기 다시 만들면 그 자리만 조용히 `0-400` 으로 남는다 — FINDINGS 90 이 정확히
     //    그거였고, 관통 자신이 그 고장을 하나 더 들고 있었다.
-    const settlement = fromDoc('item_goal_settlement', 'goal', seed.goals,
-      '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |', {
-        //  ⚠ 제목을 `outcome` 과 같게 적지 마라 (FINDINGS 100) — 아래 「메아리 0」이 잡는다.
-        title: '원장과 어긋난 돈이 없다',
-        body: '일 배치 후 원장 대사 차액으로 잰다.',
-        data: { outcome: '정산 오차 0원', metric: '일 배치 후 원장 대사 차액', deadline: '2026-06-30' },
+    //  🔴 제안이 더하는 것은 goals.md §2 의 **목표 충돌 규칙**(「둘이 부딪히면 G2 가 우선이다」)이다 —
+    //     씨앗에 없는, 문서에 남은 마지막 근거다. 전에는 G3 를 더했는데 FINDINGS 119 가 G1~G3 를
+    //     전부 씨앗에 올려서 그러면 v1.1.0 에 같은 목표가 두 줄 선다 (사람이 읽으면 고장으로 보인다).
+    const proposed = fromDoc('item_policy_goal_priority', 'policy', seed.goals,
+      '둘이 부딪히면 **G2(고객이 돈을 돌려받는 속도)가 우선이다.**', {
+        title: '승인률과 환불 속도가 부딪히면 환불이 먼저다',
+        body: '재시도를 늘리면 승인률은 오르지만 환불·취소가 늦어진다.',
+        data: {
+          rule: 'G1(승인 성공률)과 G2(환불 속도)가 부딪히면 G2 가 우선이다',
+          severity: 'must',
+          enforcement: 'review',
+        },
       })
     const proposal = await dataOf(await createProposal(req('POST', `/api/v1/projects/${projectId}/proposals`, {
       auth: owner,
       body: {
-        title: '정산 오차 0원을 목표로 더한다',
-        summary: 'G3 를 항목으로 올린다',
+        title: '목표가 부딪힐 때의 우선순위를 규칙으로 더한다',
+        summary: '§2 의 「G2 가 우선이다」를 항목으로 올린다',
         base_version_id: v1.id,
         items: [{
           operation: 'add',
-          draft: settlement.draft,
+          draft: proposed.draft,
           //  제안의 근거는 초안의 근거와 **같은 것**이다. 따로 적으면 둘이 갈라진다.
-          evidence: settlement.draft.source_refs,
+          evidence: proposed.draft.source_refs,
           reason: '문서에는 있는데 항목에 없었다',
         }],
         relates_to: ['PL-M1'],
@@ -346,7 +352,7 @@ async function main(): Promise<void> {
     await approveProposal(req('POST', `/api/v1/proposals/${proposalId}/approve`, { auth: owner }), params({ id: proposalId }))
 
     const second = await publish(req('POST', `/api/v1/projects/${projectId}/versions/publish`, {
-      auth: owner, body: { semver: '1.1.0', base_version_id: v1.id, change_summary: '정산 목표 추가' },
+      auth: owner, body: { semver: '1.1.0', base_version_id: v1.id, change_summary: '목표 충돌 규칙 추가' },
     }), params({ id: projectId }))
     check('승인된 제안이 붙은 둘째 발행이 201 이다', second.status === 201,
       second.status === 201 ? '' : JSON.stringify(await errorOf(second)))
@@ -357,7 +363,7 @@ async function main(): Promise<void> {
       params({ id: projectId, semver: '1.1.0', path: ['CLAUDE.md'] }),
     )
     const claude2Text = await claude2.text()
-    check('제안이 만든 항목이 실제로 Pack 에 나온다', claude2Text.includes('ctx:item_goal_settlement'))
+    check('제안이 만든 항목이 실제로 Pack 에 나온다', claude2Text.includes(`ctx:${String(proposed.draft.id)}`))
     check('발행마다 manifest_hash 가 달라진다', v1.manifest_hash !== v2.manifest_hash)
 
     //  🔴 **P7 을 끝까지 따라간다** (FINDINGS 90). 위의 `untagged === 0` 은 「태그가
@@ -365,7 +371,10 @@ async function main(): Promise<void> {
     //     항목이 주장하는 문장이 그 안에 있는지 센다.
     packTexts.push(claude2Text)
     const tags = packTexts.flatMap((t) => t.split('\n').map(parseTraceTag).filter((x): x is TraceTag => x !== null))
-    const expected = [...seed.evidence, ...settlement.evidence]
+    //  ⚠ Pack 에 **안 나가는 타입**(`open_question` · 씨앗의 §5 미결 넷)의 근거는 종이에 없는 것이
+    //    맞다 — 기대에서 뺀다. 어느 타입인지는 여기 적지 않고 partition 의 표를 읽는다 (FINDINGS 119).
+    const packed = (itemId: string) => !((seed.typeOf.get(itemId) ?? '') in PACK_EXCLUDED_TYPES)
+    const expected = [...seed.evidence.filter((e) => packed(e.itemId)), ...proposed.evidence]
     const followed = followEvidence(tags, expected)
     check(`🔴 P7 — 태그를 따라가면 원문에 그 문장이 있다 (근거 ${followed.followed}개)`,
       followed.broken.length === 0, followed.broken.join(' · '))
@@ -396,7 +405,7 @@ async function main(): Promise<void> {
       texts: packTexts,
       paths: manifest.files.map((f) => f.path),
       tags,
-      typeOf: new Map([...seed.typeOf, [String(settlement.draft.id), String(settlement.draft.type)]]),
+      typeOf: new Map([...seed.typeOf, [String(proposed.draft.id), String(proposed.draft.type)]]),
     })
     for (const c of coverage) {
       check(`Pack 이 ${c.axis} 를 ${c.shown.length}갈래로 보여 준다 (표는 ${c.total} · 최소 ${c.min})`,

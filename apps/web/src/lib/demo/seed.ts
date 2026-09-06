@@ -202,6 +202,9 @@ const QUOTED_DATA: Record<string, readonly string[]> = {
   mission: [],
   policy: [],
   constraint: [],
+  //  §5 「아직 정하지 못한 것」 — `question` 은 그 불릿을 **물음으로 다시 적은 것**이라
+  //  진술이다 (원문은 「…못 정했다」이지 물음표가 아니다). Pack 에는 안 나간다 (partition).
+  open_question: [],
 }
 
 /**
@@ -399,6 +402,132 @@ export const ARCHITECTURE = [
  */
 const ARCHITECTURE_TOP_PRIORITY = 70
 
+/**
+ * 🔴 **goals.md §2 「올해의 목표」 표의 세 줄** — `goal` 항목의 재료 표 (FINDINGS 119).
+ *
+ * ★ 왜 표인가 — `ARCHITECTURE` 와 같은 이유다. 셋이 글자만 다르고 모양이 같다.
+ *   목표를 하나 더하는 절차: **이 표에 한 줄.** `quote` 는 §2 표의 **한 행 전체**를
+ *   그대로 잘라 온 것이고, 세 칸(`outcome`·`metric`·`deadline`)은 그 행의 세 칸을
+ *   **글자 그대로** 옮긴다 (`QUOTED_DATA.goal` · FINDINGS 101) — 관통이 그 칸이 범위 안에
+ *   있는지 센다. 전에 `metric` 을 「주간 승인 성공률」로 줄여 적었다가 그 낱말이 문서
+ *   어디에도 없어서 잡혔다. 줄여 쓴 요약이 필요하면 그 자리는 `body` 다.
+ * ⚠ **제목을 `outcome` 과 같게 적지 마라** (FINDINGS 100). goal 절은
+ *   `- **{title}** — {data.outcome}` 를 내므로 둘이 같으면 한 줄에 같은 문장이 두 번 선다.
+ *   제목은 **목록에서 읽는 이름**이고 `outcome` 이 **표에서 온 목표 문장**이다.
+ * 🔴 줄 순서가 곧 종이의 순서다 (G1 → G2 → G3) — `priority` 를 줄 번호에서 뽑는다
+ *    (`GOAL_TOP_PRIORITY - i`). 같은 값이면 컴파일러가 제목 코드포인트 순으로 세운다.
+ */
+export const GOALS = [
+  ['item_goal_success_rate', '장애 구간에도 승인이 선다', 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
+    '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-06-30 |',
+    '결제 승인 성공률 99.5%', 'PSP 장애 구간을 포함한 주간 성공률', '2026-06-30'],
+  ['item_goal_refund_sla', '환불이 하루 안에 끝난다', '접수에서 종결까지의 시각 차이 p95 로 잰다.',
+    '| G2 | 환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95 | 2026-06-30 |',
+    '환불 접수→종결 24시간 이내 95%', '`refund.closed_at - refund.created_at` p95', '2026-06-30'],
+  ['item_goal_settlement_zero', '정산이 원장과 맞는다', '일 배치 뒤 원장 대사 차액으로 잰다.',
+    '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |',
+    '정산 오차 0원', '일 배치 후 원장 대사 차액', '2026-06-30'],
+] as const satisfies readonly (readonly [
+  id: string, title: string, body: string, quote: string, outcome: string, metric: string, deadline: string,
+])[]
+
+/** `GOALS` 첫 줄의 `priority`. 아래로 1씩 내려간다 — `ARCHITECTURE_TOP_PRIORITY` 와 같은 판단. */
+const GOAL_TOP_PRIORITY = 70
+
+/**
+ * 🔴 **goals.md §4 「로드맵」의 M1~M3** — `roadmap` 항목의 재료 표 (FINDINGS 119).
+ *
+ * ★ 왜 표인가 — 셋이 같은 모양(제목 줄 · 경로 · 의존 · 완료 기준 셋)이다. 마일스톤을
+ *   하나 더하는 절차: **이 표에 한 줄.** `quote` 는 `### M? — …` 제목 줄부터 완료 기준
+ *   마지막 줄까지 **통째로** 잘라 온 것이라, 문서의 그 절이 한 글자만 바뀌어도 `locate()`
+ *   가 던진다. `due`·`paths`·`done_when` 은 그 범위 안에 글자 그대로 있다 (`QUOTED_DATA.roadmap`).
+ * ⚠ **제목에 `M1` 을 다시 적지 마라** (FINDINGS 100). roadmap 절은
+ *   `- **{data.milestone_id} {title}**` 를 내므로 `PL-M1 M1 — …` 이 된다.
+ *   마일스톤 번호를 말하는 자리는 `milestone_id` 하나다.
+ * ⚠ `milestone_id`(`PL-M1`)는 **우리가 붙인 이름**이라 원문에 없다 — 인용 칸이 아니다.
+ *   `dependencies` 도 그 이름으로 적으므로 인용 칸이 아니다 (원문은 「의존: M1」).
+ * ★ 근거는 **goals.md §4** 다 — 폐기된 old-roadmap.md 가 아니다. 그 문서의 M1 은
+ *   「웹훅 수신 v1」이고 경로도 `src/webhook/` 라 딴 마일스톤이다 (SPEC §10.1 「stale 탐지용」).
+ * 🔴 제목 괄호의 날짜가 `due` 다 — 화면 8 의 `due` 칸과 Pack 의 `due:` 가 여기서 온다 (FINDINGS 111).
+ * 🔴 줄 순서가 곧 종이의 순서다 (M1 → M2 → M3) — `priority` 를 줄 번호에서 뽑는다.
+ */
+export const MILESTONES = [
+  ['item_road_m1', 'PL-M1', '재시도·타임아웃 정리', '2026-04-30', ['src/payment', 'src/psp'], [],
+    '### M1 — 재시도·타임아웃 정리 (2026-04-30)\n\n'
+    + '- 경로: `src/payment/`, `src/psp/`\n'
+    + '- 완료 기준:\n'
+    + '  - PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\n'
+    + '  - 모든 외부 호출에 타임아웃이 걸려 있다\n'
+    + '  - 재시도 횟수와 간격이 설정값으로 빠져 있다 (배포 없이 바꾼다)',
+    [
+      'PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다',
+      '모든 외부 호출에 타임아웃이 걸려 있다',
+      '재시도 횟수와 간격이 설정값으로 빠져 있다',
+    ]],
+  ['item_road_m2', 'PL-M2', '환불 SLA 계측', '2026-05-29', ['src/refund', 'src/ledger'], ['PL-M1'],
+    '### M2 — 환불 SLA 계측 (2026-05-29)\n\n'
+    + '- 경로: `src/refund/`, `src/ledger/`\n'
+    + '- 의존: M1\n'
+    + '- 완료 기준:\n'
+    + '  - 환불 건마다 접수·종결 시각이 남는다\n'
+    + '  - 24시간을 넘긴 건이 대시보드에 뜬다\n'
+    + '  - 넘긴 건이 자동으로 에스컬레이션된다',
+    [
+      '환불 건마다 접수·종결 시각이 남는다',
+      '24시간을 넘긴 건이 대시보드에 뜬다',
+      '넘긴 건이 자동으로 에스컬레이션된다',
+    ]],
+  ['item_road_m3', 'PL-M3', 'PII 마스킹과 감사 로그', '2026-06-30', ['src/common', 'src/webhook'], ['PL-M1'],
+    '### M3 — PII 마스킹과 감사 로그 (2026-06-30)\n\n'
+    + '- 경로: `src/common/`, `src/webhook/`\n'
+    + '- 의존: M1\n'
+    + '- 완료 기준:\n'
+    + '  - 로그로 나가는 모든 객체가 마스킹 유틸을 거친다\n'
+    + '  - 웹훅 원본 payload 가 로그에 남지 않는다\n'
+    + '  - 누가 언제 환불을 승인했는지 감사 로그에 남는다',
+    [
+      '로그로 나가는 모든 객체가 마스킹 유틸을 거친다',
+      '웹훅 원본 payload 가 로그에 남지 않는다',
+      '누가 언제 환불을 승인했는지 감사 로그에 남는다',
+    ]],
+] as const satisfies readonly (readonly [
+  id: string, milestoneId: string, title: string, due: string, paths: readonly string[],
+  dependencies: readonly string[], quote: string, doneWhen: readonly string[],
+])[]
+
+/** `MILESTONES` 첫 줄의 `priority`. 아래로 1씩 내려간다. */
+const MILESTONE_TOP_PRIORITY = 70
+
+/**
+ * 🔴 **goals.md §5 「아직 정하지 못한 것」의 네 불릿** — `open_question` 항목의 재료 표
+ *    (FINDINGS 119 · SPEC §10.1 「open_question 4개」).
+ *
+ * ★ 왜 넣나 — 화면 5 의 항목 목록과 화면 4 의 「열린 질문」 배지가 이 타입을 그리는데,
+ *   데모에 한 건도 없었다. §5 는 「여기 있는 것은 결정이 아니다」라고 스스로 말하는 절이라
+ *   이 타입의 뜻 그대로다.
+ * ⚠ **Pack 에는 안 나간다** — `compiler/src/partition.ts` 가 이 타입을 `exclude` 로 보낸다
+ *   (「답이 없는 질문을 규칙처럼 배포하지 않는다」). 그래서 `pack-coverage` 의 ItemType 축은
+ *   이걸로 안 움직인다 — 그 표의 주석이 그렇게 적어 두었다. 넣는 이유는 종이가 아니라 화면이다.
+ * ⚠ `question` 은 그 불릿을 **물음으로 다시 적은 것**이다 — 원문은 「…못 정했다」다.
+ *   진술이라 인용 칸이 아니다 (`QUOTED_DATA.open_question` 은 `[]`). 원문이 말하지 않는
+ *   선택지를 물음에 끼워 넣지 마라 (P7).
+ * ★ 질문을 하나 더하는 절차: **이 표에 한 줄.** `quote` 는 §5 의 불릿 첫 문장 그대로.
+ */
+export const OPEN_QUESTIONS = [
+  ['item_oq_exhausted_payment', '재시도를 다 쓴 결제의 처리',
+    '재시도를 다 쓰고도 실패한 결제를 **자동 취소할지, 수동 확인 큐에 넣을지** 못 정했다.',
+    '재시도를 다 쓰고도 실패한 결제를 자동 취소하나, 수동 확인 큐에 넣나?'],
+  ['item_oq_partial_refund_sla', '부분 환불의 SLA',
+    '**부분 환불도 24시간 SLA 인지** 정하지 않았다.',
+    '부분 환불도 24시간 SLA 인가?'],
+  ['item_oq_webhook_redelivery', '웹훅 재전송을 받아 주는 기간',
+    '웹훅 **재전송을 며칠까지 받아 줄지** 정하지 않았다.',
+    '웹훅 재전송을 며칠까지 받아 주나? (멱등 테이블 보관 기간과 같이 정한다)'],
+  ['item_oq_rounding_rule', '외화 정산의 반올림 규칙',
+    '정산 화폐가 KRW 외로 늘어날 때 **반올림 규칙**을 정하지 않았다.',
+    '정산 화폐가 KRW 외로 늘어날 때 반올림 규칙은 무엇인가?'],
+] as const satisfies readonly (readonly [id: string, title: string, quote: string, question: string])[]
+
 export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft[] {
   return [
     fromDoc('item_mission_paylab', 'mission', goals,
@@ -407,25 +536,13 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
         body: '가맹점이 우리를 쓰는 이유는 하나다 — 밖이 실패해도 결제가 선다.',
         data: { statement: 'PSP 장애가 가맹점 결제로 번지지 않게 한다.', rationale: '가맹점이 우리를 쓰는 유일한 이유다.' },
       }),
-    fromDoc('item_goal_success_rate', 'goal', goals,
-      '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-06-30 |', {
-        //  ⚠ 제목을 `outcome` 과 **같게 적지 마라** (FINDINGS 100). goal 절은
-        //    `- **{title}** — {data.outcome}` 를 내므로, 둘이 같으면 한 줄 안에서
-        //    같은 문장이 두 번 나온다. 제목은 **목록에서 읽는 이름**이고
-        //    `outcome` 이 **표에서 온 목표 문장**이다.
-        title: '장애 구간에도 승인이 선다',
-        body: 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
-        //  🔴 세 칸은 표의 세 칸을 **그대로** 옮긴 것이다 (FINDINGS 101). `metric` 은
-        //     전에 「주간 승인 성공률」이라고 줄여 적었는데, 그 낱말은 픽스처 문서
-        //     어디에도 없었고 「PSP 장애 구간을 포함한」이라는 조건이 통째로 사라졌다.
-        //     태그를 따라간 심사자는 자기가 읽은 문장과 다른 문장을 종이에서 본다.
-        //  ⚠ 줄여 쓴 요약이 필요하면 그 자리는 `body` 다 — 이미 그 문장을 들고 있다.
-        data: {
-          outcome: '결제 승인 성공률 99.5%',
-          metric: 'PSP 장애 구간을 포함한 주간 성공률',
-          deadline: '2026-06-30',
-        },
-      }),
+    //  🔴 §2 목표 표 세 줄 — 재료는 `GOALS` 하나다 (위 주석).
+    ...GOALS.map(([id, title, body, quote, outcome, metric, deadline], i) => fromDoc(id, 'goal', goals, quote, {
+      title,
+      body,
+      priority: GOAL_TOP_PRIORITY - i,
+      data: { outcome, metric, deadline },
+    })),
     //  🔴 근거가 **둘**이다 — 문서(goals.md §3.1)와 **코드**(`src/payment/retry.ts`).
     //  ★ 왜 코드까지 다나 — SPEC §10.1 이 말하는 「의도된 어긋남」의 첫째가 바로 이것이다:
     //    문서는 「5회 · 지수 백오프」인데 코드는 「3회 · 500ms 고정」이다. 규칙만 종이에
@@ -468,34 +585,69 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
         body: '토큰만 받는다.',
         data: { statement: '카드 원본 정보를 저장하지 않는다 — 토큰만 받는다.' },
       }),
-    //  🔴 근거는 **goals.md §4 의 M1** 이다 (전에는 폐기된 old-roadmap.md 를 가리켰다 —
-    //     그 문서의 M1 은 「웹훅 수신 v1」이고 경로도 `src/webhook/` 라 딴 마일스톤이었다).
-    //  ⚠ 그래서 제목·경로·완료 기준도 **그 문단이 말하는 것**으로 맞췄다. 근거만 옮기고
-    //    글자를 그대로 두면 태그는 맞는 자리를 가리키는데 읽어 보면 딴 소리가 적혀 있다.
-    fromDoc('item_road_m1', 'roadmap', goals,
-      '### M1 — 재시도·타임아웃 정리 (2026-04-30)\n\n'
-      + '- 경로: `src/payment/`, `src/psp/`\n'
-      + '- 완료 기준:\n'
-      + '  - PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\n'
-      + '  - 모든 외부 호출에 타임아웃이 걸려 있다\n'
-      + '  - 재시도 횟수와 간격이 설정값으로 빠져 있다 (배포 없이 바꾼다)', {
-        //  ⚠ 제목에 `M1` 을 다시 적지 마라 (FINDINGS 100). roadmap 절은
-        //    `- **{data.milestone_id} {title}**` 를 내므로 `PL-M1 M1 — …` 이 된다.
-        //    마일스톤 번호를 말하는 자리는 `milestone_id` 하나다.
-        title: '재시도·타임아웃 정리',
-        body: '',
+    //  🔴 §3.1 의 뒷부분 — 「무엇을 재시도하나」. 앞 항목(`item_policy_retry`)이 「몇 번 · 어떤
+    //     간격」이고 이건 「어떤 실패에만」이다. 한 항목에 합치면 규칙 문장이 둘이 되어
+    //     리뷰어가 어느 쪽을 어겼는지 못 짚는다 (FINDINGS 119 — goals.md 에 있던 규칙인데
+    //     항목이 아니었다).
+    fromDoc('item_policy_retry_scope', 'policy', goals,
+      '재시도 대상은 네트워크 오류와 5xx 뿐이다. 4xx 는 재시도하지 않는다.\n'
+      + '멱등키(`Idempotency-Key`)가 없는 요청은 재시도하지 않는다.', {
+        title: '재시도는 네트워크 오류와 5xx 에만',
+        body: '4xx 와 멱등키 없는 요청은 재시도하지 않는다.',
         data: {
-          milestone_id: 'PL-M1',
-          //  제목 괄호의 날짜가 기한이다 — 화면 8 의 `due` 칸과 Pack 의 `due:` 가 여기서 온다 (FINDINGS 111).
-          due: '2026-04-30',
-          paths: ['src/payment', 'src/psp'],
-          done_when: [
-            'PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다',
-            '모든 외부 호출에 타임아웃이 걸려 있다',
-            '재시도 횟수와 간격이 설정값으로 빠져 있다',
-          ],
+          rule: '네트워크 오류와 5xx 만 재시도한다 — 4xx 와 멱등키 없는 요청은 재시도하지 않는다',
+          severity: 'must',
+          enforcement: 'review',
         },
       }),
+    //  🔴 §3.2 의 둘째 문단 — 「손대지 않은 건은 자동으로 에스컬레이션」. `item_policy_refund`
+    //     (24시간 안에 종결)와 같은 도메인(refund)이라 같은 `domain-refund.md` 에 선다 —
+    //     그 파일이 한 줄짜리였다 (FINDINGS 119).
+    fromDoc('item_policy_refund_escalation', 'policy', goals,
+      '24시간이 지나도록 담당자가 손대지 않은 건은 **자동으로 승인 대기 큐에서 빠져\n'
+      + '에스컬레이션**된다. 기한 없이 `pending` 으로 쌓아 두는 것은 금지다', {
+        title: '손대지 않은 환불은 자동으로 에스컬레이션된다',
+        body: '고객이 돈을 언제 받는지 모르는 상태가 CS 비용의 절반이다.',
+        scope: { kind: 'domain', value: 'refund' },
+        data: {
+          rule: '24시간 동안 손대지 않은 환불 건은 자동으로 에스컬레이션한다 — 기한 없는 pending 은 금지다',
+          severity: 'must',
+          enforcement: 'review',
+        },
+      }),
+    //  🔴 §3.4 — 금액은 정수(원)로만. 픽스처 코드의 `src/common/money.ts` 가 이 규칙을 지키는
+    //     자리이지만 코드 근거는 붙이지 않았다 — `withRepo` 의 뜻은 「이 규칙이 코드 어디서
+    //     깨지고 있나」이고(위 `item_policy_retry`), 지켜지는 자리를 근거로 달면 그 뜻이 흐려진다.
+    fromDoc('item_policy_integer_money', 'policy', goals,
+      '`number` 부동소수 연산 금지. 원 단위 정수로만 더하고 뺀다.', {
+        title: '금액은 원 단위 정수로만 다룬다',
+        body: '화폐 단위가 늘어나면 그때 최소 단위를 다시 정한다.',
+        data: {
+          rule: '금액은 원 단위 정수로만 더하고 뺀다 — 부동소수 연산 금지',
+          severity: 'must',
+          enforcement: 'review',
+        },
+      }),
+    //  🔴 §1 의 마지막 줄 — 「정산은 하루 1회 배치」. `item_constraint_card` 와 같은 문단에서
+    //     온 둘째 제약이다 (FINDINGS 119).
+    //  ⚠ `statement` 에 「실시간」이라는 낱말을 쓰지 않는다 (SPEC §6 · 화면·문서의 같은 규칙).
+    //    원문은 그 낱말로 부정하지만, 종이에 서는 것은 진술이고 진술은 「하루 1회 배치」로 충분하다.
+    fromDoc('item_constraint_settlement_batch', 'constraint', goals,
+      '가맹점 정산은 하루 1회 배치이고 실시간이 아니다.', {
+        title: '정산은 하루 1회 배치다',
+        body: '가맹점 정산은 즉시 일어나지 않는다 — 하루 한 번의 배치다.',
+        data: { statement: '가맹점 정산은 하루 1회 배치로만 한다 — 즉시 정산은 없다.' },
+      }),
+    //  🔴 §4 마일스톤 M1~M3 — 재료는 `MILESTONES` 하나다 (위 주석). `dependencies` 는 우리
+    //     이름(`PL-M1`)이라 인용 칸이 아니고, 나머지 셋(`due`·`paths`·`done_when`)은 관통이
+    //     범위 안에서 찾는다.
+    ...MILESTONES.map(([id, milestoneId, title, due, paths, dependencies, quote, doneWhen], i) =>
+      fromDoc(id, 'roadmap', goals, quote, {
+        title,
+        body: '',
+        priority: MILESTONE_TOP_PRIORITY - i,
+        data: { milestone_id: milestoneId, due, paths: [...paths], done_when: [...doneWhen], dependencies: [...dependencies] },
+      })),
     //  🔴 **`scope.kind = 'path'` 은 이 항목 하나뿐이다** (FINDINGS 93). 없으면
     //     `.claude/rules/scoped-*.md` 라는 **Pack 파일 갈래가 통째로 데모에 안 선다** —
     //     「이 규칙은 이 경로에만 걸린다」가 종이에 한 번도 안 나온다는 뜻이다.
@@ -577,6 +729,14 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
           ],
         },
       }),
+    //  🔴 §5 미결 넷 — 재료는 `OPEN_QUESTIONS` 하나다 (위 주석). Pack 에는 안 나가고 화면에만 선다.
+    ...OPEN_QUESTIONS.map(([id, title, quote, question]) => fromDoc(id, 'open_question', goals, quote, {
+      title,
+      body: '',
+      //  ⚠ 미결이라 `confidence` 는 `low` 다 — 「결정이 아니다」를 값으로도 말한다.
+      confidence: 'low',
+      data: { question },
+    })),
   ]
 }
 

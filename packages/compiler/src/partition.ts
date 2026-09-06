@@ -97,6 +97,17 @@ export function scopePackPath(kind: ScopeKind, slug: string): string {
   return DOCS[SCOPE_DOC[kind]].path(slug)
 }
 
+/**
+ * 🔴 **Pack 에 나가지 않는 타입 → 이유.** 읽는 쪽이 둘이다: 아래 `PARTITION` 표(배치를 `exclude` 로)와
+ *    관통(`apps/web/scripts/walkthrough-publish.ts` — 「기대한 근거가 전부 Pack 에서 역추적됐나」에서
+ *    이 타입의 근거는 **애초에 종이에 없는 것이 맞다**고 빼려고).
+ * ★ 왜 표인가 — 관통이 `if (type === 'open_question')` 을 자기 파일에 적으면 이 표와 갈라진다.
+ *   여기 한 줄을 더하면 배치와 관통이 같이 따라온다.
+ */
+export const PACK_EXCLUDED_TYPES = {
+  open_question: 'open_question 은 Pack 에 나가지 않는다 — 웹에서 답한 뒤 다른 타입으로 승격된다',
+} as const satisfies Partial<Record<ItemType, string>>
+
 export const PARTITION = {
   mission: () => [place('claude', 'mission')],
   goal: () => [place('claude', 'goal')],
@@ -117,8 +128,8 @@ export const PARTITION = {
 
   workflow: () => [place('workflow', 'workflow')],
 
-  // Pack 에 나가지 않는 유일한 타입. 답이 없는 질문을 규칙처럼 배포하지 않는다.
-  open_question: () => [{ kind: 'exclude', reason: 'open_question 은 Pack 에 나가지 않는다 — 웹에서 답한 뒤 다른 타입으로 승격된다' }],
+  // Pack 에 나가지 않는 유일한 타입. 답이 없는 질문을 규칙처럼 배포하지 않는다 (이유는 위 표가 든다).
+  open_question: () => [{ kind: 'exclude', reason: PACK_EXCLUDED_TYPES.open_question }],
 } as const satisfies Record<ItemType, (item: ContextItem) => Placement[]>
 
 /**
