@@ -74,6 +74,15 @@ async function main(): Promise<void> {
   }
 
   const socket = new PGLiteSocketServer({ db: pg, port: DB_PORT, host: '127.0.0.1' })
+  //  🔴 둘째 소켓이 줄을 서면 **그 자리에서 크게 말한다.** pglite-socket 은 한 번에 한 소켓만
+  //     받고 나머지는 조용히 줄에 세운다 — 그러면 Next 쪽은 30초 뒤 500 이고 로그엔
+  //     `{"kind":"unhandled","error":"Error"}` 뿐이다 (FINDINGS 127 · 128). 원인은 늘 「풀이
+  //     둘 이상」이다: `src/db/client.ts` 의 globalThis 자리가 깨졌거나 `?max=1` 을 뺐거나.
+  socket.addEventListener('queuedConnection', (e) => {
+    const { queueSize } = (e as CustomEvent<{ queueSize: number }>).detail
+    console.error(`dev-server: ⚠ 둘째 DB 소켓이 줄을 섰다 (대기 ${queueSize}) — 풀이 둘 이상이다. `
+      + 'DATABASE_URL 에 ?max=1 이 있나 · src/db/client.ts 가 globalThis 자리를 쓰나 확인해라')
+  })
   await socket.start()
 
   //  ⚠ 이 프로세스가 살아 있어야 DB 가 산다. 붙잡아 두는 김에 **다른 프로세스가
@@ -90,6 +99,9 @@ async function main(): Promise<void> {
   //     postgres-js 는 기본이 풀 10개다. 화면 5 처럼 두 요청이 동시에 나가면 둘째가
   //     큐에서 굶다가 30초 뒤 500 이 된다 — 눈으로 확인했다 (.ci/shots/s5-context.png 첫 판:
   //     항목은 떴는데 버전 히스토리만 영원히 skeleton).
+  //     ⚠ 그리고 `?max=1` 만으로는 모자랐다 — Next dev 는 **라우트마다** 모듈을 새로 평가해
+  //       풀이 라우트 수만큼 생겼고, 순차 요청까지 30초 뒤 500 이었다 (FINDINGS 127). 그쪽은
+  //       `src/db/client.ts` 가 풀을 globalThis 에 두어 막고, `test/db-pool.test.ts` 가 잰다.
   //     ⚠ 제품 코드가 아니라 **이 개발용 하네스의 한계**다. 배포의 Supabase 는 풀을 받는다.
   console.log(`  DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:${DB_PORT}/postgres?max=1`)
   console.log(`  SUPABASE_JWT_SECRET=${TEST_JWT_SECRET}`)

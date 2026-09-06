@@ -23,7 +23,26 @@ import * as schema from './schema'
  */
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 
-let cached: Db | undefined
+/**
+ * 🔴 풀은 **모듈이 아니라 프로세스에 하나**다 — `globalThis` 에 산다.
+ *
+ * ★ 왜 모듈 변수가 아닌가 — Next dev 는 라우트를 **하나씩 따로** 컴파일하고, 그때마다 이
+ *   모듈이 새로 평가된다. `let cached` 로 두면 **컴파일된 라우트 수만큼 풀이 생긴다.**
+ *   실측(FINDINGS 127): `POST /demo/session` 이 소켓 하나를 잡은 뒤 `GET /teams` 가 자기
+ *   풀로 둘째 소켓을 열었고, 개발용 DB(pglite-socket)는 한 번에 한 소켓만 받아 둘째를 줄에
+ *   세웠다 → 30초 뒤 CONNECT_TIMEOUT → 500. 순차 요청도 같이 죽었다. 배포(Supabase)는
+ *   풀을 여럿 받아 안 죽지만, 함수 인스턴스 하나에 연결이 라우트 수만큼 열리는 것은 거기서도
+ *   낭비다. `test/db-pool.test.ts` 가 「모듈을 새로 들여와도 소켓은 하나」를 잰다.
+ * ⚠ 키는 `Symbol.for` 다 — 문자열 키는 다른 라이브러리와 부딪히고, 지역 `Symbol()` 은
+ *   모듈 인스턴스마다 달라서 이 자리가 무의미해진다.
+ */
+const SLOT = Symbol.for('contextops.db')
+type Slot = { db?: Db }
+
+function slot(): Slot {
+  const g = globalThis as typeof globalThis & { [SLOT]?: Slot }
+  return (g[SLOT] ??= {})
+}
 
 function create(): Db {
   const url = process.env.DATABASE_URL
@@ -37,10 +56,11 @@ function create(): Db {
   return drizzle(sql, { schema })
 }
 
-/** 프로세스당 한 번만 연결한다. 서버리스에서 모듈이 재사용되는 동안 같은 풀을 쓴다. */
+/** 프로세스당 한 번만 연결한다. 모듈이 몇 번 평가되든 풀은 `slot()` 의 것 하나다. */
 export function getDb(): Db {
-  if (!cached) cached = create()
-  return cached
+  const s = slot()
+  if (!s.db) s.db = create()
+  return s.db
 }
 
 /**
@@ -50,7 +70,7 @@ export function getDb(): Db {
  * ⚠ 배포 코드에서 부르지 마라. 부르면 `DATABASE_URL` 이 무의미해진다.
  */
 export function setDbForTest(db: Db | undefined): void {
-  cached = db
+  slot().db = db
 }
 
 export * as schema from './schema'
