@@ -221,8 +221,9 @@ const SYSTEM = [
   '이번 일: 팀 문서의 한 조각을 읽고 ContextOps 항목으로 옮겨 적는다.',
   '- 항목 하나 = 문서에 실제로 적힌 목표·규칙·결정·절차 하나다. 요약문을 새로 쓰지 않는다.',
   '- id 는 `item_` 으로 시작하는 소문자·숫자·밑줄 slug 다 (예: item_refund_sla).',
-  '- span 은 그 항목의 근거가 있는 구간이다. **조각 기준 offset** 이고 end_char 는 exclusive 다.',
-  '- 조각 밖을 가리키는 span 은 근거가 아니다. 범위를 벗어나면 응답 전체가 버려진다.',
+  '- span.quote 는 그 항목의 근거 문장을 **조각의 원문 그대로** 인용한 것이다. 줄이거나 고치거나 요약하지 않는다.',
+  '- 인용은 조각 안에서 **한 곳에만** 있는 길이여야 한다 (짧은 낱말 하나가 아니라 문장 하나쯤).',
+  '- 조각에 없는 글자를 인용하거나 여러 곳에 있는 글자를 인용하면 근거가 아니다. 그러면 응답 전체가 버려진다.',
   '- 문서가 무엇을 뜻하는지 판단이 필요하면 항목 대신 open_questions 에 질문으로 남긴다.',
 ].join('\n')
 
@@ -234,7 +235,7 @@ function toolRequest(chunk: DocChunk, totalChunks: number, kind: SourceDocumentK
     chunk.headingPath.length > 0
       ? `이 조각이 속한 제목: ${chunk.headingPath.join(' > ')}`
       : '이 조각은 문서 머리말이다.',
-    `span 의 offset 은 아래 블록 기준이고 0 이상 ${chunk.text.length} 이하여야 한다.`,
+    'span.quote 는 아래 블록 안의 글자를 그대로 복사한 것이어야 한다.',
   ]
   if (complaint) {
     //  🔴 SPEC §7 「실패 시 **오류 위치를 넣어** 1회 재시도」.
@@ -257,18 +258,33 @@ function issueText(issues: readonly { readonly path: readonly PropertyKey[]; rea
     .join(' · ')
 }
 
-/** chunk offset → 문서 offset. **범위 밖이면 재시도한다** (SPEC §7.1). */
+/**
+ * 🔴 인용 → 문서 offset. **모델이 낸 글자로 서버가 숫자를 계산한다** (SPEC §7.1 · P7 · FINDINGS 142).
+ *
+ * ★ 왜 모델에게 offset 을 묻지 않나 — 진짜 Gemini 로 재니 span 27개가 전부 「범위 안」인데
+ *   잘라 보면 다른 문장이었다. 모델은 제목은 맞히고 글자는 못 센다. 「범위 안」 검사는
+ *   숫자가 그럴듯한지만 보고 **가리키는 문장이 맞는지는 못 본다** — 그 근거로 Pack 을
+ *   내면 태그를 따라간 심사자가 다른 문장을 읽는다.
+ *
+ * 조각에 없거나(0곳) 여러 곳(2곳 이상)이면 어느 문장인지 정할 수 없으므로 계약 위반 →
+ * 오류 위치를 넣어 1회 재시도 (SPEC §7).
+ */
 function toSourceRef(span: AiSourceSpan, chunk: DocChunk, documentVersionId: string, where: string): SourceRef {
-  if (span.end_char <= span.start_char || span.end_char > chunk.text.length) {
-    throw new OutputInvalid(
-      `${where} 의 span 이 조각 밖이다 (${span.start_char}~${span.end_char}) — 0 이상 ${chunk.text.length} 이하여야 하고 end_char 가 더 커야 한다`,
-    )
+  //  ⚠ 모델은 `untrusted()` 가 `</` → `<\` 로 바꾼 글을 읽는다 — 인용에 그 글자가 섞여
+  //     오면 되돌려서 찾는다 (길이가 같은 치환이라 offset 은 안 흔들린다).
+  const needle = span.quote.replace(/<\\/g, '</')
+  const at = chunk.text.indexOf(needle)
+  if (at < 0) {
+    throw new OutputInvalid(`${where} 의 span.quote 가 조각 원문에 없다 — 조각의 글자를 그대로 복사해라: "${needle.slice(0, 40)}"`)
+  }
+  if (chunk.text.indexOf(needle, at + 1) >= 0) {
+    throw new OutputInvalid(`${where} 의 span.quote 가 조각 안에 여러 곳 있다 — 한 곳에만 있도록 더 길게 인용해라: "${needle.slice(0, 40)}"`)
   }
   return {
     kind: 'source_document',
     document_version_id: documentVersionId,
-    start_char: chunk.startChar + span.start_char,
-    end_char: chunk.startChar + span.end_char,
+    start_char: chunk.startChar + at,
+    end_char: chunk.startChar + at + needle.length,
     heading_path: span.heading_path.length > 0 ? span.heading_path : [...chunk.headingPath],
   }
 }

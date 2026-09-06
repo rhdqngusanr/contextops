@@ -27,7 +27,8 @@ import type { Db } from '../src/db/client'
 //
 //  🔴 여기서 재는 것 넷:
 //    ① chunk 는 순수 함수다 — 조각의 합이 문서 전체이고 두 번 돌려도 같다
-//    ② chunk offset → **문서 offset** 변환 (P7 — 근거가 원문을 정확히 가리킨다)
+//    ② 인용(quote) → **문서 offset** 계산 (P7 — 근거가 원문을 정확히 가리킨다 · 모델에게
+//       숫자를 묻지 않는다 · FINDINGS 142)
 //    ③ 계약과 다른 응답 → 오류 위치를 넣어 1회 재시도 → 재실패면 `AI_OUTPUT_INVALID`
 //    ④ 문서 하나 = 장부 **한 줄** (SPEC §7.5 의 「시간당 5회」가 chunk 가 아니라 문서다)
 //
@@ -67,8 +68,8 @@ function stubAi(reply: (n: number) => StubReply): void {
   }))
 }
 
-/** 계약을 만족하는 항목 하나. `span` 은 **조각 기준**이다. */
-function policyItem(id: string, title: string, span: { start_char: number; end_char: number }) {
+/** 계약을 만족하는 항목 하나. `quote` 는 **조각 원문 그대로**여야 한다 (그게 계약이다). */
+function policyItem(id: string, title: string, quote: string) {
   return {
     id,
     type: 'policy',
@@ -76,8 +77,16 @@ function policyItem(id: string, title: string, span: { start_char: number; end_c
     body: '문서에 적힌 규칙을 그대로 옮겼다.',
     scope: { kind: 'project' },
     data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
-    span,
+    span: { quote },
   }
+}
+
+/** goals.md 에 **한 번만** 있는 문장 — 픽스처를 근거로 쓰는 시험의 인용. */
+const REFUND_QUOTE = '환불 요청은 **접수 후 24시간 안에 종결**한다'
+
+/** `doc()` 문서의 조각 `n` 안에서 한 곳에만 있는 글 — 조각의 첫 줄(heading)이다. */
+function headingOf(chunks: readonly { text: string }[], n: number): string {
+  return chunks[n]!.text.split('\n')[0]!
 }
 
 function output(items: unknown[], openQuestions: unknown[] = []): unknown {
@@ -191,13 +200,28 @@ describe('chunk 는 순수 함수다 (SPEC §7.1)', () => {
 })
 
 // ---------------------------------------------------------------------
-describe('근거가 chunk offset 이 아니라 문서 offset 이다 (P7 · SPEC §7.1)', () => {
-  it('두 번째 조각의 span 이 조각 시작만큼 밀린다', async () => {
+describe('근거는 모델의 숫자가 아니라 **인용에서 계산한 문서 offset** 이다 (P7 · SPEC §7.1 · FINDINGS 142)', () => {
+  it('🔴 모델에게 숫자를 묻지 않는다 — 보내는 스키마에 start_char·end_char 가 없고 quote 가 있다', async () => {
+    stubAi(() => ({ input: output([]) }))
+    await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })
+    const schema = JSON.stringify(sent[0]!.schema)
+    expect(schema).not.toContain('start_char')
+    expect(schema).not.toContain('end_char')
+    expect(schema).toContain('"quote"')
+    //  프롬프트도 같은 말을 한다 — 스키마만 바꾸고 지시는 offset 을 말하면 모델이 헷갈린다.
+    expect(sent[0]!.system).toContain('원문 그대로')
+    expect(sent[0]!.system).not.toContain('offset')
+    expect(sent[0]!.user).not.toContain('offset')
+  })
+
+  it('두 번째 조각의 인용은 조각 시작만큼 밀린 문서 offset 이 된다', async () => {
     const content = doc(3, 4_000)
     const chunks = chunkByHeading(content)
     expect(chunks.length).toBe(2)
 
-    stubAi((n) => ({ input: output([policyItem(`item_rule_${n}`, `규칙 ${n}`, { start_char: 10, end_char: 40 })]) }))
+    stubAi((n) => ({ input: output([policyItem(`item_rule_${n}`, `규칙 ${n}`, headingOf(chunks, n))]) }))
 
     const result = await structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
@@ -206,47 +230,80 @@ describe('근거가 chunk offset 이 아니라 문서 offset 이다 (P7 · SPEC 
     expect(result.items.length).toBe(2)
     const second = result.items[1]!.source_refs[0]!
     if (second.kind !== 'source_document') throw new Error('근거가 문서가 아니다')
-    expect(second.start_char).toBe(chunks[1]!.startChar + 10)
-    expect(second.end_char).toBe(chunks[1]!.startChar + 40)
+    const quote = headingOf(chunks, 1)
+    //  조각 기준이 아니라 **문서** 기준이다 — 문서에서 그 글자를 찾은 자리와 같다.
+    expect(second.start_char).toBe(content.indexOf(quote))
+    expect(second.start_char).toBe(chunks[1]!.startChar + chunks[1]!.text.indexOf(quote))
+    expect(second.end_char).toBe(second.start_char + quote.length)
     expect(second.document_version_id).toBe(DOC_VERSION)
   })
 
-  it('paylab 픽스처의 근거가 원문을 정확히 가리킨다', async () => {
-    const quote = '환불 요청은 **접수 후 24시간 안에 종결**한다'
-    const at = PAYLAB_GOALS.indexOf(quote)
-    expect(at).toBeGreaterThan(0)
-
-    stubAi(() => ({
-      input: output([policyItem('item_refund_sla', '환불 SLA', { start_char: at, end_char: at + quote.length })]),
-    }))
+  it('paylab 픽스처의 근거가 원문을 정확히 가리킨다 — 잘라 내면 인용 그대로다', async () => {
+    expect(PAYLAB_GOALS.indexOf(REFUND_QUOTE)).toBeGreaterThan(0)
+    stubAi(() => ({ input: output([policyItem('item_refund_sla', '환불 SLA', REFUND_QUOTE)]) }))
 
     const result = await structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
     const ref = result.items[0]!.source_refs[0]!
     if (ref.kind !== 'source_document') throw new Error('근거가 문서가 아니다')
-    //  🔴 P7 — 근거 offset 으로 원문을 도로 꺼낼 수 있어야 한다.
-    expect(PAYLAB_GOALS.slice(ref.start_char, ref.end_char)).toBe(quote)
+    //  🔴 P7 — 근거 offset 으로 원문을 도로 꺼내면 **모델이 인용한 그 문장**이다.
+    expect(PAYLAB_GOALS.slice(ref.start_char, ref.end_char)).toBe(REFUND_QUOTE)
   })
 
-  it('조각 밖을 가리키는 span 은 재시도로 간다 — 두 번째가 맞으면 통과한다', async () => {
-    const content = PAYLAB_GOALS
+  it('🔴 「범위 안」인 숫자만으로는 못 지난다 — 원문에 없는 인용은 재시도로 간다', async () => {
     stubAi((n) => ({
       input: output([
         n === 0
-          ? policyItem('item_bad', '범위 밖', { start_char: 0, end_char: content.length + 1_000 })
-          : policyItem('item_okay', '범위 안', { start_char: 0, end_char: 20 }),
+          ? policyItem('item_bad', '없는 문장', '환불은 접수 후 48시간 안에 종결한다')
+          : policyItem('item_okay', '있는 문장', REFUND_QUOTE),
       ]),
     }))
 
     const result = await structureDocument({
-      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
     })
     expect(sent.length).toBe(2)
     expect(result.items[0]!.id).toBe('item_okay')
     //  🔴 SPEC §7 「**오류 위치를 넣어** 1회 재시도」 — 무엇이 틀렸는지가 프롬프트에 있다.
     expect(sent[1]!.user).toContain('직전 응답이 계약과 맞지 않았다')
     expect(sent[1]!.user).toContain('item_bad')
+    expect(sent[1]!.user).toContain('원문에 없다')
+  })
+
+  it('여러 곳에 있는 인용도 재시도로 간다 — 어느 문장인지 정할 수 없으면 근거가 아니다', async () => {
+    //  「재시도」는 goals.md 에 여러 번 나온다.
+    expect(PAYLAB_GOALS.indexOf('재시도', PAYLAB_GOALS.indexOf('재시도') + 1)).toBeGreaterThan(0)
+    stubAi((n) => ({
+      input: output([n === 0 ? policyItem('item_vague', '낱말 하나', '재시도') : policyItem('item_okay', '문장', REFUND_QUOTE)]),
+    }))
+
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })
+    expect(sent.length).toBe(2)
+    expect(result.items[0]!.id).toBe('item_okay')
+    expect(sent[1]!.user).toContain('여러 곳')
+  })
+
+  it('두 번 다 원문에 없으면 AI_OUTPUT_INVALID — 인용을 못 찾은 항목은 근거 없이 살아남지 않는다', async () => {
+    stubAi(() => ({ input: output([policyItem('item_bad', '없는 문장', '이 문장은 문서에 없다')]) }))
+    await expect(structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })).rejects.toMatchObject({ code: 'AI_OUTPUT_INVALID' })
+    expect(sent.length).toBe(STRUCTURE_RETRIES + 1)
+  })
+
+  it('원문에 `</` 가 있어도 찾는다 — untrusted 블록의 치환을 되돌린다', async () => {
+    const content = '# 규칙\n\n응답 본문은 `</body>` 로 닫는다. 그 뒤에는 아무것도 붙이지 않는다.\n'
+    //  모델은 `<\body>` 로 바뀐 글을 읽었으니 그대로 인용해 온다.
+    stubAi(() => ({ input: output([policyItem('item_close', '닫기', '응답 본문은 `<\\body>` 로 닫는다.')]) }))
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    const ref = result.items[0]!.source_refs[0]!
+    if (ref.kind !== 'source_document') throw new Error('근거가 문서가 아니다')
+    expect(content.slice(ref.start_char, ref.end_char)).toBe('응답 본문은 `</body>` 로 닫는다.')
   })
 })
 
@@ -271,7 +328,7 @@ describe('계약과 다른 응답은 AI_OUTPUT_INVALID 다 (SPEC §7)', () => {
 
   it('초안 계약(strict)을 어기는 여분의 키는 통과하지 못한다 (P1)', async () => {
     stubAi(() => ({
-      input: output([{ ...policyItem('item_x', '규칙', { start_char: 0, end_char: 10 }), source_code: 'function f(){}' }]),
+      input: output([{ ...policyItem('item_x', '규칙', REFUND_QUOTE), source_code: 'function f(){}' }]),
     }))
 
     await expect(structureDocument({
@@ -341,7 +398,8 @@ describe('예산 가드를 지난다 — 문서 하나가 장부 한 줄이다 (
 describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (SPEC §7.1)', () => {
   it('두 조각이 같은 id 를 내면 뒤엣것을 갈라 준다', async () => {
     const content = doc(3, 4_000)
-    stubAi(() => ({ input: output([policyItem('item_refund_sla', '환불 SLA', { start_char: 0, end_char: 20 })]) }))
+    const chunks = chunkByHeading(content)
+    stubAi((n) => ({ input: output([policyItem('item_refund_sla', '환불 SLA', headingOf(chunks, n))]) }))
 
     const result = await structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
@@ -351,8 +409,9 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
 
   it('같은 type·title 이 두 번 나오면 병합 후보로 표시된다 — 지우지는 않는다', async () => {
     const content = doc(3, 4_000)
+    const chunks = chunkByHeading(content)
     stubAi((n) => ({
-      input: output([policyItem(`item_sla_${n}`, ' 환불  SLA ', { start_char: 0, end_char: 20 })]),
+      input: output([policyItem(`item_sla_${n}`, ' 환불  SLA ', headingOf(chunks, n))]),
     }))
 
     const result = await structureDocument({
@@ -366,8 +425,9 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
 
   it('제목이 다르면 병합 후보가 아니다 — 표가 아무 때나 켜지지 않는다', async () => {
     const content = doc(3, 4_000)
+    const chunks = chunkByHeading(content)
     stubAi((n) => ({
-      input: output([policyItem(`item_sla_${n}`, `규칙 ${n}`, { start_char: 0, end_char: 20 })]),
+      input: output([policyItem(`item_sla_${n}`, `규칙 ${n}`, headingOf(chunks, n))]),
     }))
     const result = await structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
@@ -390,7 +450,7 @@ describe('문서 전체를 본다 — 중복과 잘림을 숨기지 않는다 (S
 
   it('열린 질문도 문서 offset 근거를 갖는다 — 근거 없는 질문은 없다', async () => {
     stubAi(() => ({
-      input: output([], [{ question: '재시도 상한이 5회인가 3회인가?', span: { start_char: 5, end_char: 30 } }]),
+      input: output([], [{ question: '재시도 상한이 5회인가 3회인가?', span: { quote: REFUND_QUOTE } }]),
     }))
     const result = await structureDocument({
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,

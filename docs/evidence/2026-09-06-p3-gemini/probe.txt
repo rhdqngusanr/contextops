@@ -61,3 +61,34 @@ span 을 원문에서 잘라 첫 줄을 본 것 (probe.json 의 quote):
   roadmap item_webhook_logging       625-668   → " 정책을 다시 본다. 가맹점이 늘면…"                     ← 다음 절
 반면 heading_path 는 18개 전부 맞다 (「3. 반드시 지키는 규칙 (must) > 3.1 외부 PSP 호출 재시도」처럼).
 → 모델은 글자를 못 센다 — 제목은 맞히고 숫자는 어림한다. 「범위 안」 검사는 P7 을 지키지 못한다. 고칠 방향은 142 에.
+
+## 5. 82바퀴 — 142 를 고친 뒤 (모델은 quote 를 내고 서버가 indexOf 로 offset 을 계산한다) · 세 번째 `p3:measure`
+
+계약: `AiSourceSpan { quote (원문 그대로 · ≤ AI_QUOTE_MAX_CHARS 600), heading_path }` — start_char·end_char 는 스키마에서 사라졌다.
+서버: `structure.ts` `toSourceRef()` 가 `chunk.text.indexOf(quote)` — 0곳이면 「원문에 없다」 · 2곳 이상이면 「여러 곳」 으로 OutputInvalid → 1회 재시도.
+
+roadmap : succeeded · 7,426ms · items 5 (roadmap 3 · policy 2) · 재시도 0 (장부 outputTokens 1,558 = 왕복 1)
+goals   : succeeded · 14,741ms · items 12 (goal 3 · policy 5 · roadmap 3 · domain 1) · oq 4 · 재시도 0 (4,075 = 왕복 1)
+usage   : structure 938/1,558 · structure 2,498/4,075 · conflict 1,319/142 · 합 costMicros 15,865 (≈ $0.016)
+
+인용 → 잘라 낸 원문 (probe.json 의 quote · 21/21 이 제목과 같은 문장):
+  roadmap  M1/M2/M3                       98-215 · 217-326 · 328-440 → "### M1 — 웹훅 수신 v1 (2025-10-31)" …  (마일스톤 절 통째)
+  roadmap  PSP 호출 재시도 규칙             452-519   → "- PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정."          ← 81 은 규칙 문장의 꼬리였다
+  roadmap  웹훅 원본 payload 로그 보관      560-603   → "- 장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일."  ← 81 은 다음 절이었다
+  goals    G1 결제 승인 성공률 99.5%        501-560   → "G1 | 결제 승인 성공률 99.5% | …"                                  ← 81 은 G2 줄이었다
+  goals    G2 · G3                         563-648 · 651-697 → 각자 자기 표 행
+  goals    외부 PSP 호출 재시도 규칙        841-942   → "PSP 호출이 실패하면 **최대 5회까지 재시도**한다. 재시도 간격은 **지수 백오프**로"
+  goals    환불 SLA 규칙                   1140-1223 → "환불 요청은 **접수 후 24시간 안에 종결**한다. 종결은 …"
+  goals    로그에 PII 를 남기지 않는다      1431-1497 → "다음은 **어떤 로그에도** 남기지 않는다. …"                        ← 81 은 §3.4 였다
+  goals    금액은 정수(원)로만              1692-1730 → "`number` 부동소수 연산 금지. 원 단위 정수로만 더하고 뺀다."
+  goals    웹훅 서명 검증                  1790-1826 → "서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다."          ← 81 은 §4 제목이었다
+  goals    M1/M2/M3                        1880-2056 · 2058-2217 · 2219-2403 → 각자 자기 절
+  goals    domain                           170-259  → "paylab 은 국내 커머스 가맹점을 위한 결제 대행 서비스다. …"
+  goals    열린 질문 4개                   2478-2531 · 2582-2615 · 2671-2704 · 2755-2797 → §5 의 네 줄 각각              ← 81 은 넷이 같은 구간
+→ 「범위 안」이 아니라 「그 문장」이다. P7 의 뜻으로 ✅.
+
+같이 본 것 — 충돌은 이번엔 **1/3** (81 은 2/3):
+  goals 의 「외부 PSP 호출 재시도 규칙」 후보가 accept 에서 **거절**됐다 — `{index 3, id: 이미 있는 항목 id 다}`. old-roadmap 의 재시도 규칙과 같은 slug(`item_psp_retry_policy`)를 골랐고
+  그건 이미 active 라 문 `jobs/{id}/items` 가 막았다. 그래서 탐지 candidates 가 5 → 2 로 줄고 「5회 백오프 vs 3회 고정」 짝이 재료에서 빠졌다 (FINDINGS 145).
+  81 에서는 두 문서가 우연히 다른 slug 를 골라 2 가 나왔다 — 이 수는 모델의 slug 선택에 달려 있었다. 환불 SLA 짝은 여전히 143(old-roadmap 쪽 항목이 안 뽑힘).
+  항목 수 12 는 81 의 18 보다 적다(architecture 0 · mission 0) — 같은 프롬프트에서 실행마다 흔들리는 폭이고 완료 기준(12)은 넘는다.

@@ -29,7 +29,7 @@ const doc = [
 
 const t0 = Date.now()
 const call = await callModel({
-  system: '입력에 없는 사실·수치·기한을 만들지 않는다. 원문 인용은 offset 으로만. 문서에서 팀 컨텍스트 항목을 추출한다.',
+  system: '입력에 없는 사실·수치·기한을 만들지 않는다. 원문 인용은 span.quote 에 원문 글자 그대로만. 문서에서 팀 컨텍스트 항목을 추출한다.',
   user: `<untrusted>\n${doc}\n</untrusted>`,
   inputSchema: schema,
   maxTokens: 4000,

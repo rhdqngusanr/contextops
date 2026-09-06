@@ -45,7 +45,7 @@ const CANDIDATE = {
   body: '환불은 접수 후 24시간 안에 종결한다.',
   scope: { kind: 'project' },
   data: { rule: '환불은 접수 후 24시간 안에 종결한다.', severity: 'must', enforcement: 'review' },
-  span: { start_char: 0, end_char: 40 },
+  span: { quote: '환불은 접수 후 24시간 안에 종결한다.' },
 }
 const OPEN_QUESTION = '재시도 상한이 5회인가 3회인가?'
 const OPEN_ANSWER = '재시도는 3회까지만 한다 — 그 뒤는 수동 처리다.'
@@ -54,7 +54,7 @@ const SEED_ANSWER = 'PSP 장애가 가맹점 결제로 번지지 않게 하는 �
 setAiClientForTest(stubTransport(() => ({
   input: {
     items: [CANDIDATE],
-    open_questions: [{ question: OPEN_QUESTION, span: { start_char: 0, end_char: 40 } }],
+    open_questions: [{ question: OPEN_QUESTION, span: { quote: '재시도 상한은 문서마다 다르게 적혀 있어 확인이 필요하다.' } }],
   },
 })))
 

@@ -19164,9 +19164,9 @@ var ANSWER_SLOTS = {
     data: (answer) => ({ rule: answer, severity: "should", enforcement: "review" })
   })
 };
+var AI_QUOTE_MAX_CHARS = 600;
 var AiSourceSpan = external_exports.object({
-  start_char: external_exports.int().min(0),
-  end_char: external_exports.int().min(0),
+  quote: external_exports.string().min(1).max(AI_QUOTE_MAX_CHARS),
   heading_path: external_exports.array(external_exports.string().max(200)).max(10).default([])
 }).strict();
 var AI_MAX_ITEMS_PER_CHUNK = 40;

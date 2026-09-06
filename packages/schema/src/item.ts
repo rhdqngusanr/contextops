@@ -313,12 +313,16 @@ export const ANSWER_SLOTS = {
 // ---------------------------------------------------------------------
 //  서버측 AI(§7.1)가 내는 모양 — 초안에서 **근거만** chunk 기준으로 바꾼 것
 //
-//  🔴 **왜 `ContextItemDraft` 를 그대로 안 쓰나** — SPEC §7.1 은
-//    「`source_ref.start_char/end_char` 는 **chunk offset** 을 문서 offset 으로 변환해
-//    검증」이라고 적는다. 즉 모델이 내는 offset 은 문서 기준이 아니다. 그리고
-//    `document_version_id`(uuid)는 **서버가 아는 값**이라 모델이 되풀이할 이유가 없다 —
-//    지어내면 근거가 남의 문서를 가리키게 되고 그게 P7 이 무너지는 자리다.
-//    `owner_id` 도 같은 이유로 뺐다 (사람의 uuid 를 모델이 알 리 없다).
+//  🔴 **왜 `ContextItemDraft` 를 그대로 안 쓰나** — SPEC §7.1 은 「모델은 근거 문장을
+//    **원문 그대로 인용**하고, offset 은 서버가 조각 안에서 찾아 계산한다」고 적는다.
+//    즉 모델은 숫자를 내지 않는다. 그리고 `document_version_id`(uuid)는 **서버가 아는
+//    값**이라 모델이 되풀이할 이유가 없다 — 지어내면 근거가 남의 문서를 가리키게 되고
+//    그게 P7 이 무너지는 자리다. `owner_id` 도 같은 이유로 뺐다 (사람의 uuid 를 모델이 알 리 없다).
+//
+//  🔴 **왜 offset 이 아니라 인용인가 (FINDINGS 142 · 2026-09-06)** — 진짜 Gemini 로 재니
+//    span 27개가 전부 「범위 안」인데 잘라 보면 다른 문장이었다 (G1 항목이 G2 줄을 가리키는
+//    식). `heading_path` 는 18/18 맞았다 — **모델은 제목은 맞히고 글자는 못 센다.**
+//    모델이 낸 숫자를 검증하지 말고 모델이 낸 글자로 숫자를 계산한다.
 //
 //  ⚠ 타입별 `data` 는 **위 `ITEM_DATA` 표를 그대로 읽는다.** 새 ItemType 을 더할 때
 //    여기 고칠 것은 없다 — `variantsOf` 가 표를 도는 자리 하나다.
@@ -327,10 +331,19 @@ export const ANSWER_SLOTS = {
 //    「모든 외부 입력은 packages/schema 로 파싱한다」(CLAUDE.md).
 // ---------------------------------------------------------------------
 
-/** chunk 안의 원문 구간. `end_char` 는 exclusive 다 (`slice` 와 같은 뜻). */
+/**
+ * 인용 한 개의 글자 상한. 항목 하나의 근거는 문장 몇 개다 — 이보다 길면 모델이 조각을
+ * 통째로 베끼고 있는 것이고, 항목 40개가 그러면 출력 상한(8k 토큰)에서 JSON 이 잘린다.
+ */
+export const AI_QUOTE_MAX_CHARS = 600
+
+/**
+ * chunk 안의 근거. `quote` 는 **조각의 원문 그대로**(줄임·고침 없이)이고 조각 안에서
+ * **한 곳에만** 있어야 한다 — 서버(`structure.ts` `toSourceRef`)가 `indexOf` 로 offset 을
+ * 계산하고, 없거나 여러 곳이면 계약 위반으로 재시도한다.
+ */
 export const AiSourceSpan = z.object({
-  start_char: z.int().min(0),
-  end_char: z.int().min(0),
+  quote: z.string().min(1).max(AI_QUOTE_MAX_CHARS),
   heading_path: z.array(z.string().max(200)).max(10).default([]),
 }).strict()
 export type AiSourceSpan = z.infer<typeof AiSourceSpan>

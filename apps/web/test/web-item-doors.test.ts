@@ -53,7 +53,7 @@ const CANDIDATE = {
   body: '환불은 접수 후 24시간 안에 종결한다.',
   scope: { kind: 'project' },
   data: { rule: '환불은 접수 후 24시간 안에 종결한다.', severity: 'must', enforcement: 'review' },
-  span: { start_char: 0, end_char: 20 },
+  span: { quote: '환불은 접수 후 24시간 안에 종결한다.' },
 }
 /** 문 B 가 답할 열린 질문 — §7.1 이 「판단이 필요하다」고 남긴 것. */
 const OPEN_QUESTION = '재시도 상한이 5회인가 3회인가?'
@@ -71,7 +71,7 @@ function stubStructure(): void {
   setAiClientForTest(stubTransport(() => ({
     input: {
       items: [CANDIDATE],
-      open_questions: [{ question: OPEN_QUESTION, span: { start_char: 0, end_char: 20 } }],
+      open_questions: [{ question: OPEN_QUESTION, span: { quote: '재시도 상한은 문서마다 다르게 적혀 있다.' } }],
     },
   })))
 }

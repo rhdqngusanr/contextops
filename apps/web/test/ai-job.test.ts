@@ -60,6 +60,8 @@ const PAYLAB_GOALS = readFileSync(
   fileURLToPath(new URL('../../../fixtures/paylab-docs/goals.md', import.meta.url)),
   'utf8',
 )
+/** goals.md 에 한 번만 있는 문장 — 스텁이 내는 근거 인용 (서버가 offset 을 계산한다 · FINDINGS 142). */
+const REFUND_QUOTE = '환불 요청은 **접수 후 24시간 안에 종결**한다'
 
 // ---------------------------------------------------------------------
 //  스텁 클라이언트 — `ai-conflict.test.ts` 와 같은 모양이다
@@ -317,7 +319,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
     stubAi(() => ({
       input: {
         items: [],
-        open_questions: [{ question: '재시도 상한이 5회인가 3회인가?', span: { start_char: 5, end_char: 30 } }],
+        open_questions: [{ question: '재시도 상한이 5회인가 3회인가?', span: { quote: REFUND_QUOTE } }],
       },
     }))
 
@@ -346,7 +348,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
           body: '문서에 적힌 규칙을 그대로 옮겼다.',
           scope: { kind: 'project' },
           data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
-          span: { start_char: 0, end_char: 20 },
+          span: { quote: REFUND_QUOTE },
         }],
         open_questions: [],
       },
@@ -639,7 +641,7 @@ describe('🔴 목록은 무거운 칸을 안 나른다 (FINDINGS 60 · SPEC §5
           body: DRAFT_BODY,
           scope: { kind: 'project' },
           data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
-          span: { start_char: 0, end_char: 20 },
+          span: { quote: REFUND_QUOTE },
         }],
         open_questions: [],
       },
@@ -754,7 +756,8 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
           body: '환불은 접수 후 24시간 안에 종결한다.',
           scope: { kind: 'project' },
           data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
-          span: { start_char: 0, end_char: 20 },
+          //  `multiChunkDoc` 의 조각 n 안에서 한 곳에만 있는 글 — 그 절의 heading 이다.
+          span: { quote: `## ${n + 1}. 절` },
         }],
         open_questions: [],
       },
@@ -992,7 +995,7 @@ describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화�
           body: '환불은 접수 후 24시간 안에 종결한다.',
           scope: { kind: 'project' },
           data: { rule: '환불은 접수 후 24시간 안에 종결한다', severity: 'must', enforcement: 'review' },
-          span: { start_char: 0, end_char: 20 },
+          span: { quote: REFUND_QUOTE },
         }],
         open_questions: [],
       },
@@ -1028,7 +1031,7 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
             body: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다.',
             scope: { kind: 'project' },
             data: { rule: 'PSP 호출 실패는 지수 백오프로 5회 재시도한다', severity: 'must', enforcement: 'review' },
-            span: { start_char: 0, end_char: 20 },
+            span: { quote: REFUND_QUOTE },
           },
           {
             id: 'item_doc_card',
@@ -1037,7 +1040,7 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
             body: '카드 원본 정보를 저장하지 않는다.',
             scope: { kind: 'project' },
             data: { statement: '카드 원본 정보를 저장하지 않는다' },
-            span: { start_char: 0, end_char: 20 },
+            span: { quote: REFUND_QUOTE },
           },
         ],
         open_questions: [],
@@ -1106,7 +1109,7 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
           body: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다.',
           scope: { kind: 'project' },
           data: { rule: 'PSP 호출 실패는 지수 백오프로 5회 재시도한다', severity: 'must', enforcement: 'review' },
-          span: { start_char: 0, end_char: 20 },
+          span: { quote: REFUND_QUOTE },
         }],
         open_questions: [],
       },
