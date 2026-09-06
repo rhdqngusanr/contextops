@@ -33,6 +33,14 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 146. **탐지 후보가 모델이 고른 `scope` 에 달려 있다** — 같은 코드 · 같은 프롬프트에서 충돌 3/3 ↔ 0/3   [구멍]
+- **증상**: 83바퀴 `p3:measure` 두 번(코드 `5be2611` 둘 다) — 1회차 `conflict.candidates {used 0, total 0}` · 충돌 **0/3**, 2회차 `{3, 3}` · 충돌 **3/3**. `detectConflicts()` 는 「같은 type 이고 `scopeKey` 가 같은 active 항목」만 후보로 싣는데(§7.2) **scope 는 모델이 항목마다 고른다.** 2회차는 policy 6개가 전부 `project` 라 후보 3 이었고, 1회차는 probe 가 scope 를 안 적어 어느 쪽이 갈렸는지 못 봤다 — 마일스톤은 두 번 다 `path:src/…` 였으니 policy 도 그랬을 수 있다. 83 부터 `p3:measure` 가 `itemScopes` 를 적는다.
+- **근거**: `docs/evidence/2026-09-07-p3-gemini/probe-run1.json` (`conflict.candidates`) · `probe.json` (`roadmap.itemScopes`·`goals.itemScopes` · `conflict`) · `apps/web/src/lib/ai/conflict.ts` `wantedScopes`·`matched`
+- **정본**: `docs/SPEC.md` §7.2 (「같은 type/scope 의 기존 active 항목(최대 40개)」) · §3 `Scope`
+- **왜 고장이 아닌가**: 탐지는 지나고 3/3 도 나온다. 그러나 「충돌 3」이 모델의 scope 선택에 달려 있어 실행마다 갈린다 — 145(slug 선택)와 같은 종류.
+- **고칠 방향**: 둘 중 하나 — ① 후보를 「같은 type」까지만으로 고르고 scope 는 지금처럼 프롬프트 줄(`renderItem` 의 `scope=`)에 실어 모델이 견주게 한다 — 한 프로젝트의 active 는 §7.3 이 150 으로 묶었고 상한 40·우선순위 정렬은 그대로 · SPEC §7.2 의 그 구절을 고친다 ② `project` scope 항목은 모든 scope 와 짝이 되게 `wantedScopes` 를 넓힌다(`project` ⊇ 나머지 · SPEC 은 그대로). ①이 표 하나이고 단순하다 — `conflict.ts` 를 읽고 정한다. 고친 뒤 `p3:measure` **두 번 연속** 후보 ≥ 3. ⚠ 145 와 합쳐야 3/3 이 안정된다.
+- **상태**: 대기 (주인 PLAN **P3 첫 행** — 「충돌 3」이 안정되는 조건의 나머지 절반)
+
 ### 145. **구조화 후보가 이미 있는 항목과 같은 slug 를 고르면 accept 에서 거절되고, 그 둘의 충돌을 탐지할 기회가 사라진다** — 「충돌 3」이 모델의 id 선택에 달려 있다   [구멍]
 - **증상**: 82바퀴 `p3:measure` — goals.md 의 「외부 PSP 호출 재시도 규칙」 후보가 `POST /jobs/{id}/items` 에서 `{index 3, id: 이미 있는 항목 id 다}` 로 거절됐다. old-roadmap.md 의 재시도 규칙(이미 active)과 같은 slug(`item_psp_retry_policy`)를 골랐기 때문이다. 그래서 탐지 candidates 가 5 → 2, 「5회 지수 백오프 vs 3회 0.5초 고정」 짝이 재료에서 빠져 충돌 **1/3**. 81바퀴는 두 문서가 우연히 다른 slug 를 골라 2/3 이었다 — 같은 프롬프트에서 실행마다 갈린다.
 - **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §5 · probe.json `goals.accepted.rejected` · `conflict.candidates {used 2, total 2}`.
@@ -50,12 +58,15 @@
 - **고칠 방향**: `GenerateResponse` 에 `finishReason` 을 읽어 `MAX_TOKENS` 면 불평 문장을 「출력이 상한에서 잘렸다 — 더 짧게」로 바꾸거나 상한을 올려 재시도 · `transport()` 의 429 는 `ApiError('RATE_LIMITED')` 로. 둘 다 `client.ts` 한 파일.
 - **상태**: 대기 (주인 PLAN **P3 첫 행**)
 
-### 143. **old-roadmap.md 의 「운영 규칙」 3줄 중 환불 줄이 항목이 안 된다** — 그래서 충돌이 3 이 아니라 2 다   [격차]
+### 143. ✅ **old-roadmap.md 의 「운영 규칙」 3줄 중 환불 줄이 항목이 안 된다** — 그래서 충돌이 3 이 아니라 2 다   [격차]
 - **증상**: §7.1 이 `old-roadmap.md` 에서 policy 를 둘(재시도 3회 고정 · 웹훅 원본 로그 7일)만 뽑고 「환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다」는 빠뜨린다. §7.2 는 실린 항목 사이에서만 짝을 내므로 SPEC §10.1 의 「의도된 어긋남 3곳」 중 환불 SLA 가 카드로 안 선다.
 - **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §3 · probe.json `roadmap.items`(5개) — 진짜 gemini-3.5-flash · thinkingLevel low. high 로는 6개가 나왔지만(§2) 58초 · 생각 토큰 4배라 기본으로 못 쓴다.
 - **정본**: `docs/SPEC.md` §7.1 · §10.1 · `apps/web/src/lib/ai/structure.ts` 의 `SYSTEM`·`SOURCE_DOCUMENT_KIND_BRIEF.roadmap`
 - **고칠 방향**: 프롬프트다 — 기준을 낮추지 않는다 (STATUS 80 의 규칙). `roadmap` 종류의 안내가 「마일스톤과 기한이 주로」라서 규칙 절을 가볍게 읽는 듯하다 — 「로드맵 문서 안의 운영 규칙도 policy 로 낸다」 한 줄, 또는 SYSTEM 의 「항목 하나 = 실제로 적힌 목표·규칙·결정·절차 하나」에 「부정형 규칙(기한을 두지 않는다 · 하지 않는다)도 규칙이다」. 고친 뒤 `p3:measure` 로 3/3 을 본다.
-- **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「충돌 3」이 이것이다)
+- **고친 것** (`5be2611` · 83바퀴): 프롬프트만 — `structure.ts` SYSTEM 에 `RULE_LIST_LINES` 두 줄(규칙을 나열한 절은 **줄마다** 항목 하나 · 문서 종류가 로드맵·메모여도 그 안의 규칙은 policy · 「기한은 따로 두지 않는다」 같은 **부정형도 규칙**).
+  종류 표가 아니라 SYSTEM 인 이유는 여섯 종류 전부에 해당해서다. 시험 +1(SYSTEM 에 그 문장이 산다 · 표를 읽어서 센다). **진짜 Gemini 로 두 번 쟀다** (`docs/evidence/2026-09-07-p3-gemini/probe.txt`): old-roadmap 항목 5 → **6** · 환불 줄이 두 번 다 policy(`item_refund_handling_sla` · `item_refund_sla_none`) · 인용은 그 줄 그대로.
+  2회차 충돌 **3/3**(셋째 = 「24시간 안에 종결」 vs 「기한은 따로 두지 않는다」 · contradiction high · 질문형). ⚠ 1회차는 후보 0 · 충돌 0/3 — 같은 코드다. 원인은 143 이 아니라 후보 선정의 scope(→ **146**).
+- **상태**: ✅ (주인 PLAN **P3 첫 행** — 남은 것은 145 · 146 · 144)
 
 ### 142. ✅ **`source_ref` offset 이 「범위 안」인데 가리키는 문장이 틀리다** — 모델은 글자를 못 센다 · P7 이 여기서 끊긴다   [구멍]
 - **증상**: goals.md 18항목 + 질문 4 의 span 27개가 전부 `0 ≤ start < end ≤ 문서 길이` 를 지나는데, 잘라 보면 G1 항목이 G2 줄을, PII 금지 항목이 §3.4 를, 웹훅 서명 항목이 §4 의 제목을 가리킨다. architecture 5개와 질문 4개는 각각 **같은 구간 하나**를 낸다. `heading_path` 는 18/18 맞다.

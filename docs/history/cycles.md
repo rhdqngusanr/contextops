@@ -15,6 +15,50 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (77) — 답이 갈 길은 `answerSlot` 값마다 한 줄인 표 · `none` 은 400 · 시험 +6 (FINDINGS 108 · `7e29d06`)
+
+**77바퀴는 FINDINGS 108 — 구멍(라우트가 `answerSlot` 을 두 갈래로만 읽어 `none` 이 `ask` 와 같다)을 닫았다** (`7e29d06`). INBOX 순서 4(구멍 → 격차)의
+넷째 항목이고 **루프가 혼자 닫을 구멍의 마지막**이다 — 고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 워킹트리는 깨끗한 채로 시작했다 (76 과 달리 남의 미커밋 없음).
+갈래를 `if/else` 에서 **값마다 한 줄인 표**로 옮겼다: 값 목록은 `packages/schema` 의 `ANSWER_SLOT_MODES`, 줄은 `apps/web/src/lib/api/answer-slot.ts` 의 `ANSWER_SLOT_DRAFTERS`
+(`satisfies Record<AnswerSlotMode, …>` — 값이 늘면 typecheck 가 그 표를 막는다), 라우트는 `draftForAnswer()` 한 줄만 부른다. 라우트에서 `ANSWER_MAX`·`slotDraft`·`seedDraft` import 가 사라졌다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-answer-slot/probe.txt`):
+
+| | 전 (`4109f5e`) | 후 (`7e29d06`) |
+|---|---|---|
+| 라우트의 갈래 | 2 — `slot === 'seeded'` / 나머지 | **0** — 표를 부른다. 표의 줄은 3 = `ANSWER_SLOT_MODES` (시험이 집합으로 센다) |
+| 표를 `none` 으로 뒤집고 `save_as` 를 보내면 | **200 · 항목 생성** (화면은 자리를 안 묻는데 서버는 만든다) | **400 `VALIDATION_FAILED`** 「이 질문은 답을 항목으로 만들지 않습니다」 · 항목 0 · 질문 열린 채 |
+| 뒤집고 `save_as` 없이 보내면 | 200 · 기록만 | 200 · 기록만 · 질문 `resolved` · `resolution.note` 에 답 (같음 — 「기록만」은 세 갈래 공통) |
+| 같은 답이 세 갈래에서 (`save_as='mission'`) | seeded 400 · ask draft · **none draft** | seeded 400(자리 정해짐) · ask draft:mission · **none 400(항목 안 만듦)** — 셋이 전부 다르다 |
+| 두 표의 관계 | 잠긴 시험 없음 (schema 쪽에 「none = detected」만) | `answerSlot !== 'none'` 인 종류 = `QUESTION_CONFLICT_KINDS` (API 시험) · 세 값이 표에 다 쓰인다 (schema 시험) |
+| 시험 | api-routes 37 · scope-and-enums 15 | api-routes **42** · scope-and-enums **16** · 옛 갈래로 되돌리면 **2 빨강** (`red-with-old-none-branch.txt` · 200 ≠ 400) |
+| SPEC §5 questions 행 | `seeded`·`ask` 만 | `none` 갈래 + 표의 자리(`ANSWER_SLOT_DRAFTERS`) 한 문장 |
+| CI | GREEN 20:44 | **GREEN 21:00** — principles OK 9 · typecheck 9초 · test 87초 · build 21초 · walkthrough **965** · docs OK |
+
+⚠ **안 한 것** — 화면은 안 건드렸다 (화면은 `=== 'ask'` 하나만 읽고, 그건 108 의 범위 밖 · 값을 더하는 절차 ③ 에 적어 뒀다). `none` 인 질문 종류는 여전히 없다 —
+이 바퀴는 **닿을 수 없는 갈래를 미리 잠근 것**이다. 눈 판정 대기에 새로 더한 것 없음 (API 만).
+
+🔴 **배운 것 — 「닿을 수 없는 갈래」는 표를 뒤집어서 잰다.** 라우트로는 `none` 에 갈 수 없으니 시험이 `CONFLICT_KIND_RULES.open_question.answerSlot` 을 `'none'` 으로 바꾸고
+`afterEach` 에서 되돌린다 (vitest 는 파일마다 모듈을 따로 두므로 다른 파일에 안 샌다). 「빨개지는 것을 봤나」는 `none` 줄을 옛 `ask` 와 같게 바꿔 5 중 2 가 빨간 것으로 확인했다.
+
+🔴 **2-B 이번 라운드 — `answerSlot` 3종이 그 예다.** ① 소비처: 화면 둘(`=== 'ask'`) · 라우트 표 셋 ② 뒤집으면 갈림: 「같은 답이 세 갈래에서 서로 다른 결과」 · 「표를 `none` 으로 뒤집으면 400」.
+`none` 은 이 바퀴 전에는 **①만 있고 ②가 없던 값**이었다. 다음 라운드는 `ItemType` 10종(37바퀴 이후 안 팠다).
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 121(+135) → 78바퀴가 닫았다 (`816420b`). 아래는 77 이 남긴 지목의 원문이다.
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍은 떨어졌고 이제 격차다.** 남은 구멍 둘은 루프가 못 연다 — 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명), 117 은 절삭 1번(P3 🙋 키).
+격차의 순서: **121+135**(같은 바퀴 · 게스트가 누른 뒤에 아는 것) → 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134.
+
+> **121+135 를 하는 법** — 121: `apps/web/src/lib/web/api.ts` 의 `ERROR_HINT.FORBIDDEN` 은 코드당 문구 하나라 그대로 두고, **게스트일 때만 덮는 표**
+> `GUEST_HINT: Partial<Record<ErrorCode, string>>` 을 옆에 둔다 (지금 줄은 `FORBIDDEN` 하나 · 문구는 서버 `refuseWrite()` 와 같은 말). 세션의 `guest` 는 **문구를 고르는 데만** —
+> 그 값으로 버튼을 숨기지 마라(막는 것은 서버 · `ACTOR_RULES`). 135: 게스트가 [발행하기] 를 누르면 모달이 열린다(`docs/evidence/2026-09-06-focus-visible/control/mouse-click.png`) —
+> 화면이 「쓸 수 있는가」를 서버와 **같은 표**(`lib/api/auth.ts` `ACTOR_RULES.writes` · 지금 `demo-banner.tsx` 가 읽는다)에서 읽어, 게스트에게는 모달 대신 그 자리에서 이유를 말한다.
+> 시험은 `web-*` 렌더 시험으로 「게스트 세션이면 403 문구가 GUEST_HINT 것」·「게스트에게 발행 모달 마크업 0」. 캡처를 찍어 `docs/evidence/` 로 복사. DESIGN_BRIEF §5 먼저. **한 바퀴에 하나** — 둘이 같은 자리라 같이.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
 ### 지난 바퀴 (76) — Manifest 마일스톤이 `due` 를 나른다 · 화면 8 행에 due · 75 의 미커밋 14 파일 위에 빠진 둘 (FINDINGS 111 · `4109f5e`)
 
 **76바퀴는 FINDINGS 111 — 구멍(Manifest 의 마일스톤에 `due` 가 없어 화면 8 이 기한을 말할 수 없다)을 닫았다** (`4109f5e`). INBOX 순서 4(구멍 → 격차)의

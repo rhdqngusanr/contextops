@@ -1,0 +1,54 @@
+# 83바퀴 · 2026-09-07 (KST 00:25~00:27) — FINDINGS 143 을 고친 뒤 PLAN P3 첫 행을 진짜 Gemini 로 다시 잰다
+# 전부 진짜 API(gemini-3.5-flash · 우리 키 · .env.local) · DB 는 PGlite(freshDb) · 길은 제품 그대로 · 코드 5be2611
+# 문: `pnpm --filter web p3:measure` — **같은 코드로 두 번** 돌렸다. 1회차 = probe-run1.json · 2회차 = probe.json.
+# (폴더 이름의 날짜는 스크립트의 로컬 날짜 · probe.json 의 measured_at 은 UTC 라 09-06 으로 적혀 있다)
+# 81·82바퀴의 기록은 옆 폴더 ../2026-09-06-p3-gemini/probe.txt §0~§5.
+
+## 0. 무엇을 바꿨나 (FINDINGS 143 · 프롬프트만)
+
+structure.ts SYSTEM 에 RULE_LIST_LINES 두 줄:
+  - 규칙을 나열한 절(「운영 규칙」·「지켜야 할 것」 같은 목록)은 **줄마다** 항목 하나다. 문서 종류가 로드맵·메모여도 그 안의 규칙은 policy 로 낸다.
+  - 「하지 않는다」·「기한은 따로 두지 않는다」 같은 **부정형도 규칙**이다. 숫자·기한이 없다고 빼지 않는다.
+conflict.ts · 스키마 · 화면은 그대로. 기준(항목 12 · 충돌 3)은 안 낮췄다.
+
+## 1. 완료 기준 대 실측 — 두 번
+
+| 기준 | 82 (3b6ebef) | 83 · 1회차 | 83 · 2회차 | 판정 |
+|---|---|---|---|---|
+| old-roadmap → 항목 | 5 (roadmap 3 · policy 2) | **6** (roadmap 3 · policy 3) | **6** (roadmap 3 · policy 3) | 환불 줄이 policy 로 ✅ (143 의 합격) |
+| goals.md → 항목 12 | 12 · 질문 4 | **18** (goal 3 · policy 7 · roadmap 3 · architecture 5) · 질문 4 | **14** (goal 3 · policy 7 · roadmap 3 · domain 1) · 질문 4 | ✅ |
+| 충돌 3 | 1 | **0** (후보 {used 0, total 0}) | **3** (후보 {3, 3} · 전부 contradiction high) | ✗ 실행마다 갈린다 → 146 |
+| 모든 호출이 withBudget 경유 | 3행 | 3행 (structure 1,031/1,750 · 2,591/5,305 · conflict 1,721/10 · ≈ $0.019) | 3행 (1,031/1,737 · 2,591/4,664 · conflict 1,619/371 · ≈ $0.019) | ✅ |
+| 인용이 문서 범위 안 · 그 문장 | 21/21 | 24/24 (goals 22 · roadmap 6) · 눈으로 24 | 24/24 (18 · 6) · 눈으로 24 | ✅ |
+| accept 거절 | 1 (item_psp_retry_policy) | 1 (index 3 · 같은 slug) | 1 (index 3 · 같은 slug) | 145 그대로 |
+
+## 2. 환불 줄 — 두 번 다 항목이 됐다 (probe*.json 의 roadmap.items)
+
+1회차  item_refund_handling_sla   policy  520-559  "- 환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다."
+2회차  item_refund_sla_none       policy  522-559  "환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다."   (scope project)
+나머지 둘도 그대로: PSP 재시도 3회/0.5초 고정 (452/454-490) · 웹훅 원본 payload 로그 7일 (560/562-603).
+→ 82 까지 policy 2 이던 것이 3 이 됐다. 프롬프트 두 줄이 한 일이다. 「지어낸」 항목은 없다 — 셋 다 원문 한 줄씩이다.
+
+## 3. 2회차의 충돌 셋 (probe.json 의 conflict.conflicts · 전부 질문형 · 판정 없음)
+
+contradiction high  item_log_pii_prohibited           vs item_webhook_payload_log   「새 항목은 PSP 원본 payload 를 로그에 남기지 못하게 금지 … 기존은 장애 조사를 위해 남기도록 …」
+contradiction high  item_prohibit_fixed_interval_retry vs item_psp_retry_policy      「새 항목은 고정 간격 재시도를 금지 … 기존은 0.5초 고정 … 어느 정책을 적용해야 합니까?」
+contradiction high  item_refund_sla_limit             vs item_refund_sla_none        「새 항목은 환불 요청을 24시간 이내에 종결 … 기존은 처리 기한을 따로 두지 않는다 …」
+⚠ 둘째 짝의 goals 쪽이 「외부 PSP 호출 재시도 규칙」이 아니라 「고정 간격 재시도 금지」다 — 재시도 규칙 후보는 같은 slug 라 accept 에서 거절됐다 (145).
+   goals.md 에 「고정 간격 재시도는 금지한다」 줄이 따로 있어서 짝이 섰다. 145 를 안 고치면 이 짝도 모델이 그 줄을 항목으로 내느냐에 달려 있다.
+
+## 4. 1회차는 왜 0 인가 — 후보가 0 이다 (FINDINGS 146)
+
+conflict.ts detectConflicts(): 후보 = 같은 type(DB) 이고 scopeKey 가 같은(코드) active 항목. scope 는 모델이 항목마다 고른다.
+  1회차  candidates {used 0, total 0} · conflict 호출은 갔다(장부 1,721/10 토큰 · 항목 17개끼리만) · 충돌 0
+         probe 가 scope 를 안 적어 로드맵 policy 셋과 goals policy 일곱 중 어느 쪽이 갈렸는지 **못 봤다**.
+  2회차  roadmap scopes { path:src/webhook/ 1 · path:src/ledger/ 1 · path:src/psp/ 1 · project 3 } — policy 셋이 project
+         goals   scopes { project 10 · path:src/payment/ 1 · path:src/refund/ 1 · path:src/common/ 1 · domain:payment 1 } — policy 일곱이 project
+         → policy 끼리 type·scope 가 같아 후보 3 (로드맵 policy 셋) · 충돌 3.
+→ 같은 코드·같은 프롬프트에서 3 ↔ 0. 「충돌 3」은 145(slug) 와 146(scope) 을 닫아야 안정된다. p3-measure.ts 는 이제 itemScopes 를 적는다.
+
+## 5. 이번 바퀴가 안 한 것
+
+- 145 · 146 은 안 고쳤다 (한 바퀴에 하나).
+- 화면 3(/import) 을 브라우저로 본 적은 여전히 없다 — STATUS 「눈 판정 대기」.
+- PLAN P3 첫 행은 열어 뒀다 — 「두 번 연속 3/3」 이 체크 조건이다.
