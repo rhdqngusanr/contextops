@@ -33,6 +33,18 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 158. **Context 의 scope 칸 placeholder 가 입력칸 폭에서 잘린다** — `domain:billing` → `domain:billin`   [격차]
+- **증상**: 화면 5(Context)의 거르개 셋째 칸(`scope`)이 placeholder 로 **쓰는 법**을 말하는데
+  (`project · domain:billing` · SPEC §5 의 `?scope=` 문법), 그 글자가 칸 폭을 넘겨 **마지막 글자가 잘린다.**
+  「쓰는 법을 보여 주는 자리」가 잘린 예시를 보여 주면 사람은 `domain:billin` 이 맞는 줄 안다.
+- **근거**: `docs/evidence/2026-09-07-empty-next-step/01-context.png` (96바퀴 · 1440×900 · 진짜 `next dev`).
+  자리는 `apps/web/src/app/t/[team]/p/[project]/context/page.tsx` 의 `FilterBar` — `<input className="input mono" placeholder="project · domain:billing">`.
+  ⚠ **폭을 아직 재지 않았다** — 잘린 것은 캡처로 봤고, 몇 px 모자라는지는 안 쟀다.
+- **정본**: `docs/DESIGN_BRIEF.md` §3(토큰) · `apps/web/src/app/globals.css` 의 `.input`
+- **고칠 방향**: 폭을 먼저 재라. 늘린다면 **토큰으로** 늘리고(임의 px 금지), 아니면 예시를 짧게(`domain:…`) 하고
+  긴 설명은 `title`·도움말 줄로 옮긴다. ⚠ `.input` 은 다른 화면도 쓴다 — 이 칸만 넓히는 것이 맞는지 같이 본다.
+- **상태**: 대기 (주인은 PLAN **P4 둘째 행** · 133 을 보다 곁다리로 나왔다)
+
 ### 157. ✅ **팔레트에 프로젝트 전환이 없다** — 문은 이미 있었다 (`d95f7ca`)   [구멍]
 - **증상**: 명령 팔레트(⌘K)는 **지금 프로젝트 안의 화면 7개**로만 간다. 프로젝트가 둘 이상인 사람은 주소를 직접 고쳐야 옮긴다 —
   INBOX 🟡 B 가 적은 셋(「화면 9개 · 프로젝트 전환 · 항목 검색」) 중 둘째가 비어 있다.
@@ -69,6 +81,9 @@
 - **95바퀴가 확인했다 (06:41 CI)**: **아직 빨갛다.** 같은 넷이고 같은 이유다. 그 세션의 마지막 커밋은 여전히 `eceaaab` 라
   **두 바퀴째 커밋이 안 늘었다**. 나머지는 전부 초록이다 (757개 중 **753 통과** · principles OK 9 · typecheck OK · docs OK · `plugin` 178 초록).
   95바퀴도 README·랜딩을 한 줄도 안 건드렸다 (`git show --stat d95f7ca`).
+- **96바퀴가 확인했다 (07:03 CI)**: **아직 빨갛다.** 같은 넷이고 같은 이유다. 그 세션의 마지막 커밋은 여전히 `eceaaab` 라
+  **세 바퀴째 커밋이 안 늘었다**. 나머지는 전부 초록이다 (769개 중 **765 통과** · principles OK 9 · typecheck OK · build OK · docs OK).
+  96바퀴도 README·랜딩을 한 줄도 안 건드렸다 (`git show --stat e3e48fe`).
 - **상태**: 대기 (주인은 이 루프가 아니다 — 다음 바퀴도 **확인만** 한다. 고치지 마라)
 
 ### 156. **집히지 않은 채 오래 `queued` 로 남는 job 은 아무도 못 살린다**   [구멍]
@@ -323,7 +338,18 @@
 - **정본**: `docs/DESIGN_BRIEF.md` (loading / empty / error 세 상태) · `docs/SPEC.md` §9
 - **고칠 방향**: 빈 상태 컴포넌트 하나에 「다음 행동」 자리를 두고, 화면별 문구·목적지는 **표 하나**로 — 화면이 늘면 표에 한 줄.
   accent 는 화면당 주요 액션 하나다 (DESIGN_BRIEF) — 빈 상태의 버튼이 그 하나가 되는지 화면마다 본다.
-- **상태**: 대기 (주인은 PLAN **P4 둘째 행**)
+- **고친 것** (`e3e48fe` · 96바퀴): 표는 `lib/web/screens.ts` 의 **`EMPTY_PLACES`**(`EmptySlot` 10자리)이고 그리는 자리는
+  `ScreenEmpty` 하나다. 목적지는 `PROJECT_SCREENS` 의 `path` 뿐이고 주소는 `emptyNextHref()` 하나가 짓는다.
+  🔴 **갈 곳이 화면 밖인 자리는 버튼을 만들지 않고 `noNext` 에 이유를 적는다** — 타입이 `next`·`noNext` 중 하나를 강제한다
+  (「아무 데도 안 가는 버튼」 금지 · 117 과 같은 뿌리). 목록 셋(`ProposalTable`·`DeviceTable`·`VersionHistory`)은
+  `emptyMessage: string` → `empty: ReactNode` 로 바뀌어 같은 `state-box` 마크업 세 벌이 사라졌다.
+  시험 `test/web-empty-states.test.ts` 12개: 화면 코드에 빈 상태 문구 **0건** · `<EmptyState` 직접 호출 0건 ·
+  목적지가 전부 실제 `page.tsx`(404 0개) · `noNext` 이유가 비어 있지 않다 · 한 화면에 accent 최대 하나 · DESIGN_BRIEF §5 ↔ 코드.
+- 🔴 **눈으로 봤다** (`docs/evidence/2026-09-07-empty-next-step/`): 진짜 `next dev` + 씨앗 DB 에서 **제품의 문으로 만든 빈 프로젝트**
+  (`paylab/blank`)를 열어 화면 7개를 찍었다. 전에는 빈 자리 **10곳 중 8곳에 버튼이 없었다.** 지금은 7곳에 버튼 · 3곳은 이유.
+  Context 의 버튼을 실제로 눌러 `/t/paylab/p/blank/import` 로 갔다. Pack Explorer 의 버튼만 accent(계산된 배경 `rgb(31,78,224)`)이고
+  Context 의 것은 outline 이다 — 그 화면의 accent 는 머리의 [발행하기] 하나다.
+- **상태**: ✅ `e3e48fe` (96바퀴 · 못 본 자리 셋은 evidence README 의 「못 본 것」에 적었다)
 
 ### 134. **`prefers-reduced-motion` 대응이 없다** — 스켈레톤·전환·터미널 재생이 항상 움직인다   [격차]
 - **증상**: 움직임을 줄여 달라는 OS 설정을 화면이 안 읽는다. 접근성 점검에 잘 걸리는 항목이고 CSS 몇 줄이다 (INBOX D).

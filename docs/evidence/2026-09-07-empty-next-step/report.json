@@ -1,0 +1,67 @@
+{
+  "context": {
+    "box": true,
+    "text": "◌ 아직 항목이 없습니다. 가져오기에서 문서를 올리거나 질문에 답해보세요. 가져오기로 이동",
+    "href": "/t/paylab/p/blank/import",
+    "label": "가져오기로 이동",
+    "cls": "btn",
+    "bg": "rgba(0, 0, 0, 0)",
+    "accentsOnScreen": 1,
+    "url": "/t/paylab/p/blank/context"
+  },
+  "import": {
+    "box": true,
+    "text": "◌ 아직 올린 문서가 없습니다. 왼쪽에 문서를 붙여넣어 보세요.",
+    "href": null,
+    "label": null,
+    "cls": null,
+    "bg": null,
+    "accentsOnScreen": 1,
+    "url": "/t/paylab/p/blank/import"
+  },
+  "review": {
+    "box": false,
+    "text": "팀 · 프로젝트\npaylab/blank\n화면 이동\n⌘K\n가져오기\n정리\nContext\n제안\nPack Explorer\nRoadmap\nSync\n정리\n\nAI가 찾은 결정이 필요한 것 0건 · 사람이 미리 물어 둔 질문 10장\n\n전체 10\n✎\n씨앗 질문 10\n✎\n씨앗 질문\n\n이 프로젝트가 만드는 것은 무엇인가요?\n\n가리킬 문서도 항목도 없습니다 — 답이 그대로 근거"
+  },
+  "proposals": {
+    "box": true,
+    "text": "◌ 아직 올라온 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다. Context 항목 보기",
+    "href": "/t/paylab/p/blank/context",
+    "label": "Context 항목 보기",
+    "cls": "btn",
+    "bg": "rgba(0, 0, 0, 0)",
+    "accentsOnScreen": 0,
+    "url": "/t/paylab/p/blank/proposals"
+  },
+  "packs": {
+    "box": true,
+    "text": "◌ 아직 발행된 버전이 없습니다. Context 화면에서 [발행하기]를 눌러보세요. Context로 이동",
+    "href": "/t/paylab/p/blank/context",
+    "label": "Context로 이동",
+    "cls": "btn btn-primary",
+    "bg": "rgb(31, 78, 224)",
+    "accentsOnScreen": 1,
+    "url": "/t/paylab/p/blank/packs"
+  },
+  "roadmap": {
+    "box": true,
+    "text": "◌ 아직 발행된 버전이 없습니다. 로드맵은 발행된 Pack의 마일스톤에서 옵니다. Context로 이동",
+    "href": "/t/paylab/p/blank/context",
+    "label": "Context로 이동",
+    "cls": "btn btn-primary",
+    "bg": "rgb(31, 78, 224)",
+    "accentsOnScreen": 1,
+    "url": "/t/paylab/p/blank/roadmap"
+  },
+  "sync": {
+    "box": true,
+    "text": "◌ 아직 등록된 기기가 없습니다. Claude Code에서 /contextops:init 을 실행하면 여기에 줄이 생깁니다.",
+    "href": null,
+    "label": null,
+    "cls": null,
+    "bg": null,
+    "accentsOnScreen": 0,
+    "url": "/t/paylab/p/blank/sync"
+  },
+  "clicked": "/t/paylab/p/blank/import"
+}
