@@ -529,7 +529,13 @@ params:
 - **고칠 방향**: 화면이 `fetchVersions()` 를 한 번 더 부르고 `is_official` 인 행의
   `semver` 를 상단 요약에 적는다 (문이 이미 있다 · `queries.ts`). ⚠ 서버가 sync-status
   응답에 넣는 쪽은 **고르지 마라** — 그러면 기기 목록 라우트가 버전 표까지 알게 된다.
-- **상태**: 대기 (주인은 화면 9 를 다시 만지는 바퀴 · PLAN P4 둘째 행)
+- **고친 것** (`eaaaf29` · 89바퀴): 방향 그대로 — `sync/page.tsx` 가 `fetchVersions()` 를 `useAsync` 로 한 번 더 부르고
+  `officialOf()`(`is_official` 하나)를 `SyncSummary` 에 넘긴다. 낱말은 `components/sync.tsx` 의 `OFFICIAL_HINT` 한 곳 —
+  `of(semver)` 는 화면 8 타일과 같은 `공식 vX.Y.Z 기준`, `none` 은 화면 5 와 같은 `아직 발행된 버전이 없습니다.`.
+  `undefined`(못 읽음 · 안 그린다)와 `null`(없음 · 없다고 말한다)을 갈랐다 — 버전 호출이 실패해도 표는 뜬다. `v—` 는 안 지어낸다.
+  시험 +4(`web-sync` 19) · 덤프 `docs/evidence/2026-09-07-sync-official/sync.txt` 요약 ①~④ · DESIGN_BRIEF §4 화면 9 한 줄 · CI GREEN 03:48.
+  ⚠ 브라우저로는 안 봤다 — STATUS 「눈 판정 대기」.
+- **상태**: ✅ `eaaaf29` (주인 PLAN P4 둘째 행)
 
 ### 117. **`POST /projects/{id}/ask` 가 없다** — 화면 9 의 질의창을 만들 문이 없다   [구멍]
 - **증상**: SPEC §5 와 §7.3 은 질의 엔드포인트를 적고 DESIGN_BRIEF §4 화면 9 는 그 위에
