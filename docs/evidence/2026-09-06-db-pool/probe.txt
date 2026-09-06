@@ -1,0 +1,56 @@
+# FINDINGS 127 — 게스트 데모 GET /teams 30초 500 · 고치기 전/후 (67바퀴 · 2026-09-06)
+
+재현: pnpm --filter web demo:db → next dev (DATABASE_URL=...:55432/postgres?max=1) → .ci/repro/probe.mjs (POST /demo/session 뒤 GET /teams 순차 3 · 동시 N · 화면 5·7 이 던지는 문 6개 동시)
+
+## 고치기 전 (코드 eb7794c · next dev 서버 로그)
+ ○ Compiling /api/v1/demo/session ...
+ ✓ Compiled /api/v1/demo/session in 758ms (520 modules)
+{"kind":"request","request_id":"a477bcfd-17b4-4b1d-a3d5-b1641dc37179","route":"POST /demo/session","method":"POST","status":201,"latency_ms":18,"project_id":"d6e1907e-7ec6-47f5-8375-2116dd7d64b5"}
+ POST /api/v1/demo/session 201 in 1439ms
+ ✓ Compiled /api/v1/teams in 156ms (522 modules)
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"a765f388-4850-4311-aa7b-2a1ee7a7aacf","route":"GET /teams","method":"GET","status":500,"latency_ms":30024}
+ GET /api/v1/teams 500 in 30311ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"008faec4-075c-4b79-b215-9193ba617e09","route":"GET /teams","method":"GET","status":500,"latency_ms":30012}
+ GET /api/v1/teams 500 in 30027ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"08b68841-962a-4316-a327-03d2a6f3d3c5","route":"GET /teams","method":"GET","status":500,"latency_ms":30026}
+ GET /api/v1/teams 500 in 30038ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"0b51bda7-bd6c-4103-ac99-9bf254e5c19f","route":"GET /teams","method":"GET","status":500,"latency_ms":30017}
+ GET /api/v1/teams 500 in 30032ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"b9814371-a45d-4abc-9722-56a5fc697ed9","route":"GET /teams","method":"GET","status":500,"latency_ms":60025}
+ GET /api/v1/teams 500 in 60052ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"55cfb8db-21cc-4c04-9b95-43dfce10941e","route":"GET /teams","method":"GET","status":500,"latency_ms":90051}
+ GET /api/v1/teams 500 in 90078ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"90d9d798-cf33-4151-b64c-4d7860ce8a45","route":"GET /teams","method":"GET","status":500,"latency_ms":120076}
+ GET /api/v1/teams 500 in 120103ms
+{"kind":"unhandled","error":"Error"}
+{"kind":"request","request_id":"65a0f190-0c03-4b43-bc38-5282eb204eca","route":"GET /teams","method":"GET","status":500,"latency_ms":150104}
+ GET /api/v1/teams 500 in 150131ms
+ ✓ Compiled in 24ms
+[?25h
+
+## 고치기 전 (probe · 토큰 줄 제거)
+--- sequential x3
+{ label: 'seq0', status: 500, ms: 30317, rid: '' }
+{ label: 'seq1', status: 500, ms: 30030, rid: '' }
+{ label: 'seq2', status: 500, ms: 30039, rid: '' }
+--- concurrent x5
+{ label: 'con0', status: 500, ms: 30037, rid: '' }
+{ label: 'con1', status: 500, ms: 60056, rid: '' }
+{ label: 'con2', status: 500, ms: 90083, rid: '' }
+{ label: 'con3', status: 500, ms: 120108, rid: '' }
+{ label: 'con4', status: 500, ms: 150137, rid: '' }
+
+[exited with code 0]
+
+## 고친 뒤 (코드 2134011 · probe N=8 · 토큰 줄 제거)
+seq0 200 625ms · seq1 200 18ms · seq2 200 19ms
+con0..7 전부 200 · 27~64ms
+fan-out: teams 200 39ms · items 200 1350ms · versions 200 1407ms · sync 200 1380ms · proposals 200 1405ms · progress 405 (GET 이 없는 문 — probe 의 추측 경로, 제품 고장 아님)
+next dev 로그: request 18 · unhandled 0 · 5xx 0 · demo:db 로그의 「둘째 소켓이 줄을 섰다」 0

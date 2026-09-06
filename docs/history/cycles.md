@@ -15,6 +15,44 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (61) — AGENTS/cursor 타깃 · 거울 문서 (PLAN P5 첫 행 ② · `2a1db06`)
+
+> ⚠ 61바퀴는 CI 를 **walkthrough 도중**(`.ci/logs/walkthrough.txt` 가 compile 단계에서 끊김)에
+> 끝났고 STATUS·FINDINGS 도 못 적었다 — 58·59·60 에 이어 **네 바퀴 연속** 미커밋이다.
+> 62바퀴가 같은 트리에서 전 층 CI(GREEN · 검사 843)를 다시 돌려 그대로 올렸고 FINDINGS 7 을
+> 닫았다. 이 절은 62바퀴가 그 diff 를 읽고 적은 것이다.
+
+**61바퀴는 PLAN P5 첫 행의 둘째 조각 — `AGENTS.md` · `.cursor/rules/contextops.mdc` 를 만들었다.**
+`PACK_TARGETS` 3종 중 컴파일러가 내는 것이 `claude` 하나였고 enum 값 둘이 아무것도 안 바꿨다
+(FINDINGS 7 · 2-B 의 그 종류).
+
+🔴 **잰 것 — 타깃 3종이 전부 파일을 낸다.**
+
+| | 전 | 후 |
+|---|---|---|
+| `DOCS` 표 | 7 문서 (전부 claude 타깃) | **9** — 거울 문서 `agents`·`cursor` (`compose`) |
+| 거울이 항목을 얻는 길 | — | partition 표를 **읽기만** — `collect` 가 원본 문서들의 블록을 그대로 모은다 (같은 태그 · P7 그대로) |
+| 거울에 항목을 직접 놓기 | — | **타입이 막는다** (`place()` 는 `PlaceableDocId` 만) |
+| scoped 줄 | `- [must] … · 강제: …` | 끝에 `· 도메인: ledger` / `· 경로: infra/**` (`SCOPE_INLINE_LABEL`) — 원본 파일에서도 같은 줄 |
+| 두 거울의 본문 | — | 머리말만 다르고 **byte 로 같다** (.mdc 는 `alwaysApply: true` frontmatter) |
+| 분량 규칙 | — | 거울은 대상이 아니다 — `AGENTS-2.md` 는 sync allowlist 밖 |
+| 템플릿 | 1.2 | **1.3** · golden 3종 갱신 (거울 파일 +2 · scoped 줄 끝 라벨) |
+| 관통 sync 가 놓는 파일 | 6 | **8** — allowlist 는 두 경로를 이미 알고 있었다 |
+| 컴파일러 시험 | 165 | **181** |
+
+🔴 **partition 에 줄을 더하지 않은 이유** — 그러면 ItemType 을 하나 더할 때 「CLAUDE.md 에도,
+AGENTS.md 에도」를 사람이 기억해야 하고 다음 사람은 반드시 하나를 빠뜨린다. 거울은 표를 읽기만
+하므로 ItemType 이 늘어도 거울은 안 고친다. 새 타깃(`.windsurf/…`)을 더하는 절차 넷은
+`templates/index.ts` 의 `MirrorDocId` 주석에 있다.
+
+🔴 **scoped 줄이 제 범위를 말하게 됐다** — 거울은 domain-*·scoped-* 파일의 규칙을 **한 절**에
+모으므로 파일 이름·frontmatter 가 나르던 범위가 거기서 사라진다. 줄이 스스로 말하지 않으면 경로
+규칙이 전역 규칙처럼 읽힌다. 렌더가 하나라 원본 파일에서도 같은 줄이다.
+
+**그 바퀴가 다음으로 지목한 것**: 적지 못했다 (STATUS 를 못 썼다). 남은 조각은 터미널 재생
+하나였고 62바퀴가 했다.
+
+
 ### 지난 바퀴 (60) — Pack zip · GET …/packs/{semver}/zip (PLAN P5 첫 행 ① · `8faad6a`)
 
 

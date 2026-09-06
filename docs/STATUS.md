@@ -5,18 +5,75 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 66바퀴 · 코드 `0dc2e93` · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 67바퀴 · 코드 `2134011` · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
 
-**이번 바퀴는 `docs/PLAN.md` P6 둘째 행(제출서 · README · KNOWN_LIMITATIONS)의 첫 조각 — README 와 KNOWN_LIMITATIONS 의
-본문**을 만들었다 (`0dc2e93`). 65바퀴가 지목한 FINDINGS 122 의 **본문 쪽**이다 — 🙋 URL·팀명은 그대로 🙋 라 122 는 대기로 둔다.
-관통 7단계 881 검사 초록 · 고장 0 이라 ④3 의 ② 로 갔고, PLAN 의 `- [ ]` 중 위의 셋은 사람이 막고 있다(🙋 Supabase ·
-🙋 Anthropic 키 · GATE 3). P5 둘째 행의 남은 것은 전부 계정이고, P6 첫 행(영상·슬라이드)은 발표자가 있어야 한다.
+**이번 바퀴는 INBOX(2026-09-06 · 사람이 브라우저로 QC 한 결함 넷)를 FINDINGS 127~130 으로 옮기고, ① 을 닫았다** (`2134011`).
+INBOX 가 PLAN·FINDINGS 보다 위고, 127 은 **고장**(GATE 3 의 첫 화면이 빈 화면)이라 ④3 의 ① 이다. PLAN 은 이 바퀴에 안 움직였다 —
+`- [ ]` 중 위의 셋은 사람이 막고 있고(🙋 Supabase · 🙋 Anthropic 키 · GATE 3), INBOX 가 그 다음 순서(P1 첫 행 마이그레이션 →
+126 제출서 → 미해결 FINDINGS)를 적어 두었다.
 
-🔴 **잰 것 — README 가 거짓말을 하고 있었고, 이제 랜딩과 같은 문장을 말하며 시험이 그것을 잰다.**
+🔴 **잰 것 — 게스트 데모의 500 은 「동시 요청」이 아니라 「라우트마다 풀 하나」였다.** 짐작이 아니라 재현했다
+(`docs/evidence/2026-09-06-db-pool/probe.txt`).
+
+| | 전 (`eb7794c`) | 후 (`2134011`) |
+|---|---|---|
+| `demo:db` + `next dev` · `POST /demo/session` 뒤 `GET /teams` 순차 3번 | **500 · 30.0초 × 3** (INBOX 는 「단독은 200」이라 했지만 순차도 죽었다) | 200 · 625 / 18 / 19ms |
+| `GET /teams` 동시 8번 | 500 · 30/60/90/120/150초 (postgres-js 가 한 풀 안에서 줄을 서고 매번 30초 CONNECT_TIMEOUT) | 전부 200 · 27~64ms |
+| 화면 5·7 이 던지는 문 5개 동시 (각각 첫 컴파일) | — | 전부 200 · 1.4초 |
+| next 로그 | `{"kind":"unhandled","error":"Error"}` 만 반복 (FINDINGS 128) | unhandled 0 · 5xx 0 |
+| `demo:db` 로그 | (아무 말 없음) | 「둘째 소켓이 줄을 섰다」 0 — 새로 찍는 경고 |
+| 풀이 사는 곳 | `client.ts` 모듈 변수 `let cached` — Next dev 가 **라우트마다** 모듈을 새로 평가해 컴파일된 라우트 수만큼 `postgres()` 풀 | `globalThis[Symbol.for('contextops.db')]` — 프로세스에 하나 |
+| 잠근 시험 | 0 (모든 시험이 `setDbForTest` 로 PGlite 를 직접 꽂아 `postgres()` 를 만드는 길을 한 번도 안 지났다) | `test/db-pool.test.ts` 2개 — PGlite → pglite-socket → TCP → postgres-js `?max=1` → 진짜 라우트. ① 동시 5번 ② `vi.resetModules()` 뒤 새 모듈 인스턴스. **고치기 전 코드로 돌리면 ② 가 26ms 만에 빨갛다**(직접 확인) · ① 은 전에도 초록 |
+| 웹 시험 파일 | 90 | **91** |
+| CI | — | principles OK 9 · typecheck · test · build · walkthrough 915 · docs → GREEN (`2134011`) |
+
+🔴 **관통이 이걸 못 잡은 이유는 동시성이 아니다.** 관통·시험은 라우트를 프로세스 안에서 `setDbForTest` 로 부른다 —
+`getDb()` 가 실제로 `postgres()` 를 만드는 길은 **개발용 서버와 배포만** 지났다. 그 길 위의 시험이 이제 하나 있다(`db-pool`).
+「시험이 우회하는 문」은 ④2-B 의 「정의만 있고 아무도 안 읽는 것」의 사촌이다 — 정의도 있고 배포도 읽는데 **시험만 안 읽는다.**
+
+🔴 **`?max=1` 은 반이었다.** 풀 하나 안의 연결 수는 막았지만 풀의 수는 못 막는다. 개발용 서버의 주석이 「두 요청이 동시에
+나가면」이라고 원인을 잘못 적고 있었다 — 고쳤다. pglite-socket 0.0.14 는 한 번에 한 소켓만 붙이고 둘째부터 60초 줄에 세운다
+(`connectionQueueTimeout` 기본값) — postgres-js 의 `connect_timeout` 30초가 먼저 끝나서 30초가 됐다.
+
+⚠ **브라우저로는 아직 안 봤다.** probe 는 API 만 쳤다. 「눈 판정 대기」에 적었다 — 시크릿 창에서 `/demo` 가 열리고 Roadmap 이
+`aria-busy` 에서 내려오는지는 사람이 본다.
+
+**다음 바퀴의 일 — FINDINGS 128**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **INBOX 가 정한 순서다** — 128(고장 · 오류 로그에 메시지·스택 없음) → 129(격차 · `keep-all`) → 130(격차 · `:focus-visible`)
+→ PLAN P1 첫 행(마이그레이션을 Supabase 에 실제로) → 126(제출서) → 미해결 FINDINGS 구멍 → 격차. 129·130 은 격차지만 INBOX 가
+「이번만 PLAN P4 둘째 행의 몫으로 같이 닫아라」고 했다 — 랜딩·데모가 심사의 첫 화면이다.
+
+> **128 을 고치는 법** — `lib/api/log.ts` 에 **오류 로그의 표**를 하나 더 (남기는 것: `request_id` · `route` · `name` · `code` ·
+> `message`(길이 자름) · `stack` 첫 3줄 / 남기지 않는 것: `query` · `parameters` · body). `route.ts` 의 `toApiError()` 는 그 표를
+> 읽는 함수 하나만 부른다. 시험은 「질의문이 든 예외를 던졌을 때 로그에 `select` 가 없다」와 「`code` 가 찍힌다」. 재현 로그의 실물은
+> `docs/evidence/2026-09-06-db-pool/probe.txt` 「고치기 전」 절이다 — 저 한 줄로는 127 을 못 찾았다.
+
+- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). INBOX 2번(P1 첫 행)은 「`.env.local` 에
+  Supabase 값이 꽂혀 있고 접속도 확인됐다」고 한다 — 128~130 다음에 그 행이다. ⚠ 실패하면 원인을 적고 멈춘다.
+- 대장의 대기(128 · 129 · 130 · 126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
+  **PLAN 을 막지 않는다** — 128 만 고장이다.
+
+
+---
+
+
+### 지난 바퀴 (66) — README · KNOWN_LIMITATIONS 본문 (PLAN P6 둘째 행 ① · `0dc2e93`)
+
+**66바퀴는 PLAN P6 둘째 행의 첫 조각 — README 와 KNOWN_LIMITATIONS 의 본문**을 만들었다. README 는 「루프와 명세만 있다」고
+거짓말을 하고 있었고, 이제 랜딩과 같은 문장을 말하며 `apps/web/test/readme.test.ts` 15개가 그것을 잰다(헤드라인 · Before/After ·
+3단계 · 신뢰 경계 · 설치 4줄 · 저장소 지도 40행의 경로 실존 · KNOWN_LIMITATIONS 가 단 FINDINGS 번호 5개가 전부 대기인가).
 
 | | 전 | 후 |
 |---|---|---|
@@ -30,48 +87,12 @@ _마지막 갱신: 2026-09-06 · 루프 66바퀴 · 코드 `0dc2e93` · 문서�
 | 웹 시험 | 565 | **580** (`readme` +15) |
 | CI | — | principles OK 9 · typecheck · test · build · walkthrough 881 · docs → GREEN (`0dc2e93`) |
 
-🔴 **README 는 마크다운이라 표를 import 할 수 없다 — 그래서 시험이 대조한다.** 65바퀴가 「한쪽을 정본으로 하고 다른
-쪽은 그것을 읽게 하든지, 시험이 대조하게 해라」라고 적었다. 정본은 `landing.tsx` 의 표다(거기가 시드·픽스처와 대조된다) —
-README 에 문장을 **베껴 적되** 시험이 글자 그대로인지 잰다. 랜딩 문장을 고치면 README 시험이 빨개지고, 그때 README 를 같이
-고친다. 셋째 사본(제출서 · FINDINGS 126)이 생기면 같은 시험을 넓힌다.
+🔴 **「알려진 한계」는 코드에서 이름을 찾은 뒤에 적었다** — SPEC §17 의 여덟 줄 중 절반만 맞는 것이 있었고(거울 문서는 생겼다),
+코드에만 있고 §17 에 없는 것이 아홉이었다. 특히 「서버측 AI 4종 중 둘은 문이 없다」는 principles 의 P3 줄이 매 바퀴 찍고 있었는데
+아무도 한계로 읽지 않았다.
 
-🔴 **「알려진 한계」는 코드에서 이름을 찾은 뒤에 적었다.** SPEC §17 의 여덟 줄은 코드가 생기기 전 문장이라 「Codex/Cursor 는
-출력 파일만」처럼 지금은 **절반만** 맞는 것이 있었다(거울 문서 `AGENTS.md`·`.cursor/rules` 는 생겼다 — 훅·Skill 만 없다).
-그리고 코드에만 있고 §17 에 없는 것이 아홉이었다. 특히 「서버측 AI 4종 중 둘은 문이 없다」는 principles 의 P3 줄(「2개 호출부」)이
-매 바퀴 찍고 있었는데 아무도 한계로 읽지 않았다 — 표에 넷이 있으면 넷이 도는 줄 안다 (④2-B 의 그 종류).
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 126(제출서). 67바퀴는 INBOX 의 고장이 위여서 127 로 갔다 — 126 은 그대로 대기다.
 
-⚠ **README 의 산문이 맞는가는 시험이 못 잰다.** 시험은 「랜딩과 같은가 · 경로가 있는가 · FINDINGS 가 대기인가」까지다.
-「검사 층 6」·「CLI 8」 같은 수는 이 바퀴에 코드에서 세었지만 다음 바퀴가 층을 더하면 README 는 조용히 낡는다 — 그 수는
-표에만 있고 산문에는 안 적었다.
-
-**눈으로 읽었다** — `README.md` 를 처음부터 끝까지 한 번 읽었다: 머리의 🙋 줄(URL · 팀명 · production 없음)이 KNOWN_LIMITATIONS 로
-보내고 · Before/After 표의 After 가 `<!-- ctx:item_policy_retry -->` 를 달고 있고 · 설치 블록 4줄이 랜딩 `INSTALL_STEPS` 와
-같은 주석까지 같고 · 저장소 지도 40행의 경로가 전부 있다(시험) · 「실시간」 0건 · `npx contextops` 0건.
-
-**다음 바퀴의 일 — FINDINGS 126**
-
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
-
-🔴 **126 은 FINDINGS 이지만 PLAN 을 앞지르는 것이 아니다** — 주인이 **PLAN P6 둘째 행**이고, 그 행에서 루프가 할 수 있는
-마지막 조각이 **제출서**다. README·KNOWN_LIMITATIONS 는 이 바퀴에 됐고, 남은 것은 제출서(루프) 와 🙋 두 값(URL · 팀명)이다.
-
-> **제출서를 쓰는 법** — `docs/SUBMISSION.md` 하나. 재료는 `docs/SPEC.md` §16(문제 · AI 활용 · 도구)과 README 다.
-> ⚠ §16 의 「AI 활용 (4) 승인 항목만 근거로 답하는 질의」는 **문이 없다** (`POST …/ask` 0곳 · FINDINGS 117) — 빼거나
-> KNOWN_LIMITATIONS 를 가리켜라. 없는 것을 적으면 심사의 첫 질문이 그것이 된다. P1~P7 의 문장과 설치 줄은 README 와
-> 같아야 한다 — `apps/web/test/readme.test.ts` 의 대조를 제출서에도 넓혀라 (파일 하나 더 읽는 것뿐이다).
-> 🙋 자리(공개 URL · 팀명 · 영상 링크)는 값 없이 자리만 만든다.
-
-- PLAN 의 `- [ ]` 중 **위의 셋은 사람이 막고 있다** (🙋 Supabase · 🙋 Anthropic 키 · GATE 3). P5 둘째 행의 코드 쪽은 다 됐다.
-- 대장의 대기(126 · 122 · 121 · 119 · 118 · 117 · 116 · 115 · 114 · 112 · 111 · 108 · 69 · 25 · 33 …)는
-  **PLAN 을 막지 않는다** — 적어 두고, 그 항목의 주인이 될 PLAN 행을 할 때 같이 닫는다 (④3 ②).
-
-
----
 
 
 ### 지난 바퀴 (65) — scan 단계의 env 값 검사 · 64바퀴 미커밋 올림 (PLAN P5 둘째 행 ③ · `8d29737`)
@@ -332,45 +353,6 @@ schema 를 인라인해서 `bundle.test.ts` 가 「소스에서 방금 만든 �
 FINDINGS 120(데모 시드를 제품 코드로 · Cron 뒤에)을 권했다. 63바퀴가 그것을 했다.
 
 ---
-
-
-### 지난 바퀴 (61) — AGENTS/cursor 타깃 · 거울 문서 (PLAN P5 첫 행 ② · `2a1db06`)
-
-> ⚠ 61바퀴는 CI 를 **walkthrough 도중**(`.ci/logs/walkthrough.txt` 가 compile 단계에서 끊김)에
-> 끝났고 STATUS·FINDINGS 도 못 적었다 — 58·59·60 에 이어 **네 바퀴 연속** 미커밋이다.
-> 62바퀴가 같은 트리에서 전 층 CI(GREEN · 검사 843)를 다시 돌려 그대로 올렸고 FINDINGS 7 을
-> 닫았다. 이 절은 62바퀴가 그 diff 를 읽고 적은 것이다.
-
-**61바퀴는 PLAN P5 첫 행의 둘째 조각 — `AGENTS.md` · `.cursor/rules/contextops.mdc` 를 만들었다.**
-`PACK_TARGETS` 3종 중 컴파일러가 내는 것이 `claude` 하나였고 enum 값 둘이 아무것도 안 바꿨다
-(FINDINGS 7 · 2-B 의 그 종류).
-
-🔴 **잰 것 — 타깃 3종이 전부 파일을 낸다.**
-
-| | 전 | 후 |
-|---|---|---|
-| `DOCS` 표 | 7 문서 (전부 claude 타깃) | **9** — 거울 문서 `agents`·`cursor` (`compose`) |
-| 거울이 항목을 얻는 길 | — | partition 표를 **읽기만** — `collect` 가 원본 문서들의 블록을 그대로 모은다 (같은 태그 · P7 그대로) |
-| 거울에 항목을 직접 놓기 | — | **타입이 막는다** (`place()` 는 `PlaceableDocId` 만) |
-| scoped 줄 | `- [must] … · 강제: …` | 끝에 `· 도메인: ledger` / `· 경로: infra/**` (`SCOPE_INLINE_LABEL`) — 원본 파일에서도 같은 줄 |
-| 두 거울의 본문 | — | 머리말만 다르고 **byte 로 같다** (.mdc 는 `alwaysApply: true` frontmatter) |
-| 분량 규칙 | — | 거울은 대상이 아니다 — `AGENTS-2.md` 는 sync allowlist 밖 |
-| 템플릿 | 1.2 | **1.3** · golden 3종 갱신 (거울 파일 +2 · scoped 줄 끝 라벨) |
-| 관통 sync 가 놓는 파일 | 6 | **8** — allowlist 는 두 경로를 이미 알고 있었다 |
-| 컴파일러 시험 | 165 | **181** |
-
-🔴 **partition 에 줄을 더하지 않은 이유** — 그러면 ItemType 을 하나 더할 때 「CLAUDE.md 에도,
-AGENTS.md 에도」를 사람이 기억해야 하고 다음 사람은 반드시 하나를 빠뜨린다. 거울은 표를 읽기만
-하므로 ItemType 이 늘어도 거울은 안 고친다. 새 타깃(`.windsurf/…`)을 더하는 절차 넷은
-`templates/index.ts` 의 `MirrorDocId` 주석에 있다.
-
-🔴 **scoped 줄이 제 범위를 말하게 됐다** — 거울은 domain-*·scoped-* 파일의 규칙을 **한 절**에
-모으므로 파일 이름·frontmatter 가 나르던 범위가 거기서 사라진다. 줄이 스스로 말하지 않으면 경로
-규칙이 전역 규칙처럼 읽힌다. 렌더가 하나라 원본 파일에서도 같은 줄이다.
-
-**그 바퀴가 다음으로 지목한 것**: 적지 못했다 (STATUS 를 못 썼다). 남은 조각은 터미널 재생
-하나였고 62바퀴가 했다.
-
 
 
 ## 앞 바퀴들이 남긴 것 — 다음 사람이 알아야 하는 것
@@ -674,6 +656,13 @@ AGENTS.md 에도」를 사람이 기억해야 하고 다음 사람은 반드시 
 
 ## 눈 판정 대기
 
+🔴 **게스트 데모 — 고친 뒤 브라우저로 안 봤다** (67바퀴 · FINDINGS 127). API 는 잰다(`docs/evidence/2026-09-06-db-pool/probe.txt`:
+순차·동시·화면 fan-out 전부 200). 못 잰 것은 **사람이 시크릿 창에서** 본다 (`pnpm --filter web demo:db` → `next dev` 에
+`DATABASE_URL=…55432/postgres?max=1` · `SUPABASE_JWT_SECRET=contextops-test-jwt-secret` → `http://localhost:3000/demo`):
+- Context 가 「서버에서 처리하지 못했습니다」 대신 항목 15개를 그리나 · Roadmap 이 `aria-busy="true"` 에서 내려오나
+- 화면 사이를 오가며(context → packs → proposals → sync) 30초 멈춤이 한 번도 없나 — `demo:db` 터미널에 「둘째 DB 소켓이 줄을
+  섰다」가 안 찍히나 (찍히면 풀이 둘이다 — 그 자리에서 고장이다)
+
 🔴 **데모 리셋 — 배포에서 돌린 적이 없다** (63바퀴 · 🙋 Vercel 연결 뒤). PGlite 위에서는 읽었다
 (`docs/evidence/2026-09-06-demo-reset/reset.txt`). 못 잰 것 셋: `/var/task` 에서 `fixturesRoot()`
 가 `fixtures/` 를 찾나(못 찾으면 500 + 로그에 `Error` 이름만 — 자세한 문구는 서버 로그의
@@ -893,6 +882,11 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 > 같은 벽에 두 번 부딪히면 `loop/PROMPT.md` ③ 의 규칙으로, 기계가 잴 수 있으면
 > `tools/principles.ps1` 의 검사로 올린다.
 
+- 🔴 **Next dev 는 라우트마다 모듈을 새로 평가한다 — 프로세스 단위 자원(DB 풀 · 캐시)을 모듈 변수에 두면 라우트 수만큼 생긴다.**
+  `let cached` 가 그랬고 게스트 데모의 모든 화면이 30초 뒤 500 이었다 (FINDINGS 127). 그런 자원은 `globalThis[Symbol.for(…)]` 에
+  두고, **시험이 `setDbForTest` 로 우회하는 길이 아니라 진짜 길**(`postgres()` 를 만드는 길)을 하나는 지나게 해라 (`test/db-pool.test.ts`).
+- 🔴 **개발용 서버를 배경에서 띄웠다가 멈출 때 pnpm 만 죽고 node 자식이 산다.** 55432·3000 이 잡힌 채로 다음 `demo:db` 가 EADDRINUSE 로
+  죽는다. 멈춘 뒤 `Get-NetTCPConnection -State Listen` 으로 포트를 보고 **그 PID 를** 끝내라 (67바퀴).
 - 🔴 **「잴 것이 없어서 초록」은 초록이 아니다.** payload 단계의 「env 값이 payload 에 0건」은 픽스처
   `.env.example` 의 값을 찾았는데, 다른 게이트(`fixtures.mjs` ③)가 그 파일에 값을 **금지**한다 — 두 게이트가
   서로를 무효화해 검사가 63바퀴 내내 0개를 재고 OK 를 찍었다 (FINDINGS 124 · 125). **「N 개를 재어 0건」처럼

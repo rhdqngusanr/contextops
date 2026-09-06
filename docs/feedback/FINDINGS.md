@@ -29,6 +29,75 @@
 
 ## 다음에 고칠 것
 
+### 130. **키보드 포커스가 안 보인다** — `:focus-visible` 규칙 0개 · `outline: none` 1개   [격차]
+- **증상**: 탭으로 화면을 훑으면 지금 어디에 있는지 알 수 없다. 심사에서 키보드로 훑는 사람이 있으면 바로 보인다.
+- **근거**: 사람이 브라우저에서 잰 것 (INBOX 2026-09-06 ④) — 스타일시트 전체에서 `:focus-visible` 0개 ·
+  `outline: none` 1개. 67바퀴가 코드에서 확인: `apps/web/src/app/globals.css:191`
+  (`.input:focus, .textarea:focus, .select:focus { outline: none; … }`) · `grep -rn "focus-visible" apps/web/src` → 0건.
+- **정본**: `docs/DESIGN_BRIEF.md` §3 토큰 · 접근성
+- **왜 고장이 아닌가**: 마우스로는 전부 된다. 키보드 사용자에게만 없는 것이다.
+- **고칠 방향**: 토큰 옆 한 곳에 `:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px }` —
+  버튼·링크·입력·행이 그것을 읽게. `globals.css:191` 의 `outline: none` 은 `:focus` 를 지우는 대신 `:focus-visible`
+  로 바꾼다 (마우스 클릭엔 안 뜨고 탭에는 뜬다). 시험은 `test/design-tokens.test.ts` 옆에 「`:focus-visible` 규칙이
+  있고 `outline: none` 이 `:focus-visible` 없이 홀로 있는 선택자가 0개」 한 줄.
+- **상태**: 대기 (INBOX 순서 ④ · 129 다음 · 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다)
+
+### 129. **한글이 낱말 중간에서 잘린다** — `word-break: keep-all` 이 한 곳도 없다   [격차]
+- **증상**: 랜딩 헤드라인이 「팀의 지식과 Claude의 기억을 같 / 은 방향으로」로, 에러 카드가 「잠시 후 다시 시 /
+  도해주세요」로 그려진다. 한국어 서비스의 기본기라 이거 하나로 화면 전체가 아마추어처럼 읽힌다.
+- **근거**: 사람이 브라우저에서 잰 것 (INBOX 2026-09-06 ③) — `document.querySelectorAll('body *')` 중
+  `word-break: keep-all` 0개 · `<html lang="ko">` 인데 `h1`·`body` 가 `word-break: normal`. 67바퀴가 코드에서 확인:
+  `grep -n "keep-all" apps/web/src/app/globals.css` → 0건 · 시안 `design/*.dc.html` 세 파일의 `body{…}` 에는
+  `word-break:keep-all;overflow-wrap:break-word` 가 **있다** — 구현으로 옮길 때 빠진 것이다.
+- **정본**: `docs/DESIGN_BRIEF.md` §3 (토큰 정본) · 시안 `design/*.dc.html`
+- **왜 고장이 아닌가**: 읽힌다. 못생겼을 뿐이다.
+- **고칠 방향**: `globals.css` 의 `body` 에 `word-break: keep-all; overflow-wrap: break-word` **한 줄** (시안과 같은
+  값). ⚠ 코드·경로·해시(mono · `.tree-sha` · `.pack-linetext` · `.diff-text`)에는 걸지 마라 — 거긴 `break-all`/
+  `break-word` 가 맞고 이미 그렇게 돼 있다 (`globals.css:378·405·433`). 시험은 `test/design-tokens.test.ts` 에
+  「`body` 규칙에 `keep-all` 이 있다」 한 줄 — 토큰과 같은 파일이라 그 자리다.
+- **상태**: 대기 (INBOX 순서 ③ · 128 다음 · 이번만 PLAN P4 둘째 행의 몫으로 같이 닫는다)
+
+### 128. **오류 로그에 메시지도 스택도 없다** — `{"kind":"unhandled","error":"Error"}` 한 줄뿐   [고장]
+- **증상**: 127 의 500 을 **로그만으로는 알 수 없었다.** 남는 것은 저 한 줄이고, 원인(postgres-js `CONNECT_TIMEOUT`)은
+  서버를 다시 띄워 소켓을 세어 본 뒤에야 나왔다. 운영에서 이걸 못 보면 아무것도 못 고친다.
+- **근거**: 67바퀴 재현 — `docs/evidence/2026-09-06-db-pool/probe.txt` 「고치기 전」 절: 500 여덟 번마다
+  `{"kind":"unhandled","error":"Error"}` 뿐. 찍는 자리는 `apps/web/src/lib/api/route.ts` 의 `toApiError()` 마지막 갈래
+  (「예외의 **이름만** 남긴다」) · 표는 `lib/api/log.ts` 의 `RequestLog` (요청 로그뿐 · 오류 로그의 표는 없다).
+- **정본**: `docs/SPEC.md` §11 · P1
+- **왜 고장인가**: 진행이 막힌 것은 아니지만, **막혔을 때 원인을 알 길이 없다** — 사람이 INBOX 에서 고장으로 분류했고
+  127 에서 실제로 그 대가를 치렀다 (이름 「Error」는 postgres-js 가 연결 오류에 주는 이름이라 아무것도 말하지 않는다).
+- **고칠 방향**: P1 은 「body·토큰·문서 본문·질의문」을 안 남기는 것이지 「에러 메시지를 안 남기는 것」이 아니다.
+  `log.ts` 에 **오류 로그의 표**를 하나 더 — 남기는 것: `request_id` · `route` · `error.name` · `error.code`(있으면 ·
+  postgres-js 는 `CONNECT_TIMEOUT` 같은 code 를 준다) · `error.message` · `stack` 첫 3줄. 남기지 않는 것: `query` ·
+  `parameters` · body. ⚠ 드라이버 예외의 `message` 에 질의문이 들어가는 경우가 있다 — postgres-js 는 `query` 를
+  **별도 필드**로 붙이고 message 는 짧다(재현에서 `read ECONNRESET` · `CONNECT_TIMEOUT`). 그래도 message 를 **길이로
+  자르고**(예: 200자) 시험이 「질의문이 든 예외를 던졌을 때 로그에 `select` 가 없다」를 잰다. `toApiError()` 는
+  그 표를 읽는 함수 하나만 부른다.
+- **상태**: 대기 (INBOX 순서 ② · 고장이라 PLAN 보다 위)
+
+### 127. ✅ **게스트 데모가 안 열린다 — `GET /api/v1/teams` 가 30초 뒤 500** · 풀이 라우트 수만큼 생겼다   [고장]
+- **증상**: `/demo` → `/t/demo/p/paylab-api/*` 의 모든 화면이 에러이거나 스켈레톤에서 안 넘어간다 (사람이 브라우저에서
+  본 것 · INBOX 2026-09-06 ①). GATE 3(「시크릿 창에서 링크만으로 3분 체험」)이 빈 화면이었다.
+- **근거**: 67바퀴 재현 — `docs/evidence/2026-09-06-db-pool/probe.txt`. `demo:db` + `next dev` 를 띄우고
+  `POST /demo/session`(201) 뒤 `GET /teams` **순차 3번 → 전부 500 · 30.0초** · 동시 5번 → 30/60/90/120/150초 500.
+  INBOX 의 짐작(「동시 요청이 겹치면」)보다 넓었다 — **순차도 죽는다.**
+- **정본**: `docs/SPEC.md` §2 · §9 게스트 데모 · PLAN P4 둘째 행(GATE 3)
+- **원인** (짐작이 아니라 소켓을 세어 잰 것): Next dev 는 라우트를 **하나씩 따로** 컴파일하고 그때마다 `src/db/client.ts`
+  가 새로 평가된다. 풀이 모듈 변수 `let cached` 에 살아서 **컴파일된 라우트 수만큼 `postgres()` 풀이 생겼다.**
+  개발용 DB(pglite-socket 0.0.14)는 한 번에 한 소켓만 붙이고 둘째부터 줄에 세운다(60초) → postgres-js 가 30초
+  (`connect_timeout`) 기다리다 `CONNECT_TIMEOUT` → `INTERNAL`. `?max=1` 은 풀 **하나 안의** 연결 수만 막았다.
+  ⚠ 관통이 못 잡은 이유는 동시성이 아니라 **관통은 라우트를 프로세스 안에서 `setDbForTest` 로 부르므로 `postgres()` 를
+  만드는 길을 한 번도 안 지났기** 때문이다.
+- **고친 것** (`2134011`): `client.ts` 가 풀을 `globalThis[Symbol.for('contextops.db')]` 에 둔다 — 모듈이 몇 번 평가되든
+  프로세스에 하나. `test/db-pool.test.ts` 가 개발용 서버와 **같은 길**(PGlite → pglite-socket → TCP → postgres-js
+  `?max=1` → 진짜 라우트)로 ① `GET /teams` 동시 5번 전부 200 ② `vi.resetModules()` 뒤 새 모듈 인스턴스로 불러도 둘째
+  소켓이 안 열린다를 잰다 — `queuedConnection` 과 경주시켜 30초를 안 기다린다. **고치기 전 코드로 돌리면 ② 가 26ms 만에
+  빨갛다** (직접 확인 · ① 은 고치기 전에도 초록 — 동시성 자체는 문제가 아니었다는 뜻). `dev-server.ts` 는 둘째 소켓이
+  줄을 서면 stderr 에 원인 후보를 찍는다.
+- **다시 잰 것**: 같은 절차로 순차 3번 200(625·18·19ms) · 동시 8번 전부 200(27~64ms) · 화면 5·7 이 던지는 문 5개 동시
+  (각각 첫 컴파일) 전부 200(1.4초) · next 로그 unhandled 0 · 5xx 0 · 「줄을 섰다」 0.
+- **상태**: ✅ `2134011` (67바퀴). ⚠ **브라우저로는 아직 안 봤다** — `STATUS.md` 「눈 판정 대기」.
+
 ### 126. **제출서(SPEC §16)가 저장소에 문서로 없다** — 랜딩·README 와 대조되지 않는다   [구멍]
 - **증상**: `docs/PLAN.md` P6 둘째 행은 「제출서 · README · KNOWN_LIMITATIONS」인데 제출서는 `docs/SPEC.md` §16 의
   초안 세 문단뿐이고, 그 문단은 코드가 생기기 전의 문장이라 지금과 어긋난 곳이 있다 — 「(4) 승인 항목만 근거로
