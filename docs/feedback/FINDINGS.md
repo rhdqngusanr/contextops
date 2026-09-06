@@ -51,6 +51,8 @@
   팀명 · GitHub · Known limitations(저장소의 `docs/KNOWN_LIMITATIONS.md` · 앱에 페이지를 또 만들지 않는다) 셋을 낸다. README 머리 · `docs/SUBMISSION.md` 🙋 표는
   글자 그대로 적고 `apps/web/test/readme.test.ts` ①-B(6) 가 세 곳 동일 · `.git/config` 의 origin 과 동일 · 팀명에 공백 0 · 「아직 없습니다」 문장 0 을 센다.
   `web-landing.test.ts` 는 밖 링크가 저장소 아래뿐 · 푸터에 `rel="noreferrer"` 정확히 2 를 센다.
+- **눈으로 봤다** (`docs/evidence/2026-09-06-landing-foot/` · `next start` + headless Chrome): 1280 은 여섯 항목이 한 줄 · 375(iframe) 는 세 줄로 접히고 팀명이 낱말 중간에서 안 잘린다 · 가로 넘침 0.
+  본 김에: 푸터 링크 셋이 밑줄 없이 `meta` 색이라 옆 글자와 색만으로는 안 갈린다 — 「서버 상태」가 원래 그랬으니 새 격차는 아니다. 고칠 거면 `.foot a` 한 줄.
 - **안 한 것**: `<marketplace>` (→ 140) · production URL · 영상 · 슬라이드는 🙋 그대로.
 - **상태**: 기록
 
@@ -340,7 +342,7 @@ params:
 - **고칠 방향**: 🙋 사람이 **공개 저장소 URL 과 제출 팀명**을 `INBOX.md` 에 적어 준다 →
   `LANDING_FOOT` 에 두 줄. Known limitations 는 그 URL 의 `docs/KNOWN_LIMITATIONS.md` 로 건다
   (앱에 페이지를 또 만들면 같은 문서가 두 곳이 된다).
-- **상태**: ✅ 80바퀴 (2026-09-06 · 해시는 다음 커밋이 적는다) — INBOX 「값이 생겼다」의 두 값을 `SUBMISSION_IDENTITY` 하나에 두고 푸터·README·제출서가 그것을 따른다 (122-B).
+- **상태**: ✅ `846530a` (2026-09-06 · 80바퀴 · 눈 판정 통과 `docs/evidence/2026-09-06-landing-foot/`) — INBOX 「값이 생겼다」의 두 값을 `SUBMISSION_IDENTITY` 하나에 두고 푸터·README·제출서가 그것을 따른다 (122-B).
   `<marketplace>` 는 채우지 못했다 → **140**. 그 전의 기록 —
   옛 상태: 대기 (🙋 URL · 주인은 PLAN **P6 둘째 행**) — **README · KNOWN_LIMITATIONS 의 본문은 66바퀴가 썼다**
   (`0dc2e93` · `apps/web/test/readme.test.ts` 가 랜딩 표와 대조). 남은 것은 🙋 두 값

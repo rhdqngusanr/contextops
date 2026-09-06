@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 80바퀴 · 코드 `HASH80`(INBOX 「값이 생겼다」 · FINDINGS 122 · `SUBMISSION_IDENTITY` 정본 하나 · 푸터 셋 · 140 기록) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 80바퀴 · 코드 `846530a`(INBOX 「값이 생겼다」 · FINDINGS 122 · `SUBMISSION_IDENTITY` 정본 하나 · 푸터 셋 · 140 기록) · 문서는 그 다음 커밋_
 
 ---
 
@@ -25,9 +25,11 @@ _마지막 갱신: 2026-09-06 · 루프 80바퀴 · 코드 `HASH80`(INBOX 「값
 | SUBMISSION 🙋 표 | 5행 전부 🙋 | 팀명 · URL 채움(🙋 0) · production URL · 영상 · 슬라이드는 🙋 그대로 — 시험이 「채운 둘은 정본과 같고, 남은 셋은 🙋」를 따로 센다 |
 | README 머리 | 「🙋 공개 저장소 URL · 제출 팀명 · production URL 은 아직 없습니다」 | 팀명 · URL · 정본이 어디인지 한 줄 · 🙋 production URL 만 남음 — 「저장소 URL … 아직 없」 문장은 시험이 막는다 |
 | `<marketplace>` 자리표시자 | 4곳 (landing `INSTALL_STEPS` · README · SUBMISSION · `setup.ts:150`) | **그대로 4곳** — 저장소에 `.claude-plugin/marketplace.json` 이 **0건**이라 URL 을 넣으면 첫 명령이 죽는다 → FINDINGS **140**(구멍 · 주인 P5 둘째 행) · KNOWN_LIMITATIONS 의 122 줄을 140 줄로 |
-| 시험 | readme 32 · web-landing 27 | readme **38** · web-landing **28** (두 파일 61/61 · 1.7초) |
+| 시험 | readme 32 · web-landing 20 | readme **40** · web-landing **21** (따로 돌려 잰 수 · 둘 다 초록) |
+| 눈 (`docs/evidence/2026-09-06-landing-foot/` · `next start` + headless Chrome) | — | 1280: 여섯 항목이 한 줄(글자가 x≈750 에서 끝남) · 375(iframe): 세 줄로 접힘, 팀명이 낱말 중간에서 안 잘림 · 가로 넘침 0 → **통과**. 본 김에: 링크 셋이 밑줄 없는 `meta` 색 — 「서버 상태」가 원래 그랬으니 새 격차는 아님(122-B 에 적음) |
+| CI | GREEN 21:56 | **GREEN 22:14** — principles OK 9 · typecheck · test 95초 · build 30초 · walkthrough **994** · docs OK |
 
-⚠ **안 한 것** — ① 브라우저로 푸터를 안 봤다 (SSR 문자열만 · 아래 「눈 판정 대기」). ② `<marketplace>` 는 못 채웠다 — 값이 없어서가 아니라 **그 값이 가리킬 파일이 없어서**다. 있는 것처럼 적지 않았다.
+⚠ **안 한 것** — ① 푸터 링크의 hover 색은 안 봤다(헤드리스). ② `<marketplace>` 는 못 채웠다 — 값이 없어서가 아니라 **그 값이 가리킬 파일이 없어서**다. 있는 것처럼 적지 않았다.
 ③ FINDINGS 109(「다음 바퀴의 일」 줄이 PLAN 행을 못 가리킨다)는 이번에도 안 고쳤다 — 그래서 아래 줄이 「없음」인데, 대기가 없다는 뜻이 아니라 **다음 일이 PLAN 행**이라는 뜻이다.
 
 🔴 **배운 것** — 「값이 생겼다」와 「자리를 채울 수 있다」는 다르다. URL 은 왔지만 `<marketplace>` 가 가리키는 건 URL 이 아니라 **그 URL 에 있어야 할 파일**이고, 그 파일은 없다. 채웠으면 심사위원의 첫 명령이 실패했을 것이다.
@@ -587,10 +589,6 @@ SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고쳤다. `doc
 (**67 ①** 과 같은 자리다). ✅ **31·65 는 닫혔다** (`c57b3fb`·`5fe0068`).
 
 ## 눈 판정 대기
-
-🟡 **랜딩 푸터의 셋(팀명 · GitHub · Known limitations)을 브라우저로 안 봤다** (80바퀴 · FINDINGS 122). SSR 문자열(`web-landing.test.ts` 푸터 시험)로 마크업은 확인했다.
-못 본 것: 1280 에서 푸터 한 줄에 다섯 항목(brand · event · 팀 · GitHub · Known limitations · 서버 상태)이 들어가나 · 375 에서 `flex-wrap` 으로 접힐 때 줄 순서가 어색하지 않은가 · 링크 둘이 `meta` 색이라 링크로 읽히나.
-`next build` + `next start` → `/` 를 headless Chrome 으로 1280·375 캡처 → `docs/evidence/2026-09-06-landing-foot/`.
 
 🟡 **Gemini 로 화면의 구조화 job 을 돌린 적이 없다** (79바퀴 · `836a0a9`). `ai:smoke` 는 `callModel()` 을 직접 불러 문서 2문장 → policy 2 · Zod 통과까지 봤다(`docs/evidence/2026-09-06-gemini/probe.txt`).
 못 본 것: `demo:db` + `next dev`(`.env.local` 의 키를 읽는다) → `/import` 에 `fixtures/paylab-docs/goals.md` 를 올려 job 이 `queued → running → succeeded` 로 가나 · 항목 수·충돌 수가 PLAN P3 첫 행의 완료 기준(12 + 3)에 닿나 ·

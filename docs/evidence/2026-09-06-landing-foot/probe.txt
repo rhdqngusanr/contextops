@@ -1,0 +1,25 @@
+# FINDINGS 122 — 랜딩 푸터의 셋(팀명 · GitHub · Known limitations) · 눈 판정 (80바퀴 · 2026-09-06 · 코드 846530a)
+
+방법: `next build`(CI 가 만든 .next) → `next start -p 3000`(DATABASE_URL 은 안 쓰는 값 · 랜딩은 정적이라 DB 를 안 건드린다)
+→ headless Chrome `--screenshot`. 1280 은 그대로, 375 는 Chrome 최소 창 너비 함정(STATUS 「밟은 함정」) 때문에
+`frame-landing-375.html` 의 375px iframe 안에 넣어 찍었다. `foot-*.png` 는 그 캡처의 아래 260px 을 잘라 낸 것이다
+(`.ci/crop-foot-80.py` · 마지막 비검정 행까지 — 그래서 아래 여백은 잘려 보인다. 페이지가 잘린 게 아니다).
+
+## 서버가 낸 마크업 (curl http://127.0.0.1:3000/ · <footer>)
+<span class="ink">ContextOps</span>
+<span class="meta">Wanted AI Championship 2026 출품작</span>
+<span class="meta">팀 퇴직했는데저좀이직시켜주세요</span>
+<a class="meta" href="https://github.com/rhdqngusanr/contextops" rel="noreferrer">GitHub</a>
+<a class="meta" href="https://github.com/rhdqngusanr/contextops/blob/main/docs/KNOWN_LIMITATIONS.md" rel="noreferrer">Known limitations</a>
+<a class="meta" href="/api/v1/health">서버 상태</a>
+
+## 읽은 것
+| 파일 | 뷰포트 | 본 것 |
+|---|---|---|
+| foot-1280.png (landing-1280.png 의 아래) | 1280 | 한 줄: `ContextOps · Wanted AI Championship 2026 출품작 · 팀 퇴직했는데저좀이직시켜주세요 · GitHub · Known limitations · 서버 상태` — 여섯이 한 줄에 들어가고 오른쪽 여백이 넉넉하다 (글자가 x≈750 에서 끝난다) |
+| foot-375.png (landing-375-frame.png 의 아래) | 375 (iframe) | `flex-wrap` 으로 세 줄: ① ContextOps · 출품작 ② 팀 퇴직했는데저좀이직시켜주세요 · GitHub · Known limitations ③ 서버 상태. 팀명이 낱말 중간에서 안 잘린다(keep-all) · 가로 넘침 0 (iframe 375 안) |
+
+판정: **통과.** DESIGN_BRIEF 화면 1 C-6(제출 팀명 · GitHub 링크 · Known limitations 링크)이 다 있고 토큰 밖 색·간격 없음(기존 `meta`·`ink`·`.foot` 그대로).
+
+⚠ 본 김에 적는 것 (고장 아님): 푸터의 링크 셋이 글자색만으로는 옆의 `meta` 글자와 구별되지 않는다 — 밑줄이 없다. 「서버 상태」가 원래 그랬으니 새로 생긴 격차는 아니다.
+hover 색은 안 봤다(헤드리스). 키보드 포커스 링은 130 의 `:focus-visible` 한 줄이 이 링크에도 적용된다(같은 `a`).

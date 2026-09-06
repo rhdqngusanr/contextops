@@ -86,7 +86,7 @@ _(비어 있음)_
 
 ## 끝난 것
 
-### ✅ 값이 생겼다 — 공개 저장소 URL · 제출 팀명 → `HASH80` (2026-09-06 · 80바퀴 · FINDINGS 122 ✅ · 140 기록)
+### ✅ 값이 생겼다 — 공개 저장소 URL · 제출 팀명 → `846530a` (2026-09-06 · 80바퀴 · FINDINGS 122 ✅ · 140 기록)
 
 - **정본 하나**: `apps/web/src/components/landing.tsx` 의 `SUBMISSION_IDENTITY { team, repoUrl, limitsPath }`. 푸터 `LANDING_FOOT` 은 그것을 읽어
   팀명 · GitHub · Known limitations(저장소의 `docs/KNOWN_LIMITATIONS.md` — 앱에 페이지를 또 만들지 않았다) 셋을 낸다.
