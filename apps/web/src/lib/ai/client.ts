@@ -45,8 +45,25 @@ export interface GenerateBody {
     readonly responseMimeType: 'application/json'
     readonly responseJsonSchema: Record<string, unknown>
     readonly maxOutputTokens: number
+    readonly thinkingConfig: { readonly thinkingLevel: GeminiThinkingLevel }
   }
 }
+
+/** Gemini 3.x `thinkingConfig.thinkingLevel` 의 값. `low` 와 `high` 만 모든 3.x 모델이 받는다. */
+export type GeminiThinkingLevel = 'low' | 'high'
+
+/**
+ * 🔴 **생각(thinking) 의 양 — 모든 호출이 이 값 하나를 쓴다.**
+ *
+ * ★ 왜 박아 두나 (81바퀴 · 2026-09-06 실측 · `docs/evidence/2026-09-06-p3-gemini/probe.txt`) —
+ *   Gemini 3.x 는 생각 토큰을 **`maxOutputTokens` 안에서** 센다. 기본값(high)으로 §7.1 을 부르면
+ *   조각 하나에 생각만 7,677 토큰을 써서 8,000 상한에 걸려(`finishReason: MAX_TOKENS`) JSON 이
+ *   중간에 잘렸고, 재시도도 같은 자리에서 잘려 **두 픽스처 문서 모두 `AI_OUTPUT_INVALID`** 였다.
+ *   `low` 로 같은 프롬프트: goals.md 가 항목 13 · 질문 4 · 14초 (두 번 같음). high + 상한 32,000 은
+ *   항목 17 · 58초 · 생각 12,576 토큰 — 네 배 값에 네 배 시간이라 완료 기준(12)을 넘는 `low` 를 쓴다.
+ * ⚠ 이 값을 올리면 `structure.ts`·`conflict.ts` 의 출력 상한을 같이 봐라 — 생각이 그 상한을 먹는다.
+ */
+export const GEMINI_THINKING_LEVEL: GeminiThinkingLevel = 'low'
 
 /** `generateContent` 의 응답 — 읽는 칸만 적었다. 나머지는 모른 척한다. */
 export interface GenerateResponse {
@@ -162,6 +179,8 @@ export async function callModel(req: ToolCallRequest): Promise<AiCall<unknown>> 
       responseMimeType: 'application/json',
       responseJsonSchema: toGeminiSchema(req.inputSchema),
       maxOutputTokens: req.maxTokens,
+      //  🔴 생각을 상한 안에 묶는다 — 없으면 생각이 `maxOutputTokens` 를 먹고 JSON 이 잘린다.
+      thinkingConfig: { thinkingLevel: GEMINI_THINKING_LEVEL },
     },
   })
 

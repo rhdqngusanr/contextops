@@ -13,7 +13,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "dev:db": "tsx scripts/dev-server.ts",
     "demo:db": "tsx scripts/demo-server.ts",
-    "ai:smoke": "tsx scripts/ai-smoke.ts"
+    "ai:smoke": "tsx scripts/ai-smoke.ts",
+    "p3:measure": "tsx scripts/p3-measure.ts"
   },
   "dependencies": {
     "@contextops/compiler": "workspace:*",

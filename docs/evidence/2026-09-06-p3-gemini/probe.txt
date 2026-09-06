@@ -1,0 +1,63 @@
+# 81바퀴 · 2026-09-06 — PLAN P3 첫 행의 완료 기준을 진짜 Gemini 로 잰다
+# 전부 진짜 API(gemini-3.5-flash · 우리 키 · .env.local) · DB 는 PGlite(freshDb) · 길은 제품 그대로
+# (POST /documents → ai_jobs 러너 → withBudget → callModel · jobs/{id}/items → PATCH active → conflict job).
+# 문: `pnpm --filter web p3:measure` (apps/web/scripts/p3-measure.ts). 키·프롬프트는 안 적었다.
+# 상세 수치는 옆의 probe.json (항목마다 id·type·title·span·heading_path·인용 첫 줄).
+
+## 0. 완료 기준 대 실측 (고친 뒤 · 두 번째 실행)
+
+| 기준 | 실측 | 판정 |
+|---|---|---|
+| paylab 문서 → 항목 12 | goals.md **18** (mission 1 · goal 3 · policy 5 · roadmap 3 · domain 1 · architecture 5) + 열린 질문 **4** | ✅ |
+| 충돌 3 | **2** (contradiction high 둘 — 재시도 5회/백오프 vs 3회/0.5초 고정 · PII 로그 금지 vs 웹훅 원본 7일 보관) | ✗ 2/3 — 셋째(환불 SLA 24h vs 기한 없음)는 **탐지가 못 찾은 게 아니라 old-roadmap 쪽 항목이 안 뽑혔다** (아래 §3) |
+| 모든 AI 호출이 withBudget 경유 | ai_usage 3행(structure 2 · conflict 1) = 왕복 수와 같다 · principles P3 OK | ✅ |
+| source_ref offset 이 문서 범위 안 | goals 22/22 · old-roadmap 5/5 | ✅ 범위는 안 — **그러나 가리키는 문장이 틀린 것이 많다** (아래 §4 · FINDINGS 142) |
+
+## 1. 첫 실행 — 두 문서 모두 실패 (고치기 전)
+
+roadmap : status failed · error_code AI_OUTPUT_INVALID · 60,375ms (재시도 포함 왕복 2)
+goals   : status failed · error_code AI_OUTPUT_INVALID · 59,795ms
+ai_usage: structure 2행 · outputTokens 0 (실패하면 추정치가 남는다 — structure.ts 머리 주석)
+
+## 2. 왜 — 생각(thinking)이 maxOutputTokens 를 먹는다 (임시 진단 p3-diag-81.ts · 지웠다)
+
+구조화 프롬프트를 제품이 보내는 몸 그대로 잡아(setAiClientForTest 로 가로챔) generationConfig 만 바꿔 다시 보냈다.
+
+old-roadmap.md (system 686자 · user 887자 · 스키마 11,303B · maxOutputTokens 8,000):
+  as-is (기본 thinking)      200 · 31.3s · finishReason **MAX_TOKENS** · text 670자 · JSON 아님 · thoughtsTokenCount **7,677** · candidates 301
+  maxOutputTokens 32,000     200 · 44.7s · STOP · JSON · items 6 · thoughts 10,058 · candidates 1,756
+  thinkingLevel low          200 ·  5.9s · STOP · JSON · items 5 · thoughts 없음 · candidates 1,486
+  thinkingBudget 0           200 ·  4.6s · STOP · JSON · items 3 · candidates 1,028
+goals.md (user 3,697자):
+  thinkingLevel low          200 · 14.6s · STOP · JSON · items **13** · oq **4** · candidates 4,189
+  thinkingLevel low (다시)   200 · 14.2s · STOP · JSON · items 13 · oq 4 · candidates 4,153
+  maxOutputTokens 32,000     200 · 58.1s · STOP · JSON · items 17 · oq 4 · thoughts **12,576** · candidates 3,286
+
+→ Gemini 3.x 는 생각 토큰을 maxOutputTokens 안에서 센다. 기본값이면 조각 하나에 생각만 7.7k 를 써서 8k 상한에서 JSON 이 잘리고,
+  재시도(불평 문장을 더한 같은 프롬프트)도 같은 자리에서 잘려 AI_OUTPUT_INVALID 다. 79바퀴의 ai:smoke(2문장)는 생각이 짧아 우연히 지났다.
+→ 고친 것: client.ts 에 `GEMINI_THINKING_LEVEL = 'low'` 상수 하나 · `generationConfig.thinkingConfig.thinkingLevel` 로 실린다 (FINDINGS 141).
+  `low` 를 고른 이유: 완료 기준(12)을 넘고(13~18) 14초 · high+32k 는 17개지만 58초 · 생각 12.6k 토큰(값 ~4배).
+
+## 3. 고친 뒤 — 끝까지 (두 번째 `p3:measure`)
+
+roadmap : succeeded · 6,136ms · items 5 (roadmap 3 · policy 2 = 재시도 규칙 · 웹훅 원본 로그) · oq 0 · 5개 받아 active
+goals   : succeeded · 20,128ms · items 18 · oq 4 (「아직 정하지 못한 것」 4줄이 그대로 질문 4개) · 18 받아 draft(origin doc) · rejected 0 · merge_candidates 0
+conflict: succeeded · 1,979ms · candidates {used 5, total 5} · **contradiction 2** (둘 다 high · a=goals 항목 · b=old-roadmap 항목 · 질문이 「어느 쪽을 따라야 하나」 — 판정 아님 ✅)
+usage   : structure 879/1,498 · structure 2,440/5,703 · conflict 2,727/257 (input/output 토큰) · 합 costMicros 20,460 (≈ $0.02)
+
+셋째 충돌이 없는 이유: old-roadmap.md 「운영 규칙」 3줄 중 **환불 줄(「환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다」)이 항목이 안 됐다.**
+탐지는 실린 항목 사이에서만 짝을 낸다 — 재료가 없으면 못 낸다. 프롬프트 쪽 일이다 (FINDINGS 143 · 기준을 낮추지 않는다).
+
+## 4. offset 은 「범위 안」인데 문장이 틀리다 (FINDINGS 142 · P7)
+
+span 을 원문에서 잘라 첫 줄을 본 것 (probe.json 의 quote):
+  goals  item_g1_success_rate        595-645   → "und.closed_at - refund.created_at` p95 | 2026-06-3"  ← G2 줄이다 (G1 은 ~60자 앞)
+  goals  item_psp_retry_policy       907-1307  → " 8초 → 16초로 늘리고, 각 간격에 ±20% 지터를 더한다."  ← 문장 중간에서 시작
+  goals  item_no_pii_in_logs         1727-2085 → "뺀다. 화폐 단위가 늘어나면"                            ← §3.4 의 문장 (한 절 뒤)
+  goals  item_webhook_signature…     2221-2331 → "# M3 — PII 마스킹과 감사 로그 (2026-06-30)"           ← §4 의 제목
+  goals  architecture 5개            3328-3491 (다섯이 같은 구간) → "p` 를 거친다."
+  goals  열린 질문 4개               2969-3105 (넷이 같은 구간)
+  roadmap item_retry_policy          502-587   → "작아서 고정 간격으로 충분하다)"                        ← 규칙 문장의 꼬리
+  roadmap item_webhook_logging       625-668   → " 정책을 다시 본다. 가맹점이 늘면…"                     ← 다음 절
+반면 heading_path 는 18개 전부 맞다 (「3. 반드시 지키는 규칙 (must) > 3.1 외부 PSP 호출 재시도」처럼).
+→ 모델은 글자를 못 센다 — 제목은 맞히고 숫자는 어림한다. 「범위 안」 검사는 P7 을 지키지 못한다. 고칠 방향은 142 에.

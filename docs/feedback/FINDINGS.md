@@ -33,6 +33,39 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 144. **`callModel()` 이 `finishReason` 을 안 읽는다** — 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도로 간다 · 429 는 `INTERNAL` 이 된다   [구멍]
+- **증상**: ① 출력 상한에 잘린 JSON 은 `undefined` → Zod 실패 → 「계약과 맞지 않는다」는 불평을 실어 **같은 상한으로** 다시 부른다 — 같은 자리에서 또 잘린다 (81바퀴 첫 실행이 정확히 이것 · 60초 · 왕복 2).
+  ② Gemini 가 429 를 내면 `client.ts` 가 `Error('Gemini generateContent 429')` 를 던지고 `runJob` 은 `ApiError` 가 아니라서 `INTERNAL` 로 적는다 — 화면은 「분당 제한」이 아니라 「서버 오류」를 본다 (`KNOWN_LIMITATIONS` 는 429 → 픽스처 결과라고 적어 두었다).
+- **근거**: `apps/web/src/lib/ai/client.ts` `callModel()`·`transport()` · `docs/evidence/2026-09-06-p3-gemini/probe.txt` §1·§2 (finishReason MAX_TOKENS · candidates 301 인데 장부는 0).
+- **정본**: `docs/SPEC.md` §7 (「실패 시 오류 위치를 넣어 1회 재시도」) · §7.5 (`RATE_LIMITED`)
+- **왜 고장이 아닌가**: 141 을 고친 뒤 정상 경로는 지난다. 이건 실패 경로가 **틀린 이름**으로 끝나는 문제다.
+- **고칠 방향**: `GenerateResponse` 에 `finishReason` 을 읽어 `MAX_TOKENS` 면 불평 문장을 「출력이 상한에서 잘렸다 — 더 짧게」로 바꾸거나 상한을 올려 재시도 · `transport()` 의 429 는 `ApiError('RATE_LIMITED')` 로. 둘 다 `client.ts` 한 파일.
+- **상태**: 대기 (주인 PLAN **P3 첫 행**)
+
+### 143. **old-roadmap.md 의 「운영 규칙」 3줄 중 환불 줄이 항목이 안 된다** — 그래서 충돌이 3 이 아니라 2 다   [격차]
+- **증상**: §7.1 이 `old-roadmap.md` 에서 policy 를 둘(재시도 3회 고정 · 웹훅 원본 로그 7일)만 뽑고 「환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다」는 빠뜨린다. §7.2 는 실린 항목 사이에서만 짝을 내므로 SPEC §10.1 의 「의도된 어긋남 3곳」 중 환불 SLA 가 카드로 안 선다.
+- **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §3 · probe.json `roadmap.items`(5개) — 진짜 gemini-3.5-flash · thinkingLevel low. high 로는 6개가 나왔지만(§2) 58초 · 생각 토큰 4배라 기본으로 못 쓴다.
+- **정본**: `docs/SPEC.md` §7.1 · §10.1 · `apps/web/src/lib/ai/structure.ts` 의 `SYSTEM`·`SOURCE_DOCUMENT_KIND_BRIEF.roadmap`
+- **고칠 방향**: 프롬프트다 — 기준을 낮추지 않는다 (STATUS 80 의 규칙). `roadmap` 종류의 안내가 「마일스톤과 기한이 주로」라서 규칙 절을 가볍게 읽는 듯하다 — 「로드맵 문서 안의 운영 규칙도 policy 로 낸다」 한 줄, 또는 SYSTEM 의 「항목 하나 = 실제로 적힌 목표·규칙·결정·절차 하나」에 「부정형 규칙(기한을 두지 않는다 · 하지 않는다)도 규칙이다」. 고친 뒤 `p3:measure` 로 3/3 을 본다.
+- **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「충돌 3」이 이것이다)
+
+### 142. **`source_ref` offset 이 「범위 안」인데 가리키는 문장이 틀리다** — 모델은 글자를 못 센다 · P7 이 여기서 끊긴다   [구멍]
+- **증상**: goals.md 18항목 + 질문 4 의 span 27개가 전부 `0 ≤ start < end ≤ 문서 길이` 를 지나는데, 잘라 보면 G1 항목이 G2 줄을, PII 금지 항목이 §3.4 를, 웹훅 서명 항목이 §4 의 제목을 가리킨다. architecture 5개와 질문 4개는 각각 **같은 구간 하나**를 낸다. `heading_path` 는 18/18 맞다.
+- **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §4 · probe.json 의 `quote`(span 을 원문에서 자른 첫 줄) — 진짜 API 두 번 다 같은 모양.
+- **정본**: `docs/SPEC.md` §7.1 (「chunk offset 을 문서 offset 으로 변환해 검증(범위 밖이면 재시도)」) · §0.1 **P7** · `packages/schema` `AiSourceSpan`
+- **왜 고장이 아닌가**: 관통·발행은 지나고 화면도 뜬다. 그러나 이 근거로 Pack 을 내면 **태그를 따라간 심사자가 다른 문장을 본다** — 「환각 차단」 주장이 무너지는 자리라 구멍 중 맨 위다.
+- **고칠 방향**: 모델에게 숫자 대신 **원문 인용(quote)** 을 내게 하고 서버가 조각 안에서 `indexOf` 로 offset 을 **계산**한다 — 못 찾으면 계약 위반으로 1회 재시도. 바뀌는 곳: `AiSourceSpan`(`packages/schema` — 계약이 먼저) · `structure.ts` 의 `toSourceRef()` · SYSTEM 의 span 문장 · `ai-structure.test.ts`. heading_path 는 지금처럼 모델이 내도 된다(맞는다). ⚠ 「범위 안」 검사는 남기되 그것만으로 통과시키지 마라.
+- **상태**: 대기 (주인 PLAN **P3 첫 행** — 완료 기준 「offset 이 범위 안」의 뜻이 이것이다)
+
+### 141. ✅ **진짜 Gemini 에서 구조화 job 이 두 문서 모두 `AI_OUTPUT_INVALID`** — 기본 thinking 이 `maxOutputTokens` 를 먹어 JSON 이 잘린다   [고장]
+- **증상**: `p3:measure` 첫 실행 — old-roadmap.md · goals.md 둘 다 `failed / AI_OUTPUT_INVALID` · 각 60초(재시도 포함 왕복 2) · 장부 outputTokens 0. 화면 3 으로 문서를 올려도 같은 길이다 — **P3 첫 행을 아무도 잴 수 없었다.**
+- **근거**: `docs/evidence/2026-09-06-p3-gemini/probe.txt` §1·§2 — 제품이 보내는 몸 그대로 다시 보내니 `finishReason: MAX_TOKENS` · `thoughtsTokenCount 7,677` / 상한 8,000 · text 670자(JSON 아님). `thinkingLevel: low` 면 5.9초 · STOP · JSON.
+- **정본**: `docs/SPEC.md` §7 · `apps/web/src/lib/ai/client.ts`
+- **왜 고장인가**: 진행 불가 — §7.1 이 실데이터에서 한 번도 성공하지 못한다 (79바퀴 `ai:smoke` 의 2문장은 생각이 짧아 우연히 지났다).
+- **고친 것** (`__HASH81__` · 81바퀴): `client.ts` 에 `GEMINI_THINKING_LEVEL = 'low'` 상수 하나 · 모든 호출의 `generationConfig.thinkingConfig.thinkingLevel` 로 실린다 · `ai-client.test.ts` 가 몸에 그 값이 있는지 센다. 고른 이유는 상수 옆 주석(13~18 항목 · 14초 vs high 17 항목 · 58초 · 생각 12.6k).
+  고친 뒤 goals.md 18 항목 · 질문 4 · 충돌 2 · offset 27/27 범위 안 (probe.txt §0·§3). 잰 문은 `pnpm --filter web p3:measure`(`scripts/p3-measure.ts` · CI 밖 · 돈 ≈ $0.02).
+- **상태**: ✅ (남은 것은 142 · 143 · 144)
+
 ### 140. **`claude plugin marketplace add <marketplace>` 의 `<marketplace>` 를 채울 수 없다** — 저장소에 마켓플레이스 목록이 없다   [구멍]
 - **증상**: 공개 저장소 URL 은 생겼는데(122) 설치 첫 줄은 여전히 `<marketplace>` 자리표시자다. 저장소 URL 을 그 자리에 넣으면
   `claude plugin marketplace add rhdqngusanr/contextops` 가 목록 파일을 못 찾아 실패한다 — 없는 명령을 적으면 「고장」으로 읽힌다.

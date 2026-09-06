@@ -2,6 +2,7 @@ import { describe, expect, it, afterEach } from 'vitest'
 import { AiConflictOutput, AiStructureOutput, toJsonSchemaOf } from '@contextops/schema'
 
 import {
+  GEMINI_THINKING_LEVEL,
   GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS,
   callModel,
   setAiClientForTest,
@@ -90,6 +91,8 @@ describe('callModel — 요청·응답의 모양', () => {
     expect(body?.contents[0]?.parts[0]?.text).toBe('U')
     expect(body?.generationConfig.responseMimeType).toBe('application/json')
     expect(body?.generationConfig.maxOutputTokens).toBe(777)
+    //  🔴 생각의 양이 상수 하나로 실린다 — 없으면 생각이 상한을 먹고 JSON 이 잘린다 (81바퀴 실측 · FINDINGS 141).
+    expect(body?.generationConfig.thinkingConfig).toEqual({ thinkingLevel: GEMINI_THINKING_LEVEL })
     expect(JSON.stringify(body?.generationConfig.responseJsonSchema)).not.toContain('minItems')
     //  조각(parts)이 여럿이면 이어 붙여 읽는다.
     expect(call.value).toEqual({ items: [], open_questions: [] })
