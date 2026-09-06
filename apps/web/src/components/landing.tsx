@@ -31,7 +31,9 @@ import { TerminalReplay } from './terminal-replay'
 //    · [2분 영상 보기] — 영상이 없다 (PLAN P6). 영상이 생기는 바퀴에 버튼 한 줄이다.
 //    · 스텝 썸네일 — production 캡처가 아직 없다 (PLAN P5 둘째 행 · FINDINGS 123).
 //      터미널 재생(§10.4)은 있다 — `TERMINAL_REPLAY` · 녹화는 관통이 남긴 실제 출력이다.
-//    · GitHub · Known limitations 링크 — 공개 URL 이 아직 없다 (FINDINGS 122 · 🙋).
+//    · GitHub · Known limitations 링크 — **있다** (80바퀴 · `SUBMISSION_IDENTITY` · FINDINGS 122).
+//      `<marketplace>` 는 여전히 자리표시자다 — 저장소에 `.claude-plugin/marketplace.json` 이 없어
+//      URL 을 넣어도 첫 명령이 실패한다 (FINDINGS 140).
 //
 //  ⚠ accent 는 이 화면에 **하나**다 — [샘플 팀으로 둘러보기]. 다른 버튼은 outline.
 // =====================================================================
@@ -204,10 +206,30 @@ export const INSTALL_STEPS = {
   foot: '그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.',
 } as const
 
-/** 푸터. ⚠ GitHub · Known limitations 링크는 공개 URL 이 생기면 여기 한 줄씩이다 (FINDINGS 122). */
+/**
+ * 🔴 제출 정체 — **공개 저장소 URL 과 제출 팀명의 정본은 여기 하나다** (INBOX 2026-09-06 · FINDINGS 122).
+ *
+ * 랜딩 푸터(`LANDING_FOOT`)는 이 값을 읽고, README 머리 · `docs/SUBMISSION.md` 의 🙋 표 는 마크다운이라
+ * import 를 못 하므로 **글자 그대로** 적되 `test/readme.test.ts` 가 세 곳이 같은 문자열인지 센다.
+ * 값을 바꿀 때는 여기 한 줄 → 시험이 빨개지는 문서를 따라 고친다. 문서에서 먼저 고치면 갈린다.
+ *
+ * ⚠ 팀명은 사람이 적어 준 그대로다 — 띄어쓰기를 넣거나 빼지 마라.
+ * ⚠ 아직 없는 값(production URL · 영상)은 여기 두지 않는다 — 없는 것을 있는 것처럼 적지 않는다.
+ */
+export const SUBMISSION_IDENTITY = {
+  team: '퇴직했는데저좀이직시켜주세요',
+  repoUrl: 'https://github.com/rhdqngusanr/contextops',
+  /** Known limitations 는 앱에 페이지를 또 만들지 않는다 — 같은 문서가 두 곳이 된다. 저장소의 그 파일로 건다. */
+  limitsPath: 'docs/KNOWN_LIMITATIONS.md',
+} as const
+
+/** 푸터 (DESIGN_BRIEF 화면 1 C-6: 제출 팀명 · GitHub 링크 · Known limitations 링크). 값은 `SUBMISSION_IDENTITY` 하나에서 온다. */
 export const LANDING_FOOT = {
   brand: 'ContextOps',
   event: 'Wanted AI Championship 2026 출품작',
+  team: { label: '팀', name: SUBMISSION_IDENTITY.team },
+  github: { label: 'GitHub', href: SUBMISSION_IDENTITY.repoUrl },
+  limits: { label: 'Known limitations', href: `${SUBMISSION_IDENTITY.repoUrl}/blob/main/${SUBMISSION_IDENTITY.limitsPath}` },
   health: { label: '서버 상태', href: '/api/v1/health' },
 } as const
 
@@ -369,6 +391,9 @@ function Foot() {
     <footer className={styles.foot}>
       <span className="ink">{LANDING_FOOT.brand}</span>
       <span className="meta">{LANDING_FOOT.event}</span>
+      <span className="meta">{LANDING_FOOT.team.label} {LANDING_FOOT.team.name}</span>
+      <a className="meta" href={LANDING_FOOT.github.href} rel="noreferrer">{LANDING_FOOT.github.label}</a>
+      <a className="meta" href={LANDING_FOOT.limits.href} rel="noreferrer">{LANDING_FOOT.limits.label}</a>
       <a className="meta" href={LANDING_FOOT.health.href}>{LANDING_FOOT.health.label}</a>
     </footer>
   )

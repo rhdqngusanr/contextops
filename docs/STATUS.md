@@ -5,11 +5,55 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-06 · 루프 79바퀴 · 코드 `bd003a5`(FINDINGS 138 · 관통 api RED — KNOWN_LIMITATIONS 의 닫힌 121 줄 · docs 층 게이트) + `836a0a9`(INBOX · 서버측 AI Anthropic → Gemini) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-06 · 루프 80바퀴 · 코드 `HASH80`(INBOX 「값이 생겼다」 · FINDINGS 122 · `SUBMISSION_IDENTITY` 정본 하나 · 푸터 셋 · 140 기록) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(80)는 INBOX 지시 「값이 생겼다」— FINDINGS 122 를 닫았다.** 공개 저장소 URL 과 제출 팀명이 왔고, 관통은 시작부터 7단계 OK(985)라 고장은 없었다.
+두 값의 **정본은 `apps/web/src/components/landing.tsx` 의 `SUBMISSION_IDENTITY` 하나**다 — 푸터(`LANDING_FOOT`)는 그것을 읽어 팀명 · GitHub · Known limitations 셋을 내고, README 머리와 `docs/SUBMISSION.md` 의 🙋 표는
+마크다운이라 import 를 못 하니 **글자 그대로** 적되 `apps/web/test/readme.test.ts` ①-B 가 세 곳이 같은 문자열인지 센다. Known limitations 는 앱에 페이지를 또 만들지 않고 저장소의 `docs/KNOWN_LIMITATIONS.md` 로 건다 (같은 문서가 두 곳이 되지 않게).
+
+🔴 **잰 것** (전부 시험·grep · 브라우저 픽셀은 아래 「눈 판정 대기」):
+
+| | 전 (`836a0a9`) | 후 |
+|---|---|---|
+| 우리 저장소 URL 이 든 곳 | README·docs·plugin·web 에 **0건** (122 의 근거 그대로) | `SUBMISSION_IDENTITY.repoUrl` 1 + 그것을 글자로 적는 문서 3(README 머리 · SUBMISSION 🙋 표 · KNOWN_LIMITATIONS 140 줄) — `.git/config` 의 origin 과 같은지 시험이 센다 |
+| 랜딩 푸터 (`renderToStaticMarkup`) | brand · event · 서버 상태 | + `팀 퇴직했는데저좀이직시켜주세요` · `GitHub` → repoUrl · `Known limitations` → `${repoUrl}/blob/main/docs/KNOWN_LIMITATIONS.md` · 밖 링크 둘만 `rel="noreferrer"`(정확히 2) |
+| 랜딩의 밖 링크 규칙 (`web-landing.test.ts` ④) | 「모든 링크가 `/` 로 시작」 | 「`/` 이거나 repoUrl 아래」— 다른 밖 주소는 여전히 빨갛다 |
+| SUBMISSION 🙋 표 | 5행 전부 🙋 | 팀명 · URL 채움(🙋 0) · production URL · 영상 · 슬라이드는 🙋 그대로 — 시험이 「채운 둘은 정본과 같고, 남은 셋은 🙋」를 따로 센다 |
+| README 머리 | 「🙋 공개 저장소 URL · 제출 팀명 · production URL 은 아직 없습니다」 | 팀명 · URL · 정본이 어디인지 한 줄 · 🙋 production URL 만 남음 — 「저장소 URL … 아직 없」 문장은 시험이 막는다 |
+| `<marketplace>` 자리표시자 | 4곳 (landing `INSTALL_STEPS` · README · SUBMISSION · `setup.ts:150`) | **그대로 4곳** — 저장소에 `.claude-plugin/marketplace.json` 이 **0건**이라 URL 을 넣으면 첫 명령이 죽는다 → FINDINGS **140**(구멍 · 주인 P5 둘째 행) · KNOWN_LIMITATIONS 의 122 줄을 140 줄로 |
+| 시험 | readme 32 · web-landing 27 | readme **38** · web-landing **28** (두 파일 61/61 · 1.7초) |
+
+⚠ **안 한 것** — ① 브라우저로 푸터를 안 봤다 (SSR 문자열만 · 아래 「눈 판정 대기」). ② `<marketplace>` 는 못 채웠다 — 값이 없어서가 아니라 **그 값이 가리킬 파일이 없어서**다. 있는 것처럼 적지 않았다.
+③ FINDINGS 109(「다음 바퀴의 일」 줄이 PLAN 행을 못 가리킨다)는 이번에도 안 고쳤다 — 그래서 아래 줄이 「없음」인데, 대기가 없다는 뜻이 아니라 **다음 일이 PLAN 행**이라는 뜻이다.
+
+🔴 **배운 것** — 「값이 생겼다」와 「자리를 채울 수 있다」는 다르다. URL 은 왔지만 `<marketplace>` 가 가리키는 건 URL 이 아니라 **그 URL 에 있어야 할 파일**이고, 그 파일은 없다. 채웠으면 심사위원의 첫 명령이 실패했을 것이다.
+
+🔴 **2-B 이번 라운드 — `LANDING_FOOT` 6항목**: ① 소비처 `Foot()`(5) + `Landing()` 머리글(brand) ② 뒤집으면 갈림 — `team.name`·`github.href`·`limits.href` 는 `web-landing` 푸터 시험이 마크업에서 직접 찾고 `readme` ①-B 가 정본과 대조 · `health.href` 는 「모든 링크가 `/` 이거나 repoUrl」 규칙 안. `ItemType` 10종은 여전히 다음 라운드.
+
+**다음 바퀴의 일 — FINDINGS 없음**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 **「없음」은 대기가 없다는 뜻이 아니다 (FINDINGS 109 — 이 줄은 PLAN 행을 못 가리킨다).** 고장 0 · INBOX 「할 것」비어 있음 → ④3 ② 에 따라 다음은 **PLAN P3 첫 행** 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」다.
+완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `fixtures/paylab-docs/goals.md` → job `succeeded` → 항목 수·충돌 수·offset · 429 면 픽스처 결과로 떨어지나).
+키는 `.env.local` 에 있고 `pnpm --filter web ai:smoke` 가 `callModel()` 까지는 지났다 (79바퀴). 그 행이 닫히면 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **P3 첫 행을 재는 법** — ① `pnpm --filter web demo:db`(PGlite · 씨앗) 와 `next dev` 를 띄운다(`.env.local` 의 `GEMINI_*` 를 읽는다) ② 로그인 없이 되는 길이 없으면 `dev:db` 의 owner 세션으로 ③ `/import` 에서 `goals.md` 를 올려 job 을 만들고 `ai_jobs` 가 `succeeded` 가 될 때까지 폴링
+> ④ `structure-candidates` 의 개수 · 충돌 카드 수 · 각 `source_ref.offset` 이 문서 길이 안인지 ⑤ 수치를 `docs/evidence/2026-09-06-p3-gemini/` 에 남기고 PLAN 행의 완료 기준 옆에 적는다. 12+3 에 못 미치면 **프롬프트(`structure.ts`)를 고치는 게 그 바퀴의 일**이지 기준을 낮추는 게 아니다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(키가 생겼다 — 루프가 잴 수 있다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 122 ✅ · 122-B 는 기록.
+
+### 지난 바퀴 (79) — 관통 api RED 를 docs 층 게이트로 (FINDINGS 138 · `bd003a5`) · 서버측 AI Anthropic → Gemini · client.ts 한 문 (INBOX · FINDINGS 139 · `836a0a9`)
 
 **이번 바퀴(79)는 둘이다 — ① 고장 FINDINGS 138(관통이 api 단계에서 빨갛게 시작 · `bd003a5`) ② INBOX 지시 「서버측 AI 를 Anthropic → Gemini」(`836a0a9`).**
 시작하자마자 관통이 `api FAIL` 이었다: 78 의 **문서만 고치는 커밋**(`99324a3`)이 121 을 ✅ 로 바꾸며 `docs/KNOWN_LIMITATIONS.md` 의 그 줄을 안 지웠고, 그 커밋은 test 층을 다시 안 돌렸다
@@ -41,14 +85,8 @@ _마지막 갱신: 2026-09-06 · 루프 79바퀴 · 코드 `bd003a5`(FINDINGS 13
 🔴 **2-B 이번 라운드 — `AI_MODELS` 표(이제 2줄)와 `GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS`(2줄)** ① 소비처: `currentModel()`·`costMicros()` / `toGeminiSchema()` ② 뒤집으면 갈림: 표에 없는 이름은 죽는다(`ai-budget`) ·
 정가 0 이면 시험이 막는다(새) / 키워드를 안 벗기면 진짜 API 가 400(실측 · 시험은 「모든 깊이에서 빠졌나」). `ItemType` 10종은 여전히 다음 라운드.
 
-**다음 바퀴의 일 — FINDINGS 122**
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 122 (INBOX 「값이 생겼다」). 80바퀴가 닫았다.
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 **고장은 없다. INBOX 「할 것」에 하나 남았다 — 「값이 생겼다」(공개 저장소 URL · 제출 팀명 · 2026-09-06)** → FINDINGS **122**(+126 의 팀명 자리 · README 머리 문단). INBOX 는 PLAN 보다 위다.
 그 다음은 **PLAN P3 첫 행**이 열렸다 — 완료 기준 「paylab 문서 → 항목 12 + 충돌 3 · `source_ref` offset 이 범위 안」을 **진짜 Gemini 로** 잰다 (`demo:db` + `next dev` → `/import` 에 `goals.md` → job `succeeded` →
@@ -244,55 +282,6 @@ SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고쳤다. `doc
   **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
 - 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 112 · 111 · 108 · 100 · 59 · 131~135) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
 
-### 지난 바퀴 (74) — CLI 가 웹 주소를 안 짓는다 · where.ts 한 곳 · upload-draft 의 같은 줄도 (FINDINGS 115 · `4d0ba9a`)
-
-
-**이번 바퀴(74)는 FINDINGS 115 — 구멍(CLI 가 찍는 제안 주소가 앱에 없는 `/p/{uuid}/…` 라 눌러도 404)을 닫았다** (`4d0ba9a`). INBOX 순서 4(구멍 → 격차)의 첫 항목이다 —
-고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 115 의 「고칠 방향」 **①(주소를 안 찍는다)** 을 골랐다 — 설정(`project.json`)에는 uuid 뿐이고 웹 주소는 slug 라(SPEC §8.2 · §9)
-CLI 는 그 주소를 **알 수 없다**. ② 전달 라우트는 주소를 둘로 만든다. 열어 보니 **같은 줄이 `upload-draft` 에도 있었다**(`…/p/{project_id}/context 에서 확인해라`) —
-대장은 propose 만 적었지만 같은 개념이라 같이 닫았다. 「어디서 보나」 줄은 `plugin/contextops/src/cli/where.ts` **한 곳**이 만들고 두 명령은 읽기만 한다.
-
-🔴 **잰 것** (`docs/evidence/2026-09-06-cli-web-hint/probe.txt` · fakeCli 로 같은 시나리오를 전/후로 찍었다):
-
-| | 전 (`5defaa7`) | 후 (`4d0ba9a`) |
-|---|---|---|
-| `propose` 성공 뒤 마지막 줄 | `→ https://…/p/11111111-…/proposals/p1` — 앱에 `/p/` 라우트가 없다 → 404 | `→ 웹 https://… 에 로그인해 이 프로젝트의 「제안」 탭에서 볼 수 있다 — 「환불 창을 7일로 좁힌다」 · id p1` |
-| `upload-draft` 성공 뒤 마지막 줄 | `→ https://…/p/11111111-…/context 에서 확인해라` — 같은 404 | `→ 웹 https://… 에 로그인해 이 프로젝트의 「Context」 탭에서 볼 수 있다 — 초안 1개` |
-| origin 뒤에 경로를 붙이는 CLI 소스 | **3곳** (api.ts · propose.ts:113 · upload-draft.ts:139) | **1곳** (`api.ts` 의 `/api/v1`) — `test/where.test.ts` ① 이 `src/cli/*.ts` 를 훑어 센다 · bait 파일을 넣으면 `_bad.ts:2` 를 집어 빨개진다(직접 확인) |
-| CLI 가 부르는 탭 이름 ↔ 웹 `layout.tsx` 의 `TABS` label | — | 「제안」·「Context」 둘 다 있음 — 시험 ② 가 그 파일을 글자로 읽어 센다 (플러그인은 웹을 import 못 한다 · 의존 방향 `schema ← compiler ← web/plugin`) |
-| 안내 줄에 경로가 있나 | `/p/` 1 | `/p/` 0 · `/t/` 0 · project uuid 0 — 시험 ③ 과 propose·upload-draft 의 +1 씩 |
-| 플러그인 시험 파일 / 시험 | 15 / 173 | **16 / 178** (where 3 · propose +1 · upload-draft +1 · skipped 1 그대로) |
-| 번들 `bin/contextops-cli.mjs` | 옛 줄 | 다시 만듦 · `bundle.test` 바이트 동일 |
-| Skill 문서 (init · propose) | 「웹 링크를 보여 준다」 · 「링크를 그대로」 | 「어디서 보나 줄」 + ⚠ 화면 주소를 지어 붙이지 마라 |
-| SPEC §8.3 | — | ⚠ 한 문단 — CLI 는 웹 주소를 조립하지 않는다 · 만드는 곳은 `where.ts` 하나 · 서버가 slug 를 내주면 거기만 |
-| CI | GREEN (17:43) | principles OK 9 · typecheck 9초 · test 89초 · build 21초 · walkthrough **949** · docs → **GREEN** (17:55) |
-
-⚠ **관통은 `propose`·`upload-draft` 를 안 부른다** — 그래서 위 전/후는 관통 산출물이 아니라 시험 helper(fakeCli)의 stdout 이다. 진짜 서버에 대고 찍은 적은 없다 (줄 하나라 모양은 같다).
-탭 이름은 사람이 로그인한 뒤 프로젝트 안에서 누르는 글자 그대로다 — 그 탭이 실제로 그 이름으로 뜨는 것은 70바퀴의 캡처(`docs/evidence/2026-09-06-focus-visible/`)에 있다.
-
-🔴 **배운 것 — 「주소를 찍는다」는 「주소를 안다」가 아니다.** uuid 로 지은 주소는 시험에서도 화면에서도 그럴듯하다. 그래서 게이트는 「올바른 주소인가」(CLI 는 알 수 없다)가 아니라
-**「origin 뒤에 경로를 붙이는 소스가 `api.ts` 하나인가」**를 센다 — 다음 사람이 세 번째 자리를 만들면 그 파일:줄이 찍힌다. 같은 줄이 이미 두 파일에 있었으니 「두 번이면 게이트」 그대로다.
-
-🔴 **2-B 이번 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL` 표(4행 · `satisfies Record<…>` 라 하나 빠지면 컴파일이 깨진다)가
-policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/liveness.test.ts` 「enforcement 4종」이 넷을 돌려 가며 fingerprint 가 넷 다 다름을 센다. 새로 적을 것 없음.
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 114(항목별 승인/거절을 담을 자리가 서버에 없다 → ② 문서를 코드에). 75바퀴가 닫았다 (`e7e0513`).
-
-
-🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **114**
-(항목별 [승인]/[거절] 을 담을 자리가 서버에 없다). 114 는 「둘 중 하나를 **고르고** 손대라」다 — ① 항목별 결정 표(`proposal_item_decisions`)를 만들고 발행 `applyProposals` 를
-「승인된 항목만」으로(§2.1 발행 트랜잭션을 건드린다) · ② 안 만든다 — `docs/DESIGN_BRIEF.md` §4 화면 6 의 그 줄을 「제안은 한 장 단위로 승인한다」로 고친다.
-**제출일을 보면 ② 다** — 관통이 지나는 전체 결정을 그대로 두고 문서가 코드와 같은 말을 하게 한다(「코드가 현실」). ① 은 §2.1 · `packages/schema` · 화면 6 · 발행 시험을
-한 바퀴에 다 건드리므로 **사람이 ① 을 원하면 INBOX 에 한 줄** — 그 전까지는 ②. 그 다음 구멍 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103 → 격차 121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134.
-
-> **114 ② 를 하는 법** — `docs/DESIGN_BRIEF.md` §4 화면 6 에서 「항목별 [승인] [거절]」 줄을 찾아 「제안은 한 장 단위 · 전체 [승인] / [거절(사유 필수)]」로 고친다. 정본은 SPEC §5 의
-> `PROPOSAL_DECISIONS`(제안 한 장을 옮기는 표 · `packages/schema`). 화면 6(`apps/web/src/app/t/[team]/p/[project]/proposals/[id]/page.tsx`)이 항목별 버튼을 그리지 않는 것을 먼저
-> 눈으로 확인하고, `apps/web/test/` 에 DESIGN_BRIEF ↔ 코드를 대조하는 시험이 있으면(`design-tokens.test.ts` 가 그 모양) 같은 모양으로 한 줄 — 「화면 6 에 항목별 결정 버튼 0개」.
-> FINDINGS 114 의 상태 줄과 DESIGN_BRIEF 의 줄을 **같은 커밋**에. ⚠ SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고친다 — 코드와 같다.
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
-  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
-- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 114 · 113 · 112 · 111 · 110 · 108 · 106 · 105 · 104 · 103 · 131~135 …) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
 
 ---
 
@@ -598,6 +587,10 @@ policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/livenes
 (**67 ①** 과 같은 자리다). ✅ **31·65 는 닫혔다** (`c57b3fb`·`5fe0068`).
 
 ## 눈 판정 대기
+
+🟡 **랜딩 푸터의 셋(팀명 · GitHub · Known limitations)을 브라우저로 안 봤다** (80바퀴 · FINDINGS 122). SSR 문자열(`web-landing.test.ts` 푸터 시험)로 마크업은 확인했다.
+못 본 것: 1280 에서 푸터 한 줄에 다섯 항목(brand · event · 팀 · GitHub · Known limitations · 서버 상태)이 들어가나 · 375 에서 `flex-wrap` 으로 접힐 때 줄 순서가 어색하지 않은가 · 링크 둘이 `meta` 색이라 링크로 읽히나.
+`next build` + `next start` → `/` 를 headless Chrome 으로 1280·375 캡처 → `docs/evidence/2026-09-06-landing-foot/`.
 
 🟡 **Gemini 로 화면의 구조화 job 을 돌린 적이 없다** (79바퀴 · `836a0a9`). `ai:smoke` 는 `callModel()` 을 직접 불러 문서 2문장 → policy 2 · Zod 통과까지 봤다(`docs/evidence/2026-09-06-gemini/probe.txt`).
 못 본 것: `demo:db` + `next dev`(`.env.local` 의 키를 읽는다) → `/import` 에 `fixtures/paylab-docs/goals.md` 를 올려 job 이 `queued → running → succeeded` 로 가나 · 항목 수·충돌 수가 PLAN P3 첫 행의 완료 기준(12 + 3)에 닿나 ·

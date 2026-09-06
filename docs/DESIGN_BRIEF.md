@@ -134,7 +134,7 @@
 
 > ⚠ **v1 (59바퀴 · `apps/web/src/components/landing.tsx`) 이 뺀 것** — 누르면 아무 일도 안
 > 하는 것을 두지 않는다: [2분 영상 보기](영상이 없다 · P6) · C-2 썸네일(production 캡처 뒤) ·
-> 푸터 GitHub/Known limitations 링크(URL 🙋 · FINDINGS 122).
+> 푸터 GitHub/Known limitations 링크는 **있다** (80바퀴 · `SUBMISSION_IDENTITY` 하나에서 온다 · FINDINGS 122 ✅).
 > C-3 터미널 재생은 **있다** (62바퀴 · `TERMINAL_REPLAY` · `<TerminalReplay>`) — 줄은 전부
 > `fixtures/replay/sync.json`(관통이 남긴 실제 출력)에서 오고, 오른쪽 패널은 paylab PL-M1 이
 > 0/3 → 1/3 이다 (아래 「BS-M2 1/3 → 2/3」은 목업 문구다).

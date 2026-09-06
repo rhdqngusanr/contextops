@@ -384,7 +384,7 @@
       `DEMO_PROPOSALS` 를 내보내 `test/web-landing.test.ts` 가 글자 그대로 대조한다 —
       첫 화면과 앱이 다른 문장을 말하면 시험이 빨개진다.
       🔴 **없는 것은 안 만들었다**: [2분 영상 보기](영상 없음 · P6) · 터미널 재생·스텝
-      썸네일(FINDINGS **123** · P5 첫 행) · GitHub/Known limitations 링크(**122** · 🙋 URL) ·
+      썸네일(FINDINGS **123** · P5 첫 행) · ~~GitHub/Known limitations 링크(**122**)~~ → 80바퀴가 넣었다(`SUBMISSION_IDENTITY`) ·
       `npx contextops`(npm 에 없다 — 설치 줄은 SPEC §8.3 의 **실제 명령** 4줄이고 시험이
       Skill 폴더와 CLI 파일의 존재를 센다).
       웹 시험 **525** (CI test 층 실측 · 24 파일 · `web-landing` 27개). **눈으로 읽었다** — `docs/evidence/2026-09-06-landing/landing.txt`
@@ -465,8 +465,10 @@
       초안을 **지금 코드에 있는 것**으로 다시 썼다 — 없는 문(질의 · §7.3)은 적지 않고 KNOWN_LIMITATIONS 를 가리킨다 ·
       P1~P7 행은 README 와 글자 그대로 · 🙋 표 5행(팀명 · 공개 저장소 URL · production URL · 영상 · 슬라이드)은 값 없이
       자리만. `readme.test.ts` 32 가 README·제출서 둘 다 랜딩 표·경로 실존·FINDINGS 번호 대기·Skill/훅 수를 잰다.
-      → 남은 것은 전부 🙋: 공개 저장소 URL · 제출 팀명 (FINDINGS 122) · 영상·슬라이드 링크 (첫 행이 끝나야).
-      값이 오면 제출서의 🙋 표 · README 머리 · `LANDING_FOOT` · KNOWN_LIMITATIONS 의 `<marketplace>` 줄에 같이 적고 행을 닫는다.
+      → ③ **공개 저장소 URL · 제출 팀명이 왔다** (80바퀴 · FINDINGS 122 ✅). 정본은 `landing.tsx` 의 `SUBMISSION_IDENTITY` 하나 — 푸터는 읽고,
+      README 머리 · 제출서 🙋 표는 글자 그대로 적되 `readme.test.ts` ①-B 가 세 곳 동일 · origin 동일을 센다. `<marketplace>` 는 못 채웠다(FINDINGS **140** ·
+      저장소에 마켓플레이스 목록이 없다 · P5 둘째 행의 몫).
+      → 남은 것은 🙋: production URL(P5 셋째 행) · 영상·슬라이드 링크 (첫 행이 끝나야). 그 둘이 오면 제출서 🙋 표 · README 머리에 적고 행을 닫는다.
 
 ---
 

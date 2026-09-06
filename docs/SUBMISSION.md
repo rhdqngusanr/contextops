@@ -11,8 +11,8 @@
 
 | 항목 | 값 | 어디에도 같이 적나 |
 |---|---|---|
-| 제출 팀명 | 🙋 | README 머리 · 랜딩 푸터 (`LANDING_FOOT`) — FINDINGS 122 |
-| 공개 저장소 URL | 🙋 | README 머리 · 랜딩 푸터 · KNOWN_LIMITATIONS 의 `<marketplace>` 줄 — FINDINGS 122 |
+| 제출 팀명 | 퇴직했는데저좀이직시켜주세요 | 정본은 랜딩의 `SUBMISSION_IDENTITY`(`apps/web/src/components/landing.tsx`) · README 머리 · 랜딩 푸터 (`LANDING_FOOT`) — 셋이 같은 글자인지 `apps/web/test/readme.test.ts` 가 잰다 |
+| 공개 저장소 URL | <https://github.com/rhdqngusanr/contextops> (PUBLIC · MIT) | 같은 정본 · README 머리 · 랜딩 푸터의 GitHub · Known limitations 링크. ⚠ `<marketplace>` 는 아직 못 채운다 — 저장소에 `.claude-plugin/marketplace.json` 이 없다 (FINDINGS 140) |
 | production URL | 🙋 (Vercel · Supabase 연결 뒤) | README 머리 — `docs/STATUS.md` 「막힌 것」 |
 | 2분 영상 링크 | 🙋 (PLAN P6 첫 행) | — |
 | 슬라이드 링크 | 🙋 (PLAN P6 첫 행) | — |

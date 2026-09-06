@@ -7,8 +7,9 @@
 
 > Wanted AI Championship 2026 출품작 · 제출 2026-09-20 · 개발 1인 + Claude Code
 >
-> 🙋 공개 저장소 URL · 제출 팀명 · production URL 은 아직 없습니다. 생기면 여기와 랜딩 푸터에 한 줄씩입니다
-> (`docs/feedback/FINDINGS.md` 122). 지금 도는 것과 안 도는 것은 [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) 에 있습니다.
+> 제출 팀명 **퇴직했는데저좀이직시켜주세요** · 공개 저장소 <https://github.com/rhdqngusanr/contextops> (MIT)
+> — 이 둘의 정본은 랜딩의 `SUBMISSION_IDENTITY`(`apps/web/src/components/landing.tsx`)이고 여기와 제출서가 같은 글자인지 시험이 잽니다.
+> 🙋 production URL 은 Vercel 연결 뒤 여기 한 줄입니다. 지금 도는 것과 안 도는 것은 [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) 에 있습니다.
 
 ---
 
@@ -189,7 +190,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `docs/evidence/` | 바퀴마다 남긴 근거 — 캡처 · 덤프 · 관통 산출물 복사본 |
 | `docs/history/` | STATUS 에서 내려온 지난 바퀴 기록 |
 | `docs/KNOWN_LIMITATIONS.md` | 알려진 한계 — 지금 안 되는 것 |
-| `docs/SUBMISSION.md` | 제출서 원문 — 랜딩·README 와 같은 문장인지 시험이 잰다 · 🙋 자리(팀명 · URL · 영상) |
+| `docs/SUBMISSION.md` | 제출서 원문 — 랜딩·README 와 같은 문장인지 시험이 잰다 · 🙋 자리(production URL · 영상 · 슬라이드) |
 | `CLAUDE.md` | 저장소 개발 규칙 — 사람과 AI 세션이 같이 지킨다 |
 | `LICENSE` | MIT |
 

@@ -6,7 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import {
-  BEFORE_AFTER, INSTALL_STEPS, LANDING_HEAD, Landing, TRUST_BOUNDARY, skillNamesIn,
+  BEFORE_AFTER, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, Landing, SUBMISSION_IDENTITY, TRUST_BOUNDARY,
+  skillNamesIn,
 } from '../src/components/landing'
 import { DEMO_PROPOSALS } from '../src/lib/demo/seed-demo'
 import { paylabDrafts } from '../src/lib/demo/seed'
@@ -115,10 +116,23 @@ describe('④ 누르면 아무 일도 안 하는 것이 없다', () => {
     expect(html()).not.toContain('영상')
   })
 
-  it('모든 링크가 앱 안 주소다', () => {
+  it('모든 링크가 앱 안 주소이거나 공개 저장소(SUBMISSION_IDENTITY.repoUrl) 아래다 — 다른 밖 주소는 없다', () => {
     const hrefs = [...html().matchAll(/href="([^"]*)"/g)].map((m) => m[1] as string)
     expect(hrefs.length).toBeGreaterThan(0)
-    for (const h of hrefs) expect(h, h).toMatch(/^\//)
+    for (const h of hrefs) {
+      if (h.startsWith('/')) continue
+      expect(h, h).toMatch(new RegExp(`^${SUBMISSION_IDENTITY.repoUrl}(/|$)`))
+    }
+  })
+
+  it('푸터에 제출 팀명 · GitHub · Known limitations 가 있다 (DESIGN_BRIEF 화면 1 C-6 · FINDINGS 122)', () => {
+    const out = html()
+    const foot = out.slice(out.indexOf('<footer'))
+    expect(foot).toContain(LANDING_FOOT.team.name)
+    expect(foot).toContain(`href="${LANDING_FOOT.github.href}"`)
+    expect(foot).toContain(`href="${LANDING_FOOT.limits.href}"`)
+    //  밖으로 나가는 링크 둘만 rel="noreferrer" — 앱 안 링크에는 붙지 않는다.
+    expect(foot.match(/rel="noreferrer"/g)?.length).toBe(2)
   })
 })
 

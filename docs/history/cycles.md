@@ -15,6 +15,57 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (74) — CLI 가 웹 주소를 안 짓는다 · where.ts 한 곳 · upload-draft 의 같은 줄도 (FINDINGS 115 · `4d0ba9a`)
+
+
+**이번 바퀴(74)는 FINDINGS 115 — 구멍(CLI 가 찍는 제안 주소가 앱에 없는 `/p/{uuid}/…` 라 눌러도 404)을 닫았다** (`4d0ba9a`). INBOX 순서 4(구멍 → 격차)의 첫 항목이다 —
+고장 0 · 루프가 혼자 닫을 PLAN 행 없음(아래). 115 의 「고칠 방향」 **①(주소를 안 찍는다)** 을 골랐다 — 설정(`project.json`)에는 uuid 뿐이고 웹 주소는 slug 라(SPEC §8.2 · §9)
+CLI 는 그 주소를 **알 수 없다**. ② 전달 라우트는 주소를 둘로 만든다. 열어 보니 **같은 줄이 `upload-draft` 에도 있었다**(`…/p/{project_id}/context 에서 확인해라`) —
+대장은 propose 만 적었지만 같은 개념이라 같이 닫았다. 「어디서 보나」 줄은 `plugin/contextops/src/cli/where.ts` **한 곳**이 만들고 두 명령은 읽기만 한다.
+
+🔴 **잰 것** (`docs/evidence/2026-09-06-cli-web-hint/probe.txt` · fakeCli 로 같은 시나리오를 전/후로 찍었다):
+
+| | 전 (`5defaa7`) | 후 (`4d0ba9a`) |
+|---|---|---|
+| `propose` 성공 뒤 마지막 줄 | `→ https://…/p/11111111-…/proposals/p1` — 앱에 `/p/` 라우트가 없다 → 404 | `→ 웹 https://… 에 로그인해 이 프로젝트의 「제안」 탭에서 볼 수 있다 — 「환불 창을 7일로 좁힌다」 · id p1` |
+| `upload-draft` 성공 뒤 마지막 줄 | `→ https://…/p/11111111-…/context 에서 확인해라` — 같은 404 | `→ 웹 https://… 에 로그인해 이 프로젝트의 「Context」 탭에서 볼 수 있다 — 초안 1개` |
+| origin 뒤에 경로를 붙이는 CLI 소스 | **3곳** (api.ts · propose.ts:113 · upload-draft.ts:139) | **1곳** (`api.ts` 의 `/api/v1`) — `test/where.test.ts` ① 이 `src/cli/*.ts` 를 훑어 센다 · bait 파일을 넣으면 `_bad.ts:2` 를 집어 빨개진다(직접 확인) |
+| CLI 가 부르는 탭 이름 ↔ 웹 `layout.tsx` 의 `TABS` label | — | 「제안」·「Context」 둘 다 있음 — 시험 ② 가 그 파일을 글자로 읽어 센다 (플러그인은 웹을 import 못 한다 · 의존 방향 `schema ← compiler ← web/plugin`) |
+| 안내 줄에 경로가 있나 | `/p/` 1 | `/p/` 0 · `/t/` 0 · project uuid 0 — 시험 ③ 과 propose·upload-draft 의 +1 씩 |
+| 플러그인 시험 파일 / 시험 | 15 / 173 | **16 / 178** (where 3 · propose +1 · upload-draft +1 · skipped 1 그대로) |
+| 번들 `bin/contextops-cli.mjs` | 옛 줄 | 다시 만듦 · `bundle.test` 바이트 동일 |
+| Skill 문서 (init · propose) | 「웹 링크를 보여 준다」 · 「링크를 그대로」 | 「어디서 보나 줄」 + ⚠ 화면 주소를 지어 붙이지 마라 |
+| SPEC §8.3 | — | ⚠ 한 문단 — CLI 는 웹 주소를 조립하지 않는다 · 만드는 곳은 `where.ts` 하나 · 서버가 slug 를 내주면 거기만 |
+| CI | GREEN (17:43) | principles OK 9 · typecheck 9초 · test 89초 · build 21초 · walkthrough **949** · docs → **GREEN** (17:55) |
+
+⚠ **관통은 `propose`·`upload-draft` 를 안 부른다** — 그래서 위 전/후는 관통 산출물이 아니라 시험 helper(fakeCli)의 stdout 이다. 진짜 서버에 대고 찍은 적은 없다 (줄 하나라 모양은 같다).
+탭 이름은 사람이 로그인한 뒤 프로젝트 안에서 누르는 글자 그대로다 — 그 탭이 실제로 그 이름으로 뜨는 것은 70바퀴의 캡처(`docs/evidence/2026-09-06-focus-visible/`)에 있다.
+
+🔴 **배운 것 — 「주소를 찍는다」는 「주소를 안다」가 아니다.** uuid 로 지은 주소는 시험에서도 화면에서도 그럴듯하다. 그래서 게이트는 「올바른 주소인가」(CLI 는 알 수 없다)가 아니라
+**「origin 뒤에 경로를 붙이는 소스가 `api.ts` 하나인가」**를 센다 — 다음 사람이 세 번째 자리를 만들면 그 파일:줄이 찍힌다. 같은 줄이 이미 두 파일에 있었으니 「두 번이면 게이트」 그대로다.
+
+🔴 **2-B 이번 라운드 — `enforcement` 4종은 살아 있고 잠겨 있다.** ① 소비처: `packages/compiler/src/sections.ts` 의 `ENFORCEMENT_LABEL` 표(4행 · `satisfies Record<…>` 라 하나 빠지면 컴파일이 깨진다)가
+policy 줄의 「강제: …」를 만든다 ② `packages/compiler/test/liveness.test.ts` 「enforcement 4종」이 넷을 돌려 가며 fingerprint 가 넷 다 다름을 센다. 새로 적을 것 없음.
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 114(항목별 승인/거절을 담을 자리가 서버에 없다 → ② 문서를 코드에). 75바퀴가 닫았다 (`e7e0513`).
+
+
+🔴 **고장은 없다. INBOX 순서 4 — 구멍 → 격차.** 122 는 🙋 두 값(공개 저장소 URL · 제출 팀명)이 와야 하고 117 은 절삭 1번(P3 🙋 키)이라 건너뛴다 → 다음 구멍 **114**
+(항목별 [승인]/[거절] 을 담을 자리가 서버에 없다). 114 는 「둘 중 하나를 **고르고** 손대라」다 — ① 항목별 결정 표(`proposal_item_decisions`)를 만들고 발행 `applyProposals` 를
+「승인된 항목만」으로(§2.1 발행 트랜잭션을 건드린다) · ② 안 만든다 — `docs/DESIGN_BRIEF.md` §4 화면 6 의 그 줄을 「제안은 한 장 단위로 승인한다」로 고친다.
+**제출일을 보면 ② 다** — 관통이 지나는 전체 결정을 그대로 두고 문서가 코드와 같은 말을 하게 한다(「코드가 현실」). ① 은 §2.1 · `packages/schema` · 화면 6 · 발행 시험을
+한 바퀴에 다 건드리므로 **사람이 ① 을 원하면 INBOX 에 한 줄** — 그 전까지는 ②. 그 다음 구멍 113 · 111 · 110 · 108 · 106 · 105 · 104 · 103 → 격차 121+135 · 119 · 118 · 116 · 112 · 131 · 132 · 133 · 134.
+
+> **114 ② 를 하는 법** — `docs/DESIGN_BRIEF.md` §4 화면 6 에서 「항목별 [승인] [거절]」 줄을 찾아 「제안은 한 장 단위 · 전체 [승인] / [거절(사유 필수)]」로 고친다. 정본은 SPEC §5 의
+> `PROPOSAL_DECISIONS`(제안 한 장을 옮기는 표 · `packages/schema`). 화면 6(`apps/web/src/app/t/[team]/p/[project]/proposals/[id]/page.tsx`)이 항목별 버튼을 그리지 않는 것을 먼저
+> 눈으로 확인하고, `apps/web/test/` 에 DESIGN_BRIEF ↔ 코드를 대조하는 시험이 있으면(`design-tokens.test.ts` 가 그 모양) 같은 모양으로 한 줄 — 「화면 6 에 항목별 결정 버튼 0개」.
+> FINDINGS 114 의 상태 줄과 DESIGN_BRIEF 의 줄을 **같은 커밋**에. ⚠ SPEC §2 는 이미 「제안 한 장에 status 하나」라 안 고친다 — 코드와 같다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: P3 첫 행(🙋 Anthropic 키) · P4 둘째 행(GATE 3 · 눈 판정 — 70바퀴가 반 봤다) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 🙋 URL·팀명).
+  **루프가 혼자 닫을 수 있는 PLAN 행은 없다** — 그래서 INBOX 순서 4 가 이번 뒤의 일이다.
+- 대장의 대기(122 · 121 · 119 · 118 · 117 · 116 · 114 · 113 · 112 · 111 · 110 · 108 · 106 · 105 · 104 · 103 · 131~135 …) — **고장 0** · 나머지는 **PLAN 을 막지 않는다.**
+
+
 ### 지난 바퀴 (73) — 훅 상한을 vitest.base.ts 한 곳으로 · 부하 100% 에서 33/33 (FINDINGS 136 · `767a33e`)
 
 

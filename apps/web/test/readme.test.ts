@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
-  BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_HEAD, TRUST_BOUNDARY,
+  BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, SUBMISSION_IDENTITY, TRUST_BOUNDARY,
 } from '../src/components/landing'
 
 // =====================================================================
@@ -104,6 +104,36 @@ describe.each(DOCS)('① $name 은 랜딩과 같은 문장을 말한다', ({ nam
       cursor = at + l.cmd.length
     }
     expect(text).toContain(INSTALL_STEPS.foot)
+  })
+})
+
+describe('①-B 제출 정체(팀명 · 공개 저장소 URL)는 정본 하나에서 온다 (INBOX 2026-09-06 · FINDINGS 122)', () => {
+  //  ★ 왜 — 값이 README·랜딩·제출서 세 곳에 든다. 마크다운은 상수를 import 못 하므로 시험이 대조한다.
+  //    한 곳에서만 고치면 나머지 둘이 여기서 빨개진다.
+  it.each(DOCS)('$name 머리에 팀명과 저장소 URL 이 글자 그대로 있다', ({ text }) => {
+    expect(text).toContain(SUBMISSION_IDENTITY.team)
+    expect(text).toContain(SUBMISSION_IDENTITY.repoUrl)
+  })
+
+  it('랜딩 푸터의 셋(팀명 · GitHub · Known limitations)이 그 정본을 읽는다', () => {
+    expect(LANDING_FOOT.team.name).toBe(SUBMISSION_IDENTITY.team)
+    expect(LANDING_FOOT.github.href).toBe(SUBMISSION_IDENTITY.repoUrl)
+    expect(LANDING_FOOT.limits.href).toBe(`${SUBMISSION_IDENTITY.repoUrl}/blob/main/${SUBMISSION_IDENTITY.limitsPath}`)
+    expect(existsSync(join(repoRoot, SUBMISSION_IDENTITY.limitsPath))).toBe(true)
+  })
+
+  it('팀명은 사람이 적어 준 그대로다 — 앞뒤·중간에 공백을 넣거나 빼지 않았다', () => {
+    expect(SUBMISSION_IDENTITY.team).toBe(SUBMISSION_IDENTITY.team.trim())
+    expect(SUBMISSION_IDENTITY.team).not.toMatch(/\s/)
+  })
+
+  it('저장소 URL 은 이 저장소의 origin 과 같다 — 다른 저장소를 가리키면 심사위원이 다른 코드를 본다', () => {
+    const gitConfig = readFileSync(join(repoRoot, '.git', 'config'), 'utf8')
+    expect(gitConfig).toContain(`url = ${SUBMISSION_IDENTITY.repoUrl}`)
+  })
+
+  it.each(DOCS)('$name 이 「공개 저장소 URL … 아직 없습니다」라고 더는 말하지 않는다', ({ text }) => {
+    expect(text).not.toMatch(/저장소 URL[^\n]*아직 없/)
   })
 })
 
@@ -220,12 +250,26 @@ describe('⑥ 제출서(docs/SUBMISSION.md) — README·코드와 같은 말을 
     expect(section.match(/^\d\. \*\*/gm)?.length).toBe(3)
   })
 
-  it('🙋 자리(팀명 · 공개 저장소 URL · production URL · 영상)가 값 없이 있다', () => {
-    for (const k of ['제출 팀명', '공개 저장소 URL', 'production URL', '2분 영상 링크']) {
-      const row = submission.split('\n').find((l) => l.startsWith(`| ${k} |`))
-      expect(row, `🙋 표에 ${k} 행이 없다`).toBeDefined()
-      expect(row).toContain('| 🙋')
+  /** `| 항목 | 값 | … |` 표의 한 행. */
+  function identityRow(k: string): string {
+    const row = submission.split('\n').find((l) => l.startsWith(`| ${k} |`))
+    expect(row, `🙋 표에 ${k} 행이 없다`).toBeDefined()
+    return row as string
+  }
+
+  it('아직 없는 값(production URL · 영상 · 슬라이드)은 🙋 자리표시자 그대로다 — 없는 것을 있는 것처럼 적지 않는다', () => {
+    for (const k of ['production URL', '2분 영상 링크', '슬라이드 링크']) {
+      expect(identityRow(k)).toContain('| 🙋')
     }
+  })
+
+  it('생긴 값(제출 팀명 · 공개 저장소 URL)은 정본 SUBMISSION_IDENTITY 와 글자 그대로 같고 🙋 가 아니다 (FINDINGS 122)', () => {
+    const team = identityRow('제출 팀명')
+    expect(team).toContain(`| ${SUBMISSION_IDENTITY.team} |`)
+    expect(team).not.toContain('🙋')
+    const repo = identityRow('공개 저장소 URL')
+    expect(repo).toContain(SUBMISSION_IDENTITY.repoUrl)
+    expect(repo).not.toContain('🙋')
   })
 
   it('한계는 KNOWN_LIMITATIONS 를 가리키고, 거기 있는 문장을 옮긴다', () => {

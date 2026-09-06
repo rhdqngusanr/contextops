@@ -33,6 +33,27 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 140. **`claude plugin marketplace add <marketplace>` 의 `<marketplace>` 를 채울 수 없다** — 저장소에 마켓플레이스 목록이 없다   [구멍]
+- **증상**: 공개 저장소 URL 은 생겼는데(122) 설치 첫 줄은 여전히 `<marketplace>` 자리표시자다. 저장소 URL 을 그 자리에 넣으면
+  `claude plugin marketplace add rhdqngusanr/contextops` 가 목록 파일을 못 찾아 실패한다 — 없는 명령을 적으면 「고장」으로 읽힌다.
+- **근거**: 80바퀴 직접 셈 — `find . -name marketplace.json` → 0건 (`plugin/contextops/.claude-plugin/plugin.json` 만 있다) ·
+  `<marketplace>` 를 찍는 자리 4곳: `landing.tsx` `INSTALL_STEPS` · README · SUBMISSION · `plugin/contextops/src/cli/setup.ts:150`(번들 `bin/contextops-cli.mjs` 도).
+  `claude plugin install` 로 깐 기록 0 — 관통 sync 단계와 `docs/evidence/2026-09-03-plugin/setup-new-repo.md` 는 CLI 파일을 직접 부른다.
+- **정본**: `docs/SPEC.md` §8.3 (설치 절차) · 화면 1 C-5
+- **왜 고장이 아닌가**: 설치 줄이 자리표시자라고 말하고 있고, 관통·데모는 그 줄을 안 거친다.
+- **고칠 방향**: 저장소 루트에 `.claude-plugin/marketplace.json`(`plugins[0].source` → `./plugin/contextops`)을 두고 네 자리의 `<marketplace>` 를
+  `rhdqngusanr/contextops` 로 — 값은 `SUBMISSION_IDENTITY.repoUrl` 에서 파생시키되 플러그인은 웹을 import 못 하니 시험이 대조한다(122 와 같은 모양).
+  **새 PC 에서 `claude plugin marketplace add` → `install` → `/contextops:init` 이 실제로 지나는 것**까지가 완료다 — 주인은 PLAN **P5 둘째 행**(fresh install).
+- **상태**: 대기 (주인 PLAN P5 둘째 행 · 🙋 새 PC 가 있어야 끝까지 잰다 — 목록 파일과 문자열 바꾸기는 루프가 할 수 있다)
+
+### 122-B. 80바퀴 — INBOX 「값이 생겼다」로 122 를 닫았다 · 정본은 `SUBMISSION_IDENTITY` 하나   [기록]
+- **무엇**: `apps/web/src/components/landing.tsx` 의 `SUBMISSION_IDENTITY { team, repoUrl, limitsPath }` 가 정본. `LANDING_FOOT` 은 그것을 읽어 푸터에
+  팀명 · GitHub · Known limitations(저장소의 `docs/KNOWN_LIMITATIONS.md` · 앱에 페이지를 또 만들지 않는다) 셋을 낸다. README 머리 · `docs/SUBMISSION.md` 🙋 표는
+  글자 그대로 적고 `apps/web/test/readme.test.ts` ①-B(6) 가 세 곳 동일 · `.git/config` 의 origin 과 동일 · 팀명에 공백 0 · 「아직 없습니다」 문장 0 을 센다.
+  `web-landing.test.ts` 는 밖 링크가 저장소 아래뿐 · 푸터에 `rel="noreferrer"` 정확히 2 를 센다.
+- **안 한 것**: `<marketplace>` (→ 140) · production URL · 영상 · 슬라이드는 🙋 그대로.
+- **상태**: 기록
+
 ### 139. ✅ **서버측 AI 공급자를 Anthropic → Gemini 로 바꿨다** — INBOX 지시 · 문은 `client.ts` 하나 그대로   [기록]
 - **무엇**: `apps/web/src/lib/ai/client.ts` 가 Gemini `generateContent` 를 SDK 없이 `fetch` 로 부른다 (`responseMimeType: application/json` + `responseJsonSchema`). `callClaude` → `callModel`.
   `AI_MODELS` 는 `gemini-3.5-flash`·`gemini-3.6-flash` 두 줄(claude-* 는 지웠다 — 문이 못 부른다) · env 는 `GEMINI_API_KEY`·`GEMINI_MODEL`.
@@ -308,7 +329,7 @@ params:
   (`web-terminal-replay.test.ts`). ⚠ **썸네일(C-2)은 그대로 없다** — production 캡처가 생기면
   (PLAN P5 둘째 행) 그때. 캡처 없이 목업 그림을 넣지 않는다는 방향은 그대로다.
 
-### 122. **랜딩 푸터에 GitHub · Known limitations 링크가 없다** — 공개 URL 이 없다   [구멍]
+### 122. ✅ **랜딩 푸터에 GitHub · Known limitations 링크가 없다** — 공개 URL 이 없다   [구멍]
 - **증상**: DESIGN_BRIEF 화면 1 C-6 은 「푸터: 제출 팀명, GitHub 링크, Known limitations 링크」다.
   지금 푸터는 `ContextOps · Wanted AI Championship 2026 출품작 · 서버 상태(/api/v1/health)` 뿐이다.
   제출 팀명도 모른다.
@@ -319,7 +340,9 @@ params:
 - **고칠 방향**: 🙋 사람이 **공개 저장소 URL 과 제출 팀명**을 `INBOX.md` 에 적어 준다 →
   `LANDING_FOOT` 에 두 줄. Known limitations 는 그 URL 의 `docs/KNOWN_LIMITATIONS.md` 로 건다
   (앱에 페이지를 또 만들면 같은 문서가 두 곳이 된다).
-- **상태**: 대기 (🙋 URL · 주인은 PLAN **P6 둘째 행**) — **README · KNOWN_LIMITATIONS 의 본문은 66바퀴가 썼다**
+- **상태**: ✅ 80바퀴 (2026-09-06 · 해시는 다음 커밋이 적는다) — INBOX 「값이 생겼다」의 두 값을 `SUBMISSION_IDENTITY` 하나에 두고 푸터·README·제출서가 그것을 따른다 (122-B).
+  `<marketplace>` 는 채우지 못했다 → **140**. 그 전의 기록 —
+  옛 상태: 대기 (🙋 URL · 주인은 PLAN **P6 둘째 행**) — **README · KNOWN_LIMITATIONS 의 본문은 66바퀴가 썼다**
   (`0dc2e93` · `apps/web/test/readme.test.ts` 가 랜딩 표와 대조). 남은 것은 🙋 두 값
   (공개 저장소 URL · 제출 팀명)뿐이다 — 오면 `LANDING_FOOT` 두 줄 + README 머리의 🙋 줄 + KNOWN_LIMITATIONS 의
   `<marketplace>` 줄.

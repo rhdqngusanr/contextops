@@ -29,8 +29,10 @@
   모든 관통·데모·캡처는 개발 기계의 PGlite 위에서 돌았다. 배포에서만 볼 수 있는 셋 — 함수 안에서 `fixtures/` 를
   찾는가 · Supabase 에서 데모 리셋이 60초 안에 끝나는가 · Root Directory 설정이 `vercel.json` 을 읽게 하는가 — 은
   아직 못 쟀다.
-- **`npx contextops` 는 없다.** npm 에 올린 적이 없다. 설치는 `claude plugin marketplace add <marketplace>` 부터이고
-  그 `<marketplace>` 주소는 🙋 공개 저장소 URL 이 생겨야 채워진다 (FINDINGS 122).
+- **`npx contextops` 는 없다.** npm 에 올린 적이 없다. 설치는 `claude plugin marketplace add <marketplace>` 부터인데
+  그 `<marketplace>` 는 **아직 자리표시자다** — 공개 저장소(`https://github.com/rhdqngusanr/contextops`)는 생겼지만 그 저장소에
+  마켓플레이스 목록(`.claude-plugin/marketplace.json`)이 없어 URL 을 넣어도 첫 명령이 실패한다 (FINDINGS 140). `claude plugin install` 로
+  깐 기록도 아직 없다 — 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는 `node plugin/contextops/bin/contextops-cli.mjs` 를 직접 부른다.
 - **Device code auth 미지원** — 웹에서 발급한 기기 토큰을 `setup` 에 붙여 넣는 방식이다
   (`plugin/contextops/src/cli/setup.ts`). 브라우저 콜백 서버는 없다.
 - **권한이 2단계뿐** (owner / member · `packages/schema/src/api.ts` 의 `ROLE_RANK`). 세밀한 권한 모델 없음.
