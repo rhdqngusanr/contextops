@@ -2,7 +2,7 @@ import React, { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { SYNC_STATUSES } from '@contextops/schema'
 
-import type { DeviceSyncRow } from '../src/lib/web/queries'
+import type { DeviceSyncRow, VersionRow } from '../src/lib/web/queries'
 
 //  ⚠ `tsconfig.json` 의 `jsx` 는 Next 가 요구하는 `preserve` 라, tsx(esbuild)가 JSX 를
 //    **옛 방식**(`React.createElement`)으로 바꾼다. 그 모듈에는 `React` import 가 없어서
@@ -73,12 +73,24 @@ const TEAM: DeviceSyncRow[] = [
 
 const lines: string[] = ['화면 9 — Sync 의 모든 모양 (마크업에서 글자만 뽑은 것)', '']
 
+//  공식 v1.2.0 — outdated 둘(v1.1.0)이 「무엇으로 맞춰야 하나」를 이 한 칸에서 읽는다 (FINDINGS 118).
+const OFFICIAL: VersionRow = {
+  id: '00000000-0000-4000-8000-0000000000v1',
+  semver: '1.2.0',
+  snapshot_hash: 'b'.repeat(64),
+  published_by: '00000000-0000-4000-8000-0000000000aa',
+  published_at: ago(3 * 86_400_000),
+  change_summary: null,
+  is_official: true,
+}
+
 lines.push('◆ 상단 요약')
-lines.push(`  ① 팀 13대 — ${text(renderToStaticMarkup(createElement(SyncSummary, { devices: TEAM })))}`)
+lines.push(`  ① 팀 13대 · 공식 v1.2.0 — ${text(renderToStaticMarkup(createElement(SyncSummary, { devices: TEAM, official: OFFICIAL })))}`)
 lines.push(`  ② 전부 applied — ${text(renderToStaticMarkup(createElement(SyncSummary, {
-  devices: [device(), device({ device_id: '2' })],
+  devices: [device(), device({ device_id: '2' })], official: OFFICIAL,
 })))}`)
-lines.push(`  ③ 기기 0대 — ${text(renderToStaticMarkup(createElement(SyncSummary, { devices: [] })))}`)
+lines.push(`  ③ 기기 0대 · 공식 없음 — ${text(renderToStaticMarkup(createElement(SyncSummary, { devices: [], official: null })))}`)
+lines.push(`  ④ 버전 표를 아직 못 읽음 — ${text(renderToStaticMarkup(createElement(SyncSummary, { devices: TEAM })))}`)
 lines.push('')
 
 lines.push('◆ 표 — 실제 팀 모양 (급한 것이 위다)')

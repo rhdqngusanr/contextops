@@ -3,11 +3,11 @@
 import { use } from 'react'
 
 import {
-  REALTIME_POLL_MS, fetchSyncStatus, type ProjectRef,
+  REALTIME_POLL_MS, fetchSyncStatus, fetchVersions, type ProjectRef,
 } from '../../../../../../lib/web/queries'
-import { usePolling } from '../../../../../../lib/web/use-async'
+import { useAsync, usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import { DeviceTable, SyncLegend, SyncSummary } from '../../../../../../components/sync'
+import { DeviceTable, SyncLegend, SyncSummary, officialOf } from '../../../../../../components/sync'
 import { ErrorState, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
@@ -41,6 +41,12 @@ function SyncView({ project }: { project: ProjectRef }) {
   //  ⚠ 화면 8 과 같은 폴링이다 — 끝나는 일이 아니라서 `again` 이 늘 같은 값이다
   //    (실패하면 `usePolling` 이 스스로 멈춘다).
   const sync = usePolling(() => fetchSyncStatus(project.id), [project.id], () => REALTIME_POLL_MS)
+  //  🔴 「무엇으로 맞춰야 하나」(FINDINGS 118) — 화면 5 와 같은 문을 한 번 더 부른다.
+  //    폴링이 아니다: 공식이 바뀌는 것은 발행이고, 그건 이 화면에서 일어나지 않는다.
+  //    ⚠ 이 호출이 실패해도 표는 뜬다 — 공식 칸만 비운다(`undefined`). 기기 목록이
+  //    버전 표 때문에 죽으면 안 된다.
+  const versions = useAsync(() => fetchVersions(project.id), [project.id])
+  const official = versions.result.state === 'ready' ? officialOf(versions.result.data.versions) : undefined
 
   return (
     <>
@@ -59,7 +65,7 @@ function SyncView({ project }: { project: ProjectRef }) {
 
       {sync.result.state === 'ready' ? (
         <>
-          <SyncSummary devices={sync.result.data.devices} />
+          <SyncSummary devices={sync.result.data.devices} official={official} />
           <section className="card">
             <DeviceTable
               devices={sync.result.data.devices}

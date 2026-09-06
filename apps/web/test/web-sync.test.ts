@@ -3,9 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { SYNC_STATUSES, type SyncStatus } from '@contextops/schema'
 
-import { DeviceTable, SYNC_APPLY, SYNC_ORDER, SyncLegend, SyncSummary, countByStatus, sortDevices } from '../src/components/sync'
+import {
+  DeviceTable, OFFICIAL_HINT, SYNC_APPLY, SYNC_ORDER, SyncLegend, SyncSummary, countByStatus, officialOf, sortDevices,
+} from '../src/components/sync'
 import { SYNC_CHIP, SYNC_MEANING } from '../src/components/chips'
-import type { DeviceSyncRow } from '../src/lib/web/queries'
+import type { DeviceSyncRow, VersionRow } from '../src/lib/web/queries'
 
 // =====================================================================
 //  🔴 화면 9(Sync)의 **모든 모양을 그려서 읽는다** (loop/PROMPT.md ⑦3층)
@@ -24,6 +26,8 @@ import type { DeviceSyncRow } from '../src/lib/web/queries'
 //    ⑥ 🔴 **P1** — 표에 파일 본문이 없다. 기기가 보낸 것은 경로와 해시뿐이다
 //    ⑦ ⚠ **P5 의 경계** — 사람 **이름**은 그린다(팀이 할 일을 정하는 사실이다).
 //      「횟수·점수·순위」는 안 그린다
+//    ⑧ 🔴 **「무엇으로 맞춰야 하나」** — 요약이 공식 semver 를 화면 8 과 같은 낱말로
+//      적는다 (FINDINGS 118). 공식이 없으면 없다고 말하고, 못 읽었으면 안 지어낸다
 //
 //  ⚠ 이 시험이 재지 **못하는** 것: 간격·색·글꼴. 그건 캡처가 있어야 한다.
 // =====================================================================
@@ -184,5 +188,56 @@ describe('🔴 P1 · ⚠ P5 — 표에 무엇이 있고 무엇이 없나', () =>
   it('이메일은 화면에 오지 않는다 — 서버가 이름 하나만 낸다 (lib/api/user.ts)', () => {
     const html = table(oneOfEach())
     expect(html).not.toContain('@')
+  })
+})
+
+describe('🔴 「그래서 무엇으로 맞춰야 하나」 — 요약이 공식 버전을 말한다 (FINDINGS 118)', () => {
+  function version(over: Partial<VersionRow> = {}): VersionRow {
+    return {
+      id: '00000000-0000-4000-8000-0000000000v1',
+      semver: '1.2.0',
+      snapshot_hash: 'b'.repeat(64),
+      published_by: '00000000-0000-4000-8000-0000000000aa',
+      published_at: MINUTES_AGO,
+      change_summary: null,
+      is_official: true,
+      ...over,
+    }
+  }
+  const summary = (official: VersionRow | null | undefined) => renderToStaticMarkup(createElement(SyncSummary, {
+    devices: [device({ status: 'outdated', version: '1.1.0' })],
+    official,
+  }))
+
+  it('공식이 있으면 「공식 v1.2.0 기준」 — 화면 8 의 요약 타일과 같은 낱말이다', () => {
+    const html = summary(version())
+    expect(html).toContain('공식 v1.2.0 기준')
+    //  화면 8(`roadmap.tsx`)이 적는 문장의 모양 그대로 — 두 화면이 다른 말을 하지 않는다.
+    expect(OFFICIAL_HINT.of('1.0.0')).toBe('공식 v1.0.0 기준')
+    //  값을 바꾸면 결과가 달라진다 (④2-B) — 표의 「v1.1.0 · outdated」 옆에 다음 걸음이 선다.
+    expect(summary(version({ semver: '2.0.0' }))).toContain('공식 v2.0.0 기준')
+    expect(summary(version({ semver: '2.0.0' }))).not.toContain('v1.2.0')
+  })
+
+  it('공식이 없으면 없다고 말한다 — `v—` 나 `v0.0.0` 을 지어내지 않는다', () => {
+    const html = summary(null)
+    expect(html).toContain(OFFICIAL_HINT.none)
+    expect(html).not.toContain('공식 v')
+    expect(html).not.toContain('v0.0.0')
+  })
+
+  it('아직 못 읽었으면(undefined) 공식 칸을 그리지 않고 기기 수는 그대로다 — 버전 표가 죽어도 표는 뜬다', () => {
+    const html = summary(undefined)
+    //  ⚠ 「공식」 낱말 자체는 칩 툴팁(`로컬 버전이 공식보다 낮다`)에도 있다 — 요약 문장으로 센다.
+    expect(html).not.toContain('공식 v')
+    expect(html).not.toContain(OFFICIAL_HINT.none)
+    expect(html).toContain('기기 1')
+  })
+
+  it('officialOf 는 is_official 인 행 하나를 고른다 — 없으면 null', () => {
+    const rows = [version({ id: 'a', semver: '1.0.0', is_official: false }), version({ id: 'b', semver: '1.2.0' })]
+    expect(officialOf(rows)?.semver).toBe('1.2.0')
+    expect(officialOf([version({ is_official: false })])).toBeNull()
+    expect(officialOf([])).toBeNull()
   })
 })

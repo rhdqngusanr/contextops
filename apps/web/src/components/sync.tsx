@@ -1,6 +1,6 @@
 import { SYNC_STATUSES, type SyncStatus } from '@contextops/schema'
 
-import type { DeviceSyncRow } from '../lib/web/queries'
+import type { DeviceSyncRow, VersionRow } from '../lib/web/queries'
 import { sinceText } from '../lib/web/time'
 import { SYNC_CHIP, SYNC_MEANING, SyncChip } from './chips'
 
@@ -100,7 +100,34 @@ export function countReceived(devices: readonly DeviceSyncRow[], manifestHash: s
 //  요약 — 0 인 상태는 그리지 않는다
 // ---------------------------------------------------------------------
 
-export function SyncSummary({ devices }: { devices: readonly DeviceSyncRow[] }) {
+/**
+ * 「그래서 무엇으로 맞춰야 하나」— 요약 맨 앞의 한 칸 (FINDINGS 118).
+ *
+ * ★ 왜 여기인가 — 표는 기기마다 `v1.1.0 · outdated` 를 그리지만, **공식이 지금 무엇인지**가
+ *   없으면 사람은 「낡았다」까지만 알고 다음 걸음을 모른다. 화면 8 의 요약 타일이 적는
+ *   `공식 v1.0.0 기준` 과 **같은 낱말**이다 — 두 화면이 다른 말을 하지 않게.
+ * ★ 왜 화면이 `fetchVersions()` 를 한 번 더 부르나 — sync-status 응답에 넣으면 기기 목록
+ *   라우트가 버전 표까지 알게 된다(대장의 「고르지 마라」). 문은 이미 있다.
+ * 🔴 없는 것을 지어내지 않는다 — 공식이 없으면 `v—` 가 아니라 **없다고** 말하고, 아직 못
+ *   읽었으면 아무것도 안 적는다(`undefined`). `null` 과 `undefined` 가 여기서 다른 뜻이다.
+ */
+export const OFFICIAL_HINT = {
+  of: (semver: string) => `공식 v${semver} 기준`,
+  none: '아직 발행된 버전이 없습니다.',
+} as const
+
+export function officialOf(versions: readonly VersionRow[]): VersionRow | null {
+  return versions.find((v) => v.is_official) ?? null
+}
+
+export function SyncSummary({
+  devices,
+  official,
+}: {
+  devices: readonly DeviceSyncRow[]
+  /** `undefined` = 아직 못 읽었다(아무것도 안 그린다) · `null` = 공식이 없다. */
+  official?: VersionRow | null
+}) {
   const counts = countByStatus(devices)
   //  ⚠ 0 인 상태를 칩으로 그리지 않는다 — 다섯 칩이 늘 서 있으면 사람은 어느 것이 지금
   //    있는 일인지 못 고른다 (화면 8 의 「열린 충돌 0」과 다르다: 저건 **하나뿐인 수**라
@@ -108,6 +135,11 @@ export function SyncSummary({ devices }: { devices: readonly DeviceSyncRow[] }) 
   const present = SYNC_STATUSES.filter((s) => counts[s] > 0)
   return (
     <div className="row wrap">
+      {official === undefined
+        ? null
+        : official === null
+          ? <span className="meta">{OFFICIAL_HINT.none}</span>
+          : <span className="mono ink" title={official.snapshot_hash}>{OFFICIAL_HINT.of(official.semver)}</span>}
       <span className="label">기기 {devices.length}</span>
       {present.map((s) => (
         <span key={s} className="row">
