@@ -287,8 +287,9 @@ function issueText(issues: readonly { readonly path: readonly PropertyKey[]; rea
  * 🔴 **공백은 접어서 찾는다** (FINDINGS 147). 문서는 문단을 줄 중간에서 하드 줄바꿈하고(픽스처
  *   goals.md 는 ~80자마다), 모델은 그 자리를 공백 하나로 적는다 — 진짜 Gemini 인용 27개 중 5개가
  *   그것 하나로 「원문에 없다」였고 재시도도 같은 자리에서 죽어 문서 전체가 `AI_OUTPUT_INVALID` 였다.
- *   마크다운에서 문단 안의 줄바꿈은 공백과 뜻이 같다. **글자는 여전히 그대로여야 한다** —
- *   `**` 를 더하거나 빼면 여전히 없다. offset 은 접은 자리를 **원문 자리로 되짚어** 낸다.
+ *   마크다운에서 문단 안의 줄바꿈은 공백과 뜻이 같다. **강조 표시(`*`)도 같은 이유로 뺀다**
+ *   (FINDINGS 148 · `QUOTE_FOLDED_CHARS`). **글자는 여전히 그대로여야 한다.**
+ *   offset 은 접은 자리를 **원문 자리로 되짚어** 낸다.
  */
 function toSourceRef(span: AiSourceSpan, chunk: DocChunk, documentVersionId: string, where: string): SourceRef {
   //  ⚠ 모델은 `untrusted()` 가 `</` → `<\` 로 바꾼 글을 읽는다 — 인용에 그 글자가 섞여
@@ -311,18 +312,31 @@ function toSourceRef(span: AiSourceSpan, chunk: DocChunk, documentVersionId: str
 }
 
 /**
- * 공백을 접은 글자열에서 `needle` 을 찾고 **원문 offset** 을 돌려준다. 순수 함수.
- * 접기 = 공백 문자의 연속(줄바꿈 포함)을 공백 하나로. 접힌 자리마다 원문 자리를 적어 두고 되짚는다.
- * `end` 는 마지막 글자의 원문 자리 + 1 — 인용 끝의 공백은 근거에 들어가지 않는다.
+ * 🔴 인용을 찾을 때 **글자가 아닌 것**으로 치는 문자 — 강조 표시(`*`). 양쪽에서 같이 뺀다.
+ *
+ * ★ 왜 (FINDINGS 148 · 85바퀴) — 픽스처의 「**PSP 가 흔들려도 …**」를 모델이 `**` 없이 인용했고
+ *   (84바퀴는 반대로 `**` 를 더했다), 그 하나로 「원문에 없다」→ 재시도도 같은 자리 → 문서 전체가
+ *   `AI_OUTPUT_INVALID` 였다 (3회 중 1회). 강조는 마크다운의 **꾸밈**이지 글자가 아니다 — 공백을
+ *   접는 것(147)과 같은 판단이다. 글자·문장부호는 여전히 그대로여야 한다.
+ * ⚠ 여기 문자를 더할 때는 「그 문자가 없어도 뜻이 같은가」로만 판단해라. `_` 는 id·코드의 글자다.
+ */
+export const QUOTE_FOLDED_CHARS: readonly string[] = ['*']
+
+/**
+ * 공백을 접고 꾸밈 문자(`QUOTE_FOLDED_CHARS`)를 뺀 글자열에서 `needle` 을 찾고 **원문 offset** 을
+ * 돌려준다. 순수 함수. 접기 = 공백 문자의 연속(줄바꿈 포함)을 공백 하나로. 접힌 자리마다 원문 자리를
+ * 적어 두고 되짚는다. `end` 는 마지막 글자의 원문 자리 + 1 — 인용 끝의 공백·꾸밈은 근거에 안 들어간다.
  */
 function findFolded(haystack: string, needle: string): { readonly at: number; readonly end: number } | 'none' | 'many' {
-  const target = needle.trim().replace(/\s+/g, ' ')
+  const decorated = (ch: string): boolean => QUOTE_FOLDED_CHARS.includes(ch)
+  const target = [...needle].filter((ch) => !decorated(ch)).join('').trim().replace(/\s+/g, ' ')
   if (target.length === 0) return 'none'
   const back: number[] = []
   let folded = ''
   let inSpace = false
   for (let i = 0; i < haystack.length; i++) {
     const ch = haystack[i]!
+    if (decorated(ch)) continue
     if (/\s/.test(ch)) {
       if (inSpace) continue
       inSpace = true

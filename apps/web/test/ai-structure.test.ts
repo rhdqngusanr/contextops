@@ -315,12 +315,42 @@ describe('근거는 모델의 숫자가 아니라 **인용에서 계산한 문�
     )
   })
 
-  it('공백을 접어도 **글자**는 그대로여야 한다 — `**` 를 더한 인용은 여전히 원문에 없다 (FINDINGS 147)', async () => {
+  it('🔴 강조 표시(`**`)는 글자가 아니다 — 모델이 빼고 인용해도 찾고, 근거는 원문의 강조 안쪽을 가리킨다 (FINDINGS 148)', async () => {
+    //  진짜 Gemini 85바퀴 3회차 — goals.md 의 「**PSP 가 … 것.**」을 `**` 없이 인용해 문서 전체가 죽었다.
+    const content = '# 사명\n\n가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.** 그래서 이 문서의 규칙은 대부분 「밖이 실패할 때 우리가 어떻게 행동하는가」다.\n'
+    stubAi(() => ({
+      input: output([policyItem('item_unbold', '강조 뺌', '가맹점이 우리를 쓰는 이유는 하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.')]),
+    }))
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    expect(sent.length).toBe(1)
+    const ref = result.items[0]!.source_refs[0]!
+    if (ref.kind !== 'source_document') throw new Error(ref.kind)
+    //  근거는 원문 그대로(줄바꿈 · 강조 포함)이고, 인용 끝에서 뺀 `**` 는 근거 밖이다.
+    expect(content.slice(ref.start_char, ref.end_char)).toBe('가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.')
+  })
+
+  it('반대로 모델이 `**` 를 **더해도** 찾는다 — 84바퀴의 재시도가 그랬다 (FINDINGS 148)', async () => {
     const content = '# 사명\n\n가맹점이 우리를 쓰는 이유는\n하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.\n'
+    stubAi(() => ({
+      input: output([policyItem('item_bold', '굵게 더함', '가맹점이 우리를 쓰는 이유는 하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**')]),
+    }))
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
+    })
+    expect(sent.length).toBe(1)
+    const ref = result.items[0]!.source_refs[0]!
+    if (ref.kind !== 'source_document') throw new Error(ref.kind)
+    expect(content.slice(ref.start_char, ref.end_char)).toBe('가맹점이 우리를 쓰는 이유는\n하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.')
+  })
+
+  it('접는 것은 공백과 강조뿐이다 — 글자 하나를 바꾼 인용은 여전히 원문에 없다 (FINDINGS 147 · 148)', async () => {
+    const content = '# 사명\n\n가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**\n'
     stubAi((n) => ({
       input: output([
         n === 0
-          ? policyItem('item_bold', '굵게 더함', '가맹점이 우리를 쓰는 이유는 하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**')
+          ? policyItem('item_typo', '글자 바꿈', '가맹점이 우리를 쓰는 이유는 하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 곳.')
           : policyItem('item_plain', '그대로', '가맹점이 우리를 쓰는 이유는 하나다 — PSP 가 흔들려도 결제가 흔들리지 않는 것.'),
       ]),
     }))
@@ -328,7 +358,7 @@ describe('근거는 모델의 숫자가 아니라 **인용에서 계산한 문�
       projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content, now: NOW,
     })
     expect(sent.length).toBe(2)
-    expect(sent[1]!.user).toContain('item_bold')
+    expect(sent[1]!.user).toContain('item_typo')
     expect(result.items.map((i) => i.id)).toEqual(['item_plain'])
   })
 
