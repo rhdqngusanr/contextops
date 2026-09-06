@@ -196,24 +196,29 @@ function Do-Start {
 
     if (Test-Path $stopFile) { Remove-Item $stopFile -Force }
 
-    if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-        Start-ScheduledTask -TaskName $taskName
-        Say ("■ {0} — {1}" -f $LOOP.Project, $LOOP.ProjectLine) "Cyan"
-        Say "켰다. 창을 닫아도, 껐다 켜도 계속 돈다." "Green"
-        Say "지켜보기: ctl.ps1 status" "DarkGray"
-        return
-    }
+    # ── 🔴 보이는 터미널 창으로 띄운다 (사용자 상시 지시 · 2026-09-06) ──
+    #
+    #  *"루프는 백그라운드에서 하지말고 무조건 터미널창켜서 내가 돌고있는걸
+    #    알수있게해야해"*
+    #
+    #  ★ 왜 — 전에는 작업 스케줄러가 창 없이 돌렸다. 그래서 **돌고 있는지 사람이
+    #    알 방법이 로그밖에 없었고**, 실제로 조용히 죽은 판을 몇 시간 뒤에야 알아챈
+    #    적이 네 번 있다 (2026-09-04 세 번 · 09-06 한 번). 창이 있으면 **사라진 것이
+    #    곧 신호**다.
+    #
+    #  ⚠ 맞바꾼 것 — 창을 닫으면 루프도 죽는다. 로그아웃·재부팅도 못 넘는다.
+    #    그건 스케줄러가 주던 것인데, **보이는 쪽을 골랐다.** 되돌리지 마라.
+    #  ⚠ 그래서 -WindowStyle 을 주지 않는다. 기본값이 보이는 창이다.
+    #    -NoNewWindow 도 주면 안 된다 — 그건 이 창에 묶어 버린다.
+    $title = "ContextOps 루프 — {0} · {1}" -f $LOOP.Model, $LOOP.Effort
+    $inner = '$host.UI.RawUI.WindowTitle = ''{0}''; & ''{1}''' -f $title, $loopPs1
+    $p = Start-Process -FilePath "powershell.exe" -PassThru -WorkingDirectory $root `
+            -ArgumentList ("-NoProfile -ExecutionPolicy Bypass -Command `"{0}`"" -f $inner)
 
-    #  ★ 작업이 없어도 켤 수 있게 한다. 스케줄러 등록은 환경에 따라 관리자 권한을
-    #    요구하는데, 그것 때문에 루프를 아예 못 돌리면 도구가 쓸모없다.
-    #  ⚠ 대신 이 판은 **로그아웃·재부팅을 못 넘는다.** 그건 정직하게 말한다.
-    #    (중복 실행은 걱정 없다 — loop.ps1 이 뮤텍스로 스스로 막는다.)
-    Say "작업이 등록돼 있지 않다 — 창 없이 직접 띄운다." "Yellow"
-    $p = Start-Process powershell -PassThru -WindowStyle Hidden `
-            -ArgumentList ("-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"{0}`"" -f $loopPs1) `
-            -WorkingDirectory $root
-    Say "켰다 (PID $($p.Id)). 이 창을 닫아도 계속 돈다." "Green"
-    Say "⚠ 다만 로그아웃·재부팅은 못 넘는다 — 넘기려면 관리자 PowerShell 에서 ctl.ps1 install" "DarkGray"
+    Say ("■ {0} — {1}" -f $LOOP.Project, $LOOP.ProjectLine) "Cyan"
+    Say "켰다 — **터미널 창이 떴는지 확인해라** (PID $($p.Id))." "Green"
+    Say "  창 제목: $title" "DarkGray"
+    Say "  ⚠ 그 창을 닫으면 루프가 멈춘다. 세울 때는 ctl.ps1 stop 을 써라." "Yellow"
     Say "지켜보기: ctl.ps1 status" "DarkGray"
 }
 
