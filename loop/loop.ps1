@@ -356,8 +356,23 @@ while ($true) {
     #    바퀴 둘을 그냥 태웠고 MaxCycles 를 채워 판이 끝났다.
     #  ★ 한도 문구는 제품이 바꾼다. **`limit` 이 들어간 문구는 넓게 잡아라** —
     #    오탐(20분 손해)보다 미탐(밤을 통째로 버림)이 훨씬 비싸다.
-    if ($isErr -and $resultText -match "usage limit|rate limit|session limit|quota exceeded|too many requests|429|API Error:\s*5\d\d|Overloaded|Internal server error") {
-        $limitHit = $true
+    #  🔴 2026-09-07 **문구를 쫓아다니는 방식이 세 번 뚫렸다.**
+    #      "usage limit" → "session limit" → "You're out of usage credits."
+    #    그때마다 물러서지도 갈아타지도 못하고 바퀴를 태웠다.
+    #  ★ 그래서 **구조로도 잡는다.** 문구는 제품이 바꾸지만 모양은 안 바뀐다:
+    #      진짜 일한 바퀴는 수십 턴이 나온다. **1~2턴에 끝난 오류는 일을 못 한 것**이고,
+    #      같은 조건으로 다시 불러 봐야 같은 벽이다 — 한도든 과부하든 대응이 같다.
+    #  ⚠ 구조로 잡았을 때는 **그 문구를 로그에 남긴다.** 안 남기면 다음에도 모른다.
+    if ($isErr) {
+        if ($resultText -match "usage limit|rate limit|session limit|usage credit|out of usage|quota exceeded|too many requests|429|API Error:\s*5\d\d|Overloaded|Internal server error") {
+            $limitHit = $true
+        }
+        elseif ($turns -ne "?" -and [int]$turns -le 2) {
+            $limitHit = $true
+            $sample = $resultText
+            if ($sample.Length -gt 160) { $sample = $sample.Substring(0, 160) + "…" }
+            Log "  ⚠ 문구는 몰라도 **$turns 턴에 끝난 오류**라 한도로 본다. 원문: $sample"
+        }
     }
 
     if ($limitHit) {
