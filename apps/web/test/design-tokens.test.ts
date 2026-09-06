@@ -205,3 +205,59 @@ describe('🔴 한글은 낱말 중간에서 안 접는다 — `body` 의 keep-a
     }
   })
 })
+
+// ---------------------------------------------------------------------
+//  ⑥ 키보드 포커스가 보인다 (FINDINGS 130 · INBOX 2026-09-06 ④ · DESIGN_BRIEF §3 「접근성」)
+//
+//  ★ 왜 이 시험이 생겼나 — 사람이 브라우저에서 잰 것: 스타일시트 전체에서 `:focus-visible` 규칙
+//    **0개** · `outline: none` 으로 지우는 규칙 **1개**. 탭으로 훑으면 지금 어디인지 알 수 없었다.
+//    포커스 링은 캡처로 못 잡는다(탭을 눌러야 뜬다) — 그래서 규칙의 **존재**는 기계가 잠그고
+//    모양은 사람이 본다. 어느 화면이 「보기 싫다」며 `outline: none` 한 줄을 다시 넣는 순간
+//    키보드 사용자에게는 아무것도 안 남는다 — 그 한 줄을 여기서 잡는다.
+//  재는 것 셋:
+//    ① `:focus-visible` 규칙이 있고 `outline: 2px solid var(--accent-ink)` + `outline-offset` 을 준다
+//    ② `outline: none`/`outline: 0` 을 주는 규칙의 선택자에 `:focus-visible` 이 없으면 0개
+//       (`:focus:not(:focus-visible)` 처럼 「키보드가 아닐 때만 지운다」는 허용 — 지금은 그마저 없다)
+//    ③ DESIGN_BRIEF §3 「접근성」 이 같은 값을 정본으로 적고 있다 (문서 ↔ 코드 양방향)
+// ---------------------------------------------------------------------
+describe('🔴 키보드 포커스가 보인다 — `:focus-visible` 링 한 곳', () => {
+  const cssFiles = () => sourceFiles(webSrc).filter((f) => f.endsWith('.css'))
+
+  /** `선택자 { 본문 }` 쌍. 주석은 먼저 지운다 — 주석 속 `outline: none` 을 규칙으로 세지 않게. */
+  function rules(text: string): Array<{ selector: string; body: string }> {
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, '')
+    const out: Array<{ selector: string; body: string }> = []
+    for (const m of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      out.push({ selector: (m[1] as string).trim(), body: m[2] as string })
+    }
+    return out
+  }
+
+  it('`:focus-visible` 규칙이 globals.css 에 있고 accent-ink 2px 링 + offset 을 준다', () => {
+    const ring = rules(readFileSync(globalsCss, 'utf8')).find((r) => r.selector === ':focus-visible')
+    expect(ring, 'globals.css 에 `:focus-visible { … }` 규칙이 없다').toBeDefined()
+    expect(ring!.body).toMatch(/outline:\s*2px\s+solid\s+var\(--accent-ink\)\s*;/)
+    expect(ring!.body).toMatch(/outline-offset:\s*-?\d+px\s*;/)
+  })
+
+  it('`outline: none` 이 `:focus-visible` 없이 홀로 있는 선택자가 0개다 (모든 css)', () => {
+    const hits: string[] = []
+    for (const file of cssFiles()) {
+      for (const r of rules(readFileSync(file, 'utf8'))) {
+        if (!/outline:\s*(?:none|0)\s*[;}]?/.test(r.body)) continue
+        if (r.selector.includes(':focus-visible')) continue
+        hits.push(`${file.slice(webSrc.length + 1)} — ${r.selector}`)
+      }
+    }
+    expect(hits, `키보드 포커스를 지우지 마라: ${hits.join(' · ')}`).toEqual([])
+  })
+
+  it('DESIGN_BRIEF §3 「접근성」 이 같은 값을 정본으로 적고 있다 (문서 ↔ 코드 양방향)', () => {
+    const md = readFileSync(designBrief, 'utf8')
+    const a11y = /### 접근성([\s\S]*?)\n### /.exec(md)
+    expect(a11y, 'DESIGN_BRIEF §3 에 「### 접근성」 절이 없다').not.toBeNull()
+    expect(a11y![1]).toContain(':focus-visible')
+    expect(a11y![1]).toContain('outline: 2px solid var(--accent-ink)')
+    expect(a11y![1]).toContain('outline-offset: 2px')
+  })
+})

@@ -107,6 +107,19 @@ p { margin: 0; }
 a { color: var(--accent-ink); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* ── 키보드 포커스 — 탭으로 훑을 때 「지금 어디인가」 (DESIGN_BRIEF §3 「접근성」 · FINDINGS 130) ──
+   🔴 여기가 **유일한** 포커스 링이다. 버튼·링크·입력·행(.pack-line)·탭이 전부 이 한 줄을 읽는다 —
+     컴포넌트가 자기 포커스 모양을 따로 그리지 마라. 색은 `accent-ink`(링크·강조의 색) 하나다.
+   ★ 왜 `:focus-visible` 인가 — `:focus` 면 마우스 클릭에도 링이 떠서 결국 누군가 `outline: none`
+     으로 지우고, 그러면 키보드 사용자에게는 **아무것도** 안 남는다 (사람이 브라우저에서 잰 것:
+     `:focus-visible` 0개 · `outline: none` 1개). 브라우저가 「키보드로 왔다」를 판정해 준다.
+   ⚠ `outline: none` 을 어디에도 쓰지 마라. `design-tokens.test.ts` 가 이 규칙의 존재와
+     「`outline: none` 이 홀로 있는 선택자 0개」를 센다. 탭 포커스 자체는 캡처가 못 잡으니
+     모양은 사람이 본다 (`docs/evidence/2026-09-06-focus-visible/`). */
+:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+/* 가로 스크롤 컨테이너(`.scroll-x`) 안의 **폭 100% 행**은 바깥쪽 링이 잘린다 — 안쪽으로 그린다. */
+.pack-line:focus-visible { outline-offset: -2px; }
+
 /* 버전·해시·경로·ID·수치는 모노다 — 「기계가 보증한 값」이 읽히게 (DESIGN_BRIEF §3). */
 code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
@@ -197,7 +210,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   padding: var(--sp-2) var(--sp-3);
   width: 100%;
 }
-.input:focus, .textarea:focus, .select:focus { outline: none; border-color: var(--accent-ink); }
+/* 테두리만 바꾼다. 링은 위의 `:focus-visible` 한 줄이 그린다 — 여기서 `outline: none` 을 되살리지 마라 (FINDINGS 130). */
+.input:focus, .textarea:focus, .select:focus { border-color: var(--accent-ink); }
 .input.mono { font-family: var(--font-mono); }
 .textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
 
