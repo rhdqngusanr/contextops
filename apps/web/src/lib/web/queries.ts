@@ -470,8 +470,9 @@ export function resolveConflict(
  * 🔴 **`author` 는 이름까지 온다** (FINDINGS 113). `author_id`(uuid) 를 대신한다 —
  *   둘 다 실으면 같은 사람이 두 칸에 앉고 화면이 어느 쪽을 읽을지 고르게 된다.
  *   ⚠ `null` 일 수 있다 (탈퇴·주인 없는 제안). 그때 화면은 uuid 를 대신 그리지 않는다.
- * ⚠ `decided_by` 는 아직 uuid 뿐이다 — 결정한 사람의 이름을 그리는 자리가 화면에
- *   없어서 문을 넓히지 않았다. 필요해지면 `USER_REF_COLUMNS` 를 한 번 더 join 한다.
+ * 🔴 **`decided_by` 도 사람이다** (FINDINGS 116). uuid 를 대신하며, 서버는 `users` 를
+ *   `alias(users, 'deciders')` 로 **한 번 더** join 해서 읽는다 (별칭이 없으면 작성자
+ *   이름이 이 칸에 들어간다). ⚠ 결정 전이면 `null` 이다 — 화면은 그 칸을 안 그린다.
  * ⚠ `base_version_id` 는 nullable 이다 — 첫 발행 전의 제안이 있을 수 있다.
  */
 export type ProposalRow = {
@@ -485,7 +486,7 @@ export type ProposalRow = {
   items: ProposalItem[]
   relates_to: string[]
   client_request_id: string
-  decided_by: string | null
+  decided_by: UserRef | null
   decided_at: string | null
   decision_note: string | null
   created_at: string

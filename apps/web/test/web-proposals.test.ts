@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import {
   PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_STATUSES, ROLE_RANK, TEAM_ROLES,
   ProposalItem as ProposalItemSchema,
-  type ContextItemDraft, type ContextItemView, type ProposalItem, type TeamRole,
+  type ContextItemDraft, type ContextItemView, type ProposalItem, type ProposalStatus, type TeamRole,
 } from '@contextops/schema'
 
 import {
@@ -269,6 +269,49 @@ describe('제안 머리 (DESIGN_BRIEF §4 화면 6 「상단 요약 + base v1.2.
       proposal: detail({ base_version_id: null }), base: null,
     }))
     expect(markup).toContain('기준 버전 없음')
+  })
+
+  it('🔴 **누가 결정했나**를 그린다 — uuid 가 아니라 이름이다 (FINDINGS 116)', () => {
+    const markup = html(createElement(ProposalHead, {
+      proposal: detail({
+        status: 'approved',
+        decided_by: { id: '00000000-0000-4000-8000-0000000000f1', name: '최결정' },
+        decided_at: '2026-09-05T03:00:00.000Z',
+      }),
+      base: VERSION,
+    }))
+    expect(markup).toContain('승인한 사람')
+    expect(markup).toContain('최결정')
+    //  🔴 uuid 는 화면에 없다 — 뜻 없는 글자를 사람 이름 자리에 그리지 않는다.
+    expect(markup).not.toContain('00000000-0000-4000-8000-0000000000f1')
+    //  ⚠ 작성자와 **다른 사람**이다 (서버가 별칭으로 두 번 join 한다).
+    expect(markup).toContain('최결정')
+  })
+
+  it('🔴 상태마다 그 사람의 이름이 갈린다 (`DECIDED_BY_LABEL` 표) — draft 는 아예 안 그린다', () => {
+    const person = { id: '00000000-0000-4000-8000-0000000000f1', name: '최결정' }
+    const drawn = (status: ProposalStatus) => html(createElement(ProposalHead, {
+      proposal: detail({ status, decided_by: person, decided_at: '2026-09-05T03:00:00.000Z' }),
+      base: VERSION,
+    }))
+    expect(drawn('submitted')).toContain('올린 사람')
+    expect(drawn('approved')).toContain('승인한 사람')
+    expect(drawn('rejected')).toContain('거절한 사람')
+    expect(drawn('published')).toContain('승인한 사람')
+    //  🔴 아직 아무도 옮기지 않은 제안에 사람 칸을 만들지 않는다.
+    expect(drawn('draft')).not.toContain('최결정')
+    //  표가 상태 5종을 전부 덮는가 — 하나라도 빠지면 `Record` 가 타입에서 잡는다.
+    expect(PROPOSAL_STATUSES.length).toBe(5)
+  })
+
+  it('🔴 결정자를 못 찾으면 이름을 지어내지 않는다 (탈퇴·기기)', () => {
+    const markup = html(createElement(ProposalHead, {
+      proposal: detail({ status: 'approved', decided_by: null, decided_at: '2026-09-05T03:00:00.000Z' }),
+      base: VERSION,
+    }))
+    expect(markup).toContain('승인한 사람')
+    expect(markup).toContain('—')
+    expect(markup).toContain('2026-09-05')
   })
 
   it('🔴 거절 사유는 결정된 뒤에 화면에 남는다 — 무엇을 고칠지 아는 자리가 여기뿐이다', () => {

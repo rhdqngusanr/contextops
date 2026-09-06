@@ -6,7 +6,7 @@ import { Manifest, SOURCE_REFS_MAX, SYNC_STATUSES } from '@contextops/schema'
 import { parseTraceTag } from '@contextops/compiler'
 
 import type { Db } from '../src/db/client'
-import { conflicts, contextItems, contextVersions, packFiles, projects } from '../src/db/schema'
+import { conflicts, contextItems, contextVersions, packFiles, projects, proposals, users } from '../src/db/schema'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
 import { POST as createProject } from '../src/app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../src/app/api/v1/projects/[id]/repos/route'
@@ -643,13 +643,65 @@ describe('제안 — 표 하나가 누가·언제·무엇으로를 정한다', (
     expect((got.author as { name: string }).name).toBe(listed?.author?.name)
 
     //  🔴 `author_id`(uuid)·`user_id`·`user_name` 은 **안 나간다** — 같은 사람이 세 칸에
-    //     앉으면 화면이 어느 것을 읽어야 하는지 고르게 된다 (`toProposalWithAuthor`).
+    //     앉으면 화면이 어느 것을 읽어야 하는지 고르게 된다 (`toProposalPeople`).
     for (const dropped of ['author_id', 'user_id', 'user_name']) {
       expect(Object.keys(got), `${dropped} 가 아직 나간다`).not.toContain(dropped)
       expect(Object.keys(listed ?? {}), `${dropped} 가 아직 나간다`).not.toContain(dropped)
     }
     //  🔴 이메일은 어느 칸에도 없다 (`lib/api/user.ts` 가 내는 칸이 둘뿐이다).
     expect(JSON.stringify(list)).not.toContain('@')
+  })
+
+  it('🔴 목록·상세·결정이 **결정한 사람의 이름**을 낸다 — 작성자와 다른 사람이다 (FINDINGS 116)', async () => {
+    const { owner, projectId, proposalId } = await aProposal()
+
+    await submitProposal(req('POST', `/api/v1/proposals/${proposalId}/submit`, { auth: owner }), params({ id: proposalId }))
+
+    //  🔴 작성자를 **다른 사람**으로 바꾼다. 같은 사람이면 별칭 없이 join 해도 시험이
+    //     초록이라, 「작성자 이름이 결정자 칸에 들어가는」 조용한 고장을 못 잡는다.
+    //  ⚠ `submit` 뒤에 바꾼다 — `submit` 은 작성자만 누를 수 있다 (`PROPOSAL_DECISIONS`).
+    const [writer] = await db.insert(users).values({
+      authSubject: `writer-${randomUUID()}`, email: 'writer@example.com', name: '박작성',
+    }).returning({ id: users.id })
+    await db.update(proposals).set({ authorId: writer!.id }).where(eq(proposals.id, proposalId))
+
+    const approved = await dataOf(await approveProposal(
+      req('POST', `/api/v1/proposals/${proposalId}/approve`, { auth: owner, body: { note: '좋다' } }),
+      params({ id: proposalId }),
+    ))
+
+    const decider = approved.decided_by as { id: string; name: string } | null
+    expect(decider?.name).toMatch(/^pub-owner-\d+$/)
+    expect((approved.author as { name: string } | null)?.name).toBe('박작성')
+    expect(decider?.name).not.toBe('박작성')
+
+    //  🔴 세 문(목록·상세·결정)이 **같은 모양**을 낸다 — 한 키가 라우트마다 uuid 였다가
+    //     사람이었다가 하면 화면이 둘 다 다룰 줄 알아야 한다.
+    const got = await dataOf(await getProposal(
+      req('GET', `/api/v1/proposals/${proposalId}`, { auth: owner }), params({ id: proposalId }),
+    ))
+    const list = await dataOf(await listProposals(
+      req('GET', `/api/v1/projects/${projectId}/proposals`, { auth: owner }), params({ id: projectId }),
+    ))
+    const [listed] = list.proposals as { decided_by: { name: string } | null; author: { name: string } | null }[]
+    expect((got.decided_by as { name: string }).name).toBe(decider?.name)
+    expect(listed?.decided_by?.name).toBe(decider?.name)
+    expect(listed?.author?.name).toBe('박작성')
+
+    //  🔴 uuid 칸(`decider_id`·`decider_name`)은 안 나간다 — 접어서 지운다.
+    for (const dropped of ['decider_id', 'decider_name']) {
+      expect(Object.keys(got), `${dropped} 가 아직 나간다`).not.toContain(dropped)
+    }
+    expect(JSON.stringify(list)).not.toContain('@')
+  })
+
+  it('결정 전에는 `decided_by` 가 null 이다 — 사람을 지어내지 않는다 (FINDINGS 116)', async () => {
+    const { owner, proposalId } = await aProposal()
+    const got = await dataOf(await getProposal(
+      req('GET', `/api/v1/proposals/${proposalId}`, { auth: owner }), params({ id: proposalId }),
+    ))
+    expect(got.status).toBe('draft')
+    expect(got.decided_by).toBeNull()
   })
 
   it('없는 제안과 남의 제안은 같은 404 다 (존재를 캐낼 수 없다)', async () => {

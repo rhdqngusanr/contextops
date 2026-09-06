@@ -1,11 +1,11 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { ListQuery, Proposal } from '@contextops/schema'
 
-import { contextVersions, proposals, users } from '../../../../../../db/schema'
+import { contextVersions, proposals } from '../../../../../../db/schema'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
 import {
-  PROPOSAL_AUTHOR_JOIN, PROPOSAL_COLUMNS, PROPOSAL_READ_COLUMNS, toProposal, toProposalWithAuthor,
+  PROPOSAL_COLUMNS, selectProposals, toProposal, toProposalPeople, type ProposalReadRow,
 } from '../../../../../../lib/api/proposal'
 import { parseBody, parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 
@@ -79,19 +79,16 @@ export const GET = route<{ id: string }>('GET /projects/{id}/proposals', async (
   await requireProject(ctx.db, actor, projectId, 'member')
   const query = parseQuery(ctx.req, ListQuery)
 
-  //  🔴 작성자의 **이름**을 같이 읽는다 (FINDINGS 113). uuid 만 내면 화면 6 의 함
-  //     목록은 「작성자」 칸을 **아예 만들 수 없다** — 뜻 없는 글자를 표에 그리게 되니까.
-  //  ⚠ `leftJoin` 이다: `author_id` 는 nullable 이라 사람이 없는 제안이 있을 수 있고,
-  //    inner 로 두면 그 제안이 목록에서 **조용히 사라진다**.
-  const rows = await ctx.db
-    .select(PROPOSAL_READ_COLUMNS)
-    .from(proposals)
-    .leftJoin(users, PROPOSAL_AUTHOR_JOIN)
+  //  🔴 작성자·결정자의 **이름**을 같이 읽는다 (FINDINGS 113 · 116). uuid 만 내면 화면 6 의
+  //     함 목록은 그 칸을 **아예 만들 수 없다** — 뜻 없는 글자를 표에 그리게 되니까.
+  //  ⚠ join 은 `selectProposals()` 한 곳이 건다: 둘 다 `leftJoin` 이다. `author_id`·
+  //    `decided_by` 는 nullable 이라 inner 로 두면 그 제안이 목록에서 **조용히 사라진다**.
+  const rows = await selectProposals(ctx.db)
     .where(eq(proposals.projectId, projectId))
     //  인덱스(`proposals_project_status_created_idx`)가 이 순서다 — 최신이 위다.
     .orderBy(desc(proposals.createdAt))
     .limit(query.limit)
     .offset(query.offset)
 
-  return ctx.ok({ proposals: rows.map(toProposalWithAuthor), limit: query.limit, offset: query.offset })
+  return ctx.ok({ proposals: rows.map((r) => toProposalPeople(r as ProposalReadRow)), limit: query.limit, offset: query.offset })
 })

@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { PROPOSAL_DECISIONS, ProposalDecision, type ProposalAction } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
@@ -7,7 +8,7 @@ import type { Actor } from './auth'
 import { fail } from './error'
 import { requireProject } from './guard'
 import { parseBody, pathUuid, route } from './route'
-import { USER_REF_COLUMNS, userRefOf } from './user'
+import { USER_REF_COLUMNS, userRefColumns, userRefOf } from './user'
 
 // =====================================================================
 //  Proposal 의 수명 (SPEC §2 · §5 `POST /proposals/{id}/submit|approve|reject`)
@@ -49,18 +50,47 @@ type ProposalRow = {
 }
 
 /**
- * **사람이 읽는** 제안 (목록·상세) — 제안의 칸 + 작성자의 **이름** (FINDINGS 113).
- *
- * ★ 왜 쓰기 라우트(`POST`·결정)와 나뉘나 — `insert().returning()` 은 join 을 못 한다.
- *   그리고 쓰는 쪽의 응답을 표에 그리는 화면이 없다 (제안을 올린 것은 기기다).
- *   읽는 문에만 이름을 붙이면 「누가 냈나」가 필요한 자리에만 정확히 온다.
- * ⚠ `author` 는 **`author_id` 를 대신한다** — 둘 다 실으면 같은 사람이 두 칸에 앉고,
- *   화면은 어느 쪽을 읽어야 하는지 고르게 된다.
+ * 🔴 **같은 `users` 표를 두 번째로 붙이는 자리** — 결정자 (FINDINGS 116).
+ *   별칭 없이 두 번 join 하면 SQL 이 갈라지지 않고, 조용히 **작성자 이름이 결정자 칸에**
+ *   들어간다. 화면에는 사람 이름이 멀쩡히 뜨므로 눈으로 안 잡힌다.
  */
-export const PROPOSAL_READ_COLUMNS = { ...PROPOSAL_COLUMNS, ...USER_REF_COLUMNS } as const
+export const PROPOSAL_DECIDER = alias(users, 'deciders')
+
+/**
+ * **사람이 읽는** 제안 (목록·상세·결정) — 제안의 칸 + 작성자와 **결정자의 이름**
+ * (FINDINGS 113 · 116).
+ *
+ * ★ 왜 쓰기 라우트(`POST`)와 나뉘나 — `insert().returning()` 은 join 을 못 한다.
+ *   그리고 새로 만든 제안에는 결정자가 아직 없다.
+ * ⚠ `author` 는 **`author_id` 를 대신하고**, `decided_by` 는 uuid 대신 **사람**이 된다 —
+ *   둘 다 실으면 같은 사람이 두 칸에 앉고, 화면은 어느 쪽을 읽어야 하는지 고르게 된다.
+ * ⚠ 결정 라우트도 **이 칸을 낸다** (`decide()` 가 갱신 뒤 이 문으로 다시 읽는다) —
+ *   한 키(`decided_by`)가 라우트마다 다른 모양이면 화면이 둘 다 다룰 줄 알아야 한다.
+ */
+export const PROPOSAL_READ_COLUMNS = {
+  ...PROPOSAL_COLUMNS,
+  ...USER_REF_COLUMNS,
+  ...userRefColumns('decider', PROPOSAL_DECIDER),
+} as const
 
 /** 읽는 문이 `proposals` 에 붙이는 join — `author_id` 가 nullable 이라 **left** 다. */
 export const PROPOSAL_AUTHOR_JOIN = eq(users.id, proposals.authorId)
+
+/** 결정자 join — 아직 결정되지 않은 제안이 있으므로 **left** 다. */
+export const PROPOSAL_DECIDER_JOIN = eq(PROPOSAL_DECIDER.id, proposals.decidedBy)
+
+/**
+ * 읽는 문 하나 — 세 라우트(목록·상세·결정)가 **같은 join 을 같은 순서로** 건다.
+ * ★ 왜 함수인가 — 라우트마다 `.leftJoin` 두 줄을 적으면 한 곳이 결정자 join 을 빠뜨려도
+ *   타입은 통과하고 `decided_by` 만 조용히 `null` 이 된다. 조건만 라우트가 붙인다.
+ */
+export function selectProposals(db: Db) {
+  return db
+    .select(PROPOSAL_READ_COLUMNS)
+    .from(proposals)
+    .leftJoin(users, PROPOSAL_AUTHOR_JOIN)
+    .leftJoin(PROPOSAL_DECIDER, PROPOSAL_DECIDER_JOIN)
+}
 
 /** 시각을 ISO 문자열로 바꾼다 — `Date` 를 그대로 실으면 JSON 이 로캘을 탄다. */
 export function toProposal(row: ProposalRow): Record<string, unknown> {
@@ -72,18 +102,29 @@ export function toProposal(row: ProposalRow): Record<string, unknown> {
   return out
 }
 
+/** 읽는 문이 내는 행 — 제안의 칸 + 두 사람의 칸. */
+export type ProposalReadRow = ProposalRow & {
+  user_id: unknown; user_name: unknown; decider_id: unknown; decider_name: unknown
+}
+
 /**
- * `toProposal` + 작성자 한 칸. `user_id`·`user_name` 두 칸은 **접어서 지운다** —
- * 남겨 두면 응답에 사람이 세 번(`author_id`·`user_id`·`author.id`) 나온다.
+ * `toProposal` + **사람 두 칸**(작성자·결정자). join 이 낸 네 칸은 **접어서 지운다** —
+ * 남겨 두면 응답에 같은 사람이 세 번(`author_id`·`user_id`·`author.id`) 나온다.
+ *
+ * ★ 새 사람을 더하는 절차: ① `userRefColumns(자리, alias(users, …))` 를
+ *   `PROPOSAL_READ_COLUMNS` 에 편다 ② `selectProposals()` 에 `leftJoin` 한 줄
+ *   ③ 여기서 `userRefOf(row, 자리)` 한 줄 ④ `lib/web/queries.ts` 의 `ProposalRow` 에 `UserRef`.
  */
-export function toProposalWithAuthor(
-  row: ProposalRow & { user_id: unknown; user_name: unknown },
-): Record<string, unknown> {
-  const { user_id, user_name, author_id: _dropped, ...rest } = row
+export function toProposalPeople(row: ProposalReadRow): Record<string, unknown> {
+  const { user_id, user_name, decider_id, decider_name, author_id: _dropped, ...rest } = row
+  const people = { user_id, user_name, decider_id, decider_name } as
+    Record<'user_id' | 'user_name' | 'decider_id' | 'decider_name', string | null>
   return {
     ...toProposal(rest as ProposalRow),
     //  ⚠ 못 찾으면 `null` 이다 — 화면이 「기기」·「—」 중 무엇을 그릴지 스스로 정한다.
-    author: userRefOf({ user_id: user_id as string | null, user_name: user_name as string | null }),
+    author: userRefOf(people, 'user'),
+    //  🔴 uuid 를 **대신한다.** 아직 결정 전이면 `null` 이고, 화면은 그 칸을 안 그린다.
+    decided_by: userRefOf(people, 'decider'),
   }
 }
 
@@ -134,10 +175,16 @@ export async function decide(args: {
       updatedAt: args.now,
     })
     .where(eq(proposals.id, args.proposalId))
-    .returning(PROPOSAL_COLUMNS)
+    .returning({ id: proposals.id })
   if (!updated) fail('INTERNAL', '제안을 갱신하지 못했다')
 
-  return { projectId: row.projectId, proposal: toProposal(updated) }
+  //  🔴 갱신한 행을 **읽는 문으로 다시** 읽는다 — `returning()` 은 join 을 못 해서
+  //     여기서만 `decided_by` 가 uuid 로 나가면, 같은 키가 라우트마다 다른 모양이 된다
+  //     (FINDINGS 116). 방금 결정한 사람의 이름이 그 자리에 바로 서는 것도 이 한 번이다.
+  const [read] = await selectProposals(args.db).where(eq(proposals.id, args.proposalId)).limit(1)
+  if (!read) fail('INTERNAL', '갱신한 제안을 다시 읽지 못했다')
+
+  return { projectId: row.projectId, proposal: toProposalPeople(read as ProposalReadRow) }
 }
 
 /**

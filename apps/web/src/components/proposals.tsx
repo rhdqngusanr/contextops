@@ -1,6 +1,6 @@
 import {
   PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_NOTE_MAX, ROLE_RANK,
-  type ContextItemView, type ProposalAction, type ProposalItem, type TeamRole,
+  type ContextItemView, type ProposalAction, type ProposalItem, type ProposalStatus, type TeamRole,
 } from '@contextops/schema'
 
 import { diffCounts, lineDiff, type DiffLine } from '../lib/web/diff'
@@ -106,6 +106,24 @@ export function ProposalTable({
 //  상세 — 머리 (DESIGN_BRIEF §4 화면 6 「상단 요약 + base v1.2.0」)
 // ---------------------------------------------------------------------
 
+/**
+ * 🔴 **상태마다 `decided_by` 가 다른 사람이다** — 그 칸의 이름은 여기 한 표가 정한다.
+ *   `decide()` 는 `submit` 에서도 `decided_*` 를 채운다 (「누가 언제 이 상태로 옮겼나」가
+ *   한 칸이다). 그래서 `submitted` 의 그 사람은 **결정자가 아니라 올린 사람**이고,
+ *   화면이 그걸 「승인한 사람」이라고 적으면 거짓말이 된다.
+ * ⚠ `draft` 는 `null` 이다 — 아직 아무도 옮기지 않았다.
+ * ⚠ `published` 는 발행 트랜잭션이 찍는 상태라 `decided_*` 는 **승인 때 것 그대로**다.
+ * ★ 상태를 하나 더하면: `PROPOSAL_STATUSES` 에 값 → 이 표에 한 줄 (`Record` 라 빠뜨리면
+ *   타입이 빨개진다).
+ */
+const DECIDED_BY_LABEL: Record<ProposalStatus, string | null> = {
+  draft: null,
+  submitted: '올린 사람',
+  approved: '승인한 사람',
+  rejected: '거절한 사람',
+  published: '승인한 사람',
+}
+
 export function ProposalHead({
   proposal,
   base,
@@ -144,15 +162,26 @@ export function ProposalHead({
         </div>
       )}
 
+      {/* 🔴 **누가 옮겼나**를 그 시각 옆에 적는다 (FINDINGS 116). 서버가 uuid 대신
+          사람을 낸다 — 못 찾으면 「—」다 (이름을 지어내지 않는다). */}
+      {DECIDED_BY_LABEL[proposal.status] === null ? null : (
+        <div className="row wrap">
+          <span className="label">{DECIDED_BY_LABEL[proposal.status]}</span>
+          {proposal.decided_by === null
+            ? <span aria-hidden="true" className="ink-4">—</span>
+            : <span className="ink">{proposal.decided_by.name}</span>}
+          {proposal.decided_at === null
+            ? null
+            : <span className="meta mono">{dateText(proposal.decided_at)}</span>}
+        </div>
+      )}
+
       {/* 🔴 결정 사유는 **결정된 뒤에** 제일 크게 읽혀야 한다 — 거절당한 사람이 무엇을
           고쳐야 하는지 아는 자리가 이 한 칸뿐이다 (`noteRequired`). */}
       {proposal.decision_note === null ? null : (
         <div className="col-tight">
           <span className="label">결정 사유</span>
           <p className="ink">{proposal.decision_note}</p>
-          {proposal.decided_at === null
-            ? null
-            : <span className="meta mono">{dateText(proposal.decided_at)}</span>}
         </div>
       )}
     </section>
