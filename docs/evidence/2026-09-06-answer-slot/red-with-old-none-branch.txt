@@ -1,0 +1,69 @@
+
+ RUN  v4.1.11 C:/dev/hackathon/apps/web
+
+stdout | test/api-routes.test.ts > conflicts — 선택 4개가 상태를 가른다 > 답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108) > 표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다
+{"kind":"request","request_id":"db01f4ed-89d8-4d6b-bf17-e72580654788","route":"POST /teams","method":"POST","status":201,"latency_ms":11,"user_id":"9ea3e3a2-9153-4476-967a-4e97e8593978"}
+
+stdout | test/api-routes.test.ts > conflicts — 선택 4개가 상태를 가른다 > 답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108) > 표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다
+{"kind":"request","request_id":"8116f7e8-94a3-4a14-aacc-b182f876f5b3","route":"POST /teams/{id}/projects","method":"POST","status":201,"latency_ms":8,"user_id":"9ea3e3a2-9153-4476-967a-4e97e8593978","project_id":"432b2a17-3452-4e69-834d-e32dd84f71d4"}
+
+stdout | test/api-routes.test.ts > conflicts — 선택 4개가 상태를 가른다 > 답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108) > 표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다
+{"kind":"request","request_id":"27491083-280e-4f46-a160-2daed3546c2e","route":"POST /projects/{id}/repos","method":"POST","status":201,"latency_ms":4,"user_id":"9ea3e3a2-9153-4476-967a-4e97e8593978","project_id":"432b2a17-3452-4e69-834d-e32dd84f71d4"}
+
+stdout | test/api-routes.test.ts > conflicts — 선택 4개가 상태를 가른다 > 답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108) > 표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다
+{"kind":"request","request_id":"a93a3333-f0c5-482a-aa28-a116a123ff8b","route":"POST /projects/{id}/questions","method":"POST","status":200,"latency_ms":9,"user_id":"9ea3e3a2-9153-4476-967a-4e97e8593978","project_id":"432b2a17-3452-4e69-834d-e32dd84f71d4"}
+
+ ❯ test/api-routes.test.ts (42 tests | 2 failed | 37 skipped) 4675ms
+       × 같은 답이 세 갈래에서 **서로 다른 결과**를 낸다 — 값을 뒤집으면 결과가 갈린다 891ms
+       × 표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다 909ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/api-routes.test.ts > conflicts — 선택 4개가 상태를 가른다 > 답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108) > 같은 답이 세 갈래에서 **서로 다른 결과**를 낸다 — 값을 뒤집으면 결과가 갈린다
+AssertionError: expected [ …(3) ] to deeply equal [ …(3) ]
+
+- Expected
++ Received
+
+  [
+    "VALIDATION_FAILED:이 질문은 저장될 자리가 이미 정해져 있다",
+    "draft:mission",
+-   "VALIDATION_FAILED:이 질문은 답을 항목으로 만들지 않습니다",
++   "draft:mission",
+  ]
+
+ ❯ test/api-routes.test.ts:828:22
+    826|       //  자리를 고른 답: seeded 는 거절 · ask 는 고른 자리 · none 은 거절 — **문구가 다르다.…
+    827|       const picked = ANSWER_SLOT_MODES.map((m) => outcome(m, 'mission'…
+    828|       expect(picked).toEqual([
+       |                      ^
+    829|         'VALIDATION_FAILED:이 질문은 저장될 자리가 이미 정해져 있다',
+    830|         `draft:${'mission'}`,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  test/api-routes.test.ts > conflicts — 선택 4개가 상태를 가른다 > 답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108) > 표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다
+AssertionError: expected 200 to be 400 // Object.is equality
+
+- Expected
++ Received
+
+- 400
++ 200
+
+ ❯ test/api-routes.test.ts:852:26
+    850|       }), params({ id: projectId }))
+    851|
+    852|       expect(res.status).toBe(400)
+       |                          ^
+    853|       const err = await errorOf(res)
+    854|       expect(err.code).toBe('VALIDATION_FAILED')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 3 passed | 37 skipped (42)
+   Start at  20:56:24
+   Duration  5.95s (transform 294ms, setup 0ms, import 1.13s, tests 4.68s, environment 0ms)
+

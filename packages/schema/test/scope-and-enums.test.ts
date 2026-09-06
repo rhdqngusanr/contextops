@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CONFLICT_KINDS, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, QUESTION_CONFLICT_KINDS,
+  ANSWER_SLOT_MODES, CONFLICT_KINDS, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, QUESTION_CONFLICT_KINDS,
 } from '../src/api'
 import { CONFIDENCE_LEVELS, ITEM_STATUSES, SCOPE_KINDS, Scope } from '../src/common'
 import { ContextItem, PolicyData } from '../src/item'
@@ -64,6 +64,14 @@ describe('🔴 충돌 종류 표의 두 축이 갈라지지 않는다 (FINDINGS 
     for (const kind of QUESTION_CONFLICT_KINDS) {
       expect(['seeded', 'ask'], kind).toContain(CONFLICT_KIND_RULES[kind].answerSlot)
     }
+  })
+
+  //  🔴 값 목록의 정본은 `ANSWER_SLOT_MODES` 다 (FINDINGS 108) — 표의 모든 줄이 그 안에 있고,
+  //     목록의 세 값이 전부 표에 **쓰인다.** 안 쓰이는 값은 라우트 표에 줄만 남긴다.
+  it('표의 `answerSlot` 은 전부 `ANSWER_SLOT_MODES` 안이고, 세 값이 다 쓰인다', () => {
+    expect(ANSWER_SLOT_MODES).toEqual(['seeded', 'ask', 'none'])
+    const used = new Set(CONFLICT_KINDS.map((k) => CONFLICT_KIND_RULES[k].answerSlot))
+    expect(used).toEqual(new Set(ANSWER_SLOT_MODES))
   })
 
   //  🔴 두 값이 **둘 다 살아 있어야** 한다 — 하나만 쓰이면 그 축은 이름만 남는다.

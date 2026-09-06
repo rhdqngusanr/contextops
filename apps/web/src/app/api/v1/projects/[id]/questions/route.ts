@@ -1,16 +1,15 @@
 import { and, asc, eq, inArray } from 'drizzle-orm'
-import { ANSWER_MAX, AnswerQuestions, CONFLICT_KIND_RULES, ConflictQuery, QUESTION_CONFLICT_KINDS } from '@contextops/schema'
+import { AnswerQuestions, ConflictQuery, QUESTION_CONFLICT_KINDS } from '@contextops/schema'
 //  ⚠ 정밀한 초안 타입은 따로 온다 — 유니온 스키마의 `z.infer` 는 느슨하다 (item.ts 주석).
 import type { ConflictKind, ContextItemDraft as Draft } from '@contextops/schema'
 
 import { conflicts } from '../../../../../../db/schema'
-import { slotDraft } from '../../../../../../lib/api/answer'
+import { draftForAnswer } from '../../../../../../lib/api/answer-slot'
 import { CONFLICT_COLUMNS, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
 import { insertDrafts } from '../../../../../../lib/api/item'
 import { parseBody, parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
-import { seedDraft, seedQuestionOf } from '../../../../../../lib/api/seed-questions'
 
 // =====================================================================
 //  `GET·POST /projects/{id}/questions` — member (SPEC §5 · §9 화면 3·4)
@@ -20,18 +19,19 @@ import { seedDraft, seedQuestionOf } from '../../../../../../lib/api/seed-questi
 //    §7.1 이 문서를 읽다 남긴 `open_question` 과, 프로젝트를 만들 때 심는
 //    `seed_question` 10장 (`lib/api/seed-questions.ts` · 화면 3 ③).
 //
-//  🔴 **답변이 항목이 되는 길은 둘이고, 둘 다 서버가 문장을 지어내지 않는다.**
-//     어느 길인가는 여기서 세지 않는다 — `CONFLICT_KIND_RULES[kind].answerSlot` 이 정한다:
+//  🔴 **답변이 어느 길로 가는가는 여기서 세지 않는다** — `CONFLICT_KIND_RULES[kind].answerSlot`
+//     의 값마다 한 줄인 표 `ANSWER_SLOT_DRAFTERS` 가 정한다 (`lib/api/answer-slot.ts` · FINDINGS 108).
 //    ① `seeded` — 씨앗 질문. **표가 정한 자리**로 답변을 그대로 옮긴다 (`seedDraft`).
 //    ② `ask`    — 열린 질문. 자리를 **사람이 고른다** (`save_as` → `ANSWER_SLOTS`).
-//       ⚠ 서버가 대신 고르지 않는다. 자유 문장을 타입별 `data` 로 뜯는 것은 §7.1 의
-//         일이고, 여기서 흉내 내면 근거를 지어내게 된다.
 //       ⚠ 안 고르면(=`save_as` 없음) 답만 기록하고 질문을 닫는다 — 사람이 「기록만」을
 //         고른 것이다. 예전에는 그 길**밖에** 없었고, 그래서 화면 4 의 열린 질문 카드는
 //         답을 저장해도 항목이 하나도 안 생겼다 (FINDINGS 105).
-//    🔴 **두 길 다 초안을 서버가 짓는다** — `answerDraft()` 하나 (`lib/api/answer.ts`).
-//      근거 한 줄(`questionRef`)이 거기서 붙는다: 그 항목의 Pack 줄에서 「사람이 어느
-//      질문에 답한 것인가」로 갈 길이 있어야 한다 (P7 · FINDINGS 56).
+//    ③ `none`   — 자리가 없는 종류. 답은 기록되지만 항목이 되지 않는다. 자리를 고르면 400.
+//       ⚠ 지금 이 종류의 질문은 없다 (`QUESTION_CONFLICT_KINDS` 둘은 `seeded`·`ask`) —
+//         예전엔 이 갈래가 ② 와 같아서, 셋째 질문 종류가 생기는 날 조용히 항목을 지었다.
+//    🔴 **어느 길도 서버가 문장을 지어내지 않는다** — 초안은 `answerDraft()` 하나가 짓는다
+//      (`lib/api/answer.ts`). 근거 한 줄(`questionRef`)이 거기서 붙는다: 그 항목의 Pack 줄에서
+//      「사람이 어느 질문에 답한 것인가」로 갈 길이 있어야 한다 (P7 · FINDINGS 56).
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
@@ -92,37 +92,14 @@ export const POST = route<{ id: string }>('POST /projects/{id}/questions', async
   for (const answer of body.answers) {
     const row = answerable.get(answer.question_id)
     if (!row) continue
-    const slot = CONFLICT_KIND_RULES[row.kind as ConflictKind].answerSlot
-    let draft: Draft | undefined
-
-    if (slot === 'seeded') {
-      //  ⚠ 이 종류에는 `save_as` 를 받지 않는다. **조용히 무시하지 않는다** — 무시하면
-      //     사람은 자기가 고른 자리로 저장된 줄 알고, 실제로는 표가 정한 자리로 간다.
-      if (answer.save_as) {
-        fail('VALIDATION_FAILED', '이 질문은 저장될 자리가 이미 정해져 있다', [
-          { path: 'save_as', message: answer.question_id },
-        ])
-      }
-      const seed = seedQuestionOf(row.question)
-      if (!seed) continue
-      draft = seedDraft(seed, answer.answer)
-    } else {
-      //  자리를 안 고른 답은 **기록만** 된다 (질문은 닫힌다).
-      if (!answer.save_as) continue
-      draft = slotDraft(answer.save_as, {
-        questionId: answer.question_id, question: row.question, answer: answer.answer,
-      })
-    }
-
-    //  ⚠ 초안을 못 만드는 이유는 하나다 — 답변이 목적지 칸보다 길다 (`ANSWER_MAX`).
-    //     여기서 400 을 내지 않으면 사람은 「저장됐다」를 보고 자기 문장이 어디 갔는지
-    //     못 찾는다 (`batch-draft` 가 항목별로 갈라 받는 것과 정반대의 이유다 —
-    //     거긴 기계가 보낸다).
-    if (!draft) {
-      fail('VALIDATION_FAILED', `답변은 ${ANSWER_MAX}자까지입니다`, [
-        { path: 'answer', message: `${row.question} — ${answer.answer.length}자` },
-      ])
-    }
+    //  🔴 갈래는 여기 없다 — `answerSlot` 값마다 한 줄인 표가 정한다 (`answer-slot.ts`).
+    //     `undefined` 는 「항목을 만들지 않는다」이고, 거절(자리를 잘못 골랐다 · 답이 길다)은
+    //     그 표가 400 으로 던진다.
+    const draft = draftForAnswer({
+      questionId: answer.question_id, kind: row.kind as ConflictKind,
+      question: row.question, answer: answer.answer, saveAs: answer.save_as,
+    })
+    if (!draft) continue
     drafts.set(answer.question_id, draft)
   }
 

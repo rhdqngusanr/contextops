@@ -273,6 +273,25 @@ export const PROPOSAL_DECISIONS: Record<ProposalAction, ProposalDecisionRule> = 
 export const CONFLICT_ANCHORS = ['items', 'document', 'none'] as const
 export type ConflictAnchor = (typeof CONFLICT_ANCHORS)[number]
 
+/**
+ * 🔴 **답이 어디로 가나의 값 목록** (`ConflictKindRule.answerSlot` · SPEC §5 · FINDINGS 108).
+ *
+ * ★ 왜 이름을 붙였나 — 이 값을 **읽어서 갈리는 자리**가 둘이다: 라우트의 초안 표
+ *   (`apps/web/src/lib/api/answer-slot.ts` · `ANSWER_SLOT_DRAFTERS`)와 화면의 「자리를 묻나」.
+ *   라우트가 `seeded` 인지만 보고 나머지를 한 갈래로 읽었더니 `none` 이 `ask` 와 같은
+ *   뜻이 됐다 — 이 목록으로 `Record` 를 채우게 하면 값이 늘 때 타입 검사가 그 표를 막는다.
+ *
+ * ★ 값을 더하는 절차 — 셋:
+ *   ① 여기 **끝에** 값 추가
+ *   ② `ANSWER_SLOT_DRAFTERS` 에 한 줄  ← ①만 하면 여기서 타입 검사가 막힌다
+ *   ③ 새 값이 사람에게 자리를 묻는다면 화면(`question-stack.tsx` · `conflict-card.tsx`)의
+ *      `=== 'ask'` 를 봐라 — 화면은 「묻나」 하나만 읽는다
+ * ⚠ `none` 이 아닌 값이 곧 `QUESTION_CONFLICT_KINDS` 의 값이어야 한다 —
+ *   `test/scope-and-enums.test.ts` 가 잰다.
+ */
+export const ANSWER_SLOT_MODES = ['seeded', 'ask', 'none'] as const
+export type AnswerSlotMode = (typeof ANSWER_SLOT_MODES)[number]
+
 /** 충돌 종류 하나의 규칙. 프롬프트·검증·DB 제약·화면이 이 표를 **읽기만** 한다. */
 export interface ConflictKindRule {
   /**
@@ -320,8 +339,9 @@ export interface ConflictKindRule {
    *   못 찾으면 **답 칸만 있고 항목이 안 생기는 카드**가 조용히 하나 는다 (FINDINGS 105).
    * ⚠ `none` 인 줄은 정확히 `detected: true` 인 줄이다 — 둘이 갈라지지 않는지는
    *   `test/scope-and-enums.test.ts` 가 잰다. 손으로 맞추지 마라.
+   * ⚠ 값 목록의 정본은 `ANSWER_SLOT_MODES` 다 — 라우트는 그 수만큼 갈래를 갖는다 (FINDINGS 108).
    */
-  readonly answerSlot: 'seeded' | 'ask' | 'none'
+  readonly answerSlot: AnswerSlotMode
   /** 이 종류를 만드는 자리 한 줄. `detected` 가 `false` 인 줄이 특히 중요하다. */
   readonly madeBy: string
   /**

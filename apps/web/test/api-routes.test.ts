@@ -2,14 +2,16 @@ import type { PGlite } from '@electric-sql/pglite'
 import { and, asc, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  ANSWER_MAX, CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, ContextItemView,
+  ANSWER_MAX, ANSWER_SLOT_MODES, CONFLICT_CHOICES, CONFLICT_KIND_RULES, CONFLICT_KINDS, ContextItem, ContextItemView,
   ITEM_TITLE_MAX, MANUAL_NOTE_MAX, QUESTION_CONFLICT_KINDS, RESOLUTION_ITEM_OUTCOME, SOURCE_REFS_MAX,
-  type ConflictChoice, type ConflictKind, type SourceRef,
+  type AnswerSlotMode, type ConflictChoice, type ConflictKind, type SourceRef,
 } from '@contextops/schema'
 
 import { conflicts, contextItemRevisions, contextItems, repos, sourceDocumentVersions, sourceDocuments } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { questionItemId } from '../src/lib/api/answer'
+import { ANSWER_SLOT_DRAFTERS, draftForAnswer } from '../src/lib/api/answer-slot'
+import { ApiError } from '../src/lib/api/error'
 import { RESOLUTION_OUTCOME } from '../src/lib/api/conflict'
 import { SEED_QUESTIONS } from '../src/lib/api/seed-questions'
 import { GET as listTeams, POST as createTeam } from '../src/app/api/v1/teams/route'
@@ -779,5 +781,102 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
       params({ id: projectId }),
     ))
     expect(open.questions).toHaveLength(1 + SEED_QUESTIONS.length)
+  })
+
+  //  -------------------------------------------------------------------
+  //  🔴 FINDINGS 108 — 라우트의 갈래 수 = `answerSlot` 값의 수
+  //
+  //  ★ 왜 재나 — 라우트가 `slot === 'seeded'` 만 보고 나머지를 한 갈래로 읽었을 때
+  //    `none` 은 `ask` 와 같았다. 지금 `none` 인 질문 종류는 없으므로(둘 다 `seeded`·`ask`)
+  //    라우트로는 닿을 수 없다 — 그래서 **표를 뒤집어서** 잰다. 화면 시험 7개는 뒤집으면
+  //    빨개졌는데 API 시험은 하나도 안 빨개졌던 것이 108 의 근거였다.
+  //  -------------------------------------------------------------------
+  describe('답이 갈 길은 표 한 장이다 — `answerSlot` 값마다 한 줄 (FINDINGS 108)', () => {
+    const rule = CONFLICT_KIND_RULES.open_question as { answerSlot: AnswerSlotMode }
+    const original = rule.answerSlot
+
+    afterEach(() => {
+      rule.answerSlot = original
+    })
+
+    it('표의 줄이 값 목록과 하나도 안 어긋난다 — 값이 늘면 줄도 늘어야 한다', () => {
+      expect(new Set(Object.keys(ANSWER_SLOT_DRAFTERS))).toEqual(new Set(ANSWER_SLOT_MODES))
+    })
+
+    //  🔴 두 표의 관계 — 「어느 종류가 질문인가」(`QUESTION_CONFLICT_KINDS`)와 「그 질문이 자리를
+    //     묻나」(`answerSlot`)가 갈라지면 셋째 종류를 더할 때 한쪽만 고쳐진다.
+    it('라우트가 받는 질문 종류는 정확히 `none` 이 아닌 종류다', () => {
+      const notNone = CONFLICT_KINDS.filter((k) => CONFLICT_KIND_RULES[k].answerSlot !== 'none')
+      expect(notNone).toEqual([...QUESTION_CONFLICT_KINDS])
+    })
+
+    it('같은 답이 세 갈래에서 **서로 다른 결과**를 낸다 — 값을 뒤집으면 결과가 갈린다', () => {
+      const base = {
+        questionId: '00000000-0000-4000-8000-000000000108', kind: 'open_question' as const,
+        question: SEED_QUESTIONS[0]!.question, answer: '결제를 만든다.',
+      }
+      const outcome = (mode: AnswerSlotMode, saveAs?: 'mission') => {
+        try {
+          const d = ANSWER_SLOT_DRAFTERS[mode]({ ...base, saveAs })
+          return d ? `draft:${d.type}` : 'record_only'
+        } catch (e) {
+          return e instanceof ApiError ? `${e.code}:${e.message}` : 'throw'
+        }
+      }
+      //  자리를 고른 답: seeded 는 거절 · ask 는 고른 자리 · none 은 거절 — **문구가 다르다.**
+      const picked = ANSWER_SLOT_MODES.map((m) => outcome(m, 'mission'))
+      expect(picked).toEqual([
+        'VALIDATION_FAILED:이 질문은 저장될 자리가 이미 정해져 있다',
+        `draft:${'mission'}`,
+        'VALIDATION_FAILED:이 질문은 답을 항목으로 만들지 않습니다',
+      ])
+      //  안 고른 답: seeded 는 표의 자리 · ask 는 기록만 · none 도 기록만.
+      const plain = ANSWER_SLOT_MODES.map((m) => outcome(m))
+      expect(plain).toEqual([`draft:${SEED_QUESTIONS[0]!.type}`, 'record_only', 'record_only'])
+      //  셋이 전부 다른 값을 낸 갈래가 적어도 하나 있어야 「세 갈래」다.
+      expect(new Set(picked).size).toBe(ANSWER_SLOT_MODES.length)
+      //  문은 `kind` 로 표를 고른다 — 표를 직접 부른 것과 같은 결과다.
+      expect(draftForAnswer({ ...base, saveAs: 'mission' })?.type).toBe('mission')
+    })
+
+    it('표를 `none` 으로 뒤집으면 자리를 고른 답이 400 이고 아무 질문도 안 닫힌다', async () => {
+      const { owner, projectId } = await seed()
+      const { id } = await seedConflict(projectId, 'open_question')
+      rule.answerSlot = 'none'
+
+      const res = await answerQuestions(req('POST', `/api/v1/projects/${projectId}/questions`, {
+        auth: owner,
+        body: { answers: [{ question_id: id, answer: '3회로 한다.', save_as: 'constraint' }] },
+      }), params({ id: projectId }))
+
+      expect(res.status).toBe(400)
+      const err = await errorOf(res)
+      expect(err.code).toBe('VALIDATION_FAILED')
+      expect(err.message).toBe('이 질문은 답을 항목으로 만들지 않습니다')
+      expect(await db.select().from(contextItems)).toHaveLength(0)
+      const open = await dataOf(await listQuestions(
+        req('GET', `/api/v1/projects/${projectId}/questions?status=open`, { auth: owner }),
+        params({ id: projectId }),
+      ))
+      expect((open.questions as { id: string }[]).map((q) => q.id)).toContain(id)
+    })
+
+    it('표를 `none` 으로 뒤집어도 자리를 안 고른 답은 기록되고 질문은 닫힌다 — 항목은 0', async () => {
+      const { owner, projectId } = await seed()
+      const { id } = await seedConflict(projectId, 'open_question')
+      rule.answerSlot = 'none'
+
+      const res = await answerQuestions(req('POST', `/api/v1/projects/${projectId}/questions`, {
+        auth: owner,
+        body: { answers: [{ question_id: id, answer: '3회로 한다.' }] },
+      }), params({ id: projectId }))
+
+      expect(res.status).toBe(200)
+      expect((await dataOf(res)).created_item_ids).toEqual([])
+      expect(await db.select().from(contextItems)).toHaveLength(0)
+      const [row] = await db.select({ status: conflicts.status, resolution: conflicts.resolution })
+        .from(conflicts).where(eq(conflicts.id, id))
+      expect(row).toEqual({ status: 'resolved', resolution: { choice: 'a', note: '3회로 한다.' } })
+    })
   })
 })
