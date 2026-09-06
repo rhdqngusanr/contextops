@@ -37,7 +37,10 @@ export default function ProjectLayout({
         </div>
         {/* ⚠ 내비 안이다 — 「어디로 갈 수 있나」를 말하는 자리가 둘로 갈리지 않게. */}
         <CommandPalette base={base} pathname={path} team={team} project={project} />
-        <div className="col-tight">
+        {/* ⚠ `nav-links` 는 **좁은 폭에서 접히는 것**을 가리키는 이름이다 (FINDINGS 160) —
+            접는 규칙은 `globals.css` 의 유일한 폭 질의 한 곳에 있다. 여기에 px 를 적지 마라.
+            접힌 뒤 갈 곳은 바로 위 ⌘K 팔레트다 (같은 `PROJECT_SCREENS` 표를 읽는다). */}
+        <div className="col-tight nav-links">
           {PROJECT_SCREENS.map((screen) => (
             <a
               key={screen.path}

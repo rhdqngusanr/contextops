@@ -130,6 +130,13 @@
   mono 라 `ch` 로 잰다 — px 로 적으면 글꼴이 폴백으로 바뀔 때 다시 잘린다.
   ★ 왜 — 화면 5 의 `scope` 칸이 `project · domain:billing` 을 `domain:billin` 으로 보여 줬다.
   **가르치는 자리가 틀린 문법을 가르치면 사람은 그대로 따라 적는다.**
+- **좁은 폭의 경계는 `--bp-narrow` 한 자리다** (FINDINGS 160). 이 저장소의 breakpoint 는 그것뿐이고,
+  `globals.css` 의 폭 질의(`@media (max-width: …)`)도 **하나**다 — 새 폭이 필요하면 질의를 더하지 말고
+  그 값을 고친다 (`design-tokens.test.ts` ⑨ 가 짝을 센다).
+  그 아래에서 앱 껍데기는 **좌측 내비를 가로 막대로 접고 탭 줄(`.nav-links`)을 감춘다** —
+  갈 곳은 같은 `PROJECT_SCREENS` 표를 읽는 **⌘K 팔레트**가 받는다(내비 안에 이미 있다). 팀·프로젝트 이름은 남는다.
+  ★ 왜 — 375px 에서 내비가 220px 를 그대로 차지해 `.main-inner` 가 **76px** 로 눌렸고,
+  안 들어가는 것이 전부 밖으로 밀려 **가로 스크롤**이 생겼다(문서 폭 444px · 뷰포트 375px).
 
 ### 공통 컴포넌트
 - **StatusChip**: `applied ✓` / `outdated ⚠` / `modified ✎` / `manual ⇩` / `unknown ?` / `failed ✕` — 아이콘+텍스트+색.

@@ -392,3 +392,55 @@ describe('🔴 쓰는 법을 말하는 placeholder 가 칸 폭에서 잘리지 �
     expect((layout as RegExpExecArray)[1]).toContain('--filter-input-ch')
   })
 })
+
+// ---------------------------------------------------------------------
+//  ⑨ 좁은 폭의 경계는 **한 자리**다 (FINDINGS 160 · DESIGN_BRIEF §3 「레이아웃」)
+//
+//  ★ 왜 이 시험이 생겼나 — 375px 에서 앱 껍데기가 내비 220px 를 안 접어 `.main-inner` 가
+//    **76px** 로 눌렸고, 안 들어가는 것이 밖으로 밀려 문서 폭이 444px(뷰포트 375)이 됐다 —
+//    즉 **가로 스크롤**이다. 고치려면 breakpoint 를 들여야 하는데, breakpoint 는 한 번 늘기
+//    시작하면 화면마다 다른 px 가 생기고 그때부터 아무도 「어느 폭에서 무엇이 접히나」를 못 센다.
+//  재는 것 셋:
+//    ① `--bp-narrow` 가 `:root` 에 있다 (경계값의 정본)
+//    ② `globals.css` 의 폭 질의(`@media (max-width: …)`)는 **하나뿐**이고 그 수가 ① 과 같다
+//       — CSS 변수는 `@media` 안에서 못 읽어 수를 적어야 한다. 그 짝이 갈라지는 것을 여기서 잡는다
+//    ③ 그 블록이 실제로 **접는다** — `.nav-links { display: none }` 이고,
+//       그 이름을 뼈대(`layout.tsx`)의 탭 줄이 달고 있다 (안 달면 규칙이 아무것도 안 접는다)
+//  ⚠ 새 폭이 필요하면 질의를 하나 더 만들지 말고 `--bp-narrow` 를 고쳐라.
+// ---------------------------------------------------------------------
+describe('🔴 좁은 폭에서 껍데기가 내비를 접는다 · 경계는 한 자리다', () => {
+  const shellLayout = join(webSrc, 'app', 't', '[team]', 'p', '[project]', 'layout.tsx')
+
+  it('`--bp-narrow` 가 정본이고, 폭 질의는 하나뿐이며 같은 수를 쓴다', () => {
+    const css = readFileSync(globalsCss, 'utf8')
+    const token = /--bp-narrow:\s*(\d+)px\s*;/.exec(css)
+    expect(token, 'globals.css 에 `--bp-narrow` 가 없다').not.toBeNull()
+    const queries = [...css.matchAll(/@media\s*\(\s*max-width:\s*(\d+)px\s*\)/g)].map((m) => m[1])
+    expect(queries.length, `폭 질의가 ${queries.length} 개다 — 경계는 한 자리여야 한다`).toBe(1)
+    expect(
+      queries[0],
+      `@media 의 ${queries[0]}px 가 --bp-narrow(${(token as RegExpExecArray)[1]}px) 와 다르다`,
+    ).toBe((token as RegExpExecArray)[1])
+  })
+
+  it('그 블록이 탭 줄을 접고, 뼈대의 탭 줄이 그 이름을 달고 있다', () => {
+    const css = readFileSync(globalsCss, 'utf8')
+    const block = /@media\s*\(\s*max-width:\s*\d+px\s*\)\s*\{([\s\S]*?\n\})/.exec(css)
+    expect(block, '폭 질의 블록을 못 찾았다').not.toBeNull()
+    const body = (block as RegExpExecArray)[1] as string
+    expect(body, '좁은 폭에서 `.nav-links` 를 안 접는다').toMatch(/\.nav-links\s*\{[^}]*display:\s*none/)
+    expect(body, '내비가 세로 220px 그대로다 — 가로 막대로 접어야 한다').toMatch(/\.nav\s*\{[^}]*flex-direction:\s*row/)
+    //  ⛔ 접은 자리에 두 번째 내비를 만들지 마라 — 갈 곳은 이미 있는 ⌘K 팔레트가 받는다.
+    const tsx = readFileSync(shellLayout, 'utf8')
+    expect(tsx, '뼈대의 탭 줄이 `nav-links` 를 안 달았다 — 규칙이 아무것도 안 접는다')
+      .toMatch(/className="col-tight nav-links"/)
+    expect(tsx, '접힌 뒤 갈 곳(⌘K 팔레트)이 내비 안에 없다').toMatch(/<CommandPalette/)
+  })
+
+  it('DESIGN_BRIEF §3 「레이아웃」 이 같은 규칙을 정본으로 적고 있다 (문서 ↔ 코드 양방향)', () => {
+    const md = readFileSync(designBrief, 'utf8')
+    const layout = /### 레이아웃([\s\S]*?)\n### /.exec(md)
+    expect(layout, 'DESIGN_BRIEF §3 에 「### 레이아웃」 절이 없다').not.toBeNull()
+    expect((layout as RegExpExecArray)[1]).toContain('--bp-narrow')
+  })
+})
