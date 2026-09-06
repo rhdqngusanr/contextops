@@ -11,6 +11,7 @@ import { GEMINI_TRUNCATED_FINISH_REASON, OUTPUT_TRUNCATED_COMPLAINT, setAiClient
 import { stubTransport, type SentRequest, type StubReply } from './helpers/ai'
 import { UNTRUSTED_TAG } from '../src/lib/ai/prompt'
 import {
+  QUOTE_SPAN_LINES,
   RULE_LIST_LINES,
   SOURCE_DOCUMENT_KIND_BRIEF,
   STRUCTURE_CHUNK_MAX_CHARS,
@@ -270,6 +271,51 @@ describe('근거는 모델의 숫자가 아니라 **인용에서 계산한 문�
     expect(sent[1]!.user).toContain('직전 응답이 계약과 맞지 않았다')
     expect(sent[1]!.user).toContain('item_bad')
     expect(sent[1]!.user).toContain('원문에 없다')
+  })
+
+  it('🔴 인용 셋이 틀리면 재시도 불평이 셋을 다 말한다 — 첫 하나만 말하면 둘째 왕복이 같은 자리에서 죽는다 (FINDINGS 149 ②)', async () => {
+    stubAi((n) => ({
+      input: output(
+        n === 0
+          ? [
+              policyItem('item_bad_a', '없는 문장 A', '이 문장은 문서에 없다 A'),
+              policyItem('item_okay', '있는 문장', REFUND_QUOTE),
+              policyItem('item_bad_b', '없는 문장 B', '이 문장은 문서에 없다 B'),
+              policyItem('item_vague', '낱말 하나', '재시도'),
+            ]
+          : [policyItem('item_okay', '있는 문장', REFUND_QUOTE)],
+      ),
+    }))
+
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })
+    expect(sent.length).toBe(2)
+    expect(result.items.map((i) => i.id)).toEqual(['item_okay'])
+    const complaint = sent[1]!.user
+    expect(complaint).toContain('item_bad_a')
+    expect(complaint).toContain('item_bad_b')
+    expect(complaint).toContain('item_vague')
+    //  멀쩡한 항목은 불평에 없다 — 모델이 고칠 것만 듣는다.
+    expect(complaint).not.toContain('item_okay 의')
+  })
+
+  it('🔴 같은 종류의 계약 위반은 「N개 (예: …)」로 접어 전부 말한다 — 상한 5개를 넘어도 개수는 남는다 (FINDINGS 149 ②)', async () => {
+    //  85바퀴 goals.md 첫 응답: items.0~2.id 가 패턴 위반 → 재시도. 여기서는 일곱 개.
+    const bad = (i: number) => policyItem(`ITEM-BAD-${i}`, `패턴 위반 ${i}`, REFUND_QUOTE)
+    stubAi((n) => ({
+      input: output(n === 0 ? [0, 1, 2, 3, 4, 5, 6].map(bad) : [policyItem('item_okay', '있는 문장', REFUND_QUOTE)]),
+    }))
+
+    const result = await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })
+    expect(sent.length).toBe(2)
+    expect(result.items[0]!.id).toBe('item_okay')
+    const complaint = sent[1]!.user
+    //  일곱 오류가 한 종류(같은 message)면 한 문장 「7개 (예: items.0.id)」이지 다섯 개를 자른 것이 아니다.
+    expect(complaint).toMatch(/7개 \(예: items\.0\.id\)/)
+    expect(complaint).not.toContain('items.5.id')
   })
 
   it('여러 곳에 있는 인용도 재시도로 간다 — 어느 문장인지 정할 수 없으면 근거가 아니다', async () => {
@@ -643,6 +689,20 @@ describe('프롬프트가 SPEC §7 · §11 을 따른다', () => {
     expect(RULE_LIST_LINES.length).toBeGreaterThan(0)
     for (const line of RULE_LIST_LINES) expect(system).toContain(line)
     expect(system).toContain('부정형도 규칙')
+  })
+
+  it('🔴 인용은 한 문단 안에서만 · 제목과 본문을 잇지 마라 · 문장부호를 더하지 마라 — SYSTEM 에 그 문장이 산다 (FINDINGS 151)', async () => {
+    stubAi(() => ({ input: output([]) }))
+    await structureDocument({
+      projectId: PROJECT, documentVersionId: DOC_VERSION, kind: KIND, content: PAYLAB_GOALS, now: NOW,
+    })
+    const { system } = sent[0]!
+    //  진짜 Gemini 가 「### 3.5 …」 제목 줄과 그 아래 문단을 마침표로 이어 인용했고 그 하나로 goals.md
+    //  전체가 죽었다. 접기로는 못 고친다(마침표는 글자) — 프롬프트가 말해야 한다. 표를 읽어서 센다.
+    expect(QUOTE_SPAN_LINES.length).toBeGreaterThan(0)
+    for (const line of QUOTE_SPAN_LINES) expect(system).toContain(line)
+    expect(system).toContain('이어 붙이지 마라')
+    expect(system).toContain('문장부호')
   })
 
   it('도구 스키마가 Zod 계약에서 나온다 — 두 벌이 아니다', async () => {

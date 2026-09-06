@@ -225,6 +225,20 @@ export const RULE_LIST_LINES: readonly string[] = [
   '- 「하지 않는다」·「기한은 따로 두지 않는다」 같은 **부정형도 규칙**이다. 숫자·기한이 없다고 빼지 않는다.',
 ]
 
+/**
+ * 인용(span.quote)이 **어디까지 한 인용인가**를 말하는 줄 (FINDINGS 151). 시험이 SYSTEM 에 이
+ * 문장이 있는지 센다 — 문장을 다듬으면 여기만 고친다.
+ * ★ 왜 — 진짜 Gemini 가 「### 3.5 웹훅은 서명 검증 후에만 처리한다」 제목 줄과 그 아래 문단을
+ *   **마침표를 더해** 한 문장으로 이어 인용했고, 그 하나로 goals.md 전체가 `AI_OUTPUT_INVALID` 였다
+ *   (2회 중 1회). 접기(`QUOTE_FOLDED_CHARS`)로는 못 고친다 — 마침표는 글자이고 「글자 하나 바꾼
+ *   인용은 여전히 없다」가 시험으로 잠겨 있다. 기준을 낮추지 않는 길은 프롬프트뿐이다.
+ *   종류 표가 아니라 SYSTEM 인 이유 — 여섯 종류 전부에 해당한다.
+ */
+export const QUOTE_SPAN_LINES: readonly string[] = [
+  '- 인용은 **한 문단 안**(또는 한 제목 줄 안)에서만 고른다. 제목 줄과 그 아래 문단을 이어 붙이지 마라 — 빈 줄을 건너는 인용은 원문에 없다.',
+  '- 문장부호(마침표·쉼표 등)를 더하거나 빼지 마라. 제목 줄을 인용하면 제목의 글자만 적는다 (`#` 는 안 적어도 된다).',
+]
+
 const SYSTEM = [
   AI_SYSTEM_COMMON,
   '',
@@ -238,6 +252,8 @@ const SYSTEM = [
   '- id 는 `item_` 으로 시작하는 소문자·숫자·밑줄 slug 다 (예: item_refund_sla).',
   '- span.quote 는 그 항목의 근거 문장을 **조각의 원문 그대로** 인용한 것이다. 줄이거나 고치거나 요약하지 않는다.',
   '- 인용은 조각 안에서 **한 곳에만** 있는 길이여야 한다 (짧은 낱말 하나가 아니라 문장 하나쯤).',
+  //  🔴 FINDINGS 151 — 제목 줄 + 문단을 마침표로 이은 인용.
+  ...QUOTE_SPAN_LINES,
   '- 조각에 없는 글자를 인용하거나 여러 곳에 있는 글자를 인용하면 근거가 아니다. 그러면 응답 전체가 버려진다.',
   '- 문서가 무엇을 뜻하는지 판단이 필요하면 항목 대신 open_questions 에 질문으로 남긴다.',
 ].join('\n')
@@ -266,11 +282,27 @@ function toolRequest(chunk: DocChunk, totalChunks: number, kind: SourceDocumentK
   }
 }
 
+/**
+ * 🔴 재시도 불평은 **같은 종류의 오류를 접어 전부 말한다** (FINDINGS 149 ②). 「id 패턴 위반 3개
+ * (예: items.0.id)」처럼 — 첫 다섯 개만 실으면 여섯째부터는 모델이 모른 채 다시 내고 둘째 왕복이
+ * 같은 자리에서 죽는다 (84바퀴 「첫 인용 하나만 불평한다」와 같은 자리).
+ */
 function issueText(issues: readonly { readonly path: readonly PropertyKey[]; readonly message: string }[]): string {
-  return issues
-    .slice(0, MAX_REPORTED_ISSUES)
-    .map((i) => `${i.path.map(String).join('.') || '(root)'}: ${i.message}`)
-    .join(' · ')
+  const groups = new Map<string, { count: number; example: string }>()
+  for (const i of issues) {
+    const found = groups.get(i.message)
+    if (found) found.count++
+    else groups.set(i.message, { count: 1, example: i.path.map(String).join('.') || '(root)' })
+  }
+  return foldComplaints([...groups.entries()].map(([message, g]) =>
+    g.count === 1 ? `${g.example}: ${message}` : `${g.count}개 (예: ${g.example}): ${message}`))
+}
+
+/** 불평 여러 개를 한 문장으로 — 상한(`MAX_REPORTED_ISSUES`)을 넘는 것은 개수로만 말한다. */
+function foldComplaints(complaints: readonly string[]): string {
+  const shown = complaints.slice(0, MAX_REPORTED_ISSUES).join(' · ')
+  const rest = complaints.length - MAX_REPORTED_ISSUES
+  return rest > 0 ? `${shown} · 외 ${rest}개` : shown
 }
 
 /**
@@ -374,23 +406,43 @@ function convert(raw: unknown, chunk: DocChunk, documentVersionId: string): Chun
   //     런타임은 정확한데 TS 추론이 느슨해진다. 정밀한 타입은 손으로 적은 쪽이다.
   const data = parsed.data as AiStructureOutput
 
-  const items = data.items.map((item) => {
-    const { span, ...rest } = item
-    const source_refs = [toSourceRef(span, chunk, documentVersionId, `항목 ${item.id}`)]
+  //  🔴 첫 오류에서 멈추지 않고 **끝까지 모아서** 한 번에 불평한다 (FINDINGS 149 ②). 인용 다섯이
+  //     틀렸는데 첫 하나만 말하면 재시도가 그 하나만 고치고 둘째에서 죽는다 (84바퀴 goals.md).
+  const complaints: string[] = []
+  const attempt = <T>(fn: () => T): T | undefined => {
     try {
-      //  ⚠ AI 계약이 아니라 **진짜 초안 계약**으로 한 번 더 판다 — 근거를 붙인 뒤의
-      //    모양이 서버가 받는 모양과 같아야 한다 (SPEC §3.1 allowlist).
-      return parseContextItemDraft({ ...rest, source_refs })
-    } catch {
-      throw new OutputInvalid(`항목 ${item.id} 이 초안 계약과 맞지 않는다`)
+      return fn()
+    } catch (err) {
+      if (!(err instanceof OutputInvalid)) throw err
+      complaints.push(err.message)
+      return undefined
     }
-  })
+  }
 
-  const questions = data.open_questions.map((q) => ({
-    question: q.question,
-    source_ref: toSourceRef(q.span, chunk, documentVersionId, `질문 "${q.question.slice(0, 30)}"`),
-  }))
+  const items: ContextItemDraft[] = []
+  for (const item of data.items) {
+    const { span, ...rest } = item
+    const ref = attempt(() => toSourceRef(span, chunk, documentVersionId, `항목 ${item.id}`))
+    if (!ref) continue
+    const draft = attempt(() => {
+      try {
+        //  ⚠ AI 계약이 아니라 **진짜 초안 계약**으로 한 번 더 판다 — 근거를 붙인 뒤의
+        //    모양이 서버가 받는 모양과 같아야 한다 (SPEC §3.1 allowlist).
+        return parseContextItemDraft({ ...rest, source_refs: [ref] })
+      } catch {
+        throw new OutputInvalid(`항목 ${item.id} 이 초안 계약과 맞지 않는다`)
+      }
+    })
+    if (draft) items.push(draft)
+  }
 
+  const questions: OpenQuestion[] = []
+  for (const q of data.open_questions) {
+    const ref = attempt(() => toSourceRef(q.span, chunk, documentVersionId, `질문 "${q.question.slice(0, 30)}"`))
+    if (ref) questions.push({ question: q.question, source_ref: ref })
+  }
+
+  if (complaints.length > 0) throw new OutputInvalid(foldComplaints(complaints))
   return { items, questions }
 }
 
