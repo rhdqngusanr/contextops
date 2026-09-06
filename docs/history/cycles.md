@@ -15,6 +15,45 @@
 > **옮기는 절차 (한 줄)** — `STATUS.md` 에서 제일 오래된 `### 지난 바퀴 (N)` 블록을
 > **잘라서** 이 파일의 머리글 바로 아래(제일 위)에 붙인다. 베끼지 마라 — 게이트가
 > 양쪽에 있는 것을 잡는다 (`tools/status-shape.mjs`).
+### 지난 바퀴 (81) — PLAN P3 첫 행을 진짜 Gemini 로 잼 · 기본 thinking 이 출력 상한을 먹어 `AI_OUTPUT_INVALID` → `GEMINI_THINKING_LEVEL` · 142·143·144 기록 · `p3:measure` (FINDINGS 141 · `314ab0e`)
+
+**이번 바퀴(81)는 PLAN P3 첫 행 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」의 완료 기준을 진짜 Gemini 로 쟀다.** INBOX 「할 것」비어 있음 · 관통 7단계 OK(994) · 고장 0 이라 ④3 ② 대로 PLAN 맨 위 행이었다.
+재는 문을 하나 만들었다: `pnpm --filter web p3:measure`(`apps/web/scripts/p3-measure.ts` · CI 밖 · ≈ $0.02) — PGlite 위에서 **제품 길 그대로**(`POST /documents` → `ai_jobs` 러너 → `withBudget` → `callModel` → `jobs/{id}/items` → PATCH active → conflict job)
+old-roadmap.md 를 active 로, goals.md 를 draft 로 넣고 탐지까지 굴린 뒤 `docs/evidence/2026-09-06-p3-gemini/probe.json` 에 항목마다 span·인용 첫 줄을 남긴다. `next dev` 는 안 띄웠다(「next dev 로 API 를 두드리지 마라」 · 아래 함정) — 라우트를 프로세스 안에서 부르는 길이 관통과 같다.
+
+🔴 **첫 실행은 두 문서 다 `failed / AI_OUTPUT_INVALID`(각 60초)였다 — 고장(FINDINGS 141).** 제품이 보내는 몸을 그대로 잡아(`setAiClientForTest` 로 가로챔) generationConfig 만 바꿔 다시 보내니 `finishReason: MAX_TOKENS` · 생각 토큰 **7,677 / 상한 8,000**. Gemini 3.x 는 생각을 `maxOutputTokens` 안에서 센다.
+`client.ts` 에 `GEMINI_THINKING_LEVEL = 'low'` 상수 하나(`generationConfig.thinkingConfig.thinkingLevel`) — 79바퀴의 `ai:smoke`(2문장)는 생각이 짧아 **우연히** 지났던 것이다.
+
+🔴 **잰 것** (`probe.txt` · 전부 진짜 gemini-3.5-flash · 우리 키):
+
+| 완료 기준 | 전 (`846530a`) | 후 (`314ab0e`) |
+|---|---|---|
+| goals.md → 항목 12 | job failed · 항목 0 | **18**(mission 1 · goal 3 · policy 5 · roadmap 3 · domain 1 · architecture 5) + 열린 질문 **4**(§5 「아직 정하지 못한 것」 네 줄 그대로) · 20초 · 18 받아들임 · rejected 0 ✅ |
+| 충돌 3 | — | **2**(contradiction high 둘 — 재시도 5회/백오프 vs 3회/0.5초 고정 · PII 금지 vs 웹훅 원본 7일 보관 · 「어느 쪽을 따라야 하나」 질문형 · 판정 없음) · candidates 5/5 · 2초. 셋째(환불 SLA)는 탐지가 아니라 **old-roadmap 에서 환불 규칙이 항목으로 안 뽑혀서**다(policy 2/3) → **143** |
+| 모든 호출이 `withBudget` 경유 | principles P3 OK | `ai_usage` **3행 = 왕복 3**(structure 879/1,498 · 2,440/5,703 · conflict 2,727/257 토큰 · 합 ≈ $0.02) ✅ |
+| `source_ref` offset 이 문서 범위 안 | — | **27/27** 범위 안 — **그러나 인용이 틀리다**: G1 항목이 G2 줄을, PII 항목이 §3.4 를, 웹훅 서명 항목이 §4 제목을 가리킨다 · architecture 5개·질문 4개는 각각 같은 구간 하나 · `heading_path` 는 18/18 맞다 → **142**(구멍 · P7) |
+| 실패 경로 | — | 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도 · Gemini 429 는 `INTERNAL` → **144**(구멍) |
+| thinking 비교 (같은 몸) | — | low: goals 13 · 13(두 번) · 14초 / high + 상한 32k: 17 · 58초 · 생각 12,576 토큰 / `thinkingBudget 0`: roadmap 3 |
+| 시험 | ai-client 9 | ai-client **9**(보내는 몸의 `thinkingConfig` 가 상수와 같은지 — 기존 「제자리」 시험에 한 줄) |
+| CI | GREEN 22:14 | **GREEN 23:25** — principles OK 9 · test 89초 · build 29초 · walkthrough **994** · docs OK |
+
+⚠ **PLAN 행은 열어 뒀다** — 항목 18 ✅ · 예산 ✅ · 「범위 안」은 글자로는 ✅ 인데 뜻(P7)으로는 ✗ · 충돌 2/3 ✗. **기준을 낮추지 않는다.** 행의 ④ 에 수치를 적었다.
+⚠ **안 한 것** — 화면 3(`/import`)에서 브라우저로 job 을 본 적은 없다(아래 「눈 판정 대기」). 프롬프트(`structure.ts`·`conflict.ts`)는 한 글자도 안 바꿨다 — 그게 142·143 의 일이다. 임시 진단 스크립트(`p3-diag-81.ts`)는 지웠다 · 수치는 probe.txt §2.
+
+🔴 **배운 것 둘** — ① 「범위 안」은 P7 이 아니다. 숫자 검사는 지나고 인용은 틀린다 — **모델이 낸 숫자를 검증하지 말고 모델이 낸 글자로 숫자를 계산해라**(142 의 방향). ② 공급자의 「출력 상한」이 **무엇을 세는지** 확인해라 — 생각을 세면 그건 출력 상한이 아니다. 2문장 스모크는 이걸 못 잡는다 — **완료 기준의 크기로 재라.**
+
+🔴 **2-B 이번 라운드 — `AiSourceSpan` 세 칸(`start_char`·`end_char`·`heading_path`)** ① 소비처 `structure.ts` `toSourceRef()` 하나 ② 뒤집으면 갈림: 범위 밖이면 재시도(잠겨 있음) — **그러나 범위 안의 틀린 숫자는 아무것도 못 가른다**(142). `heading_path` 는 비면 chunk 의 것으로 채운다(살아 있다).
+`ItemType` 10종 중 goals.md 하나에서 **6종**이 실제로 나왔다(mission·goal·policy·roadmap·domain·architecture) — adr·workflow·constraint·open_question 넷은 이 문서로는 안 나온다(open_question 은 항목이 아니라 질문 행으로 4개).
+
+**그 바퀴가 다음으로 지목한 것**: FINDINGS 142 → 82바퀴가 닫았다 (`3b6ebef`). 아래는 81 이 남긴 지목의 원문이다.
+
+🔴 142 는 PLAN P3 첫 행의 몫이다 — 구멍이지만 그 행의 완료 기준(「offset 이 범위 안」의 뜻) 그 자체라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 143(프롬프트 · 충돌 3/3) → 144 → `p3:measure` 로 다시 재서 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
+
+> **142 를 하는 법** — 계약이 먼저: `packages/schema` 의 `AiSourceSpan` 에서 `start_char`·`end_char` 를 빼고 `quote`(원문 그대로의 인용 · 줄임 없이)를 둔다(객체 모양이라 enum 의 「중간을 지우지 마라」와 무관 · `AiStructureOutput` 의 JSON Schema 가 따라온다) → `structure.ts` `toSourceRef()` 가 `chunk.text.indexOf(quote)` 로 offset 을 **계산**하고 0번 또는 2번 이상 나오면 `OutputInvalid` 로 1회 재시도 → SYSTEM 의 span 두 문장을 「근거 문장을 원문 그대로 인용한다(한 곳에만 있는 길이로)」로 → `ai-structure.test.ts`·`ai-job.test.ts` 의 스텁 응답을 quote 모양으로. `toGeminiSchema`·화면은 손댈 것 없다(화면은 `SourceRef` 를 읽고 그건 그대로다). 끝나면 `p3:measure` 의 quote 열이 항목 제목과 맞는지 눈으로 본다 — 그게 이 항목의 합격이다.
+
+- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(쟀다 — 142·143·144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(144 · 143 · 142 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 141 ✅.
+
 ### 지난 바퀴 (80) — 값이 생겼다 · 공개 저장소 URL · 제출 팀명을 정본 하나 `SUBMISSION_IDENTITY` 로 · 푸터 셋 · 140 기록 (INBOX · FINDINGS 122 · `846530a`)
 
 **이번 바퀴(80)는 INBOX 지시 「값이 생겼다」— FINDINGS 122 를 닫았다.** 공개 저장소 URL 과 제출 팀명이 왔고, 관통은 시작부터 7단계 OK(985)라 고장은 없었다.

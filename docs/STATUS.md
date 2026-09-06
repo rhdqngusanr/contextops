@@ -5,11 +5,53 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-07 · 루프 86바퀴 · 코드 `2c69316`(FINDINGS 144 ✅ — `callModel` 이 `finishReason` 을 읽는다 · 429 는 `RATE_LIMITED`) + `4d8ea74`(FINDINGS 150 ✅ — 인용의 백틱을 뺀다) · 진짜 Gemini 세 번(실패 · 실패(→151) · 항목 23 · 충돌 4) · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-07 · 루프 87바퀴 · 코드 `57498b7`(FINDINGS 151 ✅ — 인용은 한 문단 안에서만 · 149 ✅ — 불평은 오류 전부를 접어 · id 규칙 · 인용 200자) · 진짜 Gemini 세 번(회복 16 · 실패(→152) · 16) · 문서는 그 다음 커밋_
 
 ---
 
 ## 지금 어디인가
+
+**이번 바퀴(87)는 FINDINGS 151 — 구멍(모델이 제목 줄과 다음 문단을 마침표로 이어 인용해 goals.md 전체가 `AI_OUTPUT_INVALID`)을 닫았다** (`57498b7`) — 같은 커밋에 **149** 의 셋(① id 규칙을 표에서 읽어 SYSTEM 에 · ② 재시도 불평이 오류 **전부**를 접어 말한다 · ③ 실패한 인용을 200자까지 되비춘다 `COMPLAINT_QUOTE_CHARS`)도 닫았다. 진짜 Gemini 세 번: run1 첫 응답이 **86 run1 과 글자 그대로 같은 인용**(3.5 제목 + 본문 + 마침표)을 냈다 — **프롬프트 한 줄은 모델을 못 막았다** — 그러나 이번엔 재시도가 회복해 항목 16 · 인용 20/20 · 충돌 5. run2 는 **다른 자리**(`item_roadmap_m3` 의 「### M3 — …」 인용)에서 두 왕복 다 죽었고 40자 인용으로는 원인을 알 수 없어 **152** 를 적고 `COMPLAINT_QUOTE_CHARS`(40 → 200)를 상수로 올렸다. run3 은 재시도 0 · 16 · 20/20 · 충돌 5. INBOX 「할 것」비어 있음 · 관통 7단계 OK(1013→1017) · 고장 0.
+**151** — `QUOTE_SPAN_LINES` 두 줄(인용은 한 문단 안에서만 · 제목 줄과 그 아래 문단을 잇지 마라 · 문장부호를 더하거나 빼지 마라 · 제목은 글자만) — 표가 아니라 SYSTEM(여섯 종류 전부) · 시험은 SYSTEM 에 그 문장이 산다(`RULE_LIST_LINES` 와 같은 모양).
+**149 ②** — `convert()` 가 첫 `OutputInvalid` 에서 던지지 않고 항목·질문의 오류를 **끝까지 모아** `foldComplaints()` 로 한 번에 던진다 · `issueText()` 는 같은 message 를 「N개 (예: 경로)」로 접고 상한(5)을 넘으면 「외 N개」. 시험 +3(ai-structure **41**): 틀린 인용 셋을 다 말한다 · 멀쩡한 항목은 불평에 없다 · 패턴 위반 7개가 「7개 (예: items.0.id)」이고 `items.5.id` 는 없다.
+**149 ①③** — SYSTEM 의 id 줄이 `ITEM_ID_BODY_MAX` 를 읽어 「3~40자 · 대문자·하이픈·한글은 안 된다」 · `COMPLAINT_QUOTE_CHARS = 200` (두 throw 가 읽는다 · 모델 출력이지 문서 본문이 아니라 P1 과 무관 · 로그에 안 남는다).
+
+🔴 **잰 것** (`docs/evidence/2026-09-07-p3-gemini/probe.txt` 87바퀴 절 · 진짜 gemini-3.5-flash · 코드 `57498b7` 두 번 + 상수 200 한 번):
+
+| | run1 (`probe-87-run1.json`) | run2 (`probe-87-run2.json`) | run3 (`probe-87-run3.json` · +`COMPLAINT_QUOTE_CHARS`) |
+|---|---|---|---|
+| goals.md 항목 | **16** (policy 10 · goal 3 · roadmap 3) | **실패** `AI_OUTPUT_INVALID` (35초 · 왕복 2 · 둘 다 STOP · JSON 13,780자 · 10,181자) | **16** (policy 9 · goal 3 · roadmap 3 · domain 1) |
+| 인용 · 재시도 | **20/20** · 1 — 첫 응답이 **151 과 같은 인용**(「웹훅은 서명 검증 후에만 처리한다. 서명 검증 전에는 payload 를 」) · 둘째 왕복이 고쳤다 | 0/0 · 1 — 「`item_roadmap_m3` 의 span.quote 가 조각 원문에 없다: "### M3 — PII 마스킹과 감사 로그 (2026-06-30)」 **뒤가 40자에서 잘려 원인 미상** → **152** | **20/20** · **0** |
+| accept 거절 | 0 (16/16) | — | 0 (16/16) |
+| 탐지 후보 · 충돌 | **6/6** · **5** (contradiction high ×5) | — | **6/6** · **5** |
+| finishReason | STOP · STOP | STOP · STOP | STOP |
+| 장부 | 3행 ≈ $0.035 | 2행 | 3행 ≈ $0.022 |
+| 시험 · CI | ai-structure **41** · **GREEN 02:16** (walkthrough 1017) | — | ai-structure 41 · CI 는 문서 커밋 전에 한 번 더 |
+
+⚠ **「두 번 연속 재시도 0」은 이번에도 못 봤다** — 세 번 중 run3 하나. 인용 실패(어떤 자리든)는 84바퀴부터 실행의 약 1/3 에서 나고 자리는 매번 다르다(줄바꿈 → `**` → 백틱 → 제목+마침표 → M3 미상). 프롬프트는 run1 에서 **같은 인용을 다시 낸 것으로 실측됐다** — 막은 것이 아니라 재시도가 회복한 것이고, 86 run1 은 둘째도 죽었으니 회복이 149 ② 덕인지는 말할 수 없다(불평은 하나였다).
+⚠ **안 한 것** — 152 는 적기만(다음 실패의 200자 인용이 말할 때까지 행동 없음) · 화면 3 은 여전히 브라우저로 안 봤다 · 144 의 두 길(MAX_TOKENS · 429)은 여전히 안 밟혔다(전부 STOP).
+
+🔴 **배운 것 둘** — ① **프롬프트 문장은 「말했다」이지 「막았다」가 아니다.** 같은 인용이 같은 자리에서 다시 나왔다. 프롬프트로 고친 항목은 스텁 시험이 아니라 **첫 응답의 재시도 0** 으로만 닫힌다 — 이번 바퀴는 그 기준을 못 넘었고 ✅ 는 「방향을 다 적용했고 문서가 안 죽는다」까지다. ② **진단이 40자면 실패는 숫자다** (85바퀴 배운 것 ① 의 되풀이) — 84·86 이 일회용 진단을 만들었다 지우고 이번엔 run2 가 또 말이 없었다. 세 번째라 상수로 올렸다.
+
+🔴 **2-B 이번 라운드 — `QUOTE_SPAN_LINES` · `foldComplaints`** ① 소비처: SYSTEM 하나 · `convert`·`issueText` 둘 ② 뒤집으면 갈림: 시험 「SYSTEM 에 그 문장이 산다」 · 「셋을 다 말한다」 · 「7개 (예: items.0.id)」. `ItemType` 10종 중 run1·run3 은 **3종 · 4종**(policy·goal·roadmap·domain) — 86 run2 의 7종보다 적다 · 10종 전수는 다음 라운드.
+
+**다음 바퀴의 일 — FINDINGS 119**
+
+<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
+     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
+     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
+     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
+     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
+     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
+
+🔴 PLAN 의 `- [ ]` 맨 위는 **P4 둘째 행**(GATE 3 · 눈 판정)이다 — ④3 ② 로 그 행이 다음이고, **119**(데모 항목 15 → SPEC §10.3 의 60 · 격차)는 그 행의 몫이라 그 행을 하는 것과 같다. 루프가 혼자 닫을 구멍은 없다 — 152 는 다음 실패가 200자를 말할 때까지 행동할 수 없고(고르지 마라), 140 은 P5 둘째 행(🙋 새 PC)과 같이. 그 뒤 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137.
+
+> **119 를 하는 법** — 대장의 「고칠 방향」을 읽되 **코드를 먼저 열어라** (94 의 교훈). 데모 시드는 `apps/web/scripts/`(`demo:db` · `seed`)에 있고 항목의 정본은 `fixtures/paylab-*` 다 — SPEC §10.3 이 말하는 60개가 픽스처에 실제로 있는지부터 세라. 없으면 「SPEC 이 의도, 코드가 현실」 — 숫자를 SPEC 쪽으로 고치는 것도 답이다(지어내지 마라 · P7). 합격은 `/demo` 화면 2 의 항목 수와 SPEC §10.3 의 수가 같고 `readme.test.ts`·관통이 초록.
+
+- PLAN 의 `- [ ]` 중 남은 것 **넷**: P4 둘째 행(GATE 3 · 눈 판정 — 다음 PLAN 행) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
+- 대장의 대기(152 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 151 ✅ · 149 ✅.
+
+### 지난 바퀴 (86) — `callModel` 이 `finishReason` 을 읽는다 · 429 는 `RATE_LIMITED` · 인용의 백틱을 뺀다 · 진짜 Gemini 세 번(실패 · 실패(→151) · 항목 23 · 충돌 4) · 151 기록 (FINDINGS 144 · 150 · `2c69316` · `4d8ea74`)
 
 **이번 바퀴(86)는 FINDINGS 144 — 구멍(`callModel()` 이 `finishReason` 을 안 읽어 잘린 응답과 계약 위반이 같은 재시도로 가고 · Gemini 429 가 `INTERNAL` 이 된다)을 닫았다** (`2c69316`). 재려니 goals.md 가 `AI_OUTPUT_INVALID` — 왕복 기록이 이유를 바로 말했다(표 칸의 백틱을 모델이 뺐다) → **별개의 구멍 150**, 같은 바퀴에 따로 닫았다 (`4d8ea74`). 그 코드로 두 번: run1 은 **또 다른 자리**에서 죽었고(제목 줄 + 마침표 → **151** · 적기만) run2 는 항목 23 · 충돌 4 · 인용 27/27. INBOX 「할 것」비어 있음 · 관통 7단계 OK(1005→1013) · 고장 0.
 **144** — `client.ts` 한 파일이 정본이고 두 루프는 읽기만: `callModel()` 이 `ModelCall { truncated }` 를 낸다(`finishReason === GEMINI_TRUNCATED_FINISH_REASON` = `MAX_TOKENS`) · `OUTPUT_TRUNCATED_COMPLAINT`(「출력이 상한에서 잘렸다 — 항목 수는 그대로 두고 body 와 인용을 더 짧게」) 한 문장을 `structure.ts`·`conflict.ts` 의 재시도 루프가 **Zod 를 보기 전에** 싣는다 — 상한은 그대로(올리면 생각 토큰이 먹는다 · 141) · `GEMINI_HTTP_ERROR_CODES { 429: 'RATE_LIMITED' }` 표 — 표의 상태만 `ApiError`, 401/403·5xx 는 Error(job 은 `INTERNAL`). 스텁이 `finishReason` 을 받는다(기본 STOP). 시험 +8 · SPEC §7 · KNOWN_LIMITATIONS 의 「429 → 픽스처 결과」는 **거짓이었다**(픽스처 갈래는 §7.4 뿐) → 「RATE_LIMITED」로.
@@ -34,14 +76,8 @@ _마지막 갱신: 2026-09-07 · 루프 86바퀴 · 코드 `2c69316`(FINDINGS 14
 
 🔴 **2-B 이번 라운드 — `GEMINI_HTTP_ERROR_CODES` · `truncated`** ① 소비처: 표는 `geminiTransport` 하나 · `truncated` 는 두 루프 ② 뒤집으면 갈림: 시험 「표의 값은 전부 코드를 바꾼다」 · 「401/500 은 ApiError 가 아니다」 · 「잘리면 불평이 다르고 상한은 같다」. `ItemType` 10종 중 run2 는 **7종**(policy·architecture·goal·roadmap·constraint·mission·domain) — 10종 전수는 다음 라운드.
 
-**다음 바퀴의 일 — FINDINGS 151**
+그 바퀴가 다음으로 지목한 것은 FINDINGS 151 이었다 — 87바퀴가 닫았다 (`57498b7` · 149 ①②③ 도 같은 커밋 + `COMPLAINT_QUOTE_CHARS`) · 진짜 Gemini 세 번 중 run2 가 다른 자리(M3)에서 죽어 152 를 적었다.
 
-<!-- 🔴 이 줄이 **다음 할 일을 말하는 유일한 자리**다 (FINDINGS 102).
-     모양을 지켜라: `**다음 바퀴의 일 — FINDINGS <번호>**` (대기가 없으면 「FINDINGS 없음」).
-     `tools/status-shape.mjs` 가 ① 이런 줄이 **하나**인지 ② 그 번호가 FINDINGS 에서
-     **대기**인지를 센다. 닫힌 항목을 가리키면 `tools/ci.ps1` 의 `docs` 층이 FAIL 이다.
-     ⚠ 「다음 할 일」을 여기 말고 다른 데 또 적지 마라 — 그게 102 의 고장이었다.
-     ⚠ 지나간 바퀴의 지목은 **다른 낱말**로 적어라 (「그 바퀴가 다음으로 지목한 것」). -->
 
 🔴 PLAN 의 `- [ ]` 맨 위는 **P4 둘째 행**(GATE 3 · 눈 판정)이다 — ④3 ② 로는 그 행이 다음이지만, 그 행의 몫인 격차보다 **구멍 151** 이 순서상 위이고(구멍 → 격차) 진짜 모델에서 goals.md 를 2회 중 1회 죽이는 자리라 먼저 닫는다. 그 다음 149(격차 · 같은 파일 · 151 과 같이 해도 된다) → 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
 
@@ -192,45 +228,6 @@ _마지막 갱신: 2026-09-07 · 루프 86바퀴 · 코드 `2c69316`(FINDINGS 14
 
 - PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(142 ✅ — 143·145·144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
 - 대장의 대기(145 · 144 · 143 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 142 ✅.
-
-### 지난 바퀴 (81) — PLAN P3 첫 행을 진짜 Gemini 로 잼 · 기본 thinking 이 출력 상한을 먹어 `AI_OUTPUT_INVALID` → `GEMINI_THINKING_LEVEL` · 142·143·144 기록 · `p3:measure` (FINDINGS 141 · `314ab0e`)
-
-**이번 바퀴(81)는 PLAN P3 첫 행 「7.1 문서 구조화 · 7.2 충돌 탐지 · 예산 가드」의 완료 기준을 진짜 Gemini 로 쟀다.** INBOX 「할 것」비어 있음 · 관통 7단계 OK(994) · 고장 0 이라 ④3 ② 대로 PLAN 맨 위 행이었다.
-재는 문을 하나 만들었다: `pnpm --filter web p3:measure`(`apps/web/scripts/p3-measure.ts` · CI 밖 · ≈ $0.02) — PGlite 위에서 **제품 길 그대로**(`POST /documents` → `ai_jobs` 러너 → `withBudget` → `callModel` → `jobs/{id}/items` → PATCH active → conflict job)
-old-roadmap.md 를 active 로, goals.md 를 draft 로 넣고 탐지까지 굴린 뒤 `docs/evidence/2026-09-06-p3-gemini/probe.json` 에 항목마다 span·인용 첫 줄을 남긴다. `next dev` 는 안 띄웠다(「next dev 로 API 를 두드리지 마라」 · 아래 함정) — 라우트를 프로세스 안에서 부르는 길이 관통과 같다.
-
-🔴 **첫 실행은 두 문서 다 `failed / AI_OUTPUT_INVALID`(각 60초)였다 — 고장(FINDINGS 141).** 제품이 보내는 몸을 그대로 잡아(`setAiClientForTest` 로 가로챔) generationConfig 만 바꿔 다시 보내니 `finishReason: MAX_TOKENS` · 생각 토큰 **7,677 / 상한 8,000**. Gemini 3.x 는 생각을 `maxOutputTokens` 안에서 센다.
-`client.ts` 에 `GEMINI_THINKING_LEVEL = 'low'` 상수 하나(`generationConfig.thinkingConfig.thinkingLevel`) — 79바퀴의 `ai:smoke`(2문장)는 생각이 짧아 **우연히** 지났던 것이다.
-
-🔴 **잰 것** (`probe.txt` · 전부 진짜 gemini-3.5-flash · 우리 키):
-
-| 완료 기준 | 전 (`846530a`) | 후 (`314ab0e`) |
-|---|---|---|
-| goals.md → 항목 12 | job failed · 항목 0 | **18**(mission 1 · goal 3 · policy 5 · roadmap 3 · domain 1 · architecture 5) + 열린 질문 **4**(§5 「아직 정하지 못한 것」 네 줄 그대로) · 20초 · 18 받아들임 · rejected 0 ✅ |
-| 충돌 3 | — | **2**(contradiction high 둘 — 재시도 5회/백오프 vs 3회/0.5초 고정 · PII 금지 vs 웹훅 원본 7일 보관 · 「어느 쪽을 따라야 하나」 질문형 · 판정 없음) · candidates 5/5 · 2초. 셋째(환불 SLA)는 탐지가 아니라 **old-roadmap 에서 환불 규칙이 항목으로 안 뽑혀서**다(policy 2/3) → **143** |
-| 모든 호출이 `withBudget` 경유 | principles P3 OK | `ai_usage` **3행 = 왕복 3**(structure 879/1,498 · 2,440/5,703 · conflict 2,727/257 토큰 · 합 ≈ $0.02) ✅ |
-| `source_ref` offset 이 문서 범위 안 | — | **27/27** 범위 안 — **그러나 인용이 틀리다**: G1 항목이 G2 줄을, PII 항목이 §3.4 를, 웹훅 서명 항목이 §4 제목을 가리킨다 · architecture 5개·질문 4개는 각각 같은 구간 하나 · `heading_path` 는 18/18 맞다 → **142**(구멍 · P7) |
-| 실패 경로 | — | 잘린 응답(MAX_TOKENS)과 계약 위반이 같은 재시도 · Gemini 429 는 `INTERNAL` → **144**(구멍) |
-| thinking 비교 (같은 몸) | — | low: goals 13 · 13(두 번) · 14초 / high + 상한 32k: 17 · 58초 · 생각 12,576 토큰 / `thinkingBudget 0`: roadmap 3 |
-| 시험 | ai-client 9 | ai-client **9**(보내는 몸의 `thinkingConfig` 가 상수와 같은지 — 기존 「제자리」 시험에 한 줄) |
-| CI | GREEN 22:14 | **GREEN 23:25** — principles OK 9 · test 89초 · build 29초 · walkthrough **994** · docs OK |
-
-⚠ **PLAN 행은 열어 뒀다** — 항목 18 ✅ · 예산 ✅ · 「범위 안」은 글자로는 ✅ 인데 뜻(P7)으로는 ✗ · 충돌 2/3 ✗. **기준을 낮추지 않는다.** 행의 ④ 에 수치를 적었다.
-⚠ **안 한 것** — 화면 3(`/import`)에서 브라우저로 job 을 본 적은 없다(아래 「눈 판정 대기」). 프롬프트(`structure.ts`·`conflict.ts`)는 한 글자도 안 바꿨다 — 그게 142·143 의 일이다. 임시 진단 스크립트(`p3-diag-81.ts`)는 지웠다 · 수치는 probe.txt §2.
-
-🔴 **배운 것 둘** — ① 「범위 안」은 P7 이 아니다. 숫자 검사는 지나고 인용은 틀린다 — **모델이 낸 숫자를 검증하지 말고 모델이 낸 글자로 숫자를 계산해라**(142 의 방향). ② 공급자의 「출력 상한」이 **무엇을 세는지** 확인해라 — 생각을 세면 그건 출력 상한이 아니다. 2문장 스모크는 이걸 못 잡는다 — **완료 기준의 크기로 재라.**
-
-🔴 **2-B 이번 라운드 — `AiSourceSpan` 세 칸(`start_char`·`end_char`·`heading_path`)** ① 소비처 `structure.ts` `toSourceRef()` 하나 ② 뒤집으면 갈림: 범위 밖이면 재시도(잠겨 있음) — **그러나 범위 안의 틀린 숫자는 아무것도 못 가른다**(142). `heading_path` 는 비면 chunk 의 것으로 채운다(살아 있다).
-`ItemType` 10종 중 goals.md 하나에서 **6종**이 실제로 나왔다(mission·goal·policy·roadmap·domain·architecture) — adr·workflow·constraint·open_question 넷은 이 문서로는 안 나온다(open_question 은 항목이 아니라 질문 행으로 4개).
-
-**그 바퀴가 다음으로 지목한 것**: FINDINGS 142 → 82바퀴가 닫았다 (`3b6ebef`). 아래는 81 이 남긴 지목의 원문이다.
-
-🔴 142 는 PLAN P3 첫 행의 몫이다 — 구멍이지만 그 행의 완료 기준(「offset 이 범위 안」의 뜻) 그 자체라 「PLAN 이 먼저」와 어긋나지 않는다. 그 뒤 143(프롬프트 · 충돌 3/3) → 144 → `p3:measure` 로 다시 재서 행을 닫는다. 그 다음 격차 119 → 118 → 116 → 112 → 59 → 100 → 131 → 132 → 133 → 134 → 137, 구멍 140 은 P5 둘째 행(🙋 새 PC)과 같이.
-
-> **142 를 하는 법** — 계약이 먼저: `packages/schema` 의 `AiSourceSpan` 에서 `start_char`·`end_char` 를 빼고 `quote`(원문 그대로의 인용 · 줄임 없이)를 둔다(객체 모양이라 enum 의 「중간을 지우지 마라」와 무관 · `AiStructureOutput` 의 JSON Schema 가 따라온다) → `structure.ts` `toSourceRef()` 가 `chunk.text.indexOf(quote)` 로 offset 을 **계산**하고 0번 또는 2번 이상 나오면 `OutputInvalid` 로 1회 재시도 → SYSTEM 의 span 두 문장을 「근거 문장을 원문 그대로 인용한다(한 곳에만 있는 길이로)」로 → `ai-structure.test.ts`·`ai-job.test.ts` 의 스텁 응답을 quote 모양으로. `toGeminiSchema`·화면은 손댈 것 없다(화면은 `SourceRef` 를 읽고 그건 그대로다). 끝나면 `p3:measure` 의 quote 열이 항목 제목과 맞는지 눈으로 본다 — 그게 이 항목의 합격이다.
-
-- PLAN 의 `- [ ]` 중 남은 것 다섯: **P3 첫 행(쟀다 — 142·143·144 가 남았다 · 다음)** · P4 둘째 행(GATE 3 · 눈 판정) · P5 셋째 행(🙋 Vercel) · P6 두 행(🙋 영상 · 제출서는 production URL·영상만 🙋).
-- 대장의 대기(144 · 143 · 142 · 140 · 119 · 118 · 117 · 116 · 112 · 100 · 59 · 131~134 · 137) — **고장 0** · 141 ✅.
 
 ---
 
