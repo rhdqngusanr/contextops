@@ -172,6 +172,15 @@ while ($true) {
         $waitCount = 0
     }
 
+    #  🔴 **바퀴마다 설정을 다시 읽는다.**
+    #    ★ 왜 — 전에는 env.ps1 을 시작할 때 한 번만 읽었다. 그래서 값을 바꾸려면
+    #      루프를 세우고 다시 켜야 했고, **그 stop→start 사이에서 루프가 꺼진 채로
+    #      남는 일이 반복됐다** (사람이 「또 꺼졌다」를 여러 번 발견했다).
+    #      설정을 바꾸는 것과 루프를 멈추는 것은 **다른 일**인데 묶여 있었다.
+    #    ★ 이제 env.ps1 만 고치면 **다음 바퀴부터** 먹는다. 세울 필요가 없다.
+    #  ⚠ 갈아탄 모델($curModel)은 덮지 않는다 — 그건 실행 중 상태지 설정이 아니다.
+    try { . (Join-Path $PSScriptRoot "env.ps1") } catch { Log "  ⚠ env.ps1 을 다시 읽지 못했다: $($_.Exception.Message)" }
+
     $cycle++
     $tag        = "{0}_c{1:d3}" -f $today, $cycle
     if ($DryRun) { $tag = "{0}_dry{1:d3}" -f $today, $cycle }   # 진짜 바퀴 기록을 안 덮는다
