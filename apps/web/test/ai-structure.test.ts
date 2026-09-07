@@ -676,7 +676,7 @@ describe('프롬프트가 SPEC §7 · §11 을 따른다', () => {
     }
     //  ② 🔴 여섯이 서로 **다르다.** 하나라도 겹치면 그 값은 골라도 결과가 같은 값이다.
     expect(new Set(heads.values()).size).toBe(SOURCE_DOCUMENT_KINDS.length)
-  }, 30_000)
+  })
 
   it('🔴 규칙 목록은 줄마다 항목이고 부정형도 규칙이다 — SYSTEM 에 그 문장이 산다 (FINDINGS 143)', async () => {
     stubAi(() => ({ input: output([]) }))

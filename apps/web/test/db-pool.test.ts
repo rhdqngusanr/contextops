@@ -99,7 +99,7 @@ describe('DB 풀은 프로세스에 하나 (소켓 위에서)', () => {
     expect(queued).toBe(0)
     //  pglite-socket 은 붙을 때 `connection` 을 두 번 알린다 (직접 붙임 + 핸들러 붙임).
     expect(attached).toBeLessThanOrEqual(2)
-  }, 15_000)
+  })
 
   it('모듈을 새로 들여와도(Next dev 가 라우트마다 하는 것) 둘째 소켓이 안 열린다', async () => {
     const before = attached
@@ -115,5 +115,5 @@ describe('DB 풀은 프로세스에 하나 (소켓 위에서)', () => {
     expect(attached).toBe(before)
     //  같은 풀 객체다 — 새 인스턴스가 만든 것이 아니라 globalThis 의 것을 집었다.
     expect(freshClient.getDb()).toBe(getDb())
-  }, 15_000)
+  })
 })

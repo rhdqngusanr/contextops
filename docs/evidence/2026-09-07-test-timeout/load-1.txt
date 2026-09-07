@@ -1,0 +1,31 @@
+
+ RUN  v4.1.11 C:/dev/hackathon
+
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 조용한 것이 기본이다 > 연결 안 된 저장소에서는 한 글자도 내지 않는다 68ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 조용한 것이 기본이다 > 토큰이 없으면 조용하다 — project.json 만 clone 받은 사람이 여기다 57ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 조용한 것이 기본이다 > 서버에 못 닿으면 조용하다 — 캐시도 낡았을 때 106ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 조용한 것이 기본이다 > 최신이면 조용하다 77ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 알릴 것이 있을 때만 알린다 > 공식이 새로 나오면 버전 둘과 부를 명령을 말한다 75ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 알릴 것이 있을 때만 알린다 > 한 번도 sync 안 했으면 「아직 받지 않았다」다 80ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 알릴 것이 있을 때만 알린다 > 대기 중인 초안이 있으면 같이 알린다 80ms
+ ✓ plugin/contextops/test/hooks.test.ts > session-start 훅 — 알릴 것이 있을 때만 알린다 > 깨진 파일에도 죽지 않는다 — 훅이 죽으면 사용자는 우리 도구가 고장 났다고 읽는다 65ms
+ ✓ plugin/contextops/test/hooks.test.ts > 🔴 P6 — 훅은 선언한 자리 밖을 건드리지 않는다 > session-start 는 알릴 것이 있을 때 도 저장소의 모든 바이트와 mtime 이 그대로다 81ms
+ ✓ plugin/contextops/test/hooks.test.ts > 🔴 P6 — 훅은 선언한 자리 밖을 건드리지 않는다 > session-start 는 조용할 때 도 저장소의 모든 바이트와 mtime 이 그대로다 68ms
+ ✓ plugin/contextops/test/hooks.test.ts > 🔴 P6 — 훅은 선언한 자리 밖을 건드리지 않는다 > stop 이 바꾼 경로가 _writes 선언과 정확히 같다 264ms
+ ✓ plugin/contextops/test/hooks.test.ts > 🔴 P6 — 훅은 선언한 자리 밖을 건드리지 않는다 > 할 말이 없으면 stop 도 아무것도 안 쓴다 — 선언은 허가지 의무가 아니다 260ms
+ ✓ plugin/contextops/test/hooks.test.ts > stop 훅 — 진행 보고 (SPEC §8.6) > 마일스톤 paths 가 걸리면 in_progress 를 보낸다 — 근거는 경로뿐이다 (P1) 336ms
+ ✓ plugin/contextops/test/hooks.test.ts > stop 훅 — 진행 보고 (SPEC §8.6) > 같은 세션에 agent 가 이미 보고했으면 보내지 않는다 — 근거 개수를 부풀리지 않는다 (P7) 298ms
+ ✓ plugin/contextops/test/hooks.test.ts > stop 훅 — 진행 보고 (SPEC §8.6) > 세션 id 를 모르면 보내지 않는다 — 중복 보고보다 누락이 낫다 292ms
+ ✓ plugin/contextops/test/hooks.test.ts > stop 훅 — 진행 보고 (SPEC §8.6) > 연결 안 된 저장소에서는 아무 일도 하지 않는다 157ms
+ ✓ plugin/contextops/test/hooks.test.ts > hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1) > plugin.json 이 이 파일을 가리킨다 — 안 가리키면 훅은 아예 안 돈다 0ms
+ ✓ plugin/contextops/test/hooks.test.ts > hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1) > 훅이 하나 이상 있다 — 표가 비면 위 검사가 아무것도 안 잰다 0ms
+ ✓ plugin/contextops/test/hooks.test.ts > hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1) > 가리키는 스크립트가 디스크에 있다 — node "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.mjs" 0ms
+ ✓ plugin/contextops/test/hooks.test.ts > hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1) > 가리키는 스크립트가 디스크에 있다 — node "${CLAUDE_PLUGIN_ROOT}/scripts/stop.mjs" 0ms
+ ✓ plugin/contextops/test/hooks.test.ts > hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1) > timeout 이 그 훅 자신의 네트워크 한도보다 길다 — 짧으면 훅이 늘 강제 종료된다 · node "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.mjs" 0ms
+ ✓ plugin/contextops/test/hooks.test.ts > hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1) > timeout 이 그 훅 자신의 네트워크 한도보다 길다 — 짧으면 훅이 늘 강제 종료된다 · node "${CLAUDE_PLUGIN_ROOT}/scripts/stop.mjs" 0ms
+
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+   Start at  09:44:56
+   Duration  3.07s (transform 176ms, setup 0ms, import 465ms, tests 2.37s, environment 0ms)
+

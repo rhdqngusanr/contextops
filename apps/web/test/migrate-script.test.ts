@@ -70,7 +70,7 @@ describe('scripts/migrate.ts — 소켓 위의 Postgres 에 적용한다', () =>
       `select to_regclass('drizzle.__drizzle_migrations')::text as exists`,
     )
     expect(ledger.rows[0]?.exists).toBeNull()
-  }, 30_000)
+  })
 
   it('② 적용하면 파일 수만큼 장부에 적히고 표·인덱스가 TS 스키마와 같다', async () => {
     const r = await migrateDatabase(url)
@@ -81,7 +81,7 @@ describe('scripts/migrate.ts — 소켓 위의 Postgres 에 적용한다', () =>
     expect(r.indexes.missing).toEqual([])
     expect(r.indexes.present).toEqual([...INDEX_NAMES])
     expect(r.enums).toBeGreaterThan(0)
-  }, 60_000)
+  })
 
   it('③ 다시 돌리면 0개를 적용한다 — 장부가 막는다 (Supabase 에 두 번 돌려도 무해하다)', async () => {
     const r = await migrateDatabase(url)
@@ -90,7 +90,7 @@ describe('scripts/migrate.ts — 소켓 위의 Postgres 에 적용한다', () =>
     expect(r.appliedNow).toBe(0)
     expect(r.pendingAfter).toBe(0)
     expect(r.tables.db).toBe(r.tables.ts)
-  }, 30_000)
+  })
 
   it('④ migrator 가 만든 모양과 시험 helper 가 만든 모양이 같다', async () => {
     const viaHelper = new PGlite()
@@ -100,5 +100,5 @@ describe('scripts/migrate.ts — 소켓 위의 Postgres 에 적용한다', () =>
     } finally {
       await viaHelper.close()
     }
-  }, 60_000)
+  })
 })
