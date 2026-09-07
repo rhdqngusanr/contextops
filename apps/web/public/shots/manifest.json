@@ -1,0 +1,25 @@
+{
+  "shots": [
+    {
+      "file": "/shots/screen-context.png",
+      "src": "/t/demo/p/paylab-api/context",
+      "alt": "팀 Context 화면 — 항목마다 원문 근거가 옆에 붙어 있다",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "/shots/screen-packs.png",
+      "src": "/t/demo/p/paylab-api/packs",
+      "alt": "Pack Explorer — 발행된 CLAUDE.md 와 그 줄의 출처",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "file": "/shots/screen-sync.png",
+      "src": "/t/demo/p/paylab-api/sync",
+      "alt": "Sync 화면 — 기기마다 어느 버전이 적용됐나",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}

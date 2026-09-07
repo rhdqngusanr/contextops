@@ -102,13 +102,24 @@ $stages = @(
        count_json = $true },
 
     @{ name = "shots"
-       what = "화면 캡처 — 눈 판정 재료 (.ci/shots/)"
+       what = "화면 캡처 — 진짜 브라우저로 찍고 그려졌는지 센다 (.ci/shots/)"
        prereq = "apps\web\e2e"
        cmd = "pnpm --filter web test:e2e"
-       #  ⚠ 이 단계는 아직 SKIP 이다 (apps/web/e2e 가 없다). 켜지는 바퀴에 이 정규식이
-       #    playwright 요약과 맞는지 확인해라 — 안 맞으면 관통이 「검사 수를 못 셌다」로
-       #    **FAIL** 한다. 조용히 0 으로 떨어지지 않는다.
-       count_log = '(\d+) passed' }
+       #  103바퀴에 켰다. 하네스는 playwright 가 아니라 **CDP 로 몬 헤드리스 Chrome**
+       #  이다 (`apps/web/e2e/shots.ts` · 의존성 0). 그 스크립트가 끝에 찍는 줄이
+       #    e2e: 25 passed, 0 failed — 캡처는 .ci/shots/
+       #  ⚠ 그 줄의 모양을 바꾸면 여기도 같이 고쳐라. 안 맞으면 관통이
+       #    「검사 수를 못 셌다」로 **FAIL** 한다 — 조용히 0 으로 떨어지지 않는다.
+       count_log = '(\d+) passed' },
+
+    @{ name = "shotcopy"
+       what = "방금 찍은 캡처를 랜딩이 읽는 자리로 옮긴다 (apps/web/public/shots/ · FINDINGS 131)"
+       #  ⚠ `.ci/shots/` 는 관통 첫머리에 **통째로 지워진다.** 랜딩이 거기서 읽으면
+       #    배포된 그림이 사라지거나 낡은 채로 남는다. 그래서 옮기는 단계가 따로 있고,
+       #    「방금 찍은 것이 없으면」 이 단계가 **FAIL** 한다 — 건너뛰지 않는다.
+       prereq = "apps\web\e2e\publish-shots.ts"
+       cmd = "pnpm --filter web exec tsx e2e/publish-shots.ts"
+       count_log = '검사 (\d+)개' }
 )
 
 #  단계가 돈 검사 수를 **그 단계의 산출물에서 읽는다.** 여기서 세지 않는다.
