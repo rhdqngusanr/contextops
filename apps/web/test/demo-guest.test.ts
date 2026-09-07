@@ -1,7 +1,7 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { AI_JOB_STATUSES, SYNC_STATUSES } from '@contextops/schema'
+import { AI_JOB_STATUSES, PROPOSAL_STATUSES, SYNC_STATUSES } from '@contextops/schema'
 
 import { ACTOR_RULES } from '../src/lib/api/auth'
 import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_TENANT, demoBannerText } from '../src/lib/demo/tenant'
@@ -184,15 +184,42 @@ describe('데모 테넌트를 심으면', () => {
     expect(data.off_roadmap_total).toBe(1)
   })
 
-  it('화면 6 이 그릴 것이 있다 — 실림·승인 대기·거절·결정 전 네 갈래', async () => {
+  it('화면 6 이 그릴 것이 있다 — 제안 상태 5종이 전부 선다', async () => {
     const token = await guestToken()
     const data = await dataOf(await listProposals(
       req('GET', `/api/v1/projects/${seeded.projectId}/proposals`, { auth: token }),
       params({ id: seeded.projectId }),
     ))
-    const statuses = (data.proposals as { status: string }[]).map((p) => p.status).sort()
+    const rows = data.proposals as { status: string }[]
+    const count = (s: string) => rows.filter((p) => p.status === s).length
     //  ⚠ `published` 와 `approved` 가 **둘 다** 있어야 한다 — 승인은 발행이 아니다.
-    expect(statuses).toEqual(['approved', 'published', 'rejected', 'submitted'])
+    expect(rows.map((p) => p.status).sort())
+      .toEqual(['approved', 'draft', 'published', 'rejected', 'submitted'])
+    //  🔴 **5종이 전부 화면에 선다** (FINDINGS 163 · loop/PROMPT.md ④2-B).
+    //  ★ 왜 위 한 줄로 안 끝내나 — 저건 **오늘의 목록**이라 `PROPOSAL_STATUSES` 에
+    //    여섯째가 붙어도 그대로 초록이다. 화면 6 의 거르개 칩은 그 표를 그대로 읽어
+    //    종류마다 하나씩 그리므로, 씨앗이 안 만든 종류는 **늘 빈 목록인 칩**이 된다.
+    //    종류가 늘면 `DEMO_PROPOSALS` 에 한 줄을 더해라.
+    for (const status of PROPOSAL_STATUSES) {
+      expect(count(status), `데모가 제안 상태 ${status} 를 한 번도 안 보여 준다`).toBeGreaterThan(0)
+    }
+    //  🔴 `draft` 는 **제출도 안 된 것**이다 — 결정자가 있으면 그건 초안이 아니다.
+    for (const row of rows.filter((p) => p.status === 'draft')) {
+      expect((row as { decided_by?: unknown }).decided_by ?? null).toBeNull()
+    }
+  })
+
+  it('화면 6 의 거르개가 종류마다 그 종류만 낸다 — 거르는 것은 서버다', async () => {
+    const token = await guestToken()
+    for (const status of PROPOSAL_STATUSES) {
+      const data = await dataOf(await listProposals(
+        req('GET', `/api/v1/projects/${seeded.projectId}/proposals?status=${status}`, { auth: token }),
+        params({ id: seeded.projectId }),
+      ))
+      const rows = data.proposals as { status: string }[]
+      expect(rows.length, `?status=${status} 가 빈 목록이다`).toBeGreaterThan(0)
+      expect(rows.every((p) => p.status === status)).toBe(true)
+    }
   })
 
   it('게스트가 보는 팀은 데모 하나뿐이다', async () => {

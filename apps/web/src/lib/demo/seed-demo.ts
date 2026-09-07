@@ -131,13 +131,20 @@ type DemoProposal = {
   data: Record<string, unknown>
   reason: string
   /**
-   * 🔴 화면 6 이 그려야 하는 네 갈래 (`PROPOSAL_STATUS_CHIP`):
+   * 🔴 화면 6 이 그려야 하는 **다섯 갈래** (`PROPOSAL_STATUSES` · `PROPOSAL_STATUS_CHIP`):
    * `published`(승인 → v1.1.0 에 실렸다) · `approved`(승인됐고 **다음 발행을 기다린다**) ·
-   * `rejected`(사유와 함께) · `pending`(아직 결정 전).
+   * `rejected`(사유와 함께) · `pending`(제출됐고 아직 결정 전 = `submitted`) ·
+   * `draft`(**아직 제출도 안 했다** — `contextops propose` 가 만들어 놓기만 한 것).
    * ⚠ `approved` 와 `published` 를 둘 다 두는 이유 — 승인은 발행이 아니다. 하나만 두면
    *   화면에서 그 둘을 구별하는 칩이 데모에 한 번도 안 선다.
+   * ⚠ `draft` 도 같은 이유다 (FINDINGS 163) — 화면 6 의 거르개는 `PROPOSAL_STATUSES` 를
+   *   그대로 읽어 칩 **다섯**을 그리는데, 씨앗이 넷만 만들면 「초안」 칩은 늘 빈 목록이다.
+   *
+   * ★ 갈래를 하나 더하려면: ① 이 union 에 값 ② 아래 `DEMO_PROPOSALS` 에 한 줄
+   *   ③ 심는 반복문(`③ 심기`)에서 그 값이 어디까지 가는지 한 줄. 수를 세는 자리는
+   *   `demo-guest.test.ts` 화면 6 시험 하나뿐이고, 그것은 **표를 돌며** 센다.
    */
-  decision: 'published' | 'approved' | 'rejected' | 'pending'
+  decision: 'published' | 'approved' | 'rejected' | 'pending' | 'draft'
   note?: string
 }
 
@@ -197,6 +204,20 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
     //  ⚠ 이 하나는 v1.1.0 **발행 뒤에** 승인한다 — 그래야 「승인됐지만 아직 안 실린」
     //    상태가 데모에 선다.
     decision: 'approved',
+  },
+  {
+    author: 'demo-member-seoyeon',
+    title: '카드 정보 제약에 「토큰 보관 기간」을 적는다',
+    summary: '토큰만 받는다까지는 적혀 있는데, 그 토큰을 얼마나 들고 있나가 없다.',
+    target: 'item_constraint_card',
+    data: {
+      statement: '카드 원본 정보를 저장하지 않는다 — 토큰만 받는다. '
+        + '받은 토큰은 결제 확정 후 90일까지만 보관하고 그 뒤에는 지운다.',
+    },
+    reason: '보관 기간이 항목에 없어서 리뷰마다 사람마다 다른 수를 말한다.',
+    //  ⚠ 이 하나는 **제출하지 않는다** — 「올리다 만 초안」이 화면 6 에 한 줄 서야
+    //    「초안」 칩이 빈 목록이 아니게 된다 (FINDINGS 163).
+    decision: 'draft',
   },
 ]
 
@@ -336,8 +357,8 @@ export async function seedDemo(now: Date = new Date()): Promise<DemoSeedResult> 
   //  ── 발행 ①: v1.0.0 ──────────────────────────────────────────────────
   const v1 = await publish(seed, owner, '1.0.0', null, '첫 정본 — 목표·규칙·로드맵을 팀 공식으로')
 
-  //  ── 제안 넷 (실림 · 승인 대기 · 거절 · 결정 전) ──────────────────────
-  //  ⚠ 넷 다 v1.0.0 을 기준으로 **먼저 올린다.** 결정만 발행 앞뒤로 갈린다 —
+  //  ── 제안 다섯 (실림 · 승인 대기 · 거절 · 결정 전 · 초안) ────────────
+  //  ⚠ 다섯 다 v1.0.0 을 기준으로 **먼저 올린다.** 결정만 발행 앞뒤로 갈린다 —
   //    그래야 「승인은 했는데 아직 안 실렸다」가 실제 상태로 선다.
   const decideLater: { id: string; owner: string }[] = []
   for (const p of DEMO_PROPOSALS) {
@@ -362,6 +383,9 @@ export async function seedDemo(now: Date = new Date()): Promise<DemoSeedResult> 
       params({ id: seed.projectId }),
     ))
     const id = created.id as string
+    //  🔴 `draft` 는 여기서 멈춘다 — 라우트가 만들 때 매기는 상태가 `draft` 이고
+    //     제출해야 `submitted` 로 간다. 결정은 그 뒤의 이야기라 아래도 전부 건너뛴다.
+    if (p.decision === 'draft') continue
     await submitProposal(req('POST', `/api/v1/proposals/${id}/submit`, { auth: author, body: {} }), params({ id }))
     if (p.decision === 'published') {
       await approveProposal(req('POST', `/api/v1/proposals/${id}/approve`, { auth: owner, body: {} }), params({ id }))
