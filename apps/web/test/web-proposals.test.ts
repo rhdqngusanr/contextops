@@ -18,7 +18,7 @@ import {
 } from '../src/components/proposals'
 import { PROPOSAL_STATUS_CHIP } from '../src/components/chips'
 import { ScreenEmpty } from '../src/components/states'
-import { EMPTY_PLACES } from '../src/lib/web/screens'
+import { EMPTY_PLACES, MADE } from '../src/lib/web/screens'
 import { diffCounts, lineDiff } from '../src/lib/web/diff'
 import { dateText } from '../src/lib/web/time'
 import { proposals } from '../src/db/schema'
@@ -551,6 +551,25 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
     //     ③만 있으면 「올린」을 통째로 지워도 초록이고, 그러면 draft 가 왜 승인 대기로
     //     안 가는지 화면이 아무 말도 안 하게 된다.
     expect(intro).toContain('올린 것만')
+  })
+
+  it('🔴 **빈 목록도 같은 낱말로 말한다** — 세 자리가 낱말 하나에서 나온다 (FINDINGS 167)', () => {
+    //  ★ 167 은 165(날짜 칸) · 166(목록 위 설명)을 고친 뒤에도 **한 자리가 남아** 있던
+    //    것이다. 빈 목록은 「아직 올라온 제안이 없습니다」라고 말했는데, 그 낱말이
+    //    `components/` 안에 있어서 `lib/web` 의 `EMPTY_PLACES` 가 읽을 수 없었다.
+    //    낱말을 `lib/web/screens.ts` 로 내려 셋이 같은 `MADE` 를 읽는다.
+    const empty = EMPTY_PLACES['proposals.list'].message
+
+    //  ① 빈 목록의 문장이 그 낱말을 쓴다.
+    expect(empty).toContain(`아직 ${MADE} 제안이 없습니다`)
+
+    //  ② 🔴 **세 자리가 같은 하나에서 나온다.** 하나만 되돌리면 여기서 갈라진다.
+    const intro = html(createElement(ProposalListIntro))
+    expect(PROPOSAL_DATE_COLUMN.head).toContain(MADE)
+    expect(intro).toContain(MADE)
+
+    //  ③ 안 올린 `draft` 도 이 목록에 뜬다 — 「올라온 것이 없다」는 조건이 아니다.
+    expect(empty).not.toMatch(/올라온|제출된/)
   })
 
   it('빈 목록은 **넘겨받은 빈 상태를 그대로** 그린다 — 표가 문구를 짓지 않는다 (FINDINGS 133)', () => {

@@ -7,6 +7,9 @@ import {
 
 import { diffCounts, lineDiff, type DiffLine } from '../lib/web/diff'
 import type { ProposalDetail, ProposalRow, VersionRow } from '../lib/web/queries'
+//  🔴 낱말 `MADE`(「만든」)의 정본은 `lib/web/screens.ts` 다 — 빈 목록 문구(`EMPTY_PLACES`)와
+//     같은 하나를 읽어야 세 자리가 안 갈라진다 (FINDINGS 167). 여기서 다시 적지 마라.
+import { MADE } from '../lib/web/screens'
 import { dateText } from '../lib/web/time'
 import { PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, TypeIcon, VersionPill } from './chips'
 import { EvidenceList } from './evidence'
@@ -91,12 +94,6 @@ export function proposalEmptyMessage(status: ProposalStatus | null): string | un
   if (status === null) return undefined
   return `「${PROPOSAL_STATUS_CHIP[status].label}」 상태의 제안이 없습니다. [전체] 를 누르면 모두 봅니다.`
 }
-
-/**
- * `contextops propose` 가 **하는 일**을 부르는 낱말 하나. 표 머리(「만든 날」)와 목록 위
- * 설명(「…로 만든 변경 제안입니다」)이 여기서 같이 나온다 — 한쪽만 고치면 시험이 빨개진다.
- */
-const MADE = '만든'
 
 /**
  * 🔴 **날짜 칸의 머리와 값은 한 자리에서 나온다** (FINDINGS 165).

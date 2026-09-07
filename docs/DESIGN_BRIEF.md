@@ -281,6 +281,10 @@
 - 목록 위 한 줄: `Claude Code에서 contextops propose 로 만든 변경 제안입니다. 올린 것만 승인 대기로 가고, 승인된 제안만 다음 발행에 들어갑니다.` (FINDINGS 166)
   ⚠ **「올라온 변경 제안」이 아니다** — `draft` 행(163)은 만들어 놓기만 하고 아직 안 올린 것이라, 날짜 칸에서 고친 것과 같은 거짓말이 여기 한 번 더 있었다.
   문장의 정본은 `ProposalListIntro` 이고(화면이 아니라 조각이라 시험이 읽는다) 「만든」은 표 머리와 **같은 낱말 하나**(`MADE`)에서 온다.
+- 빈 목록: `아직 만든 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.` + [Context 항목 보기] (`EMPTY_PLACES['proposals.list']` · FINDINGS 167)
+  ⚠ 여기도 **「올라온」이 아니다** — 165·166 과 같은 낱말의 **세 번째 자리**였다. 낱말 `MADE` 의 정본은 `apps/web/src/lib/web/screens.ts` 이고,
+  표 머리 · 목록 위 한 줄 · 이 문장 셋이 그 하나를 읽는다. ★ `components/` 가 아니라 `lib/web` 인 이유 — `EMPTY_PLACES` 가 `lib/web` 에 있고
+  **`lib/` 는 `components/` 를 못 읽는다**(의존 방향). 낱말이 조각 쪽에 있는 동안에는 이 문장만 문자열을 한 벌 더 적을 수밖에 없었다.
 - 표 위에 **상태 거르개 칩** `[전체]` + 상태 5종 (`ProposalStatusFilter` · FINDINGS 112). 낱말과 값은 `PROPOSAL_STATUS_CHIP`·`PROPOSAL_STATUSES` 표에서 오고, 고른 것은 `aria-pressed` 로도 말한다(색만으로 구분하지 않는다).
   ⚠ **개수를 적지 않는다** — 거르는 것은 서버(`?status`)라 화면 손에는 거른 목록뿐이고, 「거절됨 3」은 그 상태의 수가 아니라 지금 보이는 수다. 그래서 화면 4 의 종류 칩과 달리 **한 장도 없는 상태도 그린다**(그 수를 모른다). 눌러서 비면 표가 「'거절됨' 상태의 제안이 없습니다」라고 말한다.
   ⚠ **author 거르개는 없다** — 고를 이름의 목록을 내는 문이 없다.

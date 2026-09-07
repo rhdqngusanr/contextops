@@ -235,6 +235,22 @@ export type EmptyPlace =
   //  버튼이 없는 자리는 **왜 없는지**를 적는다 — 다음 사람이 「빠뜨린 것」과 구별한다.
   | { readonly message: string; readonly next?: undefined; readonly noNext: string }
 
+/**
+ * `contextops propose` 가 **하는 일**을 부르는 낱말 하나 (FINDINGS 165 · 166 · 167).
+ *
+ * 🔴 **화면 6 의 세 자리가 여기서 나온다** — 표 머리(「만든 날」) · 목록 위 설명
+ * (「…로 만든 변경 제안입니다」) · 빈 목록(「아직 만든 제안이 없습니다」).
+ *
+ * ★ 왜 `lib/web` 인가 — 166 까지 이 낱말은 `components/proposals.tsx` 안에 있었는데,
+ *   빈 목록의 문구는 바로 아래 `EMPTY_PLACES` 가 정본이고 **`lib/` 는 `components/` 를
+ *   못 읽는다**(의존 방향). 낱말이 저쪽에 있는 한 이쪽은 문자열을 한 벌 더 적을 수밖에
+ *   없고, 그래서 165·166 을 고친 뒤에도 **빈 목록만 「올라온」이라고 말했다**.
+ *   아래(`lib/web`)로 내리면 조각도 이 표도 같은 하나를 읽는다 — 넷째 자리가 안 생긴다.
+ * ⚠ 「올라온/제출된」으로 되돌리지 마라 — `propose` 는 **만들기만** 하고, 안 올린
+ *   `draft` 도 이 목록에 뜬다. `test/web-proposals.test.ts` 가 세 자리를 함께 잰다.
+ */
+export const MADE = '만든'
+
 export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
   //  ⚠ 이 칸이 세는 것은 **문서가 아니라 job** 이다 (FINDINGS 159).
   //     데모에는 문서가 2건 있는데도 「아직 올린 문서가 없습니다」라고 말해서,
@@ -257,7 +273,9 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
     next: { label: 'Context로 이동', to: 'context', tone: 'accent' },
   },
   'proposals.list': {
-    message: '아직 올라온 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.',
+    //  ⚠ 「올라온」이 아니라 **「만든」**이다 (FINDINGS 167) — `propose` 는 만들기만 하고,
+    //    안 올린 `draft` 도 이 목록에 뜬다. 낱말의 정본은 위 `MADE` 하나다.
+    message: `아직 ${MADE} 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.`,
     //  ⚠ 제안을 만드는 곳은 CLI 다 — 화면에 「만들기」 버튼을 두면 거짓말이다.
     //    갈 수 있는 곳은 지금 항목을 보는 Context 이고, 그래서 `plain` 이다.
     next: { label: 'Context 항목 보기', to: 'context', tone: 'plain' },
