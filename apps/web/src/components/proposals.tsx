@@ -93,6 +93,12 @@ export function proposalEmptyMessage(status: ProposalStatus | null): string | un
 }
 
 /**
+ * `contextops propose` 가 **하는 일**을 부르는 낱말 하나. 표 머리(「만든 날」)와 목록 위
+ * 설명(「…로 만든 변경 제안입니다」)이 여기서 같이 나온다 — 한쪽만 고치면 시험이 빨개진다.
+ */
+const MADE = '만든'
+
+/**
  * 🔴 **날짜 칸의 머리와 값은 한 자리에서 나온다** (FINDINGS 165).
  *
  * 111바퀴까지 머리는 「올라온 날」(= 제출한 날)인데 그리는 값은 `created_at`(만든 날)이었다.
@@ -104,12 +110,6 @@ export function proposalEmptyMessage(status: ProposalStatus | null): string | un
  *   표 → `packages/schema` → 라우트 → 여기 순으로 **같은 바퀴에** 칸을 만들어야 한다.
  * ★ 그래서 머리와 값을 이 한 줄에 묶었다 — 한쪽만 고치면 시험이 먼저 빨개진다.
  */
-/**
- * `contextops propose` 가 **하는 일**을 부르는 낱말 하나. 표 머리(「만든 날」)와 목록 위
- * 설명(「…로 만든 변경 제안입니다」)이 여기서 같이 나온다 — 한쪽만 고치면 시험이 빨개진다.
- */
-const MADE = '만든'
-
 export const PROPOSAL_DATE_COLUMN = {
   head: `${MADE} 날`,
   of: (proposal: ProposalRow) => proposal.created_at,
