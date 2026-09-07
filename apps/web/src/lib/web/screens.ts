@@ -251,6 +251,13 @@ export type EmptyPlace =
  */
 export const MADE = '만든'
 
+/**
+ * 항목의 담당자 앞에 붙는 낱말 (FINDINGS 168 · 화면 5).
+ * ★ 왜 상수인가 — 116 이 「결정한 사람」을 `DECIDED_BY_LABEL` 로 올린 것과 같은 자리다.
+ *   낱말이 화면 조각 안에 있으면 시험이 그 문자열을 다시 적어야 하고, 그때부터 둘이 갈린다.
+ */
+export const OWNER_LABEL = '담당'
+
 export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
   //  ⚠ 이 칸이 세는 것은 **문서가 아니라 job** 이다 (FINDINGS 159).
   //     데모에는 문서가 2건 있는데도 「아직 올린 문서가 없습니다」라고 말해서,

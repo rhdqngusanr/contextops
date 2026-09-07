@@ -3,7 +3,7 @@ import { ContextItemQuery } from '@contextops/schema'
 
 import { contextItemRevisions, contextItems } from '../../../../../../db/schema'
 import { requireProject } from '../../../../../../lib/api/guard'
-import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItemView } from '../../../../../../lib/api/item'
+import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItemView, ITEM_OWNER_JOIN, itemOwners } from '../../../../../../lib/api/item'
 import { parseQuery, pathUuid, route } from '../../../../../../lib/api/route'
 
 // =====================================================================
@@ -45,6 +45,8 @@ export const GET = route<{ id: string }>('GET /projects/{id}/context-items', asy
     .select(ITEM_COLUMNS)
     .from(contextItems)
     .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+    //  담당자 이름 (FINDINGS 168). **left** 다 — 담당자 없는 항목이 정상이고, inner 면 목록에서 사라진다.
+    .leftJoin(itemOwners, ITEM_OWNER_JOIN)
     .where(and(...where))
     .orderBy(asc(contextItems.publicId))
     .limit(query.limit)

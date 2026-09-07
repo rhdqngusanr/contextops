@@ -7,7 +7,7 @@ import type { Db } from '../../db/client'
 import { contextItemRevisions, contextItems, contextVersions, packFiles, projects, proposals } from '../../db/schema'
 import type { Actor } from './auth'
 import { fail } from './error'
-import { appendSourceRef, CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItem } from './item'
+import { appendSourceRef, CURRENT_REVISION_JOIN, ITEM_COLUMNS, ITEM_OWNER_JOIN, itemOwners, toContextItem } from './item'
 
 // =====================================================================
 //  🔴 발행 트랜잭션 — 정본은 docs/SPEC.md §2.1. 여덟 단계가 **이 파일 하나**에 있다.
@@ -118,6 +118,8 @@ export async function publishVersion(args: {
       .select(ITEM_COLUMNS)
       .from(contextItems)
       .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+      //  담당자 이름 (FINDINGS 168). ITEM_COLUMNS 를 쓰는 질의는 **전부** 이 join 이 필요하다.
+      .leftJoin(itemOwners, ITEM_OWNER_JOIN)
       .where(and(
         eq(contextItems.projectId, projectId),
         eq(contextItems.status, 'active'),

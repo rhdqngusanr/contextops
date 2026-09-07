@@ -11,6 +11,7 @@ import {
   fetchItems, fetchVersions, publishVersion, updateItemStatus,
   type ProjectRef, type VersionRow,
 } from '../../../../../../lib/web/queries'
+import { OWNER_LABEL } from '../../../../../../lib/web/screens'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver, type SemverBump } from '../../../../../../lib/web/semver'
 import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
@@ -331,6 +332,12 @@ function ItemDrawer({
         <ItemStatusChip status={item.status} />
         <ConfidenceChip confidence={item.confidence} />
         <span className="meta mono">{item.type}</span>
+        {/* 🔴 **담당자를 이름으로 그린다** (FINDINGS 168) — `owner_id`(uuid)만 있을 때는
+            화면이 그릴 것이 없어서 그 칸이 「저장은 되는데 아무도 안 읽는」 상태였다.
+            ⚠ 없으면 **자리 자체를 안 그린다** — 「담당 —」 은 없는 것을 있는 척한다. */}
+        {item.owner === undefined ? null : (
+          <span className="meta">{OWNER_LABEL} {item.owner.name}</span>
+        )}
       </div>
       <p className="ink-3">{item.body}</p>
 

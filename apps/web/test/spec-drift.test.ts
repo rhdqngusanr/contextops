@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -144,5 +144,41 @@ describe('⑥ .ps1 이 전부 BOM + CRLF 다', () => {
       if (buf[i] === 0x0a && (i === 0 || buf[i - 1] !== 0x0d)) bareLf++
     }
     expect(bareLf, `${rel} 에 CRLF 아닌 줄이 ${bareLf}개 있다`).toBe(0)
+  })
+})
+
+// =====================================================================
+//  🔴 `ITEM_COLUMNS` 를 쓰는 질의는 **전부** 담당자 join 을 건다 (FINDINGS 168)
+//
+//  ★ 왜 시험인가 — 칸 표(`ITEM_COLUMNS`)에 별칭 표의 컬럼을 넣는 순간, 그 표를 쓰는
+//    **모든** 질의가 그 표를 join 해야 한다. 안 걸면 드리즐이 런타임에 던지고
+//    (`… "item_owners" is not part of the query!`) 그 라우트는 **500** 이다.
+//    실제로 그렇게 됐다: 여섯 자리 중 넷만 고쳐서 발행이 500 이 났다.
+//  ★ 왜 타입이 못 막나 — join 여부는 드리즐의 **런타임** 검사다. 그래서 소스를 센다.
+//
+//  ⚠ 새 항목 질의를 더할 때 이 시험이 빨개지면 고칠 것은 시험이 아니라 **그 질의**다:
+//    `.leftJoin(itemOwners, ITEM_OWNER_JOIN)` 한 줄. `left` 인 이유는 `item.ts` 에 있다.
+// =====================================================================
+describe('ITEM_COLUMNS 를 쓰는 질의는 담당자 표를 join 한다', () => {
+  it('빠뜨린 파일이 없다', () => {
+    const roots = ['src/app/api', 'src/lib/api']
+    const files: string[] = []
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(join(webRoot, dir), { withFileTypes: true })) {
+        const rel = `${dir}/${entry.name}`
+        if (entry.isDirectory()) walk(rel)
+        else if (entry.name.endsWith('.ts')) files.push(rel)
+      }
+    }
+    for (const r of roots) walk(r)
+
+    const users = files.filter((f) => {
+      const text = readFileSync(join(webRoot, f), 'utf8')
+      return text.includes('.select(ITEM_COLUMNS)')
+    })
+    expect(users.length, 'ITEM_COLUMNS 를 쓰는 파일을 못 찾았다 — 이름이 바뀌었나').toBeGreaterThan(3)
+
+    const missing = users.filter((f) => !readFileSync(join(webRoot, f), 'utf8').includes('.leftJoin(itemOwners, ITEM_OWNER_JOIN)'))
+    expect(missing, '이 질의가 담당자 표를 join 하지 않는다 — 부르면 500 이다').toEqual([])
   })
 })

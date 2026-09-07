@@ -328,7 +328,15 @@ async function draftFor(seed: SeedResult, owner: string, p: DemoProposal): Promi
   const current = items.find((i) => i.id === p.target)
   if (!current) throw new Error(`[demo-seed] 제안의 대상 항목 ${p.target} 이 씨앗에 없다`)
 
-  const { project_id: _p, status: _s, revision: _r, updated_at: _u, ...draft } = current
+  //  🔴 **화면용 칸을 떼고 초안으로 만든다.** `ContextItemDraft` 는 `.strict()` 라
+  //     여분의 키가 하나만 있어도 제안 만들기가 400 이다.
+  //  ⚠ 뗄 것이 늘어나는 자리다 — `ContextItemView` 에 「화면만 읽는 칸」을 더하면
+  //    여기도 한 줄이다 (`owner` 가 그 첫 예다 · FINDINGS 168). 안 떼면 씨앗이 통째로 죽는다.
+  const {
+    project_id: _p, status: _s, revision: _r, updated_at: _u,
+    owner: _o,
+    ...draft
+  } = current
   return { ...draft, data: p.data }
 }
 

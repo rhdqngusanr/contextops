@@ -19058,7 +19058,19 @@ var ItemBase = external_exports.object({
   revision: external_exports.int().min(1)
 });
 var DraftBase = ItemBase.omit({ project_id: true, status: true, revision: true });
-var ViewBase = ItemBase.extend({ updated_at: external_exports.iso.datetime() });
+var ViewBase = ItemBase.extend({
+  updated_at: external_exports.iso.datetime(),
+  /**
+   * 🔴 **담당자 — id 와 이름** (FINDINGS 168). `owner_id`(uuid)는 `ItemBase` 에 이미 있고
+   * snapshot 이 그것으로 선다. 그런데 **이름이 없으면 화면이 그릴 것이 없어서**, 그 칸은
+   * 여러 바퀴 동안 「저장은 되는데 아무도 안 읽는」 상태였다 — 116 이 `decided_by` 에서
+   * 겪은 것과 같은 자리다.
+   * ⚠ 이름을 `ItemBase` 에 넣지 마라 — 사람이 이름을 바꾸면 snapshot 의 지문이 흔들린다 (P4).
+   *   `updated_at` 을 여기 둔 것과 **정확히 같은 이유**다.
+   * ⚠ 담당자가 없는 항목이 정상이라 `optional` 이다 (`leftJoin`).
+   */
+  owner: external_exports.object({ id: external_exports.uuid(), name: external_exports.string() }).strict().optional()
+});
 var MissionData = external_exports.object({
   statement: external_exports.string().min(3).max(500),
   rationale: external_exports.string().max(1e3).optional()

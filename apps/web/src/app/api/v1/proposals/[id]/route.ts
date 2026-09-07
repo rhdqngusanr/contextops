@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 import { contextItemRevisions, contextItems, proposals } from '../../../../../db/schema'
 import { fail } from '../../../../../lib/api/error'
 import { requireProject } from '../../../../../lib/api/guard'
-import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, toContextItemView } from '../../../../../lib/api/item'
+import { CURRENT_REVISION_JOIN, ITEM_COLUMNS, ITEM_OWNER_JOIN, itemOwners, toContextItemView } from '../../../../../lib/api/item'
 import { selectProposals, toProposalPeople, type ProposalReadRow } from '../../../../../lib/api/proposal'
 import { pathUuid, route } from '../../../../../lib/api/route'
 
@@ -53,6 +53,8 @@ export const GET = route<{ id: string }>('GET /proposals/{id}', async (ctx) => {
     .select(ITEM_COLUMNS)
     .from(contextItems)
     .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+    //  담당자 이름 (FINDINGS 168). ITEM_COLUMNS 를 쓰는 질의는 **전부** 이 join 이 필요하다.
+    .leftJoin(itemOwners, ITEM_OWNER_JOIN)
     .where(and(
       eq(contextItems.projectId, row.project_id),
       inArray(contextItems.publicId, targetIds),

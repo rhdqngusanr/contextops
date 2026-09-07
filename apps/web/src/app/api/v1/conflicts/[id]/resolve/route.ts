@@ -7,7 +7,7 @@ import { conflicts, contextItemRevisions, contextItems } from '../../../../../..
 import { CONFLICT_COLUMNS, RESOLUTION_OUTCOME, resolutionNote, toConflict } from '../../../../../../lib/api/conflict'
 import { fail } from '../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../lib/api/guard'
-import { appendSourceRef, CURRENT_REVISION_JOIN, ITEM_COLUMNS } from '../../../../../../lib/api/item'
+import { appendSourceRef, CURRENT_REVISION_JOIN, ITEM_COLUMNS, ITEM_OWNER_JOIN, itemOwners } from '../../../../../../lib/api/item'
 import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
 
 // =====================================================================
@@ -112,6 +112,8 @@ async function retireItem(tx: Db, args: {
     .select(ITEM_COLUMNS)
     .from(contextItems)
     .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+    //  담당자 이름 (FINDINGS 168). **left** 다 — 담당자 없는 항목이 정상이고, inner 면 목록에서 사라진다.
+    .leftJoin(itemOwners, ITEM_OWNER_JOIN)
     .where(and(
       eq(contextItems.projectId, args.projectId),
       eq(contextItems.publicId, args.publicId),

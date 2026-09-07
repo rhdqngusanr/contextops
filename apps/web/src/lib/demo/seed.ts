@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm'
-import { AI_JOB_STATUSES } from '@contextops/schema'
+import { AI_JOB_STATUSES, type SourceRef } from '@contextops/schema'
 
-import { AI_JOB_STATUS_RULES, aiJobs, contextItems } from '../../db/schema'
+import { AI_JOB_STATUS_RULES, aiJobs, contextItemRevisions, contextItems, users } from '../../db/schema'
 import { POST as createTeam } from '../../app/api/v1/teams/route'
 import { POST as createProject } from '../../app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../../app/api/v1/projects/[id]/repos/route'
@@ -900,12 +900,36 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
   const itemRows = await getDb()
     //  ⚠ `type` 도 같이 읽는다 — 「데모가 ItemType 몇 갈래를 보여 주나」를 세는 쪽이
     //    id 로 타입을 되찾아야 하는데, 그 표를 손으로 들면 픽스처가 늘 때 갈라진다.
-    .select({ id: contextItems.id, publicId: contextItems.publicId, type: contextItems.type })
+    .select({
+      id: contextItems.id, publicId: contextItems.publicId, type: contextItems.type,
+      //  담당자를 누구로 둘지 고르는 재료 (아래 주석).
+      sourceRefs: contextItemRevisions.sourceRefs,
+    })
     .from(contextItems)
+    .innerJoin(contextItemRevisions, and(
+      eq(contextItemRevisions.itemId, contextItems.id),
+      eq(contextItemRevisions.revision, contextItems.currentRevision),
+    ))
     .where(eq(contextItems.projectId, projectId))
+
+  //  🔴 **담당자를 심는다** (FINDINGS 168). 이 칸은 여러 바퀴 동안 「저장은 되는데 아무도
+  //     안 읽는」 상태였는데, 씨앗이 값을 안 주면 화면을 살려도 **늘 비어서** 똑같이 죽는다.
+  //  ★ 누구인가 — 문서에서 온 항목은 그 문서를 쓴 사람이다.
+  //    `fixtures/paylab-docs/goals.md` 머리가 「작성: 결제팀 팀장」이라고 적고,
+  //    그 문서를 올린 것도 팀장(`DEMO_TENANT.ownerName`)이다. **지어낸 값이 아니다.**
+  //  ⚠ 코드에서 온 항목(`repository_path` 근거만 있는 것)은 **비워 둔다** — 스캔이 만든
+  //    항목의 담당자를 팀장이라고 적으면 근거 없는 주장이 하나 는다. 담당자가 없는 항목이
+  //    정상이라는 것도 화면이 보여 줘야 한다 (그래서 `leftJoin` 이다).
+  const [ownerRow] = await getDb()
+    .select({ id: users.id }).from(users).where(eq(users.authSubject, ownerSub)).limit(1)
+
   for (const row of itemRows) {
+    const fromDocument = (row.sourceRefs as SourceRef[]).some((r) => r.kind === 'source_document')
+    const changes = fromDocument && ownerRow !== undefined
+      ? { status: 'active' as const, owner_id: ownerRow.id }
+      : { status: 'active' as const }
     await updateItem(req('PATCH', `/api/v1/projects/${projectId}/context-items/${row.publicId}`, {
-      auth: owner, body: { revision: 1, changes: { status: 'active' } },
+      auth: owner, body: { revision: 1, changes },
     }), params({ id: projectId, itemId: row.publicId }))
   }
 

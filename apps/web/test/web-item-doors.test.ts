@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { parseTraceTag } from '@contextops/compiler'
 
-import { packFiles } from '../src/db/schema'
+import { packFiles, users } from '../src/db/schema'
 import type { Db } from '../src/db/client'
 import { setAiClientForTest } from '../src/lib/ai/client'
 import { stubTransport } from './helpers/ai'
@@ -252,5 +252,58 @@ describe('🔴 화면이 항목을 만드는 문 셋 (FINDINGS 35)', () => {
     expect(pack).toContain(SEED_ANSWER)
     expect(pack, '문 C 가 승인 없이 나갔다').not.toContain(CANDIDATE.body)
     expect(pack, '문 B 가 승인 없이 나갔다').not.toContain(OPEN_ANSWER)
+  })
+})
+
+// =====================================================================
+//  🔴 **담당자(`owner_id`)가 화면까지 산다** (FINDINGS 168)
+//
+//  ★ 왜 시험인가 — 이 칸은 DB·계약·`toContextItem()` 에 다 있는데 **읽는 코드가 0곳**이었다.
+//    값을 무엇으로 바꿔도 화면도 Pack 도 그대로였다 — 이 저장소가 매 바퀴 찾는
+//    「정의만 있고 아무 일도 안 하는」 자리의 전형이다 (116 이 `decided_by` 에서 겪은 것과 같다).
+//
+//  재는 것 셋:
+//    ① 담당자가 없으면 그 칸 **자체가 없다** — 「담당 —」 로 있는 척하지 않는다
+//    ② 넣으면 응답에 **이름이 같이** 온다 (uuid 만으로는 화면이 그릴 것이 없다)
+//    ③ 담당자 없는 항목이 목록에서 **사라지지 않는다** (`leftJoin` 이어야 하는 이유)
+// =====================================================================
+describe('🔴 담당자가 화면까지 산다 (FINDINGS 168)', () => {
+  async function items(projectId: string): Promise<Record<string, unknown>[]> {
+    const data = await dataOf(await listItems(
+      req('GET', `/api/v1/projects/${projectId}/context-items`, { auth: owner }), params({ id: projectId }),
+    ))
+    return data.items as Record<string, unknown>[]
+  }
+
+  it('①②③ 없으면 칸이 없고, 넣으면 이름이 오고, 그래도 목록은 안 줄어든다', async () => {
+    const doors = await walkDoors()
+    const before = await items(doors.projectId)
+    expect(before.length).toBeGreaterThan(1)
+
+    //  ① 아직 아무도 담당이 아니다 — 칸 자체가 없다.
+    for (const item of before) expect(item).not.toHaveProperty('owner')
+
+    //  담당자로 쓸 사람 — 이 프로젝트를 만든 사람이다.
+    const [me] = await db.select({ id: users.id }).from(users).where(eq(users.authSubject, 'doors-owner')).limit(1)
+    expect(me).toBeDefined()
+
+    //  ② 문으로 넣는다 (`PATCH …/context-items/{id}` 의 `changes.owner_id`).
+    const target = before[0]!
+    const publicId = target['id'] as string
+    const patched = await dataOf(await updateItem(
+      req('PATCH', `/api/v1/projects/${doors.projectId}/context-items/${publicId}`, {
+        auth: owner, body: { revision: target['revision'], changes: { owner_id: me!.id } },
+      }),
+      params({ id: doors.projectId, itemId: publicId }),
+    ))
+    const owned = patched.owner as { id: string; name: string } | undefined
+    expect(owned?.id).toBe(me!.id)
+    expect(typeof owned?.name).toBe('string')
+
+    //  ③ 목록에도 이름이 오고, **담당자 없는 나머지가 사라지지 않는다.**
+    const after = await items(doors.projectId)
+    expect(after).toHaveLength(before.length)
+    expect((after.find((i) => i['id'] === publicId)?.['owner'] as { name: string }).name).toBe(owned!.name)
+    expect(after.filter((i) => i['owner'] === undefined).length).toBe(before.length - 1)
   })
 })

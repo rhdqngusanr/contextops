@@ -5,7 +5,7 @@ import { contextItemRevisions, contextItems } from '../../../../../../../db/sche
 import { fail } from '../../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../../lib/api/guard'
 import {
-  CURRENT_REVISION_JOIN, ITEM_COLUMNS, parseItemData, toContextItemView,
+  CURRENT_REVISION_JOIN, ITEM_COLUMNS, parseItemData, toContextItemView, ITEM_OWNER_JOIN, itemOwners
 } from '../../../../../../../lib/api/item'
 import { parseBody, pathUuid, route } from '../../../../../../../lib/api/route'
 
@@ -49,6 +49,8 @@ export const PATCH = route<{ id: string; itemId: string }>(
       .select(ITEM_COLUMNS)
       .from(contextItems)
       .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+      //  담당자 이름 (FINDINGS 168). **left** 다 — 담당자 없는 항목이 정상이다.
+      .leftJoin(itemOwners, ITEM_OWNER_JOIN)
       .where(and(
         eq(contextItems.projectId, projectId),
         eq(contextItems.publicId, publicId.data),
@@ -101,6 +103,8 @@ export const PATCH = route<{ id: string; itemId: string }>(
       .select(ITEM_COLUMNS)
       .from(contextItems)
       .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+      //  담당자 이름 (FINDINGS 168). **left** 다 — 담당자 없는 항목이 정상이다.
+      .leftJoin(itemOwners, ITEM_OWNER_JOIN)
       .where(eq(contextItems.id, current.uuid))
       .limit(1)
     if (!updated) fail('INTERNAL', '갱신한 항목을 다시 읽지 못했다')

@@ -67,7 +67,19 @@ const DraftBase = ItemBase.omit({ project_id: true, status: true, revision: true
  * ⚠ 변형이 셋이 됐다(항목·초안·화면). 넷째를 더하기 전에 **정말 다른 계약인지** 물어라 —
  *   같은 것을 다르게 **보여 주는** 것뿐이라면 화면이 골라 그리는 것이 맞다.
  */
-const ViewBase = ItemBase.extend({ updated_at: z.iso.datetime() })
+const ViewBase = ItemBase.extend({
+  updated_at: z.iso.datetime(),
+  /**
+   * 🔴 **담당자 — id 와 이름** (FINDINGS 168). `owner_id`(uuid)는 `ItemBase` 에 이미 있고
+   * snapshot 이 그것으로 선다. 그런데 **이름이 없으면 화면이 그릴 것이 없어서**, 그 칸은
+   * 여러 바퀴 동안 「저장은 되는데 아무도 안 읽는」 상태였다 — 116 이 `decided_by` 에서
+   * 겪은 것과 같은 자리다.
+   * ⚠ 이름을 `ItemBase` 에 넣지 마라 — 사람이 이름을 바꾸면 snapshot 의 지문이 흔들린다 (P4).
+   *   `updated_at` 을 여기 둔 것과 **정확히 같은 이유**다.
+   * ⚠ 담당자가 없는 항목이 정상이라 `optional` 이다 (`leftJoin`).
+   */
+  owner: z.object({ id: z.uuid(), name: z.string() }).strict().optional(),
+})
 
 // ---------------------------------------------------------------------
 //  타입별 data

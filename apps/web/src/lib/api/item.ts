@@ -1,4 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import {
   ITEM_DATA, SOURCE_REFS_MAX,
   type ContextItem, type ContextItemDraft, type ContextItemView, type ItemType,
@@ -6,7 +7,8 @@ import {
 } from '@contextops/schema'
 
 import type { Db } from '../../db/client'
-import { contextItemRevisions, contextItems, type RevisionOrigin } from '../../db/schema'
+import { contextItemRevisions, contextItems, users, type RevisionOrigin } from '../../db/schema'
+import { userRefColumns, userRefOf } from './user'
 
 // =====================================================================
 //  DB 두 행(항목 + 현재 개정) → 계약의 `ContextItem` 하나 (SPEC §2 · §3)
@@ -25,6 +27,18 @@ export const CURRENT_REVISION_JOIN = and(
   eq(contextItemRevisions.revision, contextItems.currentRevision),
 )
 
+/**
+ * 🔴 **항목의 담당자 표** — 별칭이다 (FINDINGS 116 의 규칙 · 168 의 살리기).
+ *
+ * ★ 왜 별칭인가 — 한 질의에 사람이 둘 이상 붙을 수 있다. `users` 를 별칭 없이 두 번
+ *   join 하면 **조용히 한쪽 이름이 다른 칸에 들어가고**, 화면에는 멀쩡한 사람 이름이
+ *   뜨므로 눈으로 절대 안 잡힌다.
+ * ⚠ `leftJoin` 이다 — 담당자가 **없는 항목이 정상**이다 (대부분이 그렇다).
+ *   `innerJoin` 으로 두면 담당자 없는 항목이 목록에서 통째로 사라진다.
+ */
+export const itemOwners = alias(users, 'item_owners')
+export const ITEM_OWNER_JOIN = eq(itemOwners.id, contextItems.ownerId)
+
 /** `select({...})` 에 그대로 펴 넣는다 — 컬럼 목록이 라우트마다 갈리지 않게. */
 export const ITEM_COLUMNS = {
   uuid: contextItems.id,
@@ -34,7 +48,10 @@ export const ITEM_COLUMNS = {
   status: contextItems.status,
   scope: contextItems.scope,
   priority: contextItems.priority,
-  owner_id: contextItems.ownerId,
+  //  🔴 uuid 와 **이름을 같이** 낸다 (FINDINGS 168) — uuid 만 내면 화면이 그릴 수 있는 것이
+  //     없어서 그 칸은 「저장은 되는데 아무도 안 읽는」 상태로 남는다 (116 과 같은 자리).
+  //     ⚠ 이 표를 쓰는 질의는 `.leftJoin(itemOwners, ITEM_OWNER_JOIN)` 을 같이 걸어야 한다.
+  ...userRefColumns('owner', itemOwners),
   revision: contextItems.currentRevision,
   title: contextItemRevisions.title,
   body: contextItemRevisions.body,
@@ -60,6 +77,8 @@ type ItemJoinRow = {
   scope: Scope
   priority: number
   owner_id: string | null
+  /** 담당자 이름 — `leftJoin` 이라 담당자가 없으면 `null` 이다 (FINDINGS 168). */
+  owner_name: string | null
   revision: number
   title: string
   body: string
@@ -110,7 +129,16 @@ export function toContextItem(row: ItemJoinRow): ContextItem {
  *   자리에서 빨개진다.
  */
 export function toContextItemView(row: ItemJoinRow): ContextItemView {
-  return { ...toContextItem(row), updated_at: row.updated_at.toISOString() } as ContextItemView
+  //  🔴 담당자는 **이름까지** 낸다 (FINDINGS 168) — `owner_id`(uuid)만으로 화면이 그릴 수
+  //     있는 것이 없어서 그 칸은 여러 바퀴 동안 「저장은 되는데 아무도 안 읽는」 상태였다.
+  //     ⚠ 계약(`ContextItem`)의 `owner_id` 는 그대로 둔다 — snapshot 이 그것으로 서고,
+  //       이름은 사람이 바꿀 수 있어서 snapshot 에 들어가면 해시가 흔들린다 (P4).
+  const owner = userRefOf(row, 'owner')
+  return {
+    ...toContextItem(row),
+    updated_at: row.updated_at.toISOString(),
+    ...(owner === null ? {} : { owner }),
+  } as ContextItemView
 }
 
 /** 타입별 `data` 를 그 타입의 표로 다시 판다 (전부 `.strict()` — P1 allowlist). */
