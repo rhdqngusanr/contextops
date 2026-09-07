@@ -16,13 +16,14 @@
 //  🔴 끝에 `검사 N개` 를 찍는다 — 관통이 그 수를 읽는다 (`count_log`).
 // =====================================================================
 
-import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { type ShotEntry, ShotsManifest } from '@contextops/schema'
 
 import { PUBLISHED_SHOTS } from './plan'
+import { decodePng, pixelDiff } from './png'
 import { copySummary } from './report'
 
 const webRoot = fileURLToPath(new URL('..', import.meta.url))
@@ -62,9 +63,28 @@ for (const shot of PUBLISHED_SHOTS) {
   check(`${shot.name}: 빈 파일이 아니다`, bytes > 5_000, `${bytes} bytes`)
 
   const to = join(outDir, target)
+  //  🔴 **그림이 그대로면 안 옮긴다** (FINDINGS 161). 견주는 것은 파일 바이트가 아니라
+  //     **픽셀**이다 — 같은 화면을 다시 찍어도 인코더가 몇 바이트를 다르게 쓸 수 있고,
+  //     그걸 옮기면 코드와 무관한 diff 가 매 관통마다 커밋에 섞인다.
+  //  ⚠ 반대로 픽셀이 하나라도 달라졌으면 **반드시** 옮긴다 — 랜딩이 지난주 그림을
+  //    보여 주는 것이 이 단계가 막는 상태다 (FINDINGS 131).
+  const diff = existsSync(to)
+    ? pixelDiff(decodePng(readFileSync(to)), decodePng(readFileSync(from)))
+    : null
+  if (diff !== null && diff.changed === 0) {
+    check(`${shot.name}: 그림이 그대로다 — 안 옮겼다`, statSync(to).size > 0, '달라진 픽셀 0개')
+    entries.push({ file: `/shots/${target}`, src: shot.path, alt: shot.alt, width: shot.width, height: shot.height })
+    continue
+  }
+
   copyFileSync(from, to)
   const copied = existsSync(to) && statSync(to).size === bytes
-  check(`${shot.name}: public/shots/${target} 로 옮겼다`, copied)
+  //  🔴 **얼마나 달라졌는지를 남긴다** — 「매 바퀴 그림이 바뀐다」를 짐작으로 두지 않으려고
+  //     관통 로그에 수를 찍는다. 107바퀴까지 이 수를 아무도 안 쟀다 (FINDINGS 161).
+  const why = diff === null
+    ? '처음 옮긴다'
+    : `달라진 픽셀 ${diff.changed}개 / ${diff.total} · 줄 ${diff.rows?.[0]}-${diff.rows?.[1]}`
+  check(`${shot.name}: public/shots/${target} 로 옮겼다`, copied, why)
 
   entries.push({ file: `/shots/${target}`, src: shot.path, alt: shot.alt, width: shot.width, height: shot.height })
 }
