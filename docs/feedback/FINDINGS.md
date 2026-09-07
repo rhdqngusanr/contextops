@@ -3660,7 +3660,19 @@ params:
   ② `source_map` 을 지우고 태그를 정본으로 선언한다.
   ⚠ 지금은 ②가 유력하다 — 태그는 **플러그인이 받는 바이트 안에** 있어서 오프라인에서도
   역추적이 되고, `source_map` 은 서버에 물어봐야만 산다. 지우기 전에 SPEC §2 표에서도 지워라.
-- **상태**: 대기
+- **상태**: ✅ **②로 지웠다** — `bc8bbbb` (107바퀴). 먼저 다시 쟀다:
+  `grep -rn "sourceMap\|source_map" apps packages plugin` → 읽는 곳 **0곳** (INSERT 한 줄과
+  시험 두 줄이 전부). 지운 것 넷: `db/schema.ts` 의 칸 · 마이그레이션 `0007_outgoing_corsair.sql`
+  (`ALTER TABLE pack_files DROP COLUMN source_map`) · `lib/api/publish.ts` 의 INSERT ·
+  `docs/SPEC.md` §2 의 표(칸 자리에 왜 지웠는지 남겼다). `pack_files` **7칸 → 6칸**.
+  - **시험 두 자리를 태그로 다시 쟀다** — 화면 7 이 쓰는 파서(`traceLines`)를 그대로 부른다.
+    ★ 왜 파서를 재사용하나 — 시험이 정규식을 손으로 적으면 태그 형식이 바뀔 때
+    **이 시험만 초록으로 남는다.**
+  - **남긴 것**: `packages/compiler` 의 `sourcemap`(메모리 안)은 죽은 칸이 아니라 **P7 게이트의
+    한쪽**이다 — `traceability.test.ts` 가 그 줄 범위를 태그와 대조한다(끝 줄에 태그가 있나 ·
+    태그 개수 = 블록 개수 · 태그 없는 줄은 전부 템플릿 줄). 지우면 태그를 태그로 검사하는 꼴이 된다.
+  - **눈으로 읽었다**: `.ci/walkthrough-pack/CLAUDE.md` — 칸을 지운 뒤에도 발행된 바이트의
+    모든 블록이 태그로 끝난다 (41줄에 `ctx:` **20개**). CI 전 층 GREEN · 관통 1247검사.
 
 ### 35. 화면에서 항목을 **새로 만들 수 없다** — 표에서 보고 고칠 수만 있다   [구멍]
 - **증상**: `PATCH /context-items/{id}` 는 있는데 **단건 생성 문이 없다.**
