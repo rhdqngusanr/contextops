@@ -62,8 +62,11 @@ export const POST = route<{ id: string }>('POST /projects/{id}/documents', async
     return { document, version }
   })
 
-  //  🔴 SPEC §5 「document + **구조화 job 시작**(§7.1)」. 화면 3 은 이 `job.id` 를
-  //     polling 한다 (`GET /projects/{id}/jobs/{jobId}`).
+  //  🔴 SPEC §5 「document + **구조화 job 시작**(§7.1)」. 화면 3 은 이 id 로
+  //     `GET /projects/{id}/jobs?feature=structure&limit=1` 을 polling 한다.
+  //  ⚠ **job 객체를 싣지 않는다** (FINDINGS 63) — `createJob()` 이 내는 `{id,status}` 는
+  //    목록·상세 어느 쪽도 아닌 셋째 모양이고, 화면은 이미 그것을 안 들고 다닌다
+  //    (`import/page.tsx` 의 그 주석). id 하나면 읽으러 갈 수 있다.
   const job = await createJob(ctx.db, {
     projectId,
     feature: 'structure',
@@ -79,6 +82,6 @@ export const POST = route<{ id: string }>('POST /projects/{id}/documents', async
     current_version_id: doc.version.id,
     revision: doc.version.revision,
     content_hash: contentHash,
-    job,
+    job_id: job.id,
   }, 201)
 })

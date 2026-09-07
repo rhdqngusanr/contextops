@@ -118,7 +118,8 @@ async function walkDoors(): Promise<Doors> {
     }),
     params({ id: projectId }),
   ))
-  const jobId = (doc.job as { id: string }).id
+  //  🔴 응답은 job **id** 다 — 객체가 아니다 (FINDINGS 63).
+  const jobId = doc.job_id as string
   expect(await runJob(jobId)).toBe('succeeded')
 
   //  ── 문 C: 사람이 고른 후보만 항목이 된다.

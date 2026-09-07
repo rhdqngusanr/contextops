@@ -117,7 +117,8 @@ async function uploadDoc(
     }),
     params({ id: projectId }),
   ))
-  return data as { current_version_id: string; job: { id: string; status: AiJobStatus } }
+  //  🔴 응답은 job **객체가 아니라 id** 다 (FINDINGS 63) — `job` 칸은 없어야 한다.
+  return data as { current_version_id: string; job_id: string; job?: undefined }
 }
 
 /** 항목 둘을 올리고 그 응답이 낸 탐지 job 을 돌려준다. */
@@ -129,7 +130,19 @@ async function uploadItems(owner: string, projectId: string) {
     }),
     params({ id: projectId }),
   ))
-  return data as { accepted: { id: string }[]; job: { id: string; status: AiJobStatus } | null }
+  //  🔴 `ContextItemsBatchDraftResult` 그대로다 — job **id** 이고 객체가 아니다 (FINDINGS 44 · 63).
+  return data as { accepted: { id: string }[]; job_id: string | null; job?: undefined }
+}
+
+/**
+ * `batch-draft` 가 **탐지 job 을 만들었다**는 전제로 그 id 를 낸다 (FINDINGS 44 · 63).
+ * ⚠ `null` 이면 크게 죽는다 — 「job 이 없다」를 조용히 `undefined` 로 흘리면
+ *   그 뒤의 `runJob` 이 무엇을 굴렸는지 아무도 모른다.
+ */
+async function uploadItemsJob(owner: string, projectId: string): Promise<{ id: string }> {
+  const { job_id: jobId } = await uploadItems(owner, projectId)
+  if (jobId === null) throw new Error('batch-draft 가 탐지 job 을 안 만들었다')
+  return { id: jobId }
 }
 
 async function jobRow(jobId: string) {
@@ -244,9 +257,13 @@ describe('🔴 수명 4종이 DB 에서 서로 다른 모양이다 (AI_JOB_STATU
 describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (SPEC §7.2)', () => {
   it('탐지 결과가 `conflicts` 행이 되고, 종류마다 표가 말한 칸만 찬다', async () => {
     const { owner, projectId } = await seed()
-    const { accepted, job } = await uploadItems(owner, projectId)
+    const { accepted, job_id: jobId } = await uploadItems(owner, projectId)
     expect(accepted.length).toBe(2)
-    expect(job).not.toBeNull()
+    //  🔴 받아들인 항목이 있으면 **id 가 온다** — 객체가 아니다 (FINDINGS 44 · 63).
+    expect(jobId).not.toBeNull()
+    //  ⚠ 여기서 `uploadItemsJob()` 을 부르면 **두 번째 업로드**가 된다 — 같은 응답의 id 를 쓴다.
+    if (jobId === null) throw new Error('batch-draft 가 탐지 job 을 안 만들었다')
+    const job = { id: jobId }
 
     //  탐지 종류 넷을 전부 낸다 — 넷 다 항목 대 항목이다.
     stubAi(() => ({
@@ -261,7 +278,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
       },
     }))
 
-    expect(await runJob(job!.id)).toBe('succeeded')
+    expect(await runJob(job.id)).toBe('succeeded')
 
     //  ⚠ 씨앗 질문 10장이 프로젝트와 같이 심긴다 (`lib/api/seed-questions.ts`).
     //     여기서 재는 것은 **탐지가 만든 행**이라 종류로 좁힌다.
@@ -280,7 +297,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
     }
 
     //  결과가 job 에도 남는다 — 화면 4 가 어느 카드가 이번에 생겼는지 안다.
-    const done = await jobRow(job!.id)
+    const done = await jobRow(job.id)
     expect((done.result as { conflict_ids: string[] }).conflict_ids.length)
       .toBe(DETECTED_CONFLICT_KINDS.length)
     expect(done.errorCode).toBeNull()
@@ -288,7 +305,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
 
   it('충돌 화면이 그 행을 그대로 읽는다 — 「충돌 N건」이 0 이 아니게 된다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadItems(owner, projectId)
+    const job = await uploadItemsJob(owner, projectId)
     stubAi(() => ({
       input: {
         conflicts: [{
@@ -300,7 +317,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
         }],
       },
     }))
-    await runJob(job!.id)
+    await runJob(job.id)
 
     const data = await dataOf(await listConflicts(
       req('GET', `/api/v1/projects/${projectId}/conflicts`, { auth: owner }),
@@ -316,7 +333,8 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
 
   it('열린 질문은 **질문 카드**가 된다 — `a_ref` 만 차고 항목 칸은 빈다 (SPEC §7.1)', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    //  응답은 id 뿐이다 (FINDINGS 63) — 아래 걸음들이 쓰기 좋게 `{id}` 로 감싼다.
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     stubAi(() => ({
       input: {
         items: [],
@@ -339,7 +357,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
 
   it('항목 초안은 행이 되지 않는다 — 사람이 고르기 전에 `context_items` 에 넣지 않는다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     stubAi(() => ({
       input: {
         items: [{
@@ -370,7 +388,7 @@ describe('🔴 낸 것이 행이 된다 — 충돌 표가 처음으로 찬다 (S
 describe('🔴 집기(claim)는 한 번뿐이다 — 예산이 두 배로 타지 않는다', () => {
   it('같은 job 을 두 번 굴려도 LLM 은 한 번만 돌고, 둘째는 `undefined` 다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     stubAi(() => ({ input: { items: [], open_questions: [] } }))
 
     expect(await runJob(job.id)).toBe('succeeded')
@@ -392,7 +410,7 @@ describe('🔴 집기(claim)는 한 번뿐이다 — 예산이 두 배로 타지
 describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
   it('계약과 다른 응답이 두 번 오면 `AI_OUTPUT_INVALID` 로 끝난다 — `result` 는 비어 있다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     stubAi(() => ({ input: { items: [{ id: 'nope' }], open_questions: [] } }))
 
     expect(await runJob(job.id)).toBe('failed')
@@ -404,7 +422,7 @@ describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
 
   it('키가 없으면 `INTERNAL` 로 끝난다 — 고장이 아니라 화면이 받을 갈래다 (SPEC §7.5)', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     //  스텁을 꽂지 않는다 — `client.ts` 가 「키가 없다」로 던진다.
     delete process.env.GEMINI_API_KEY
 
@@ -415,7 +433,7 @@ describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
   it('🔴 사람이 올릴 때 고른 **문서 종류**가 §7.1 프롬프트까지 간다 (FINDINGS 82)', async () => {
     const { owner, projectId } = await seed()
     //  화면 3 이 「메모」로 올린 문서다 — 그 값은 `source_documents.kind` 에만 있다.
-    const { job } = await uploadDoc(owner, projectId, PAYLAB_GOALS, 'notes')
+    const job = { id: (await uploadDoc(owner, projectId, PAYLAB_GOALS, 'notes')).job_id }
 
     const seen: string[] = []
     setAiClientForTest(stubTransport((sent) => {
@@ -464,16 +482,18 @@ describe('🔴 라우트가 job 을 만들고, 화면이 그것을 polling 한�
   it('`POST /documents` 가 구조화 job 을 만들고 응답에 실어 준다', async () => {
     const { owner, projectId } = await seed()
     const doc = await uploadDoc(owner, projectId)
-    expect(doc.job.status).toBe('queued')
+    //  🔴 **id 뿐이다 — job 객체가 아니다** (FINDINGS 63). 상태는 이 id 로 읽으러 간다.
+    expect(typeof doc.job_id).toBe('string')
+    expect(doc.job).toBeUndefined()
     //  응답을 보낸 **뒤에** 굴린다 — 라우트는 그 id 를 `startJob()` 에 넘겼다.
-    expect(startedJobIds()).toEqual([doc.job.id])
+    expect(startedJobIds()).toEqual([doc.job_id])
 
     const data = await dataOf(await readJob(
-      req('GET', `/api/v1/projects/${projectId}/jobs/${doc.job.id}`, { auth: owner }),
-      params({ id: projectId, jobId: doc.job.id }),
+      req('GET', `/api/v1/projects/${projectId}/jobs/${doc.job_id}`, { auth: owner }),
+      params({ id: projectId, jobId: doc.job_id }),
     ))
     expect(data).toMatchObject({
-      id: doc.job.id, project_id: projectId, feature: 'structure', status: 'queued',
+      id: doc.job_id, project_id: projectId, feature: 'structure', status: 'queued',
       result: null, error_code: null, started_at: null, finished_at: null,
     })
   })
@@ -481,8 +501,8 @@ describe('🔴 라우트가 job 을 만들고, 화면이 그것을 polling 한�
   it('`batch-draft` 는 받아들인 항목이 있을 때만 탐지 job 을 만든다', async () => {
     const { owner, projectId } = await seed()
     const good = await uploadItems(owner, projectId)
-    expect(good.job).not.toBeNull()
-    expect(startedJobIds()).toEqual([good.job!.id])
+    expect(good.job_id).not.toBeNull()
+    expect(startedJobIds()).toEqual([good.job_id])
 
     //  등록되지 않은 레포면 전부 거절이다 — 부를 것이 없으니 job 도 없다.
     const none = await dataOf(await batchDraft(
@@ -491,7 +511,7 @@ describe('🔴 라우트가 job 을 만들고, 화면이 그것을 polling 한�
       }),
       params({ id: projectId }),
     ))
-    expect(none.job ?? null).toBeNull()
+    expect(none.job_id).toBeNull()
     expect(startedJobIds().length).toBe(1)
   })
 
@@ -499,7 +519,7 @@ describe('🔴 라우트가 job 을 만들고, 화면이 그것을 polling 한�
     const { owner, projectId } = await seed()
     const doc = await uploadDoc(owner, projectId)
     stubAi(() => ({ input: { items: [], open_questions: [] } }))
-    await runJob(doc.job.id)
+    await runJob(doc.job_id)
 
     const rows = await db.select().from(aiJobs)
     const dumped = JSON.stringify(rows)
@@ -525,8 +545,8 @@ describe('🔴 라우트가 job 을 만들고, 화면이 그것을 polling 한�
     const otherId = otherProject.id as string
 
     const res = await readJob(
-      req('GET', `/api/v1/projects/${otherId}/jobs/${doc.job.id}`, { auth: other }),
-      params({ id: otherId, jobId: doc.job.id }),
+      req('GET', `/api/v1/projects/${otherId}/jobs/${doc.job_id}`, { auth: other }),
+      params({ id: otherId, jobId: doc.job_id }),
     )
     expect(res.status).toBe(404)
     expect((await errorOf(res)).code).toBe('NOT_FOUND')
@@ -551,7 +571,7 @@ describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 �
     //  화면 3 이 새로고침 뒤에 하는 질의가 이것 하나다.
     const found = await list(owner, projectId, '?feature=structure&limit=1')
     expect(found.jobs.length).toBe(1)
-    expect(found.jobs[0]!.id).toBe(doc.job.id)
+    expect(found.jobs[0]!.id).toBe(doc.job_id)
     expect(found.jobs[0]!.status).toBe('queued')
   })
 
@@ -561,7 +581,7 @@ describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 �
     const second = await uploadDoc(owner, projectId, '# 목표 둘\n나중 문서다.')
 
     const found = await list(owner, projectId, '?feature=structure')
-    expect(found.jobs.map((j) => j.id)).toEqual([second.job.id, first.job.id])
+    expect(found.jobs.map((j) => j.id)).toEqual([second.job_id, first.job_id])
   })
 
   it('🔴 `feature` 를 뒤집으면 결과가 갈린다 — 구조화와 탐지가 같은 표에 있어도 섞이지 않는다', async () => {
@@ -569,8 +589,8 @@ describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 �
     const doc = await uploadDoc(owner, projectId)
     const items = await uploadItems(owner, projectId)
 
-    expect((await list(owner, projectId, '?feature=structure')).jobs.map((j) => j.id)).toEqual([doc.job.id])
-    expect((await list(owner, projectId, '?feature=conflict')).jobs.map((j) => j.id)).toEqual([items.job!.id])
+    expect((await list(owner, projectId, '?feature=structure')).jobs.map((j) => j.id)).toEqual([doc.job_id])
+    expect((await list(owner, projectId, '?feature=conflict')).jobs.map((j) => j.id)).toEqual([items.job_id])
     //  거르지 않으면 둘 다 나온다 — 필터가 실제로 줄인 것이지 원래 하나였던 게 아니다.
     expect((await list(owner, projectId)).jobs.length).toBe(2)
   })
@@ -579,11 +599,11 @@ describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 �
     const { owner, projectId } = await seed()
     const done = await uploadDoc(owner, projectId, '# 끝날 문서\n하나.')
     stubAi(() => ({ input: { items: [], open_questions: [] } }))
-    expect(await runJob(done.job.id)).toBe('succeeded')
+    expect(await runJob(done.job_id)).toBe('succeeded')
     const waiting = await uploadDoc(owner, projectId, '# 기다리는 문서\n둘.')
 
-    expect((await list(owner, projectId, '?status=queued')).jobs.map((j) => j.id)).toEqual([waiting.job.id])
-    expect((await list(owner, projectId, '?status=succeeded')).jobs.map((j) => j.id)).toEqual([done.job.id])
+    expect((await list(owner, projectId, '?status=queued')).jobs.map((j) => j.id)).toEqual([waiting.job_id])
+    expect((await list(owner, projectId, '?status=succeeded')).jobs.map((j) => j.id)).toEqual([done.job_id])
     expect((await list(owner, projectId, '?status=running')).jobs).toEqual([])
   })
 
@@ -594,8 +614,8 @@ describe('🔴 새로고침해도 도는 job 을 다시 찾는다 (FINDINGS 58 �
 
     const page = await list(owner, projectId, '?limit=1&offset=1')
     expect(page).toMatchObject({ limit: 1, offset: 1 })
-    expect(page.jobs.map((j) => j.id)).toEqual([first.job.id])
-    expect((await list(owner, projectId, '?limit=1')).jobs.map((j) => j.id)).toEqual([second.job.id])
+    expect(page.jobs.map((j) => j.id)).toEqual([first.job_id])
+    expect((await list(owner, projectId, '?limit=1')).jobs.map((j) => j.id)).toEqual([second.job_id])
   })
 
   it('계약 밖 질의는 400 이다 — job 이 아닌 기능도, 없는 상태도 물을 수 없다', async () => {
@@ -632,7 +652,7 @@ describe('🔴 목록은 무거운 칸을 안 나른다 (FINDINGS 60 · SPEC §5
 
   /** 문서 하나를 올려 구조화 job 을 **끝까지** 굴린다 — `result` 가 찬 행을 만든다. */
   async function succeededJob(owner: string, projectId: string) {
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     stubAi(() => ({
       input: {
         items: [{
@@ -720,7 +740,7 @@ describe('🔴 목록은 무거운 칸을 안 나른다 (FINDINGS 60 · SPEC §5
 
     const [listed] = (await listRaw(owner, projectId)).jobs
     expect(listed).toMatchObject({
-      id: doc.job.id,
+      id: doc.job_id,
       feature: 'structure',
       status: 'queued',
       input: { document_version_id: doc.current_version_id },
@@ -784,7 +804,7 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
     expect(chunkByHeading(content).length).toBe(3)
 
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId, content)
+    const job = { id: (await uploadDoc(owner, projectId, content)).job_id }
     const seen: unknown[] = []
     stubAiWatching(job.id, seen, chunkAnswer)
 
@@ -802,7 +822,7 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
   it('🔴 첫 걸음에 이미 **총수**를 안다 — 회전이 막대가 되는 자리다', async () => {
     const content = multiChunkDoc(2)
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId, content)
+    const job = { id: (await uploadDoc(owner, projectId, content)).job_id }
     const seen: unknown[] = []
     stubAiWatching(job.id, seen, chunkAnswer)
 
@@ -814,14 +834,14 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
 
   it('아직 굴리지 않은 job 은 진행률이 `null` 이다 — 「0 걸음」과 다르다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     expect((await jobRow(job.id)).progress).toBeNull()
   })
 
   it('🔴 실패해도 **어디까지 갔는지** 남는다 — 「9/12 에서 죽었다」를 말할 수 있다', async () => {
     const content = multiChunkDoc(3)
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId, content)
+    const job = { id: (await uploadDoc(owner, projectId, content)).job_id }
     const seen: unknown[] = []
     //  첫 조각만 계약을 지키고, 둘째 조각은 재시도까지 어긴다 (SPEC §7).
     stubAiWatching(job.id, seen, (n) => (n === 0 ? chunkAnswer(n) : { input: { items: 'nope' } }))
@@ -838,7 +858,7 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
   it('🔴 목록이 진행률을 나른다 — 2초마다 두드리는 자리가 목록이다', async () => {
     const content = multiChunkDoc(2)
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId, content)
+    const job = { id: (await uploadDoc(owner, projectId, content)).job_id }
     stubAi(chunkAnswer)
     expect(await runJob(job.id)).toBe('succeeded')
 
@@ -860,17 +880,17 @@ describe('🔴 도는 동안 진행률이 남는다 (FINDINGS 62 · SPEC §7.1 �
     const { owner, projectId } = await seed()
 
     //  ① 구조화
-    const { job: structure } = await uploadDoc(owner, projectId, multiChunkDoc(2))
+    const structure = { id: (await uploadDoc(owner, projectId, multiChunkDoc(2))).job_id }
     stubAi(chunkAnswer)
     expect(await runJob(structure.id)).toBe('succeeded')
 
     //  ② 탐지 — 걸음이 하나다 (묶음 하나를 한 번에 견준다)
-    const { job: conflict } = await uploadItems(owner, projectId)
+    const conflict = await uploadItemsJob(owner, projectId)
     stubAi(() => ({ input: { conflicts: [] } }))
-    expect(await runJob(conflict!.id)).toBe('succeeded')
+    expect(await runJob(conflict.id)).toBe('succeeded')
 
     const structureProgress = (await jobRow(structure.id)).progress as AiJobProgress
-    const conflictProgress = (await jobRow(conflict!.id)).progress as AiJobProgress
+    const conflictProgress = (await jobRow(conflict.id)).progress as AiJobProgress
 
     //  기능마다 낱말이 갈리고, 그 값은 **표에서 온다** — 시험이 낱말을 손으로 적지 않는다.
     expect(structureProgress.unit).toBe(AI_JOB_RUNNERS.structure.unit)
@@ -960,7 +980,7 @@ describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화�
 
   it('🔴 목록이 판정과 **근거**를 같이 나른다 — 화면 3 이 두드리는 자리가 목록이다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
 
     //  ① 방금 만든 job — 한 번도 안 움직였지만 그게 정상이다.
     const [before] = (await listRaw(owner, projectId)).jobs
@@ -984,7 +1004,7 @@ describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화�
 
   it('🔴 한 걸음 갈 때마다 근거가 움직인다 — 그래서 도는 job 은 멈춘 것이 아니다', async () => {
     const { owner, projectId } = await seed()
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     const created = (await jobRow(job.id)).updatedAt
 
     stubAi((n) => ({
@@ -1021,7 +1041,7 @@ describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화�
 describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.1 · FINDINGS 84·31)', () => {
   /** §7.1 이 후보 둘을 낸 문서 하나. */
   async function structured(owner: string, projectId: string) {
-    const { job } = await uploadDoc(owner, projectId)
+    const job = { id: (await uploadDoc(owner, projectId)).job_id }
     stubAi((n) => ({
       input: {
         items: n > 0 ? [] : [
@@ -1115,8 +1135,8 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
         open_questions: [],
       },
     }))
-    expect(await runJob(doc.job.id)).toBe('succeeded')
-    await accept(owner, projectId, doc.job.id, ['item_doc_retry'])
+    expect(await runJob(doc.job_id)).toBe('succeeded')
+    await accept(owner, projectId, doc.job_id, ['item_doc_retry'])
 
     const [row] = await db.select({ refs: contextItemRevisions.sourceRefs }).from(contextItemRevisions)
     //  서버가 채운 문서 버전을 가리킨다 — 모델이 uuid 를 지어낼 자리가 없다.
@@ -1169,7 +1189,7 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
   it('아직 안 끝난 job · 탐지 job 은 400 이다 — 「없어서 0건」과 갈린다', async () => {
     const { owner, projectId } = await seed()
     const queued = await uploadDoc(owner, projectId)
-    expect((await errorOf(await accept(owner, projectId, queued.job.id, ['item_ghost']))).code).toBe('VALIDATION_FAILED')
+    expect((await errorOf(await accept(owner, projectId, queued.job_id, ['item_ghost']))).code).toBe('VALIDATION_FAILED')
 
     const conflict = await createJob(db, {
       projectId, feature: 'conflict', input: { changed_item_ids: ['item_alpha'] },
@@ -1268,7 +1288,7 @@ describe('🔴 실패한 job 을 다시 굴리는 문 (FINDINGS 59 · SPEC §5 �
     expect(row.progress).toBeNull()
     expect(row.errorCode).toBeNull()
     //  ⚠ 응답을 보낸 **뒤에** 굴린다 — 라우트가 그 id 를 `startJob()` 에 넘겼다.
-    expect(startedJobIds()).toEqual([doc.job.id, job.id])
+    expect(startedJobIds()).toEqual([doc.job_id, job.id])
   })
 
   it('두 번 눌러도 한 번만 되돌려진다 — 둘째는 400 이고 job 은 하나만 굴러간다', async () => {
@@ -1285,11 +1305,11 @@ describe('🔴 실패한 job 을 다시 굴리는 문 (FINDINGS 59 · SPEC §5 �
   it('아직 안 끝난 job · 성공한 job 은 400 이다', async () => {
     const { owner, projectId } = await seed()
     const queued = await uploadDoc(owner, projectId)
-    expect((await errorOf(await retry(owner, projectId, queued.job.id))).code).toBe('VALIDATION_FAILED')
+    expect((await errorOf(await retry(owner, projectId, queued.job_id))).code).toBe('VALIDATION_FAILED')
 
     stubAi(() => ({ input: { items: [], open_questions: [] } }))
-    expect(await runJob(queued.job.id)).toBe('succeeded')
-    expect((await errorOf(await retry(owner, projectId, queued.job.id))).code).toBe('VALIDATION_FAILED')
+    expect(await runJob(queued.job_id)).toBe('succeeded')
+    expect((await errorOf(await retry(owner, projectId, queued.job_id))).code).toBe('VALIDATION_FAILED')
   })
 
   it('🔴 남의 프로젝트 job 은 404 다 — 그 행은 그대로 남는다', async () => {
@@ -1388,7 +1408,7 @@ describe('🔴 멈춘 job 을 되살리는 문 — 되돌리지 않고 **새로 
     expect(closed.errorCode).toBe('INTERNAL')
 
     //  응답을 보낸 뒤에 굴린 것은 **새 행**이다 (멈춘 행이 아니다).
-    expect(startedJobIds()).toEqual([doc.job.id, data.id])
+    expect(startedJobIds()).toEqual([doc.job_id, data.id])
   })
 
   it('🔴 **도는 중인 job 은 못 죽인다** — 멈추지 않았으면 400 이고 행은 그대로다', async () => {

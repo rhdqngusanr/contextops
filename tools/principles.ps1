@@ -128,6 +128,23 @@ if ($productFiles.Count -eq 0) {
     }
 }
 
+# ---------------------------------------------------------------------
+#  주석을 뺀 본문. **게이트는 코드를 봐야 한다** (FINDINGS 50).
+#
+#  ★ 왜 필요한가 — 예전 P3 는 파일의 **글자**로 호출부를 셌다. 그래서
+#    ① 주석에 그 이름을 적은 파일이 「호출부」로 세어지고
+#    ② 진짜 호출부가 주석에만 withBudget 을 적어도 통과했다.
+#    실측(2026-09-07): P3 가 센 「2개 호출부」는 둘 다 **예외 파일**(client·budget)이었고,
+#    진짜 호출부 둘(conflict·structure)은 아예 안 세어졌다 — 게이트가 **아무것도 안 재고 있었다.**
+#
+#  ⚠ 줄 단위로만 뗀다 (// · * · /* 로 시작하는 줄). 꼬리 주석까지 떼려면 문자열 안의
+#    // 를 구별해야 하고 그건 파서를 쓰는 일이다 — 게이트가 그만큼 복잡해지면 다음 사람이
+#    못 고친다. 위 두 고장은 줄 단위로 전부 잡힌다.
+function Get-CodeOnly([string] $raw) {
+    $lines = $raw -split "`r?`n"
+    ($lines | Where-Object { $_ -notmatch '^\s*(//|\*|/\*)' }) -join "`n"
+}
+
 # =====================================================================
 #  P3 — 서버측 LLM 호출은 전부 withBudget() 경유
 # =====================================================================
@@ -137,12 +154,18 @@ $webFiles = Get-SourceFiles "apps\web\src" @("*.ts", "*.tsx")
 if ($webFiles.Count -eq 0) {
     Add-Row "P3" "모든 LLM 호출이 withBudget() 경유" "SKIP" "apps/web/src 없음"
 } else {
+    #  🔴 **무엇이 「호출부」인가** (FINDINGS 50) — 두 갈래를 다 센다:
+    #    ① 공급자의 문을 직접 두드리는 파일 (`generateContent` 등)
+    #    ② 그것을 감싼 `callModel()` 을 부르는 파일 — **제품 코드가 실제로 부르는 길이 이쪽이다.**
+    #  ②를 안 세면 누구든 `callModel()` 을 부르면서 `withBudget` 을 건너뛰어도 초록이다.
+    #  ⚠ `generateContent` 는 Gemini 의 문이다 (2026-09-06 · INBOX). 공급자를 바꾸면
+    #    **여기 패턴을 같이 바꿔라** — 안 바꾸면 「LLM 호출 없음」SKIP 으로 P3 가 눈을 감는다.
+    $callPattern = "messages\.create|messages\.stream|generateContent|callModel\s*\("
     $callers = @()
     foreach ($f in $webFiles) {
         $raw = Get-Content -LiteralPath $f.FullName -Raw -ErrorAction SilentlyContinue
-        #  ⚠ `generateContent` 는 Gemini 의 문이다 (2026-09-06 · INBOX). 공급자를 바꾸면
-        #    **여기 패턴을 같이 바꿔라** — 안 바꾸면 「LLM 호출 없음」SKIP 으로 P3 가 눈을 감는다.
-        if ($raw -match "messages\.create|messages\.stream|generateContent") { $callers += $f }
+        if ($null -eq $raw) { continue }
+        if ((Get-CodeOnly $raw) -match $callPattern) { $callers += $f }
     }
     if ($callers.Count -eq 0) {
         Add-Row "P3" "모든 LLM 호출이 withBudget() 경유" "SKIP" "아직 LLM 호출 없음"
@@ -151,8 +174,11 @@ if ($webFiles.Count -eq 0) {
         foreach ($f in $callers) {
             $rel = $f.FullName.Substring($root.Length + 1)
             $raw = Get-Content -LiteralPath $f.FullName -Raw
+            #  예외는 감싸는 자리 둘뿐이다 — client.ts 는 문을 두드리고 budget.ts 는 세는 자리다.
             $isClient = $rel -match "lib[\\/]ai[\\/](client|budget)\.ts$"
-            if (-not $isClient -and $raw -notmatch "withBudget") { $bad += $rel }
+            #  🔴 **주석의 withBudget 은 통과시키지 않는다** (FINDINGS 50) — 「급해서 임시로」
+            #     부른 자리가 주석 한 줄로 초록이 되는 것이 이 게이트가 막으려는 바로 그 모양이다.
+            if (-not $isClient -and (Get-CodeOnly $raw) -notmatch "withBudget") { $bad += $rel }
         }
         if ($bad.Count -gt 0) {
             Add-Row "P3" "모든 LLM 호출이 withBudget() 경유" "FAIL" ($bad -join " · ")

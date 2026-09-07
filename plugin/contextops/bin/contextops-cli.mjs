@@ -19213,7 +19213,22 @@ var ContextItemsBatchDraftResult = external_exports.object({
   rejected: external_exports.array(external_exports.object({
     index: external_exports.int().min(0),
     issues: external_exports.array(external_exports.object({ path: external_exports.string(), message: external_exports.string() }).strict())
-  }).strict())
+  }).strict()),
+  /**
+   * 받아들인 항목이 있으면 서버가 시작한 **탐지 job 의 id** · 없으면 `null` (§7.2).
+   *
+   * 🔴 **id 뿐이고 job 객체가 아니다** (FINDINGS 63) — 객체로 실으면 목록(`summary`)·
+   *    상세(`full`) 말고 `shape` 도 `progress` 도 `stalled` 도 없는 **셋째 모양**이 생기고,
+   *    화면이 그것을 job 으로 들고 다니면 「멈춤」을 `undefined` 로 읽는다(=거짓).
+   *    받은 쪽이 할 일은 하나다: 이 id 로 목록·상세를 **읽으러 간다.**
+   *
+   * ⚠ 이 칸이 없어서 **플러그인이 성공한 업로드를 실패로 보고했다** (FINDINGS 44):
+   *   서버는 `job` 을 실어 보내는데 이 계약이 `.strict()` 라 `unrecognized_keys` 로 죽었고,
+   *   `upload-draft` 는 「서버 응답이 계약과 맞지 않는다」로 끝났다. 시험의 픽스처가
+   *   서버가 **실제로 내는 모양이 아니어서** 초록이었다 — 그래서 라우트가 이 계약으로
+   *   한 번 파싱해서 낸다 (`batch-draft/route.ts`).
+   */
+  job_id: external_exports.string().nullable()
 }).strict();
 var PROPOSAL_OPERATIONS = ["add", "update", "deprecate"];
 var ProposalItem = external_exports.object({

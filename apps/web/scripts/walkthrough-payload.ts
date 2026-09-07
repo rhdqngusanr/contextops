@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  ContextItemsBatchDraft, ProgressEvent, Proposal, ScanResult,
+  ContextItemsBatchDraft, ContextItemsBatchDraftResult, ProgressEvent, Proposal, ScanResult,
 } from '@contextops/schema'
 
 import { openStage, plantEnv, type PlantedEnv } from '../../../tools/walkthrough-stage'
@@ -73,7 +73,11 @@ function handle(req: IncomingMessage, res: ServerResponse): void {
     sent.push({ path, body: raw })
     if (path.endsWith('/context-items/batch-draft')) {
       const items = (JSON.parse(raw) as { items: { id: string }[] }).items
-      envelope(res, 200, { accepted: items.map((item, index) => ({ index, id: item.id })), rejected: [] })
+      //  🔴 **가짜 서버도 계약으로 낸다** (FINDINGS 44). 손으로 만든 객체를 그대로 내면
+      //     관통은 초록인데 진짜 서버의 응답 모양과 다를 수 있다 — 실제로 그랬다.
+      envelope(res, 200, ContextItemsBatchDraftResult.parse({
+        accepted: items.map((item, index) => ({ index, id: item.id })), rejected: [], job_id: 'walkthrough-job',
+      }))
       return
     }
     if (path.endsWith('/proposals')) { envelope(res, 201, { id: 'p1' }); return }

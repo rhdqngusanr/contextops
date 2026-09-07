@@ -81,3 +81,35 @@ describe('🔴 충돌 종류 표의 두 축이 갈라지지 않는다 (FINDINGS 
     expect(slots).toContain('ask')
   })
 })
+
+// =====================================================================
+//  🔴 `b_ref` — **지금은 어느 종류도 채울 수 없다. 일부러 그렇다** (FINDINGS 57)
+//
+//  ★ 왜 시험이 필요한가 — `conflicts.b_ref` 컬럼은 있는데 그것을 채울 수 있는 조합
+//    (`anchor:'document'` 이면서 `needsB:true`)이 표에 **0줄**이라, DB 의 CHECK 이
+//    `("b_ref" is null)` 로 굳어 있다. 이 저장소가 매 바퀴 찾는 「정의만 있고 아무 일도
+//    안 하는 것」과 **겉모습이 똑같다.** 그러니 지우는 대신, 「비어 있는 것이 지금의
+//    정답」임을 기계가 말하게 둔다.
+//
+//  ⚠ 그 조합을 가진 종류를 더하면 아래 시험이 **먼저 빨개진다.** 그때 할 일은 이 시험을
+//    고치는 것이 아니라 ① `db:generate` 로 CHECK 을 다시 만들고 ② 화면(`web-conflict-card`)이
+//    그 칸을 실제로 그리는지 보는 것이다. 시험을 지워서 초록으로 만들지 마라.
+// =====================================================================
+describe('`b_ref` 를 채울 수 있는 종류', () => {
+  const canFillB = CONFLICT_KINDS.filter(
+    (k) => CONFLICT_KIND_RULES[k].anchor === 'document' && CONFLICT_KIND_RULES[k].needsB,
+  )
+
+  it('지금은 0개다 — 그래서 CHECK 이 `b_ref is null` 이다', () => {
+    expect(canFillB).toEqual([])
+  })
+
+  //  🔴 그렇다고 `needsB` 축이 죽은 것은 아니다 — `anchor:'items'` 쪽에서 살아 있다.
+  //     둘 다 죽으면 그때는 축을 지우는 것이 맞다.
+  it('`needsB` 축은 `anchor:items` 에서 살아 있다', () => {
+    const itemsNeedB = CONFLICT_KINDS.filter(
+      (k) => CONFLICT_KIND_RULES[k].anchor === 'items' && CONFLICT_KIND_RULES[k].needsB,
+    )
+    expect(itemsNeedB.length).toBeGreaterThan(0)
+  })
+})

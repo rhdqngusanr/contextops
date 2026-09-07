@@ -180,7 +180,7 @@ async function main(): Promise<void> {
     const doc = await dataOf(await createDocument(req('POST', `${P(projectId)}/documents`, {
       auth: owner, body: { title, kind, content: text },
     }), params({ id: projectId })))
-    const jobId = (doc.job as { id: string }).id
+    const jobId = doc.job_id as string   //  응답은 job **id** 다 (FINDINGS 63)
     const t0 = Date.now()
     const status = await runJob(jobId)
     const latencyMs = Date.now() - t0

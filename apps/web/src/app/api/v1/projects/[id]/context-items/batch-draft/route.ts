@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { ContextItemDraft, ContextItemsBatchDraftEnvelope } from '@contextops/schema'
+import { ContextItemDraft, ContextItemsBatchDraftEnvelope, ContextItemsBatchDraftResult } from '@contextops/schema'
 //  ⚠ 값과 **타입**을 따로 들여온다. 유니온 스키마의 `z.infer` 는 느슨해서 `unknown` 이
 //    되고, 정밀한 타입은 `packages/schema` 가 mapped type 으로 따로 낸다 (item.ts 주석).
 import type { ContextItemDraft as Draft } from '@contextops/schema'
@@ -41,13 +41,14 @@ export const POST = route<{ id: string }>('POST /projects/{id}/context-items/bat
     .where(and(eq(repos.projectId, projectId), eq(repos.name, body.repo)))
     .limit(1)
   if (!repo) {
-    return ctx.ok({
+    return ctx.ok(ContextItemsBatchDraftResult.parse({
       accepted: [],
       rejected: body.items.map((_, index) => ({
         index,
         issues: [{ path: 'repo', message: `등록되지 않은 레포다: ${body.repo}` }],
       })),
-    }, 200)
+      job_id: null,
+    }), 200)
   }
 
   const rejected: DraftInsertResult['rejected'] = []
@@ -87,5 +88,8 @@ export const POST = route<{ id: string }>('POST /projects/{id}/context-items/bat
   })
   if (job) startJob(job.id)
 
-  return ctx.ok({ accepted, rejected, job })
+  //  🔴 **계약으로 한 번 파싱해서 낸다** (FINDINGS 44). 손으로 만든 객체를 그대로 내면
+  //     계약이 **받는 쪽에서만** 강제되고, 칸이 하나 어긋난 순간 시험은 초록인데
+  //     `upload-draft` 만 「서버 응답이 계약과 맞지 않는다」로 죽는다 — 실제로 그랬다.
+  return ctx.ok(ContextItemsBatchDraftResult.parse({ accepted, rejected, job_id: job?.id ?? null }))
 })

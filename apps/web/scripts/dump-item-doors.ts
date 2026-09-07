@@ -76,7 +76,7 @@ const doc = await dataOf(await createDocument(
   }),
   params({ id: projectId }),
 ))
-const jobId = (doc.job as { id: string }).id
+const jobId = doc.job_id as string   //  응답은 job **id** 다 (FINDINGS 63)
 lines.push(`① 문서 1건을 올렸다 — §7.1 job ${jobId.slice(0, 8)} → ${await runJob(jobId)}`)
 
 //  ── 문 C — 고른 후보만 항목이 된다

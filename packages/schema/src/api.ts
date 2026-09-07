@@ -82,7 +82,12 @@ export const ERROR_STATUS: Record<ErrorCode, { status: number; message: string; 
   UNAUTHORIZED: { status: 401, message: '인증이 필요하다', retryable: false },
   FORBIDDEN: { status: 403, message: '이 작업을 할 권한이 없다', retryable: false },
   NOT_FOUND: { status: 404, message: '대상을 찾을 수 없다', retryable: false },
-  VALIDATION_FAILED: { status: 400, message: '요청 본문이 계약과 맞지 않는다', retryable: false },
+  //  🔴 「**요청**이」다 — 「요청 본문이」가 아니다 (FINDINGS 61). 이 코드는 body 뿐 아니라
+  //     query(`?feature=ask`)·path 가 계약과 안 맞을 때도 난다. 본문을 보낸 적도 없는데
+  //     화면이 「요청 본문이…」를 그대로 띄우면 사람은 **body 를 고치러 간다.**
+  //     ⚠ 코드를 나누지 마라 — 갈래를 더하면 이 표가 늘어난다. 문구를 셋 다에 참인 데까지
+  //       좁히는 것이 더 싸고, 정확한 자리는 이미 `details`(`path`)가 말한다.
+  VALIDATION_FAILED: { status: 400, message: '요청이 계약과 맞지 않는다', retryable: false },
   //  발행 요청의 base 가 지금의 공식 버전이 아니다 (SPEC §2.1 1단계).
   //  ⚠ 다시 보낼 것이 **다른 body** 다 (base 를 다시 읽어야 한다) — 같은 것을 다시 굴리면 또 409 다.
   STALE_BASE: { status: 409, message: '기준 버전이 낡았다 — 다시 읽고 보내라', retryable: false },

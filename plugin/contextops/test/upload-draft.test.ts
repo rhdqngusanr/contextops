@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { ContextItemsBatchDraftEnvelope } from '@contextops/schema'
+import { ContextItemsBatchDraftEnvelope, ContextItemsBatchDraftResult } from '@contextops/schema'
 
 import { runCommand } from '../src/cli/commands'
 import { EXIT } from '../src/cli/exit'
@@ -53,7 +53,18 @@ function seed(repo: string, home: string, options: { scan?: unknown; draft?: unk
   writeJson(repoPath(repo, 'draft'), options.draft ?? DRAFT)
 }
 
-const ACCEPTED = { accepted: [{ index: 0, id: ITEM.id }], rejected: [] }
+/**
+ * 🔴 **서버가 실제로 내는 모양이어야 한다** (FINDINGS 44).
+ *
+ * ★ 왜 계약으로 파싱해 두나 — 예전 픽스처는 `{accepted, rejected}` 뿐이었고 서버는
+ *   `job` 을 하나 더 실어 보냈다. 계약이 `.strict()` 라 진짜 응답은 `unrecognized_keys`
+ *   로 죽는데, **픽스처가 서버가 안 내는 모양이라 시험만 초록**이었다 —
+ *   `upload-draft` 는 성공한 업로드를 「서버 응답이 계약과 맞지 않는다」로 보고했다.
+ *   여기서 한 번 파싱하면 계약이 바뀌는 순간 **픽스처가 먼저 빨개진다.**
+ */
+const ACCEPTED = ContextItemsBatchDraftResult.parse({
+  accepted: [{ index: 0, id: ITEM.id }], rejected: [], job_id: 'job-1',
+})
 
 describe('contextops upload-draft', () => {
   it('초안과 스캔을 합쳐 batch-draft 로 보낸다', async () => {
@@ -141,7 +152,7 @@ describe('contextops upload-draft', () => {
     seed(repo, home)
     const cli = fakeCli({
       cwd: repo, home,
-      responses: [okEnvelope({ accepted: [], rejected: [{ index: 0, issues: [{ path: 'id', message: '이미 있는 항목 id 다' }] }] })],
+      responses: [okEnvelope(ContextItemsBatchDraftResult.parse({ accepted: [], rejected: [{ index: 0, issues: [{ path: 'id', message: '이미 있는 항목 id 다' }] }], job_id: null }))],
     })
 
     expect(await runCommand(cli, ['upload-draft'])).toBe(EXIT.INVALID)
