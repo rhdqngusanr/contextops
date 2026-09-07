@@ -308,19 +308,26 @@ export function AddDevice({
   on: AddDeviceHandlers
 }) {
   const closed = state.kind === 'closed'
+  //  🔴 발급된 뒤에는 이 줄을 그리지 않는다 — 카드가 자기 [닫기] 를 들고 있어서
+  //     같은 일을 하는 버튼이 한 화면에 둘이 됐다 (106바퀴 캡처에서 눈으로 봤다).
+  const toggle = state.kind !== 'issued'
   return (
     <section className="col" aria-label={ADD_DEVICE.section}>
-      <div className="row wrap">
-        <button
-          type="button"
-          className={closed ? 'btn btn-primary' : 'btn'}
-          aria-expanded={!closed}
-          onClick={closed ? on.open : on.close}
-        >
-          {closed ? ADD_DEVICE.open : ADD_DEVICE.cancel}
-        </button>
-        <span className="meta">{ADD_DEVICE.why}</span>
-      </div>
+      {toggle ? (
+        <div className="row wrap">
+          <button
+            type="button"
+            className={closed ? 'btn btn-primary' : 'btn'}
+            aria-expanded={!closed}
+            onClick={closed ? on.open : on.close}
+          >
+            {closed ? ADD_DEVICE.open : ADD_DEVICE.cancel}
+          </button>
+          {/*  ⚠ 무엇을 발급하는지는 **누르기 전에만** 말한다. 열린 뒤에도 계속 있으면
+              카드가 같은 말을 두 번 하는 화면이 된다. */}
+          {closed ? <span className="meta">{ADD_DEVICE.why}</span> : null}
+        </div>
+      ) : null}
 
       {state.kind === 'denied' ? <ReadOnlyNotice reason={state.reason} onClose={on.close} /> : null}
 
