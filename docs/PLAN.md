@@ -456,11 +456,20 @@
       `progress` 보고 · 17줄) — 손으로 쓴 줄이 0 이고, 관통이 매번 다시 녹화해 대조한다(`t_ms` 제외).
       `<TerminalReplay>` 가 랜딩 C-3 에 섰고 오른쪽 Roadmap 미니 패널은 왼쪽 줄을 읽어서 바뀐다
       (근거 0/3 → 1/3 · 마일스톤은 씨앗의 PL-M1 과 글자 그대로). 계약 `ReplayFrames` 는 schema 에.
-      ⚠ 스텝 썸네일(C-2)은 production 캡처가 생긴 뒤다 — 둘째 행의 몫.
+      ⚠ 스텝 썸네일(C-2)은 **B-2 「제품 화면」이 대신했다** (104바퀴 · 아래 ③) — 같은 캡처를
+      두 곳에 흩지 않는다.
       → ③ **관통이 이제 진짜 화면을 찍는다** (103바퀴 · `f29133f`). `shots` 단계가 아홉 바퀴 만에
       켜졌고(`apps/web/e2e` · CDP 헤드리스 Chrome · 의존성 0 · 37검사), `shotcopy` 가 세 장을
       `apps/web/public/shots/` 로 옮긴다(10검사 · `manifest.json`). 관통 1119 → **1172검사 · SKIP 0**.
-      ⚠ 남은 것은 **랜딩이 그 manifest 를 읽는 것**뿐이다 (FINDINGS 131 ③) — 이 행의 마지막 격차다.
+      → ③ **랜딩이 그 manifest 를 읽는다 — FINDINGS 131 닫음** (104바퀴 · `8e5d269`). 히어로 바로
+      아래에 B-2 「제품 화면」 절. **화면 코드에 파일 이름이 0건**이고 목록의 정본은 `e2e/plan.ts` 의
+      `PUBLISHED` 하나다 — 거기 한 줄을 더하고 관통을 돌리면 랜딩이 따라온다(격자도 칸 수가 아니라
+      `auto-fit`/`--shot-min`). 모양의 정본은 schema 의 `ShotsManifest` 하나이고 **쓰는 쪽과 읽는 쪽이
+      같이 본다.** 게이트 24개(`web-landing-shots.test.ts`) · 관통 1172 → **1199검사**.
+      **눈으로 봤다** — `docs/evidence/2026-09-07-landing-shots/`: 1440×900 의 **접히기 전**에 캡처
+      세 장이 보인다 (이 항목의 증상이 사라졌다는 근거) · 375px 한 열 · accent 여전히 하나.
+      ⚠ 이 행에 남은 것은 **완료 기준 그것뿐**이다 — 🔴 **GATE 3: 시크릿 창에서 링크만으로 3분 체험**을
+      사람이(또는 관통이) 실제로 완주하고 눈으로 판정하는 것. 격차는 다 닫혔다.
 - [ ] **Vercel production · Cron · 보안 캡처 증거 · 새 PC fresh install**
       **완료 기준**: production 으로 발표 시나리오 1회 완주
       → ① **Cron 의 코드 쪽은 됐다** (63바퀴 · FINDINGS 120 닫음). `GET /cron/demo-reset` 이
