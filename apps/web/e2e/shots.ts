@@ -26,14 +26,14 @@
 // =====================================================================
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { TEST_JWT_SECRET } from '../test/helpers/db'
 import { DEMO_TENANT } from '../src/lib/demo/tenant'
-import { type Cdp, connectCdp, sleep, waitFor } from './cdp'
+import { type Cdp, sleep, waitFor } from './cdp'
+import { connectBrowser, connectPage, launchChrome } from './chrome'
 import { runGate3 } from './gate3'
 import { DEMO_BASE, SHOT_PLAN } from './plan'
 import { shotsSummary } from './report'
@@ -49,14 +49,6 @@ const DB_PORT = Number(process.env.E2E_DB_PORT ?? 55442)
 const INFO_PORT = Number(process.env.E2E_INFO_PORT ?? 55443)
 const CDP_PORT = Number(process.env.E2E_CDP_PORT ?? 9223)
 const BASE = `http://127.0.0.1:${WEB_PORT}`
-
-//  Chrome 은 이 기계에 설치된 것을 쓴다. 없으면 **크게 실패한다** — 조용히 건너뛰면
-//  「캡처 0장으로 통과」가 되고, 그건 이 단계가 막으려는 바로 그 상태다.
-const CHROME_CANDIDATES = [
-  process.env.CHROME_PATH,
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-].filter((p): p is string => typeof p === 'string' && p.length > 0)
 
 // ── 검사 장부 ────────────────────────────────────────────────────
 type Check = { name: string; ok: boolean; detail: string }
@@ -87,11 +79,6 @@ let profileDir = ''
 
 async function main(): Promise<void> {
   mkdirSync(shotsDir, { recursive: true })
-
-  const chrome = CHROME_CANDIDATES.find((p) => existsSync(p))
-  if (chrome === undefined) {
-    throw new Error('Chrome 을 못 찾았다 — CHROME_PATH 로 알려 줘라 (헤드리스 캡처에 필요하다)')
-  }
 
   // ① 씨앗 DB (PGlite → TCP). 게스트 데모까지 심는다.
   console.log('e2e: 씨앗 DB 를 띄운다…')
@@ -127,27 +114,12 @@ async function main(): Promise<void> {
     try { return (await fetch(BASE)).ok } catch { return false }
   }, 240_000)
 
-  // ③ 헤드리스 Chrome
-  const profile = mkdtempSync(join(tmpdir(), 'ctxops-e2e-'))
-  track(spawn(chrome, [
-    '--headless=new', `--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${profile}`,
-    '--no-first-run', '--no-default-browser-check', '--disable-gpu', 'about:blank',
-  ], { stdio: 'ignore' }))
+  // ③ 헤드리스 Chrome — 띄우는 절차의 정본은 `e2e/chrome.ts` 다 (`production.ts` 도 같은 것을 쓴다)
+  const launched = await launchChrome(CDP_PORT)
+  track(launched.child)
+  const profile = launched.profileDir
 
-  let target: { webSocketDebuggerUrl: string } | undefined
-  await waitFor('Chrome', async () => {
-    try {
-      const list = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json() as
-        { type: string; webSocketDebuggerUrl: string }[]
-      target = list.find((t) => t.type === 'page')
-      return target !== undefined
-    } catch { return false }
-  }, 60_000)
-  if (target === undefined) throw new Error('Chrome 의 page 대상을 못 찾았다')
-
-  const page: Cdp = await connectCdp(target.webSocketDebuggerUrl)
-  await page.send('Page.enable')
-  await page.send('Runtime.enable')
+  const page: Cdp = await connectPage(CDP_PORT)
 
   // ④ 게스트 세션 — 제품과 같은 길이다 (`/demo` → 리다이렉트)
   await page.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
@@ -241,9 +213,7 @@ async function main(): Promise<void> {
   //  ⚠ 여기가 마지막인 이유 — 위 ⑤ 가 화면을 전부 한 번씩 열어 `next dev` 를 데워 놨다.
   //    안 데운 채로 재면 3분의 대부분이 **컴파일 시간**이라 이 게이트가 아무 말도 못 한다.
   //  ⚠ `Target.*` 는 **브라우저** 끝점의 일이다 — 위 page 연결로는 못 부른다 (`cdp.ts`).
-  const version = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)).json() as
-    { webSocketDebuggerUrl: string }
-  const browser = await connectCdp(version.webSocketDebuggerUrl)
+  const browser = await connectBrowser(CDP_PORT)
   try {
     await runGate3({
       browser,
