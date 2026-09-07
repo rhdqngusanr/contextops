@@ -19740,6 +19740,7 @@ function describeIssues(error61) {
 }
 
 // src/cli/managed.ts
+import { existsSync } from "node:fs";
 import { join as join3 } from "node:path";
 
 // src/cli/paths.ts
@@ -19841,6 +19842,16 @@ function judge(root, local, official) {
       missing.length > 0 ? `${missing.length}\uAC1C\uAC00 \uC5C6\uB2E4` : ""
     ].filter((p) => p.length > 0);
     return { status: "modified", line: `v${local.context_version} \u2014 ${parts.join(" \xB7 ")}`, modified, missing };
+  }
+  const appliedByUs = existsSync(join3(root, ...CACHE_DIR.split("/"), local.context_version));
+  if (!appliedByUs) {
+    const tail = official === void 0 ? " (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)" : official.manifest_hash === local.manifest_hash ? " \xB7 \uCD5C\uC2E0\uC774\uB2E4" : ` \xB7 \uACF5\uC2DD v${official.context_version} \uC774 \uB098\uC654\uB2E4`;
+    return {
+      status: "manual",
+      line: `v${local.context_version} \u2014 sync \uAC00 \uC544\uB2C8\uB77C \uC190\uC73C\uB85C \uB193\uC600\uB2E4 (zip)${tail}`,
+      modified,
+      missing
+    };
   }
   if (official === void 0) {
     return { status: "applied", line: `v${local.context_version} \uC801\uC6A9\uB428 (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)`, modified, missing };

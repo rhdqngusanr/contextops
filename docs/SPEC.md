@@ -456,7 +456,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 - semver: patch=오탈자/설명, minor=항목 추가·변경, major=Schema/템플릿 변경. **고르는 것은 owner 다** — 상세는 §6.1.
 - 버전은 불변. 잘못 발행 시 이전 snapshot으로 새 버전 발행(롤백 = 새 버전).
-- 동일성 판정(sync 보고 기준): `applied` = 로컬 managed 파일 hash 전부 일치 · `outdated` = 로컬 버전 < 공식 · `modified` = 버전 같으나 hash 다름 · `manual` = zip 수동 적용 · `unknown` = 보고 없음. 화면 문구는 "마지막 보고: 8분 전, v1.3, applied" 형식. "실시간"이라는 단어 금지.
+- 동일성 판정(sync 보고 기준): `applied` = 로컬 managed 파일 hash 전부 일치 · `outdated` = 로컬 버전 < 공식 · `modified` = 버전 같으나 hash 다름 · `manual` = zip 수동 적용 · `unknown` = 보고 없음. 🔴 **`manual` 을 판정하는 자리는 `judge()` 하나다** (FINDINGS 69) — 파일이 Manifest 와 다 맞는데 우리 캐시(`.contextops/cache/<semver>/`)에 그 버전의 자취가 없으면(= `sync` 가 놓은 것이 아니면) `manual` 이다. ⚠ `modified`·missing 검사 **뒤**에 온다 — 손으로 푼 뒤 고친 파일은 `manual` 이 아니라 `modified` 다. ⚠ `unknown` 만 기기가 자칭할 수 없다 (`REPORTABLE_SYNC_STATUSES`). 화면 문구는 "마지막 보고: 8분 전, v1.3, applied" 형식. "실시간"이라는 단어 금지.
 
 ### 6.1 semver 등급 — **서버는 추천하지 않는다** (FINDINGS 32)
 

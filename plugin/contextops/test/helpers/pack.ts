@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { Manifest } from '@contextops/schema'
 
 import { sha256OfText } from '../../src/cli/fsx'
-import { LOCAL_FILES } from '../../src/cli/paths'
+import { CACHE_DIR, LOCAL_FILES } from '../../src/cli/paths'
 
 // =====================================================================
 //  시험용 Pack 한 벌 — **해시는 진짜로 잰다**
@@ -54,13 +54,20 @@ export function manifestOf(
 }
 
 /**
- * 이미 sync 를 한 저장소를 만든다 — 파일들 + `.contextops/manifest.json`.
+ * 이미 sync 를 한 저장소를 만든다 — 파일들 + `.contextops/manifest.json` + **`cache/<semver>/`**.
+ *
+ * 🔴 캐시 폴더까지 만드는 이유 (FINDINGS 69) — 진짜 `sync` 는 받은 파일을 반드시
+ *    `cache/<semver>/` 에 남긴다 (SPEC §8.5 4단계). 그 자취가 없으면 `judge()` 는
+ *    「우리가 놓은 게 아니다」= `manual` 로 본다. 픽스처가 그것을 안 만들면
+ *    **「sync 한 저장소」라면서 sync 의 자취가 없는** 상태가 되고, 시험이 실제와 다른 것을 판다.
+ *
  * @param onDisk `false` 면 Manifest 만 쓴다 (파일이 없어진 상태 = missing).
+ * @param byUs `false` 면 캐시 자취를 안 남긴다 — **zip 을 손으로 푼 저장소** (= `manual`).
  */
 export function writeLocalManifest(
   root: string,
   files: Record<string, string>,
-  options: { onDisk?: boolean; overrides?: Partial<Manifest> } = {},
+  options: { onDisk?: boolean; byUs?: boolean; overrides?: Partial<Manifest> } = {},
 ): Manifest {
   const manifest = manifestOf(files, options.overrides ?? {})
   if (options.onDisk !== false) {
@@ -73,5 +80,9 @@ export function writeLocalManifest(
   const manifestPath = join(root, ...LOCAL_FILES.manifest.split('/'))
   mkdirSync(join(manifestPath, '..'), { recursive: true })
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  //  sync 의 자취 (위 주석). `byUs:false` 면 안 남긴다 = zip 을 손으로 푼 저장소.
+  if (options.byUs !== false) {
+    mkdirSync(join(root, ...CACHE_DIR.split('/'), manifest.context_version), { recursive: true })
+  }
   return manifest
 }

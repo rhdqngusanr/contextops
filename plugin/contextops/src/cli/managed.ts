@@ -1,8 +1,9 @@
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Manifest, RepoPath, type SyncStatus } from '@contextops/schema'
 
 import { readTextIfExists, hasSymlink, sha256OfFile } from './fsx'
-import { LOCAL_FILES, repoFile } from './paths'
+import { CACHE_DIR, LOCAL_FILES, repoFile } from './paths'
 
 // =====================================================================
 //  🔴 **sync 가 건드려도 되는 파일의 정본 표** (docs/SPEC.md §8.5 6단계 allowlist)
@@ -161,6 +162,31 @@ export function judge(root: string, local: Manifest | undefined, official: Manif
       missing.length > 0 ? `${missing.length}개가 없다` : '',
     ].filter((p) => p.length > 0)
     return { status: 'modified', line: `v${local.context_version} — ${parts.join(' · ')}`, modified, missing }
+  }
+
+  //  🔴 **파일은 다 맞는데 우리가 놓은 것이 아니다 → `manual`** (FINDINGS 69 · SPEC §6 「zip 수동 적용」).
+  //
+  //  ★ 왜 이 판정이 필요한가 — `SYNC_STATUSES` 다섯 중 `manual` 만 **찍는 코드가 0곳**이었다.
+  //    화면 9 는 그 값을 그릴 준비가 돼 있는데(`SYNC_APPLY.manual`) 영원히 네 값만 그렸다 —
+  //    「정의만 있고 아무 일도 안 하는」 자리의 전형이다.
+  //  ★ 무엇으로 아나 — `sync` 는 받은 파일을 반드시 `cache/<semver>/` 에 남긴다
+  //    (SPEC §8.5 4단계 · `sync.ts`). 그 폴더가 없는데 파일이 manifest 와 다 맞으면,
+  //    그 Pack 은 **우리를 거치지 않고** 놓인 것이다 — zip 을 받아 손으로 푼 경우다
+  //    (`GET …/packs/{semver}/zip` 이 `.contextops/manifest.json` 을 그 자리 그대로 담는다).
+  //  ⚠ `modified`·`missing` 검사 **뒤**에 온다. 파일이 어긋난 것이 먼저다 — 손으로 푼 뒤
+  //    한 파일을 고쳤으면 그건 `manual` 이 아니라 `modified` 다.
+  //  ⚠ `unknown` 과 달리 이 값은 **기기가 보고할 수 있다** (`REPORTABLE_SYNC_STATUSES`).
+  const appliedByUs = existsSync(join(root, ...CACHE_DIR.split('/'), local.context_version))
+  if (!appliedByUs) {
+    const tail = official === undefined
+      ? ' (서버에 못 닿아 최신 여부는 모른다)'
+      : official.manifest_hash === local.manifest_hash ? ' · 최신이다' : ` · 공식 v${official.context_version} 이 나왔다`
+    return {
+      status: 'manual',
+      line: `v${local.context_version} — sync 가 아니라 손으로 놓였다 (zip)${tail}`,
+      modified,
+      missing,
+    }
   }
 
   if (official === undefined) {

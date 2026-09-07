@@ -1,7 +1,7 @@
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { SYNC_STATUSES } from '@contextops/schema'
+import { REPORTABLE_SYNC_STATUSES, SYNC_STATUSES } from '@contextops/schema'
 
 import { MANAGED_PATHS, checkWritable, judge, readLocalManifest } from '../src/cli/managed'
 import { LOCAL_FILES } from '../src/cli/paths'
@@ -119,6 +119,27 @@ describe('judge — 상태 5종이 전부 실제로 나온다 (SPEC §6)', () =>
     //  🔴 낡았든 아니든, 손으로 고친 파일을 말없이 덮는 것이 제일 나쁜 결과다.
     expect(verdict.status).toBe('modified')
     expect(verdict.modified).toEqual(['CLAUDE.md'])
+  })
+
+  //  🔴 **`manual` 이 실제로 나온다** (FINDINGS 69). 다섯 중 이 하나만 **찍는 코드가 0곳**이라
+  //     화면 9 는 영원히 네 값만 그렸다 — 「정의만 있고 아무 일도 안 하는」 자리의 전형이다.
+  //  ★ 무엇이 `manual` 인가 — 파일은 manifest 와 다 맞는데 **우리 캐시(`cache/<semver>/`)에
+  //    그 버전의 자취가 없다.** zip 을 받아 손으로 푼 경우다 (SPEC §6 「zip 수동 적용」).
+  it('sync 자취가 없는데 파일이 다 맞으면 manual — zip 을 손으로 푼 것이다', () => {
+    const root = repo()
+    const local = writeLocalManifest(root, { 'CLAUDE.md': '# 규칙\n' }, { byUs: false })
+    const verdict = judge(root, local, local)
+    expect(verdict.status).toBe('manual')
+    //  보고할 수 있는 값이다 — `unknown` 과 다른 점이 이것이다.
+    expect(REPORTABLE_SYNC_STATUSES as readonly string[]).toContain('manual')
+  })
+
+  it('손으로 푼 뒤 한 파일을 고쳤으면 manual 이 아니라 modified 다', () => {
+    const root = repo()
+    const local = writeLocalManifest(root, { 'CLAUDE.md': '# 규칙\n' }, { byUs: false })
+    writeFileSync(join(root, 'CLAUDE.md'), '# 사람이 고쳤다\n', 'utf8')
+    //  ⚠ 파일이 어긋난 것이 먼저다 — 순서가 바뀌면 손으로 고친 파일을 말없이 덮는다.
+    expect(judge(root, local, local).status).toBe('modified')
   })
 
   it('없어진 파일도 modified 이고 missing 에 뜬다', () => {
