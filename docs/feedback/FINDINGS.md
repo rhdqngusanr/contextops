@@ -33,6 +33,53 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 165. **화면 6 의 날짜 칸이 「올라온 날」인데 값은 `created_at` 이다** — 초안은 아직 안 올라왔다   [격차]
+- **증상**: 함 목록의 마지막 칸 머리가 「올라온 날」(= 제출한 날)인데 그리는 값은 `p.created_at`(만든 날)이다.
+  넷이 전부 제출된 것이던 동안에는 둘이 사실상 같았는데, 163 이 `draft` 행을 세우면서 **아직 안 올라온 제안에
+  「올라온 날 2026-09-01」** 이 붙었다. 화면이 말하는 것과 값이 갈린다.
+- **근거**: `apps/web/src/components/proposals.tsx:116`(머리) 대 `:142`(`dateText(p.created_at)`).
+  캡처 `.ci/shots/screen-proposals.png` → `docs/evidence/2026-09-07-proposal-draft/after-screen-proposals.png` (111바퀴) — 첫 행이 `· 초안` 인데 같은 줄 오른쪽이 `2026-09-01` 이다.
+- **정본**: `docs/DESIGN_BRIEF.md` §4 화면 6 · `docs/SPEC.md` §5 (`GET /projects/{id}/proposals`)
+- **고칠 방향**: 둘 중 하나다 — ① 머리를 값에 맞춰 「만든 날」로 (코드 0줄 · 문서 한 줄) 또는
+  ② `submitted_at` 을 실제로 내고 `draft` 는 「—」로. ⚠ ②는 DB 칸이 지금 없다 — `proposals` 에
+  제출 시각을 담는 자리가 없어서 표·스키마·라우트를 같은 바퀴에 고쳐야 한다. **①을 권한다.**
+- **상태**: 대기
+
+### 164. **제안의 `relates_to`(관련 마일스톤)가 데모에서 늘 비어 있다** — 다섯 행이 전부 「—」   [구멍]
+- **증상**: 화면 6 함 목록의 「관련 마일스톤」 칸이 **다섯 행 전부 `—`** 다. 상세 화면의 마일스톤 칩 줄도
+  `relates_to.length === 0` 이라 통째로 안 그려진다. 「이 제안이 어느 마일스톤을 움직이나」가 데모에서 한 번도 안 보인다.
+  ⚠ 이 제품이 로드맵(화면 8)과 제안(화면 6)을 잇는 유일한 줄이 그것이다.
+- **근거**: `.ci/shots/screen-proposals.png` → `docs/evidence/2026-09-07-proposal-draft/after-screen-proposals.png` (111바퀴) — 「관련 마일스톤」 칸 5행 전부 `—`.
+  ⚠ **죽은 것은 코드가 아니라 씨앗이다** — 배선은 다 살아 있다: 계약이 `relates_to: z.array(MilestoneId).max(10)`
+  (`packages/schema/src/upload.ts:111`) · 만드는 라우트가 `relatesTo: body.relates_to` 로 넣고
+  (`app/api/v1/projects/[id]/proposals/route.ts:65`) · 표에 칸이 있고(`db/schema.ts:435`) · 화면이 칩으로 그린다
+  (`components/proposals.tsx:132`·`205`). `DEMO_PROPOSALS` 가 그 키를 **한 줄도 안 쓴다**.
+- **정본**: `apps/web/src/lib/demo/seed-demo.ts` (`DEMO_PROPOSALS`) · `docs/SPEC.md` §10.3
+- **고칠 방향**: 씨앗의 제안 몇 줄에 `relates_to: ['M1']` 같은 것을 붙인다 — **씨앗이 실제로 심는 마일스톤 id**
+  (`seed.ts` 의 `MILESTONES`)여야 한다. 없는 id 를 적으면 화면에 뜻 없는 칩이 선다.
+  게이트는 163·162 와 같은 모양으로 — 「목록에 `relates_to` 가 빈 배열이 아닌 행이 있다」를 시험으로 잠근다.
+- **상태**: 대기
+
+### 163. **데모가 제안 상태 5종 중 4종만 보여 준다** — 「초안」 칩은 늘 빈 목록이다   [구멍]
+- **증상**: 화면 6(제안)의 거르개 칩은 `PROPOSAL_STATUSES` 를 그대로 읽어 **다섯**을 그리는데
+  (`[전체] · 초안 · 승인 대기 · 승인됨·발행 대기 · 거절됨 · 발행됨`), 데모 씨앗이 만드는 제안은 **넷**뿐이다.
+  「초안」을 누르면 「'초안' 상태의 제안이 없습니다」만 나온다 — 화면이 그리라고 만든 칩 하나가 데모에서 한 번도 안 선다.
+  ⚠ `draft` 는 「`contextops propose` 가 만들어 놓기만 하고 아직 안 올린 것」이라, **CLI 로 만들면 어디에 쌓이나**를 화면에서 말해 주는 유일한 상태다.
+- **근거**: `.ci/shots/screen-proposals.png` (111바퀴 · 관통이 찍은 진짜 브라우저) — 칩 6개(전체 + 5종)인데 표는 **4행**이고
+  `승인됨·발행 대기 · 승인 대기 · 거절됨 · 발행됨` 뿐이다. `apps/web/src/lib/demo/seed-demo.ts` 의 `DEMO_PROPOSALS` 가 4줄이고
+  심는 반복문이 **넷 다 무조건 `submit`** 한다(`await submitProposal(...)`) — 그래서 `draft` 로 남는 것이 0개다.
+  ⚠ **죽은 것은 코드가 아니라 씨앗이다** — 배선은 다 살아 있다: 만드는 라우트가 `status: 'draft'` 로 넣고
+  (`app/api/v1/projects/[id]/proposals/route.ts:60`), 목록 문이 `?status=draft` 를 걸고(`:85`) 작성자 제한이 없어 팀원 누구나 본다.
+- **정본**: `apps/web/src/lib/demo/seed-demo.ts` (`DEMO_PROPOSALS`) · `docs/SPEC.md` §10.3 · `docs/DESIGN_BRIEF.md` §4 화면 6
+- **고칠 방향**: 씨앗에 한 줄. 162 와 같이 **종류를 표에서 세어라** — 「오늘 5장」을 재는 시험은 여섯째가 붙는 날에도 초록이다.
+- **상태**: ✅ `98f00cb` (111바퀴) — `DEMO_PROPOSALS` **4 → 5**: `카드 정보 제약에 「토큰 보관 기간」을 적는다`
+  (`decision: 'draft'` · 대상 `item_constraint_card`). 심는 반복문이 그 값에서 `continue` 한다 — 제출도 결정도 안 한다.
+  🔴 **게이트로 올렸다** — `demo-guest.test.ts` 의 화면 6 시험이 ① 다섯 상태의 목록을 그대로 재고
+  ② **`PROPOSAL_STATUSES` 를 돌며 종류마다 0보다 큰지** ③ `draft` 행은 `decided_by` 가 `null` 인지를 잰다.
+  그리고 시험 하나를 더했다 — **`?status=<종류>` 를 5종 전부 눌러 보고** 빈 목록이 없는지·다른 종류가 안 섞이는지.
+  ★ ②가 본체다 — ①만 있으면 `PROPOSAL_STATUSES` 에 여섯째가 붙는 날에도 초록이라 같은 구멍이 다시 난다.
+  제품 코드는 **0줄**이다 (162 와 같은 모양 — 고친 것은 씨앗과 시험뿐).
+
 ### 162. **데모가 sync 상태 5종 중 3종만 보여 준다** — `modified`·`unknown` 은 코드에만 산다   [구멍]
 - **증상**: 화면 9(Sync)의 칩 줄에 `applied 9 · outdated 2 · manual 1` 셋만 선다. 남은 둘은 **화면·서버·스키마가 이미 다 그릴 수 있는데**
   데모 씨앗이 한 번도 안 만든다: `modified`(버전은 공식인데 파일이 로컬에서 고쳐졌다)와 `unknown`(그 기기에서 아직 보고가 안 왔다).
