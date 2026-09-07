@@ -49,43 +49,58 @@
 
 ```
 contextops/
-├── package.json                 # workspaces: apps/*, packages/*, plugin
-├── pnpm-workspace.yaml
+├── package.json                 # pnpm workspace 뿌리 · docs:check · typecheck
+├── pnpm-workspace.yaml          # 멤버 + catalog (의존 버전의 정본 — §1.2)
 ├── tsconfig.base.json
-├── .github/workflows/ci.yml     # lint · test · plugin validate
+├── vitest.base.ts               # 시험 훅 상한의 정본 (한 곳 — FINDINGS 136)
+├── .nvmrc                       # Node 버전의 정본 (§1.2)
+├── .github/workflows/ci.yml     # principles · typecheck · test · build · docs
 ├── apps/
 │   └── web/                     # Next.js 15 App Router (프론트 + API)
-│       ├── src/app/(marketing)/page.tsx          # 랜딩
-│       ├── src/app/(app)/t/[team]/p/[project]/…  # 앱 화면
-│       ├── src/app/api/v1/…                      # Route Handlers
-│       ├── src/db/schema.ts                      # Drizzle
-│       ├── src/db/migrations/
-│       ├── src/lib/ai/{client,budget,prompts}/   # 서버측 AI
-│       ├── src/lib/auth.ts                       # Supabase Auth · 토큰 검증
-│       └── src/lib/compiler-runner.ts            # packages/compiler 호출 + 저장
+│       ├── src/app/page.tsx                      # 랜딩
+│       ├── src/app/t/[team]/p/[project]/          # 앱 화면 (§9)
+│       ├── src/app/api/v1/                       # Route Handlers (§5)
+│       ├── src/components/                       # 화면 조각 (landing.tsx · 팔레트 · 카드)
+│       ├── src/db/{schema,client}.ts             # Drizzle
+│       ├── drizzle/                              # 마이그레이션 SQL (drizzle-kit generate)
+│       ├── src/lib/ai/{client,budget,features,model,prompt,job,structure,conflict}.ts
+│       ├── src/lib/api/{auth,session,token,route,respond,error,publish,sync}.ts
+│       ├── src/lib/demo/{tenant,seed,seed-demo,reset,teardown,fixtures,inproc}.ts
+│       ├── src/lib/web/screens.ts                # 화면 표의 정본 (내비·팔레트·게이트가 읽는다)
+│       ├── e2e/{shots,gate3,production,chrome,plan,cdp}.ts   # 캡처 · GATE 3 · 배포 검증
+│       ├── scripts/{migrate,dev-server,demo-server}.ts
+│       └── vercel.json                           # Cron (§11 · docs/DEPLOY.md)
 ├── packages/
 │   ├── schema/                  # Zod 계약 (모든 곳이 import)
-│   │   └── src/{context-item,proposal,progress,manifest,pack,api}.ts
+│   │   └── src/{common,item,upload,manifest,api,table,plugin,replay,shots,json-schema,index}.ts
 │   └── compiler/                # 결정론 컴파일러
-│       ├── src/{index,partition,sort,render,sourcemap,hash}.ts
-│       ├── templates/*.md.hbs   # 버전 고정 템플릿
-│       └── test/golden/{case-1,case-2,case-3}/{snapshot.json,expected/*}
+│       ├── src/{index,compile,input,partition,sort,sections,assemble,tag,text,hash,limits,version,errors}.ts
+│       ├── templates/{index,progress-report}.ts  # 버전 고정 템플릿 — **TS 표다** (핸들바 없음)
+│       └── test/golden/case-{1-small,2-domains,3-overflow}/{input.json,expected}
 ├── plugin/contextops/           # 공식 Claude Code plugin 레이아웃
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/{init,sync,propose}/SKILL.md
 │   ├── hooks/hooks.json
-│   ├── scripts/{session-start,stop}.mjs
+│   ├── scripts/{session-start.mjs,stop.mjs,build.ts}
 │   ├── bin/contextops-cli.mjs   # esbuild 단일 번들 (src → bin)
-│   ├── src/cli/{setup,init-scan,sync,propose,progress,common}.ts
-│   └── schemas/*.json           # packages/schema에서 export한 JSON Schema (로컬 검증용)
+│   ├── src/cli/{main,setup,scan,sync,propose,progress,status,upload-draft,where}.ts
+│   └── schemas/                 # packages/schema에서 export한 JSON Schema (로컬 검증용)
 ├── fixtures/
-│   ├── paylab-api/              # 샘플 레포 (TS, ~40파일)
-│   ├── paylab-docs/             # 팀장 문서 150줄 + 오래된 문서 1개
+│   ├── paylab-api/              # 샘플 레포 (TS)
+│   ├── paylab-docs/             # 팀장 문서 + 오래된 문서 1개
+│   ├── replay/                  # 브라우저 터미널 재생 녹화 (§10.4)
 │   └── seed/                    # 데모 테넌트 시드 JSON
+├── tools/                       # ci.ps1 · principles.ps1 · walkthrough.ps1 · status-shape.mjs
+├── loop/                        # 자율 개발 루프 — **제품이 아니다** (CLAUDE.md ⛔ P2 의 경계)
 ├── docs/
 │   ├── SPEC.md                  # 이 문서
+│   ├── PLAN.md                  # Phase 체크리스트
+│   ├── STATUS.md                # 다음 바퀴의 유일한 기억
+│   ├── DEPLOY.md                # 배포 절차의 정본 (P5)
 │   ├── DESIGN_BRIEF.md          # Claude Design용
-│   └── KNOWN_LIMITATIONS.md
+│   ├── KNOWN_LIMITATIONS.md
+│   ├── SUBMISSION.md            # 제출서 (§16)
+│   └── feedback/                # INBOX.md(사람 → 루프) · FINDINGS.md(대장)
 └── CLAUDE.md                    # 저장소 자체의 개발 규칙 (아래 §15)
 ```
 
@@ -93,7 +108,7 @@ contextops/
 
 | 레이어 | 선택 | 비고 |
 |---|---|---|
-| 언어 | TypeScript 5.x, Node 20 LTS | 전 구성요소 단일 언어 |
+| 언어 | TypeScript · Node — **버전 숫자는 여기 적지 않는다** | 정본은 `.nvmrc`(Node · 지금 **22**)와 `pnpm-workspace.yaml` 의 `catalog`(typescript 등) · `package.json` 의 `packageManager`(pnpm). ★ 왜 — 숫자가 두 곳에 살면 한쪽만 올라가고 조용히 갈라진다 (FINDINGS 2 · 3) |
 | 웹+API | Next.js 15 (App Router, Route Handlers) | 별도 백엔드 없음 |
 | UI | Tailwind CSS 4 + shadcn/ui, TanStack Query 5 | Claude Design 산출물을 그대로 컴포넌트화 |
 | DB | Supabase Postgres, Drizzle ORM + drizzle-kit | RLS 미사용, 서버 service role + 앱 레벨 권한 검사 |
@@ -101,7 +116,7 @@ contextops/
 | 실시간 | Supabase Realtime (progress_events, context_versions 구독) | Roadmap·Sync 즉시 갱신 |
 | 서버 AI | Gemini `generateContent` 를 **SDK 없이 `fetch`** 로 (`apps/web/src/lib/ai/client.ts` 하나 · 2026-09-06 Anthropic 에서 바꿈). 모델은 `GEMINI_MODEL` 환경변수로 교체 가능 · 기본값과 쓸 수 있는 이름의 정본은 `apps/web/src/lib/ai/features.ts` 의 `AI_MODELS` 표 **한 곳**(버전 숫자를 여기 적지 않는다) · `responseJsonSchema` 로 구조화 출력 | 예산 가드 필수 · 무료 티어는 분당 요청 제한 |
 | 플러그인 CLI | esbuild → 단일 ESM 번들, 런타임 의존 0 | `node ${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs` |
-| 테스트 | vitest (schema·compiler·api), Playwright 1 시나리오 | |
+| 테스트 | vitest (schema·compiler·api·plugin) · e2e 는 **헤드리스 Chrome 을 CDP 로 직접** (`apps/web/e2e/`) | Playwright 는 **안 쓴다** — 의존이 하나 늘고 관통이 이미 같은 것을 잰다 (`shots.ts`·`gate3.ts`·`production.ts`) |
 | 배포 | Vercel (web), Supabase cloud | Vercel Cron `0 */6 * * *` → `/api/health` (Supabase pause 방지) |
 
 ---
@@ -116,12 +131,21 @@ users            { id, auth_subject text unique, email, name, avatar_url }
 teams            { id, slug text unique, name, settings jsonb /* {auto_apply:boolean, auto_submit:boolean} */ }
 team_members     { team_id, user_id, role enum('owner','member'), status enum('active','invited'), pk(team_id,user_id) }
 projects         { id, team_id, slug, name, description, official_version_id uuid null, unique(team_id,slug) }
-repos            { id, project_id, name, remote_url null, default_branch, path_prefix null /* 모노레포용 */ }
+repos            { id, project_id, name, remote_url null, default_branch, path_prefix null /* 모노레포용 */,
+                   last_scan jsonb null /* ScanSummary — 경로·이름만 · P1 */, last_scan_at null }
 source_documents { id, project_id, title, kind enum('goal','policy','roadmap','adr','notes','wiki'), current_version_id }
 source_document_versions { id, document_id, revision int, content text, content_hash, created_by, unique(document_id,revision) }
-context_items    { id, project_id, type enum(10종), status enum('draft','review','active','deprecated'),
-                   current_revision int, scope jsonb, priority int default 50, owner_id null, unique(id) }
-context_item_revisions { item_id, revision, data jsonb /* type별 필드 */, source_refs jsonb[], confidence enum('high','medium','low'),
+context_items    { id uuid pk, public_id text /* `item_<slug>` — §3 의 ItemId · 프로젝트 안에서 유일 */,
+                   project_id, type enum(10종), status enum('draft','review','active','deprecated'),
+                   current_revision int, scope jsonb, priority int default 50, owner_id null,
+                   unique(project_id,public_id) }
+                   /* 🔴 **id 와 public_id 를 하나로 두지 마라** (FINDINGS 23). uuid 를 그대로 쓰면
+                      Pack 의 역추적 태그(`<!-- ctx:{id} -->`)에 uuid 가 박혀서 사람이 원문까지 못 간다 —
+                      P7 은 「사람이 되짚는다」는 주장이다. uuid 는 FK 용이고, 사람이 읽는 이름은 public_id 다.
+                      conflicts 의 a_item_id·b_item_id 는 `(project_id, public_id)` 복합 FK 로 잇는다. */
+context_item_revisions { item_id, revision, title, body text default '', tags text[] default [],
+                   valid_from null, valid_until null /* ContextItem 의 나머지 절반이 앉는 자리 — 없으면 저장될 곳이 없다 */,
+                   data jsonb /* type별 필드 */, source_refs jsonb[], confidence enum('high','medium','low'),
                    created_by, origin enum('doc','code','manual','proposal'), unique(item_id,revision) }
 conflicts        { id, project_id, kind enum('contradiction','stale','duplicate','doc_vs_code','open_question','seed_question'),
                    a_item_id text null, b_item_id text null /* item_<slug> · (project_id,*) 복합 FK → context_items */,
@@ -133,12 +157,24 @@ proposals        { id, project_id, author_id, status enum('draft','submitted','a
                    client_request_id unique, decided_by, decided_at, decision_note }
 context_versions { id, project_id, semver text, snapshot_hash text, snapshot jsonb, manifest jsonb, published_by, published_at,
                    change_summary text, unique(project_id,semver), unique(project_id,snapshot_hash) }
+                   /* ⚠ **`unique(project_id,snapshot_hash)` 는 「같은 내용을 두 번 발행하는 것」을 막지 않는다**
+                      (FINDINGS 27). `snapshot_hash` 는 `context_version`(=semver)을 **포함해서** 계산되므로
+                      (`packages/compiler` 의 `snapshotHash`) 번호만 올리면 언제나 다른 해시다 — 이 제약은
+                      사실상 `unique(project_id,semver)` 의 메아리다. 실측: 내용이 하나도 안 바뀐 발행이 201 이다.
+                      🔴 **내용 중복 발행은 지금 막지 않는다.** 막고 싶으면 해시에서 semver 를 빼야 하는데
+                      그건 golden 전부와 `COMPILER_VERSION` 을 같이 움직이는 일이다 — 두 번째 해시 규칙을
+                      손으로 만들지 마라, 해시 규칙이 두 곳이 되는 것이 P4 가 제일 싫어하는 모양이다. */
 pack_files       { version_id, path, content text, sha256, target enum('claude','agents','cursor'), unique(version_id,path) }
                    /* 🔴 `source_map jsonb`(줄 범위 → 항목 ID) 칸이 있었는데 지웠다 (FINDINGS 34 · 마이그레이션 0007).
                       P7 의 역추적 정본은 **본문에 박힌 `<!-- ctx:… -->` 태그** 하나다 — 태그는 플러그인이 받는
                       바이트 안에 있어서 오프라인에서도 되짚어지고, 칸은 저장만 되고 읽는 라우트가 0곳이었다. */
-devices          { id, user_id, project_id, name, token_hash text unique, last_seen_at, revoked_at }
-sync_reports     { id, device_id, project_id, version_id, status enum('applied','outdated','modified','failed','manual'), manifest_hash, reported_at }
+devices          { id, user_id, project_id, name, token_hash text unique, expires_at /* §11 「만료 90일」의 자리 */, last_seen_at, revoked_at }
+sync_reports     { id, device_id, project_id, version_id, status enum('applied','outdated','modified','manual','unknown'), manifest_hash, reported_at }
+                   /* 🔴 정본은 `packages/schema` 의 `SYNC_STATUSES` 다 (FINDINGS 17). **`failed` 는 없다** —
+                      sync 가 실패하면 backup 에서 파일을 **전부 복원**하므로(§8.5) 기기의 상태는 실패 이전
+                      그대로다. 「실패했다」는 상태가 아니라 사건이고, 상태로 저장하면 다음 보고가 올 때까지
+                      화면이 거짓을 말한다. `unknown` 은 **보고가 없을 때 서버가 매긴다** — 기기는 자칭할 수
+                      없다 (기기가 보낼 수 있는 값은 `REPORTABLE_SYNC_STATUSES` 로 따로 좁힌다). */
 ai_usage         { id, project_id null /* 게스트 데모는 없다 */, feature enum('structure','conflict','ask','demo'), actor_hash text null /* sha256 — 원문 저장 금지 */,
                    model text, input_tokens int, output_tokens int, cost_micros int /* USD 백만분의 1 */, day text /* UTC YYYY-MM-DD */ }
 ai_jobs          { id, project_id, feature enum('structure','conflict') /* ai_feature 4종 중 job 으로 도는 둘 · CHECK 이 좁힌다 */,
@@ -168,7 +204,7 @@ progress_events  { id, project_id, device_id, milestone_id text, criterion text 
      ⚠ 근거가 이미 `SOURCE_REFS_MAX` 개면 **몰래 하나를 버리지 않고** 그 항목을 실패로
      돌린다 (8단계). 버리면 그 항목만 역추적이 조용히 한 칸 짧아진다.
 3. active 항목 + revision을 ID 순으로 정렬해 `snapshot` 구성 → `snapshot_hash = sha256(canonical JSON)`
-4. `context_versions` INSERT (semver는 요청값, 추천값은 §6.5)
+4. `context_versions` INSERT (semver 는 **요청값**이다 — 서버는 추천하지 않는다 · §6.1)
 5. `compiler.compile(snapshot, {templateVersion, compilerVersion})` → `pack_files` INSERT
 6. `projects.official_version_id = version.id`
 7. Proposal status → `published`
@@ -188,7 +224,12 @@ export const SourceRef = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('manual'), note: z.string().max(200) }),
 ]);
 
-export const Scope = z.object({ kind: z.enum(['project','domain','path']), value: z.string().optional() }); // path는 repo 상대 glob
+// 🔴 `domain`·`path` 는 value 가 **필수**다 (FINDINGS 4) — 값이 없으면 컴파일러가
+//    `domain-{slug}.md`·`scoped-{slug}.md` 파일 이름을 못 만든다 (§4.1).
+//    정본은 `packages/schema/src/common.ts` 이고 시험(`scope-and-enums.test.ts`)이 잠근다.
+export const Scope = z.object({ kind: z.enum(SCOPE_KINDS), value: z.string().min(1).max(200).optional() })
+  .strict().refine((s) => s.kind === 'project' || s.value !== undefined,
+    { message: 'domain·path scope 는 value 가 필요하다', path: ['value'] }); // path는 repo 상대 glob
 
 const Base = z.object({
   id: z.string().regex(/^item_[a-z0-9_]{3,40}$/), project_id: z.string().uuid(), type: ItemType,
@@ -217,15 +258,21 @@ export const ContextItem = Base.and(z.discriminatedUnion('type', [/* type → da
 
 **Proposal**
 ```ts
-export const ProposalItem = z.object({ operation: z.enum(['add','update','deprecate']), target_item_id: z.string().optional(),
-  draft: ContextItemDraft.optional(), evidence: z.array(SourceRef).min(1), reason: z.string().max(500) });
+// 🔴 연산마다 **채워야 하는 칸이 다르다** (FINDINGS 4). 둘 다 그냥 optional 로 두면
+//    「아무것도 바꾸지 않는 제안 항목」이 통과한다. 정본은 `packages/schema/src/upload.ts` 다.
+export const ProposalItem = z.object({ operation: z.enum(PROPOSAL_OPERATIONS), target_item_id: ItemId.optional(),
+  draft: ContextItemDraft.optional(), evidence: z.array(SourceRef).min(1).max(20), reason: z.string().min(1).max(500) })
+  .strict().refine((p) => (p.operation === 'add' ? p.draft !== undefined : p.target_item_id !== undefined),
+    { message: 'add 는 draft 가, update·deprecate 는 target_item_id 가 필요하다' });
 export const Proposal = z.object({ title: z.string(), summary: z.string(), base_version_id: z.string().uuid(),
-  items: z.array(ProposalItem).min(1).max(20), relates_to: z.array(z.string()).default([]), client_request_id: z.string().uuid() });
+  items: z.array(ProposalItem).min(1).max(20), relates_to: z.array(MilestoneId).max(10).default([]), client_request_id: z.uuid() });
 ```
 
 **Progress 이벤트** (업로드 allowlist — 여기 없는 필드는 서버가 400)
 ```ts
-export const ProgressEvent = z.object({ milestone_id: z.string(), status: z.enum(['in_progress','criterion_done','done_candidate','none']),
+// 🔴 `milestone_id` 는 `MilestoneId` 정규식 또는 `'none'` 이다 (FINDINGS 4) — `z.string()` 으로 두면
+//    형식이 RoadmapData 와 여기 두 곳에서 갈리고, roadmap 대조가 **조용히** 빗나간다.
+export const ProgressEvent = z.object({ milestone_id: z.union([MilestoneId, z.literal('none')]), status: z.enum(['in_progress','criterion_done','done_candidate','none']),
   criterion: z.string().max(200).optional(), evidence: z.array(z.object({ path: z.string(), start_line: z.number().int().optional(), end_line: z.number().int().optional(), commit_sha: z.string().optional() })).max(20),
   summary: z.string().max(300), context_version: z.string(), source: z.enum(['agent','hook','manual']), client_event_id: z.string().uuid() });
 ```
@@ -275,20 +322,35 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 3. **sort** — 섹션 순서 고정(mission→goal→roadmap→policy→constraint→quickmap) → priority desc → scope(project<domain<path) → title(ko/en locale-independent, codepoint) → id.
    - `priority` 는 <b>「먼저」</b>이고 **같은 타입 안에서만** 견줘진다 — 절은 타입별로 갈려 있고(§4.1 2단계), 절삭도 「type별 priority 상위」다(§7.3). 그래서 「중요도」가 아니라 <b>「그 타입 안에서 몇 번째로 읽히나」</b>로 써도 된다 (예: architecture 다섯 줄이 §7 그림의 흐름 순서로 선다).
 4. **render** — 템플릿 문자열 치환만. Markdown escape: `|`, 선행 `#`, `<!--`. 항목마다 역추적 태그 한 줄:
-   `<!-- ctx:item_bs_m2 rev:6 src:doc:sdv_…#1840-1961,repo:parking-api:src/billing/fee.ts:14 -->`
+   `<!-- ctx:item_bs_m2 rev:6 conf:high src:doc:sdv_…#1840-1961,repo:parking-api:src/billing/fee.ts:14 -->`
    - 🔴 **항목의 `body`(사람이 적은 설명)는 어느 절에서도 버려지지 않는다** (템플릿 1.4 · FINDINGS 9). 자리는 `packages/compiler/src/sections.ts` 의 `SECTIONS` 표 **`body` 칸 하나**가 정한다: `block`(블록 끝에 한 줄 — mission·architecture·adr_full·workflow) · `indent`(목록 줄 아래 두 칸 들여쓴 줄 — goal·roadmap·policy·constraint·scoped_rule) · `own`(절이 스스로 자리를 정한다 — domain 은 용어·불변식보다 **앞**) · `elsewhere`(요약 절이라 같은 항목의 body 는 다른 절이 낸다 — quickmap→architecture · adr_summary→adr_full). ★ 왜 표의 칸인가 — 예전엔 `render` 안에서 절마다 손으로 불렀고 넷만 불러서 나머지 절의 설명이 **조용히 사라졌다.** 「부르는 걸 잊었나」는 안 보이지만 표의 빈 칸은 보이고, 타입이 막는다. 잠근 것은 `test/liveness.test.ts` 「ItemType 10종의 body」 — 타입마다 body 를 채워 **그 문장이 Pack 본문에 실제로 있나**를 잰다 (지문으로 재면 `snapshot_hash` 가 늘 바뀌어 버려도 초록이다).
 5. **budget** — CLAUDE.md 12,000자 초과 시 policy/constraint를 `.claude/rules/policies.md`로 이동(경고 기록), rules 파일 30,000자 초과 시 domain 분할.
 6. **sourcemap** — 파일별 `[ {start_line, end_line, item_id, revision} ]`.
 7. **hash** — LF 정규화, 끝 개행 1개, UTF-8, `sha256`. manifest 생성.
 
-### 4.2 CLAUDE.md 템플릿 (v1.0, 발췌)
+### 4.2 CLAUDE.md 템플릿 (발췌)
+
+> 🔴 **정본은 `packages/compiler/templates/index.ts` 와 `src/sections.ts` 다.** 아래는 사람이 모양을
+> 잡는 데 쓰는 **발췌**이고, 핸들바 문법처럼 보이지만 실제 템플릿은 **TS 표**다 (§1.1 · 핸들바 의존 없음).
+> 템플릿 버전의 정본은 `TEMPLATE_VERSION`(지금 **1.4**)이다 — 여기에 숫자를 적지 않는다.
+>
+> ⚠ 세 곳이 예전 발췌와 달라졌다. **코드를 되돌리지 마라** (FINDINGS 10):
+> ① 머리말은 `manifest:` 가 아니라 **`snapshot:`** 이다 — `manifest_hash` 는 그 파일의 sha256 으로
+>    계산되는데 그 값을 파일 안에 적으면 **계산이 순환한다.**
+> ② Mission 절은 `{{body}}` 가 아니라 **`data.statement`**(+`rationale` 인용)를 낸다 — `body` 만 쓰면
+>    `MissionData` 를 아무도 안 읽어 **필드가 죽는다.** 사람이 적은 `body` 는 그 뒤에 따로 붙는다(1.4).
+> ③ 역추적 태그에 **`conf:{level}`** 이 있다 — `confidence` 3단계가 **전부** 출력을 바꾸게 하려고 넣었다.
+>    low 일 때만 적으면 high 와 medium 이 구별되지 않는다.
+
 
 ```md
 # {{project.name}} — Team Context v{{version}}
-<!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. manifest:{{manifest_hash_short}} -->
+<!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. snapshot:{{snapshot_hash_short}} -->
 
 ## Mission
-{{#each mission}}{{body}} {{tag}}{{/each}}
+{{#each mission}}{{data.statement}} {{tag}}
+{{#if data.rationale}}> {{data.rationale}}{{/if}}
+{{body}}{{/each}}
 
 ## Goals
 {{#each goal}}- **{{title}}** — {{data.outcome}}{{#if data.metric}} · 지표: {{data.metric}}{{/if}}{{#if data.deadline}} · 기한: {{data.deadline}}{{/if}} {{tag}}
@@ -348,10 +410,10 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | POST /projects/{id}/repos | owner | {name, remote_url?, path_prefix?} → repo |
 | POST /projects/{id}/tokens | member | {device_name} → {token(1회 표시), device_id} |
 | DELETE /devices/{id} | 본인·owner | → 204 |
-| POST /projects/{id}/documents | member | multipart(zip) 또는 {title, kind, content} → document + `job:{id,status}` — 구조화 job 을 만들고 **응답을 보낸 뒤에** 굴린다 (§7.1) |
+| POST /projects/{id}/documents | member | multipart(zip) 또는 {title, kind, content} → document + **`job_id`** — 구조화 job 을 만들고 **응답을 보낸 뒤에** 굴린다 (§7.1). 🔴 **job 객체가 아니라 id 다** (FINDINGS 63) — 객체로 실으면 목록(`shape:'summary'`)·상세(`'full'`) 어느 쪽도 아닌 **셋째 모양**이 생기고, 그것을 job 으로 들고 다니는 화면은 `progress`·`stalled` 를 `undefined` 로 읽는다(=「멈춤 아님」이라는 거짓). 받은 쪽은 이 id 로 목록·상세를 **읽으러 간다** |
 | GET /projects/{id}/context-items | member | ?type&status&scope → items[] — 항목을 **응답으로** 내는 문은 `ContextItem` 이 아니라 `ContextItemView` 로 판다: 「마지막으로 바뀐 때」(`updated_at`) 한 칸이 더 있다. 🔴 **그 칸이 `ContextItem` 에 있으면 안 된다** — 컴파일러가 받는 snapshot 의 항목이 `ContextItem` 이고 `snapshot_hash` 가 그것을 통째로 재서, 시각이 섞이면 **내용이 같은 묶음이 매번 다른 지문**을 갖는다 (`generated_at` 을 지문에서 뺀 것과 같은 이유 · §4.1). 읽는 것은 화면뿐이다 — 화면 4 의 「A 갱신 2026-07-12 · B 갱신 2026-08-04」와 화면 5 표의 「갱신」 칸 (§9 · DESIGN_BRIEF §4) |
-| POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → {accepted, rejected[{index, issues}], job} — 받아들인 항목이 있을 때만 탐지 job 을 만든다 (§7.2). 빈 탐지는 §7.5 의 상한만 태운다 |
-| PATCH /projects/{id}/context-items/{itemId} | owner | {revision(현재), patch} → item (`ContextItemView` — 위 행과 같다) · revision 불일치 409. 🔴 **`{itemId}` 는 `public_id`(`item_<slug>`)다 — uuid 가 아니다.** 항목을 내는 문이 돌려주는 `id` 가 그것이고 (§3 · P7 의 역추적이 그 이름으로 이어진다), 화면은 uuid 를 **볼 수 없다.** 전역 `/context-items/{uuid}` 였을 때는 화면에 초안을 승인할 문이 아예 없었다 (FINDINGS 79). `public_id` 는 프로젝트 안에서만 유일해서(`unique(project_id, public_id)`) 이 문은 프로젝트 밑에 있어야 한다 |
+| POST /projects/{id}/context-items/batch-draft | member/device | {items: ContextItemDraft[], repo, scan_summary} → **`ContextItemsBatchDraftResult`** = {accepted, rejected[{index, issues}], **`job_id`**} — 받아들인 항목이 있을 때만 탐지 job 을 만든다 (§7.2 · 없으면 `null`). 빈 탐지는 §7.5 의 상한만 태운다. 🔴 **라우트가 그 계약으로 파싱해서 낸다** (FINDINGS 44) — 손으로 만든 객체를 그대로 내면 계약이 **받는 쪽에서만** 강제되고, 실제로 서버가 `job` 객체를 더 실어 보내는 동안 플러그인 `upload-draft` 는 `.strict()` 에 걸려 **성공한 업로드를 「서버 응답이 계약과 맞지 않는다」로 보고**했다 |
+| PATCH /projects/{id}/context-items/{itemId} | owner | {revision(현재), **changes**} → item (`ContextItemView` — 위 행과 같다) · revision 불일치 409. 🔴 **`{itemId}` 는 `public_id`(`item_<slug>`)다 — uuid 가 아니다.** 항목을 내는 문이 돌려주는 `id` 가 그것이고 (§3 · P7 의 역추적이 그 이름으로 이어진다), 화면은 uuid 를 **볼 수 없다.** 전역 `/context-items/{uuid}` 였을 때는 화면에 초안을 승인할 문이 아예 없었다 (FINDINGS 79). `public_id` 는 프로젝트 안에서만 유일해서(`unique(project_id, public_id)`) 이 문은 프로젝트 밑에 있어야 한다. 🔴 **칸 이름이 `changes` 인 이유** (FINDINGS 22) — 「코드의 변경분」을 뜻하는 그 낱말은 `tools/principles.ps1` 의 P1 게이트가 `packages/schema/src` 안에서 **금지어로 센다.** 서버가 코드 변경분을 받지 않는다는 것이 정확히 P1 이다. **게이트에 예외를 파지 마라** — 이름 하나 바꾸는 것이 훨씬 싸다 |
 | GET /projects/{id}/jobs | member | ?feature&status&limit&offset → {jobs[] (**`shape:'summary'`** — `result` 없음 · `progress`·`updated_at`·`stalled` 는 있다), limit, offset} — **최신순.** job id 는 `POST /documents`·`batch-draft` 의 응답에만 있어서, 이 문이 없으면 화면 3 이 새로고침 한 번에 도는 job 을 잃는다 (FINDINGS 58). `?feature=structure&limit=1` 이 「마지막 구조화 job」이다 |
 | GET /projects/{id}/jobs/{jobId} | member | → {**shape:'full'**, id, feature, status, progress, input, result, error_code, started_at, finished_at, updated_at, **stalled**} — 화면 3 의 polling (§9). 도는 동안 갈리는 값은 `status`·**`progress {done,total,unit}`**·`updated_at` 이다 (§2). 🔴 **`stalled` 는 서버가 내는 판정**이다 — 「끝나지 않았는데 `updated_at` 이 그 기능의 `stallAfterSec` 을 넘겼다」. 잣대가 서버 전용 표(`AI_JOB_RUNNERS`)에 있고 화면의 시계는 서버와 어긋나므로 재는 쪽이 시각 둘을 다 가진 서버다. 근거(`updated_at`)를 판정 옆에 같이 낸다. 남의 프로젝트 job 은 없는 job 과 같은 404 다 |
 | POST /projects/{id}/jobs/{jobId}/items | member | {item_ids[]} → 201 {accepted[{index,id}], rejected[{index,issues}]} — 🔴 **§7.1 이 낸 항목 후보가 항목이 되는 유일한 문이다** (§7.1 · FINDINGS 84). 고른 id 만 `status:'draft'` · `origin:'doc'` 로 들어간다. 본문은 요청이 아니라 **job 의 `result` 에서** 온다 — 요청이 본문을 실으면 화면이 모델 출력을 고쳐 되보낼 수 있고 그 항목의 근거는 여전히 원문 구간을 가리킨다 (P7). 구조화 job 이 아니거나 아직 안 끝났으면 `VALIDATION_FAILED`, 남의 프로젝트 job 은 없는 job 과 같은 404 다. ⚠ 항목별로 갈라 받는다 (`batch-draft` 와 같은 이유) — 후보 하나가 계약과 안 맞는다고 나머지를 못 받으면 그 문서는 통째로 막힌다 |
@@ -380,16 +442,39 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | GET /cron/demo-reset | **Cron** (`CRON_SECRET`) | → `{team_slug, existed, official_version, items, members, devices, reports, progress, proposals}` — 데모 테넌트를 **지우고 다시 심는다** (§9 「매일 03:00 리셋」 · `lib/demo/reset.ts`). 🔴 **GET 으로 상태를 바꾸는 유일한 문**이다 — Vercel Cron 은 GET 으로만 부른다. 그래서 `/cron/` 밑에 따로 살고, 주체(`ctx.actor()`)가 아니라 `CRON_SECRET` 자물쇠(`lib/api/cron.ts`)로 잠긴다 — 세션·기기·게스트 토큰으로는 401 이다. 변수가 없으면 **아무도 못 부른다**(조용히 통과시키지 않는다 — 발표 도중 남이 리셋한다). 심다가 던지면 다시 지운다 — 반쯤 심긴 데모보다 없는 데모가 낫다(`/demo/session` 이 404 로 말한다). 응답에 토큰·이름·이메일이 없다. `maxDuration` 60 |
 | GET /health | 공개 | {ok, db, version} |
 
-에러 코드: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `STALE_BASE`, `REVISION_CONFLICT`, `BUDGET_EXCEEDED`, `RATE_LIMITED`, `COMPILE_FAILED`.
+에러 코드: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `STALE_BASE`, `REVISION_CONFLICT`, `BUDGET_EXCEEDED`, `RATE_LIMITED`, `COMPILE_FAILED`, `INTERNAL`, `AI_OUTPUT_INVALID`.
+
+🔴 **정본은 `packages/schema` 의 `ERROR_CODES` 다** (FINDINGS 21). `INTERNAL`(500)은 **잡히지 않은 예외**의 자리다 — 그 자리가 없으면 예외 하나만 `{error:{code,…}}` 봉투가 아니게 되고 화면은 그 모양을 못 읽는다. `COMPILE_FAILED` 로 덮으면 거짓말이다. ⚠ **값은 직렬화된다 — 끝에만 더하고 중간을 지우지 마라.** `AI_OUTPUT_INVALID` 는 **§7 공통 규약의 마지막 갈래**다 — 「출력을 Zod 로 재검증, 실패 시 오류 위치를 넣어 1회 재시도, 재실패면 이 코드」. `INTERNAL` 로 내면 「AI 가 계약과 다른 걸 냈다」와 「서버가 터졌다」가 화면에서 구별되지 않는다. ⚠ 어느 코드로도 **스택·요청 본문을 싣지 않는다** (§11 로그 규칙과 같은 이유 · P1).
 🔴 **정본은 `packages/schema` 의 `ERROR_STATUS` 표다** — 이 나열이 아니다(그 표에는 `INTERNAL`·`AI_OUTPUT_INVALID` 도 있다). 그 표의 축은 셋이다: **HTTP 상태 · 기본 문구 · `retryable`**(「같은 입력 그대로 다시 굴리면 결과가 달라질 수 있나」 · FINDINGS 59). 세 번째 축을 읽는 곳은 실패한 job 을 되돌리는 문과 화면 3 의 [다시 시도] 둘뿐이고, 둘 다 `isRetryableErrorCode()` 하나를 부른다.
 
 ---
 
 ## 6. 버전·동일성 규칙
 
-- semver: patch=오탈자/설명, minor=항목 추가·변경, major=Schema/템플릿 변경. 서버가 Proposal 내용으로 추천, owner가 조정.
+- semver: patch=오탈자/설명, minor=항목 추가·변경, major=Schema/템플릿 변경. **고르는 것은 owner 다** — 상세는 §6.1.
 - 버전은 불변. 잘못 발행 시 이전 snapshot으로 새 버전 발행(롤백 = 새 버전).
 - 동일성 판정(sync 보고 기준): `applied` = 로컬 managed 파일 hash 전부 일치 · `outdated` = 로컬 버전 < 공식 · `modified` = 버전 같으나 hash 다름 · `manual` = zip 수동 적용 · `unknown` = 보고 없음. 화면 문구는 "마지막 보고: 8분 전, v1.3, applied" 형식. "실시간"이라는 단어 금지.
+
+### 6.1 semver 등급 — **서버는 추천하지 않는다** (FINDINGS 32)
+
+🔴 **정본은 `apps/web/src/lib/web/semver.ts` 의 `SEMVER_RULE` 표**(등급 → 라벨·「무슨 뜻인가」)와
+`nextSemver(current, bump)`(`1.2.3` → 등급별 다음 값 · 형식이 아니면 `null` — 지어내지 않는다)다.
+첫 발행의 시작점은 `1.0.0` 이다.
+
+| 등급 | 무슨 뜻인가 (화면이 그대로 읽는다) |
+|---|---|
+| `patch` | 오탈자·설명만 고쳤습니다 |
+| `minor` | 항목을 더하거나 바꿨습니다 |
+| `major` | Schema·템플릿이 바뀌었습니다 |
+
+🔴 **서버가 Proposal 내용으로 등급을 계산하는 코드는 없다.** 화면 5 는 **세 후보와 각각의 기준을
+나란히 보여 주고 사람이 고른다.** ★ 왜 지어내지 않나 — 없는 판정을 화면이 내면 「AI 가 판정했습니다」와
+같은 종류의 거짓이 된다 (`DESIGN_BRIEF` §2-4). `POST /versions/publish` 의 `semver` 는 **요청값 그대로**이고
+응답에 `recommended_semver` 같은 칸은 **없다**.
+
+⚠ 나중에 서버 추천을 더한다면 바꾸는 것은 **기본 선택 하나**다 — 위 표는 그대로 쓰고, 강제하지 않는다
+(§6 이 「owner 가 조정한다」고 적는 이유다). 그때 필요한 재료는 Proposal 의 `items[].operation` 뿐이다
+(`deprecate` 포함 → major 후보 · `add`/`update` → minor · 설명만 → patch).
 
 ---
 
