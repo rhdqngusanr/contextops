@@ -32,8 +32,11 @@ export type Shot = {
   readonly alt: string
 }
 
-/** 게스트 데모가 앉는 자리 — 슬러그의 정본은 `DEMO_TENANT` 하나다 */
-const BASE = `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug}`
+/**
+ * 게스트 데모가 앉는 자리 — 슬러그의 정본은 `DEMO_TENANT` 하나다.
+ * ⚠ GATE 3 의 걸음표(`e2e/gate3.ts`)도 이것을 읽는다. 주소를 두 곳에 적으면 갈라진다.
+ */
+export const DEMO_BASE = `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug}`
 
 /**
  * 랜딩으로 넘길 화면과 그 대체텍스트.
@@ -46,8 +49,11 @@ const PUBLISHED: Record<string, string> = {
   sync: 'Sync 화면 — 기기마다 어느 버전이 적용됐나',
 }
 
-/** 앱 껍데기가 붙는 화면인지 (랜딩은 껍데기를 안 쓴다) */
-const APP_SHELL = '.main-inner'
+/**
+ * 앱 껍데기가 붙는 화면인지 (랜딩은 껍데기를 안 쓴다).
+ * ⚠ GATE 3 의 걸음표도 「도착했다」의 증거로 이것을 쓴다 — selector 를 두 곳에 적지 마라.
+ */
+export const APP_SHELL = '.main-inner'
 
 export const SHOT_PLAN: readonly Shot[] = [
   //  랜딩 — 심사위원이 제일 먼저 보는 화면. 좁은 폭도 같이 찍는다 (FINDINGS 160 이 잰 자리).
@@ -57,7 +63,7 @@ export const SHOT_PLAN: readonly Shot[] = [
   //  앱 화면 — 표에서 그대로 만든다. 손으로 한 줄도 더하지 마라.
   ...PROJECT_SCREENS.map((screen): Shot => ({
     name: `screen-${screen.path}`,
-    path: `${BASE}/${screen.path}`,
+    path: `${DEMO_BASE}/${screen.path}`,
     needs: APP_SHELL,
     width: 1440,
     height: 900,

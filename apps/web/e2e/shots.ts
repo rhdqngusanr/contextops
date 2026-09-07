@@ -17,6 +17,9 @@
 //  🔴 무엇을 세나 — 캡처 한 장마다 **검사 넷**이다: ① 그 화면의 selector 가 보이나
 //     ② **로딩이 끝났나**(skeleton 0 — 껍데기만 뜬 그림은 쓸 수 없다)
 //     ③ 가로로 밀지 않나(`scrollWidth == clientWidth`) ④ 캡처가 빈 파일이 아닌가.
+//     그리고 마지막에 **GATE 3** 을 밟는다 (`e2e/gate3.ts`) — 빈 창에서 링크만으로
+//     화면 5·6·8·9 를 3분 안에. 캡처가 끝난 뒤인 이유는 그 파일의 머리말에 있다.
+//
 //     끝에 `e2e: N passed, M failed` 를 찍는다 — 관통이 그 수를 읽는다
 //     (`tools/walkthrough.ps1` 의 `count_log`). ⚠ 그 줄의 모양을 바꾸면 관통이
 //     「검사 수를 못 셌다」로 FAIL 한다. 같이 고쳐라.
@@ -30,7 +33,9 @@ import { fileURLToPath } from 'node:url'
 
 import { TEST_JWT_SECRET } from '../test/helpers/db'
 import { DEMO_TENANT } from '../src/lib/demo/tenant'
-import { SHOT_PLAN } from './plan'
+import { type Cdp, connectCdp, sleep, waitFor } from './cdp'
+import { runGate3 } from './gate3'
+import { DEMO_BASE, SHOT_PLAN } from './plan'
 import { shotsSummary } from './report'
 
 const webRoot = fileURLToPath(new URL('..', import.meta.url))
@@ -52,8 +57,6 @@ const CHROME_CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
 ].filter((p): p is string => typeof p === 'string' && p.length > 0)
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 // ── 검사 장부 ────────────────────────────────────────────────────
 type Check = { name: string; ok: boolean; detail: string }
@@ -77,31 +80,6 @@ function killAll(): void {
       spawn('taskkill', ['/pid', String(c.pid), '/T', '/F'], { stdio: 'ignore' })
     } catch { /* 이미 죽었다 */ }
   }
-}
-
-async function waitFor(what: string, probe: () => Promise<boolean>, timeoutMs: number): Promise<void> {
-  const until = Date.now() + timeoutMs
-  while (Date.now() < until) {
-    if (await probe()) return
-    await sleep(500)
-  }
-  throw new Error(`${what} 이(가) ${Math.round(timeoutMs / 1000)}초 안에 안 떴다`)
-}
-
-// ── CDP — Node 22 의 내장 WebSocket 만 쓴다 (의존성 0) ────────────
-type CdpResult = { result?: { result?: { value?: unknown }; data?: string; exceptionDetails?: unknown } }
-let ws: WebSocket
-let msgId = 0
-const waiters = new Map<number, (msg: CdpResult) => void>()
-
-function send(method: string, params: Record<string, unknown> = {}): Promise<CdpResult> {
-  const id = ++msgId
-  ws.send(JSON.stringify({ id, method, params }))
-  return new Promise((res) => waiters.set(id, res))
-}
-async function evalJs<T>(expression: string): Promise<T | undefined> {
-  const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
-  return r.result?.result?.value as T | undefined
 }
 
 /** Chrome 이 죽은 뒤에 지울 임시 프로필 */
@@ -159,34 +137,26 @@ async function main(): Promise<void> {
   }, 60_000)
   if (target === undefined) throw new Error('Chrome 의 page 대상을 못 찾았다')
 
-  ws = new WebSocket(target.webSocketDebuggerUrl)
-  await new Promise<void>((r) => ws.addEventListener('open', () => r()))
-  ws.addEventListener('message', (e: MessageEvent) => {
-    const msg = JSON.parse(String(e.data)) as { id?: number }
-    if (msg.id !== undefined && waiters.has(msg.id)) {
-      waiters.get(msg.id)?.(msg as CdpResult)
-      waiters.delete(msg.id)
-    }
-  })
-  await send('Page.enable')
-  await send('Runtime.enable')
+  const page: Cdp = await connectCdp(target.webSocketDebuggerUrl)
+  await page.send('Page.enable')
+  await page.send('Runtime.enable')
 
   // ④ 게스트 세션 — 제품과 같은 길이다 (`/demo` → 리다이렉트)
-  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
-  await send('Page.navigate', { url: `${BASE}/demo` })
+  await page.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
+  await page.send('Page.navigate', { url: `${BASE}/demo` })
   let landed = ''
   await waitFor('게스트 세션', async () => {
-    landed = (await evalJs<string>('location.pathname')) ?? ''
+    landed = (await page.evalJs<string>('location.pathname')) ?? ''
     return landed.includes(`/t/${DEMO_TENANT.teamSlug}/`)
   }, 180_000)
   check('게스트 세션이 붙는다 (/demo → 앱)', landed.includes(`/t/${DEMO_TENANT.teamSlug}/`), landed)
 
   // ⑤ 계획대로 한 장씩
   for (const shot of SHOT_PLAN) {
-    await send('Emulation.setDeviceMetricsOverride', {
+    await page.send('Emulation.setDeviceMetricsOverride', {
       width: shot.width, height: shot.height, deviceScaleFactor: 1, mobile: shot.width < 700,
     })
-    await send('Page.navigate', { url: `${BASE}${shot.path}` })
+    await page.send('Page.navigate', { url: `${BASE}${shot.path}` })
 
     //  화면이 「그려질 때까지」 기다린다 — 고정 초를 세지 않는다.
     //  ⚠ next dev 는 그 화면을 **처음 열 때 컴파일한다.** 첫 방문이 수십 초일 수 있다.
@@ -195,7 +165,7 @@ async function main(): Promise<void> {
     let shown = false
     try {
       await waitFor(`${shot.name} 의 ${shot.needs}`, async () => {
-        shown = (await evalJs<boolean>(visible)) === true
+        shown = (await page.evalJs<boolean>(visible)) === true
         return shown
       }, 120_000)
     } catch { /* 아래 검사가 FAIL 로 적는다 */ }
@@ -211,7 +181,7 @@ async function main(): Promise<void> {
     let loaded = false
     try {
       await waitFor(`${shot.name} 의 로딩`, async () => {
-        loaded = (await evalJs<boolean>(settled)) === true
+        loaded = (await page.evalJs<boolean>(settled)) === true
         return loaded
       }, 60_000)
     } catch { /* 아래 검사가 FAIL 로 적는다 */ }
@@ -225,7 +195,7 @@ async function main(): Promise<void> {
     //    때까지** 재고, 안 가라앉으면 그때 마지막 값으로 FAIL 한다.
     const OVERFLOW_SETTLE_MS = 8_000
     const measureOverflow = (): Promise<{ px: number; who: string } | undefined> =>
-      evalJs<{ px: number; who: string }>(`(() => {
+      page.evalJs<{ px: number; who: string }>(`(() => {
       const de = document.documentElement
       const px = de.scrollWidth - de.clientWidth
       if (px <= 0) return { px, who: '' }
@@ -249,14 +219,35 @@ async function main(): Promise<void> {
     //  ⚠ next dev 는 화면 왼쪽 아래에 **자기 배지**(`<nextjs-portal>`)를 띄운다. 그건 제품이
     //    아니라 개발 서버의 표시라서, 랜딩에 붙일 그림에 들어가면 안 된다. 캡처 직전에만
     //    걷어낸다 — 제품 설정(`next.config.ts`)을 캡처 사정으로 고치지 않는다.
-    await evalJs(`(() => { document.querySelectorAll('nextjs-portal').forEach((e) => e.remove()); return 1 })()`)
-    const png = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
-    const data = png.result?.data
+    await page.evalJs(`(() => { document.querySelectorAll('nextjs-portal').forEach((e) => e.remove()); return 1 })()`)
+    const png = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
+    const data = png.data as string | undefined
     const file = join(shotsDir, `${shot.name}.png`)
     if (typeof data === 'string') writeFileSync(file, Buffer.from(data, 'base64'))
     const bytes = existsSync(file) ? statSync(file).size : 0
     //  ⚠ 빈 PNG 도 파일은 만들어진다. **크기**를 봐야 「찍혔다」다.
     check(`${shot.name}: 캡처가 남았다`, bytes > 5_000, `${bytes} bytes`)
+  }
+
+  // ⑥ GATE 3 — **빈 창에서 링크만으로 3분** (PLAN P4 둘째 행의 완료 기준 · `e2e/gate3.ts`)
+  //  ⚠ 여기가 마지막인 이유 — 위 ⑤ 가 화면을 전부 한 번씩 열어 `next dev` 를 데워 놨다.
+  //    안 데운 채로 재면 3분의 대부분이 **컴파일 시간**이라 이 게이트가 아무 말도 못 한다.
+  //  ⚠ `Target.*` 는 **브라우저** 끝점의 일이다 — 위 page 연결로는 못 부른다 (`cdp.ts`).
+  const version = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)).json() as
+    { webSocketDebuggerUrl: string }
+  const browser = await connectCdp(version.webSocketDebuggerUrl)
+  try {
+    await runGate3({
+      browser,
+      cdpPort: CDP_PORT,
+      origin: BASE,
+      base: DEMO_BASE,
+      shotsDir,
+      jsonPath: join(repoRoot, '.ci', 'gate3.json'),
+      check,
+    })
+  } finally {
+    browser.close()
   }
 
   //  ⚠ 프로필 폴더는 **Chrome 을 죽인 뒤에** 지운다 — 살아 있으면 EBUSY 다

@@ -102,7 +102,7 @@ $stages = @(
        count_json = $true },
 
     @{ name = "shots"
-       what = "화면 캡처 — 진짜 브라우저로 찍고 그려졌는지 센다 (.ci/shots/)"
+       what = "화면 캡처 + GATE 3 — 진짜 브라우저로 찍고, 빈 창에서 링크만으로 3분을 밟는다 (.ci/shots/ · .ci/gate3.json)"
        prereq = "apps\web\e2e"
        cmd = "pnpm --filter web test:e2e"
        #  103바퀴에 켰다. 하네스는 playwright 가 아니라 **CDP 로 몬 헤드리스 Chrome**
