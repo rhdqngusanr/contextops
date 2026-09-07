@@ -33,6 +33,32 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 169. **데모 씨앗의 `body` 가 제 `data` 를 말만 바꿔 되풀이하는 자리가 둘 남았다**   [격차]
+- **증상**: `body` 가 종이에 나가기 시작하니(9 ✅) **같은 뜻을 두 번 말하는 줄**이 눈에 띈다.
+  글자가 달라 메아리 검사(`pack-echo.ts`)는 통과한다 — 사람이 읽어야 보인다.
+  | 항목 | `data` | `body` |
+  |---|---|---|
+  | `item_constraint_settlement_batch` | 가맹점 정산은 하루 1회 배치로만 한다 — 즉시 정산은 없다 | 가맹점 정산은 즉시 일어나지 않는다 — 하루 한 번의 배치다 |
+  | `item_goal_success_rate` | 지표: PSP 장애 구간을 포함한 주간 성공률 | PSP 장애 구간을 포함한 주간 성공률로 잰다 |
+- **근거**: `.ci/walkthrough-pack/CLAUDE.md` 의 Constraints·Goals 절 (이번 바퀴가 눈으로 읽었다) ·
+  `apps/web/src/lib/demo/seed.ts`
+- **정본**: `docs/SPEC.md` §10.3 (데모 씨앗)
+- **고칠 방향**: 고칠 자리는 **씨앗**이지 템플릿이 아니다 (`pack-echo.ts` 머리말의 그 이유 그대로).
+  `body` 는 `data` 가 **안 말하는 것**(왜 그런가 · 무엇이 해당하나)만 적는다 — 옆의
+  `item_policy_retry`·`item_policy_pii_log` 가 이미 그 모양이다. ⚠ 씨앗을 고치면 관통의 인용
+  검사가 원문(`fixtures/paylab-*`)과 대조하므로 **원문에 있는 말**로 적어야 한다.
+- **상태**: 대기
+
+### 168. **`tags`·`owner_id`·`valid_from`·`valid_until` 을 읽는 코드가 아직 0곳이다**   [구멍]
+- **증상**: FINDINGS 9 의 남은 절반이다. Base 스키마의 이 네 칸을 **컴파일러도 화면도 안 읽는다** —
+  값을 무엇으로 바꿔도 Pack 도 화면도 그대로다.
+- **근거**: `grep -rn "tags\|owner_id\|valid_" packages/compiler/src` → 0건 (`5377fe9` 에서 다시 확인)
+- **정본**: `docs/SPEC.md` §3 · §9
+- **고칠 방향**: 9 와 같다 — **살리거나 지운다.** 화면(P1~P4 행)이 `tags`·`owner_id` 를 읽으면 산 것이다.
+  `valid_until` 이 지난 항목을 Pack 에서 빼는 것이 제일 값싼 살리기인데 **컴파일러는 시각을 못 읽는다**(P4) —
+  `generated_at` 을 「오늘」로 삼아야 하고 golden 이 같이 움직인다. ⚠ 한 바퀴에 **하나만** 골라라.
+- **상태**: 대기
+
 ### 167. **빈 제안 목록도 「아직 올라온 제안이 없습니다」라고 말한다** — 세 번째 같은 낱말   [격차]
 - **증상**: 165(날짜 칸) · 166(목록 위 설명)과 **같은 거짓말이 한 자리 더** 있다. 제안이 하나도 없을 때 화면 6 이 그리는 문장이
   `아직 올라온 제안이 없습니다. Claude Code에서 /contextops:propose 를 실행하면 여기에 쌓입니다.` 인데, 그 다음 문장이
@@ -4128,7 +4154,19 @@ params:
   살리기인데, **그러려면 「오늘」이 필요하고 컴파일러는 시각을 읽을 수 없다** (P4) —
   `generated_at` 을 기준으로 삼아야 한다. 짧은 절의 `body` 는 「웹에서만 보는 설명」이라고
   정하고 화면에 그렇게 적든지, Pack 에 한 줄로 내보내든지 **골라라.**
-- **상태**: 대기
+- **상태**: ✅ (절반) `5377fe9` — **짧은 절의 `body` 를 살렸다.** 「Pack 에 내보낸다」를 골랐고,
+  자리는 `src/sections.ts` 의 `SECTIONS` 표 **`body` 칸 하나**가 정한다 (`BodyStyle` 4값 ·
+  `block`·`indent`·`own`·`elsewhere` · 타입이 빈 칸을 막는다). 붙이는 것은 `renderSection()`
+  하나이고 `render` 안에서 손으로 부르던 자리를 없앴다. `TEMPLATE_VERSION` 1.3 → **1.4**.
+  잠근 것: `test/liveness.test.ts` 「ItemType 10종의 body」 — 타입마다 body 를 채워 **그 문장이
+  Pack 본문에 실제로 있나**를 잰다 (지문으로 재면 `snapshot_hash` 가 늘 바뀌어 버려도 초록이다) ·
+  Pack 에 안 나가는 타입은 0건. 되돌려 FAIL 나는 것을 봤다.
+  🔴 **살리자 겹침 둘이 드러났다** — 관통의 메아리 검사(99·100)가 잡았다: `answerDraft()` 가
+  답변을 `body` 와 `data` 양쪽에 넣고 있었고(→ `body` 를 비운다), 씨앗 둘의 `body` 가 제
+  `rule`·`statement` 를 되풀이했다(→ 「왜 그런가」로 바꿨다).
+  ⚠ **남은 절반은 `tags`·`owner_id`·`valid_from`·`valid_until` 이다** — 아직 아무도 안 읽는다.
+  주인은 화면(P1~P4 행)이고, `valid_until` 은 `generated_at` 을 「오늘」로 삼아야 한다 (P4).
+  그 넷은 **FINDINGS 168** 로 따로 세웠다.
 
 ### 13. `ProgressEvent.status` 4종 · `source` 3종이 아직 아무것도 바꾸지 않는다   [구멍]
 - **증상**: `PROGRESS_STATUSES`(`in_progress`·`criterion_done`·`done_candidate`·`none`)와
