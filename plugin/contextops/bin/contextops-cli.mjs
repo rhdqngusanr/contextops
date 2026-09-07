@@ -20652,7 +20652,8 @@ async function runSetup(cli2, flags) {
   cli2.io.out("");
   cli2.io.out("\u2460 \uBE0C\uB77C\uC6B0\uC800\uC5D0\uC11C \uB85C\uADF8\uC778\uD55C\uB2E4:");
   cli2.io.out(`     ${loginUrl}`);
-  cli2.io.out("\u2461 \uD504\uB85C\uC81D\uD2B8\uB97C \uACE0\uB974\uACE0 \uAE30\uAE30 \uD1A0\uD070\uC744 \uBC1C\uAE09\uBC1B\uC544 \uC544\uB798\uC5D0 \uBD99\uC5EC \uB123\uB294\uB2E4 (ctx_ \uB85C \uC2DC\uC791\uD55C\uB2E4).");
+  cli2.io.out("\u2461 \uD504\uB85C\uC81D\uD2B8\uC758 Sync \uD654\uBA74\uC5D0\uC11C [\uAE30\uAE30 \uCD94\uAC00] \uB97C \uB20C\uB7EC \uD1A0\uD070\uC744 \uBC1C\uAE09\uBC1B\uB294\uB2E4.");
+  cli2.io.out("   \uADF8 \uD654\uBA74\uC774 \uC8FC\uB294 \uBA85\uB839 \uD55C \uC904\uC744 \uADF8\uB300\uB85C \uBD99\uC5EC\uB123\uC73C\uBA74 \uC774 \uBB3C\uC74C\uC740 \uAC74\uB108\uB6F4\uB2E4.");
   cli2.io.out("");
   if (!flags.bool("no-browser")) cli2.openUrl(loginUrl);
   const projectId = await need(cli2, flags, "project", "\uD504\uB85C\uC81D\uD2B8 uuid: ");

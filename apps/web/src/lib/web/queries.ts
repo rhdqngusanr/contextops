@@ -660,3 +660,26 @@ export type DeviceSyncRow = {
 export function fetchSyncStatus(projectId: string): Promise<{ devices: DeviceSyncRow[] }> {
   return apiJson(`/projects/${projectId}/sync-status`)
 }
+
+/**
+ * 발급된 기기 하나 (`POST /projects/{id}/tokens` · SPEC §5 · FINDINGS 36).
+ *
+ * 🔴 **`token` 은 이 응답 한 번뿐이다** — DB 에는 sha256 만 들어간다(라우트 머리 주석).
+ *   그래서 화면은 이 값을 `localStorage` 에도 상태 저장소에도 남기지 않고, 사람이
+ *   복사할 때까지만 들고 있다가 [닫기] 에서 버린다.
+ * ⚠ 이 값을 로그·에러 메시지에 넣지 마라 (P1 · SPEC §11).
+ */
+export type IssuedDevice = {
+  token: string
+  device_id: string
+  expires_at: string
+}
+
+/**
+ * 기기 토큰을 발급한다. `setup` 이 「브라우저에서 발급받아 붙여 넣어라」고 가리키던
+ * **그 문**이다 — 이 함수가 생기기 전에는 `POST /projects/{id}/tokens` 를 손으로
+ * 부르는 것 말고 길이 없었다 (FINDINGS 36).
+ */
+export function createDeviceToken(projectId: string, deviceName: string): Promise<IssuedDevice> {
+  return post(`/projects/${projectId}/tokens`, { device_name: deviceName })
+}

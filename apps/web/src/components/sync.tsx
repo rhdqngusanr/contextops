@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 
-import { SYNC_STATUSES, type SyncStatus } from '@contextops/schema'
+import { SYNC_STATUSES, setupCommandLine, type SyncStatus } from '@contextops/schema'
 
-import type { DeviceSyncRow, VersionRow } from '../lib/web/queries'
-import { sinceText } from '../lib/web/time'
+import type { DeviceSyncRow, IssuedDevice, VersionRow } from '../lib/web/queries'
+import { dateText, sinceText } from '../lib/web/time'
 import { SYNC_CHIP, SYNC_MEANING, SyncChip } from './chips'
+import { ErrorState, ReadOnlyNotice } from './states'
 
 // =====================================================================
 //  화면 9 — Sync 가 그리는 조각들 (SPEC §9 화면 9 · §6 · DESIGN_BRIEF §4 「화면 9」)
@@ -218,5 +219,206 @@ export function SyncLegend() {
     <p className="meta">
       {SYNC_STATUSES.map((s) => `${SYNC_CHIP[s].label} = ${SYNC_MEANING[s]}`).join(' · ')}
     </p>
+  )
+}
+
+// ---------------------------------------------------------------------
+//  기기 추가 — `setup` 이 가리키던 **없던 화면** (FINDINGS 36 · SPEC §8.3 · §9 화면 9)
+//
+//  ★ 무엇이 고장이었나 — `contextops setup` 은 「브라우저에서 기기 토큰을 발급받아
+//    붙여 넣어라」고 안내하는데 **웹에 그 화면이 없었다.** 토큰을 만드는 길은
+//    `POST /projects/{id}/tokens` 를 손으로 부르는 것뿐이었고, 관통조차 `node -e` 로
+//    그 라우트를 직접 쳤다. 안내가 가리키는 곳에 아무것도 없는 것이 이 항목이다.
+//
+//  🔴 **한 줄을 통째로 복사하게 한다.** uuid 둘과 토큰을 사람이 손으로 옮기면 반드시
+//     하나를 흘리고, 그 증상은 며칠 뒤 `sync` 의 401 로 나온다. 그리고 그렇게 옮기면
+//     `device_id` 가 늘 빠져서(그 값은 발급 응답에만 있다) 「이 기기만 끊기」가 영원히
+//     안 된다 — 한 줄로 주면 그 값이 저절로 따라간다.
+//  🔴 **줄의 정본은 `packages/schema` 의 `setupCommandLine` 하나다** — 만드는 쪽(여기)과
+//     받는 쪽(CLI)이 다른 패키지라, 여기서 플래그 이름을 손으로 적으면 갈린다.
+//
+//  ⚠ 이 화면의 **accent 는 이제 [기기 추가] 하나**다 (DESIGN_BRIEF §3 「화면당 주요
+//    액션 하나」). 다른 accent 를 여기 더하지 마라.
+//  ⚠ 훅이 없다 — 상태는 화면(`sync/page.tsx`)이 들고, 여기는 **네 모양을 그리기만**
+//    한다. 그래야 시험이 네 모양을 다 그려서 읽는다 (이 파일 머리의 ★ 와 같은 이유).
+// ---------------------------------------------------------------------
+
+/**
+ * 이 칸의 **문구 정본**. 화면이 문장을 손으로 적지 않는다 — 두 곳에 적히면 한쪽만
+ * 고쳐지고, 그때 화면과 시험이 서로 다른 말을 검사한다.
+ */
+export const ADD_DEVICE = {
+  section: '기기 추가',
+  open: '기기 추가',
+  cancel: '닫기',
+  /** 버튼 옆 한 줄 — **무엇을 발급하는지**를 누르기 전에 말한다. */
+  why: '이 프로젝트에 붙일 기기 토큰을 발급합니다.',
+  nameLabel: '기기 이름',
+  namePlaceholder: 'mac-노트북',
+  nameHint: '나중에 Sync 표에서 이 이름으로 보입니다.',
+  submit: '토큰 발급',
+  busy: '발급하는 중입니다…',
+  issuedTitle: '발급된 기기 토큰',
+  tokenLabel: '기기 토큰',
+  //  🔴 이 문장이 이 칸의 전부다 — 「한 번뿐」을 말 안 하면 사람은 나중에 다시 찾으러 온다.
+  once: '이 토큰은 지금 한 번만 보입니다. 서버에는 해시만 남아서 다시 볼 수 없습니다 — 잃어버리면 새로 발급받으세요.',
+  commandLead: '그 저장소에서 이 한 줄을 그대로 붙여넣으세요.',
+  copyToken: '토큰 복사',
+  copyCommand: '명령 한 줄 복사',
+  copied: '복사했습니다',
+  expires: (day: string) => `만료 ${day}`,
+  done: '닫기',
+  /** 닫은 뒤 무엇이 달라지나 — 새 기기는 아직 보고가 없어서 `unknown` 으로 선다. */
+  after: '닫으면 위 표에 그 기기가 「보고 없음」으로 섭니다.',
+} as const
+
+/** 복사 버튼이 방금 무엇을 복사했나 — `null` 이면 아무것도 안 눌렀다. */
+export type CopiedWhat = 'token' | 'command' | null
+
+/**
+ * 이 칸의 **네 모양**. 화면이 이 넷 중 하나를 들고 있고, 여기는 그리기만 한다.
+ * ★ 모양을 더하려면 여기 한 줄 + 아래 `AddDevice` 의 갈래 + 시험 —
+ *   유니온이라 갈래를 빠뜨리면 타입이 먼저 막는다.
+ */
+export type AddDeviceState =
+  | { kind: 'closed' }
+  /** 게스트가 눌렀다 — 문의 판정은 `writeDoor()` 표에서 온다 (FINDINGS 135). */
+  | { kind: 'denied'; reason: string }
+  | { kind: 'form'; name: string; busy: boolean; error: unknown }
+  | { kind: 'issued'; issued: IssuedDevice; copied: CopiedWhat }
+
+export type AddDeviceHandlers = {
+  open: () => void
+  close: () => void
+  name: (value: string) => void
+  submit: () => void
+  copy: (what: Exclude<CopiedWhat, null>, text: string) => void
+}
+
+export function AddDevice({
+  state,
+  apiOrigin,
+  projectId,
+  on,
+}: {
+  state: AddDeviceState
+  /** `window.location.origin` — CLI 가 서버 주소로 받는 그 값이다 (`ApiOrigin`). */
+  apiOrigin: string
+  projectId: string
+  on: AddDeviceHandlers
+}) {
+  const closed = state.kind === 'closed'
+  return (
+    <section className="col" aria-label={ADD_DEVICE.section}>
+      <div className="row wrap">
+        <button
+          type="button"
+          className={closed ? 'btn btn-primary' : 'btn'}
+          aria-expanded={!closed}
+          onClick={closed ? on.open : on.close}
+        >
+          {closed ? ADD_DEVICE.open : ADD_DEVICE.cancel}
+        </button>
+        <span className="meta">{ADD_DEVICE.why}</span>
+      </div>
+
+      {state.kind === 'denied' ? <ReadOnlyNotice reason={state.reason} onClose={on.close} /> : null}
+
+      {state.kind === 'form' ? (
+        <div className="card pad col">
+          <div className="field">
+            <label className="label" htmlFor="add-device-name">{ADD_DEVICE.nameLabel}</label>
+            <input
+              id="add-device-name"
+              className="input"
+              value={state.name}
+              maxLength={100}
+              placeholder={ADD_DEVICE.namePlaceholder}
+              onChange={(e) => on.name(e.target.value)}
+            />
+            <span className="meta">{ADD_DEVICE.nameHint}</span>
+          </div>
+          {state.error === null ? null : <ErrorState error={state.error} />}
+          <div className="row wrap">
+            {/*  ⚠ 여기는 accent 가 아니다 — 이 화면의 하나는 위의 [기기 추가] 다. */}
+            <button
+              type="button"
+              className="btn"
+              disabled={state.busy || state.name.trim().length === 0}
+              onClick={on.submit}
+            >
+              {ADD_DEVICE.submit}
+            </button>
+            {state.busy ? <span className="meta">{ADD_DEVICE.busy}</span> : null}
+          </div>
+        </div>
+      ) : null}
+
+      {state.kind === 'issued'
+        ? <IssuedDeviceCard issued={state.issued} apiOrigin={apiOrigin} projectId={projectId} copied={state.copied} on={on} />
+        : null}
+    </section>
+  )
+}
+
+/**
+ * 발급 직후 **한 번만 보이는 값**과 그 아래 통째로 복사하는 한 줄.
+ * ⚠ 값을 `title` 이나 링크에 넣지 마라 — 토큰이 브라우저 기록에 남는다.
+ */
+export function IssuedDeviceCard({
+  issued,
+  apiOrigin,
+  projectId,
+  copied,
+  on,
+}: {
+  issued: IssuedDevice
+  apiOrigin: string
+  projectId: string
+  copied: CopiedWhat
+  on: Pick<AddDeviceHandlers, 'close' | 'copy'>
+}) {
+  //  🔴 플래그 이름을 여기서 짓지 않는다 — 정본은 `packages/schema` 하나다.
+  const command = setupCommandLine({
+    api_origin: apiOrigin,
+    project_id: projectId,
+    token: issued.token,
+    device_id: issued.device_id,
+  })
+  return (
+    <div className="card pad col" aria-label={ADD_DEVICE.issuedTitle}>
+      {/*  아이콘 + 글자 — 상태를 색만으로 말하지 않는다 (DESIGN_BRIEF §2-4). */}
+      <p className="row items-start">
+        <span aria-hidden="true" className="ink-warn">⚠</span>
+        <span className="ink">{ADD_DEVICE.once}</span>
+      </p>
+
+      <div className="field">
+        <span className="label">{ADD_DEVICE.tokenLabel}</span>
+        <div className="row wrap">
+          <input className="input mono grow" readOnly aria-label={ADD_DEVICE.tokenLabel} value={issued.token} />
+          <button type="button" className="btn btn-sm" onClick={() => on.copy('token', issued.token)}>
+            {copied === 'token' ? ADD_DEVICE.copied : ADD_DEVICE.copyToken}
+          </button>
+        </div>
+      </div>
+
+      <div className="col-tight">
+        <span className="label">{ADD_DEVICE.commandLead}</span>
+        {/*  ⚠ 긴 한 줄이다 — 본문을 가로로 밀지 않게 자기 칸 안에서만 넘친다 (⑦3층). */}
+        <div className="scroll-x"><code className="mono">{command}</code></div>
+        <div className="row wrap">
+          <button type="button" className="btn btn-sm" onClick={() => on.copy('command', command)}>
+            {copied === 'command' ? ADD_DEVICE.copied : ADD_DEVICE.copyCommand}
+          </button>
+          <span className="meta mono">{ADD_DEVICE.expires(dateText(issued.expires_at))}</span>
+        </div>
+      </div>
+
+      <div className="row wrap">
+        <button type="button" className="btn" onClick={on.close}>{ADD_DEVICE.done}</button>
+        <span className="meta">{ADD_DEVICE.after}</span>
+      </div>
+    </div>
   )
 }

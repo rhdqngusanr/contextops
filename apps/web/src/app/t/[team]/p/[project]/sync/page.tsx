@@ -1,13 +1,17 @@
 'use client'
 
-import { use } from 'react'
+import { use, useEffect, useState } from 'react'
 
 import {
-  REALTIME_POLL_MS, fetchSyncStatus, fetchVersions, type ProjectRef,
+  REALTIME_POLL_MS, createDeviceToken, fetchSyncStatus, fetchVersions, type ProjectRef,
 } from '../../../../../../lib/web/queries'
+import { writeDoor } from '../../../../../../lib/web/actor'
 import { useAsync, usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import { DeviceTable, SyncLegend, SyncSummary, officialOf } from '../../../../../../components/sync'
+import {
+  AddDevice, DeviceTable, SyncLegend, SyncSummary, officialOf,
+  type AddDeviceState, type CopiedWhat,
+} from '../../../../../../components/sync'
 import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
@@ -24,8 +28,10 @@ import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/
 //  ⚠ **질의창(§7.3)은 여기 없다.** SPEC §14 의 절삭 순서 1번이고, 그것을 부르는 문
 //    (`POST /projects/{id}/ask`)이 아직 없다 — 누르면 아무 일도 안 하는 입력칸을 두지
 //    않는다. 표가 먼저다.
-//  ⚠ accent 가 이 화면에 하나도 없다 (DESIGN_BRIEF §3 「화면당 주요 액션 하나」) —
-//    이 화면에서 사람이 할 일은 **읽는 것**이고, 고치는 곳은 그 기기의 터미널이다.
+//  🔴 **이 화면의 accent 는 [기기 추가] 하나다** (DESIGN_BRIEF §3 「화면당 주요 액션
+//     하나」 · FINDINGS 36). 106바퀴 전에는 accent 가 하나도 없었다 — 「읽는 화면」이라서
+//     맞다고 적어 뒀는데, 그 사이 `contextops setup` 이 가리키는 **토큰 발급 화면이
+//     없다**는 것이 대장에 있었다. 그 문이 들어올 자리가 여기다. 다른 accent 를 더하지 마라.
 // =====================================================================
 
 export default function SyncPage({ params }: { params: Promise<{ team: string; project: string }> }) {
@@ -48,6 +54,36 @@ function SyncView({ base, project }: { base: string; project: ProjectRef }) {
   const versions = useAsync(() => fetchVersions(project.id), [project.id])
   const official = versions.result.state === 'ready' ? officialOf(versions.result.data.versions) : undefined
 
+  // ── 기기 추가 (FINDINGS 36) ────────────────────────────────────
+  //  🔴 상태를 **여기서만** 든다 — 그리는 것은 `AddDevice` 다. 그래야 시험이 네 모양을
+  //     브라우저 없이 다 그려서 읽는다 (`components/sync.tsx` 머리의 ★).
+  //  🔴 발급된 토큰은 이 상태 말고 어디에도 안 남는다 — `localStorage` 도, 주소도,
+  //     로그도 아니다 (P1 · SPEC §11). [닫기] 를 누르면 그대로 사라진다.
+  const [add, setAdd] = useState<AddDeviceState>({ kind: 'closed' })
+  //  ⚠ `window` 는 프리렌더에 없다. 칸이 열리기 전에 효과가 먼저 돌아서 사람이 보는
+  //    한 줄에는 늘 값이 들어 있다.
+  const [apiOrigin, setApiOrigin] = useState('')
+  useEffect(() => setApiOrigin(window.location.origin), [])
+
+  async function issue(name: string): Promise<void> {
+    setAdd({ kind: 'form', name, busy: true, error: null })
+    try {
+      const issued = await createDeviceToken(project.id, name.trim())
+      setAdd({ kind: 'issued', issued, copied: null })
+      //  새 기기는 아직 보고가 없다 — 표에 `unknown` 한 줄로 선다.
+      sync.reload()
+    } catch (error) {
+      setAdd({ kind: 'form', name, busy: false, error })
+    }
+  }
+
+  function copy(what: Exclude<CopiedWhat, null>, text: string): void {
+    //  ⚠ 실패해도 아무 말도 하지 않는다 — 값은 화면에 그대로 있고, 사람은 긁어서 복사한다.
+    //    「복사 실패」 배너를 띄우면 브라우저 권한 이야기가 이 칸의 주제가 된다.
+    void navigator.clipboard?.writeText(text).catch(() => undefined)
+    setAdd((prev) => (prev.kind === 'issued' ? { ...prev, copied: what } : prev))
+  }
+
   return (
     <>
       <header className="col-tight">
@@ -59,6 +95,24 @@ function SyncView({ base, project }: { base: string; project: ProjectRef }) {
           이 화면은 {REALTIME_POLL_MS / 1000}초마다 다시 읽습니다.
         </p>
       </header>
+
+      {/*  🔴 게스트는 누른 뒤가 아니라 **누른 자리에서** 이유를 듣는다 (FINDINGS 135) —
+           판정은 `writeDoor()` 표에서 오고, 화면이 `session.guest` 를 다시 읽지 않는다. */}
+      <AddDevice
+        state={add}
+        apiOrigin={apiOrigin}
+        projectId={project.id}
+        on={{
+          open: () => {
+            const door = writeDoor()
+            setAdd(door.open ? { kind: 'form', name: '', busy: false, error: null } : { kind: 'denied', reason: door.reason })
+          },
+          close: () => setAdd({ kind: 'closed' }),
+          name: (name) => setAdd((prev) => (prev.kind === 'form' ? { ...prev, name } : prev)),
+          submit: () => { if (add.kind === 'form' && !add.busy) void issue(add.name) },
+          copy,
+        }}
+      />
 
       {sync.result.state === 'loading' ? <Skeleton rows={5} /> : null}
       {sync.result.state === 'error' ? <ErrorState error={sync.result.error} retry={sync.reload} /> : null}

@@ -56,6 +56,49 @@ export const DeviceCredential = z.object({
 }).strict()
 export type DeviceCredential = z.infer<typeof DeviceCredential>
 
+// ---------------------------------------------------------------------
+//  `contextops setup` **한 줄의 정본** (SPEC §8.3 · FINDINGS 36)
+//
+//  ★ 왜 스키마에 있나 — 이 한 줄을 **만드는 쪽**(웹 화면 9 「기기 추가」)과 **받는 쪽**
+//    (플러그인 CLI)이 서로 다른 패키지다. 각자 적으면 플래그 이름이 조용히 갈리고,
+//    그때의 증상은 **화면이 복사해 준 줄을 CLI 가 모른다**는 것이다 — 사람은 그걸
+//    자기 오타로 안다. 둘 다 여기 하나를 읽으면 갈릴 자리가 없다.
+//
+//  🔴 **새 플래그를 이 줄에 더하려면**: ① 아래 `SETUP_COMMAND_FLAGS` 에 이름
+//     ② `setupCommandLine` 의 값 표에 한 줄(`Record` 라 빠뜨리면 타입이 먼저 막는다)
+//     ③ `plugin/contextops/src/cli/setup.ts` 의 `SETUP_FLAGS` 에 그 이름이 있어야 한다
+//     — `plugin/contextops/test/setup-command.test.ts` 가 ③ 을 센다.
+//
+//  ⚠ 토큰이 이 문자열 안에 들어간다. **로그에 찍지 마라** (P1 · SPEC §11) —
+//    화면은 사람이 복사할 때까지만 들고 있고, 어디에도 저장하지 않는다.
+// ---------------------------------------------------------------------
+
+/** 이 줄이 넘기는 플래그 — **차례가 곧 화면에 그려지는 차례**다. */
+export const SETUP_COMMAND_FLAGS = ['api-origin', 'project', 'token', 'device-id'] as const
+export type SetupCommandFlag = (typeof SETUP_COMMAND_FLAGS)[number]
+
+/** 명령 이름 — `COMMANDS` 표의 `usage` 와 같은 말이다 (`contextops setup [옵션]`). */
+export const SETUP_COMMAND_NAME = 'contextops setup'
+
+export type SetupCommandArgs = {
+  api_origin: string
+  project_id: string
+  token: string
+  /** 발급 응답의 `device_id`. 있어야 나중에 **이 기기만** 끊을 수 있다. */
+  device_id: string
+}
+
+/** `contextops setup --api-origin … --project … --token … --device-id …` 한 줄. */
+export function setupCommandLine(args: SetupCommandArgs): string {
+  const values: Record<SetupCommandFlag, string> = {
+    'api-origin': args.api_origin,
+    'project': args.project_id,
+    'token': args.token,
+    'device-id': args.device_id,
+  }
+  return [SETUP_COMMAND_NAME, ...SETUP_COMMAND_FLAGS.map((f) => `--${f} ${values[f]}`)].join(' ')
+}
+
 /**
  * `~/.contextops/credentials.json` (chmod 600) — `{origin: {project_id: {…}}}`.
  *

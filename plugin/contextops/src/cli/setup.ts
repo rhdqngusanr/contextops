@@ -19,10 +19,12 @@ import { ensureLocalGitignore } from './sync'
 //
 //  🔴 **토큰을 project.json 에 적지 마라.** 그 파일은 팀에 퍼진다.
 //
-//  ⚠ 지금은 토큰을 **사람이 웹에서 복사해 온다.** 콜백 서버를 여는 쪽이 편하지만,
-//    토큰 발급 화면이 아직 없어서 지금 그걸 만들면 **아무도 안 부르는 문**이 된다
-//    (docs/feedback/FINDINGS.md). 화면이 생기면 그 화면이 이 명령 한 줄을 통째로
-//    복사하게 만드는 것이 다음 걸음이다 — 여기 흐름은 그대로 둔다.
+//  ⚠ 토큰은 **사람이 웹에서 복사해 온다.** 106바퀴에 웹 화면 9(Sync)에 [기기 추가] 가
+//    생겼고, 그 화면이 **이 명령 한 줄을 통째로** 준다 (FINDINGS 36) — 줄의 정본은
+//    `packages/schema` 의 `setupCommandLine` 하나이고 `test/setup-command.test.ts` 가
+//    「그 줄의 플래그를 이 명령이 전부 받는가」를 센다.
+//  ⚠ 콜백 서버는 **아직 만들지 마라.** 화면이 주는 한 줄로 사람이 하는 일은 붙여넣기
+//    하나뿐이고, 콜백을 더하면 CLI 가 브라우저와 포트를 다루기 시작한다.
 // =====================================================================
 
 export const SETUP_FLAGS: FlagSpecs = {
@@ -66,7 +68,8 @@ export async function runSetup(cli: Cli, flags: Flags): Promise<number> {
   cli.io.out('')
   cli.io.out('① 브라우저에서 로그인한다:')
   cli.io.out(`     ${loginUrl}`)
-  cli.io.out('② 프로젝트를 고르고 기기 토큰을 발급받아 아래에 붙여 넣는다 (ctx_ 로 시작한다).')
+  cli.io.out('② 프로젝트의 Sync 화면에서 [기기 추가] 를 눌러 토큰을 발급받는다.')
+  cli.io.out('   그 화면이 주는 명령 한 줄을 그대로 붙여넣으면 이 물음은 건너뛴다.')
   cli.io.out('')
   if (!flags.bool('no-browser')) cli.openUrl(loginUrl)
 

@@ -278,9 +278,11 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
     message: '공식 Pack에 마일스톤이 없습니다. roadmap 타입 항목을 만들면 여기 행이 생깁니다.',
     next: { label: 'Context로 이동', to: 'context', tone: 'plain' },
   },
+  //  ⚠ 「웹에 그 문이 없다」였다 (FINDINGS 36). **이제 있다** — 같은 화면 머리의
+  //     [기기 추가] 가 토큰을 발급하고 `contextops setup` 한 줄을 통째로 준다.
   'sync.devices': {
-    message: '아직 등록된 기기가 없습니다. Claude Code에서 /contextops:init 을 실행하면 여기에 줄이 생깁니다.',
-    noNext: '기기를 붙이는 것은 CLI 다 — 웹에 그 문이 없다.',
+    message: '아직 등록된 기기가 없습니다. 위 [기기 추가] 로 토큰을 발급하고, 그 저장소에서 붙여넣은 한 줄을 실행하세요.',
+    noNext: '다음 행동이 같은 화면 머리의 [기기 추가] 다 — 같은 걸음을 두 번 그리지 않는다.',
   },
 }
 
