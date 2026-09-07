@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import {
   PROPOSAL_ACTIONS, PROPOSAL_DECISIONS, PROPOSAL_STATUSES, ROLE_RANK, TEAM_ROLES,
@@ -11,12 +12,15 @@ import {
 
 import {
   DECIDED_TEXT, DIFF_MISSING_TEXT, DiffView, ProposalDecisions, ProposalHead, ProposalItemCard,
-  ProposalStatusFilter, ProposalTable, availableActions, diffSidesOf, proposalEmptyMessage,
+  PROPOSAL_DATE_COLUMN, ProposalStatusFilter, ProposalTable, availableActions, diffSidesOf,
+  proposalEmptyMessage,
 } from '../src/components/proposals'
 import { PROPOSAL_STATUS_CHIP } from '../src/components/chips'
 import { ScreenEmpty } from '../src/components/states'
 import { EMPTY_PLACES } from '../src/lib/web/screens'
 import { diffCounts, lineDiff } from '../src/lib/web/diff'
+import { dateText } from '../src/lib/web/time'
+import { proposals } from '../src/db/schema'
 import type { ProposalDetail, ProposalRow, VersionRow } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -491,12 +495,36 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
     expect(markup).not.toContain('알 수 없')
   })
 
-  it('항목 수와 올라온 날을 센다', () => {
+  it('항목 수와 날짜를 센다', () => {
     const markup = html(createElement(ProposalTable, {
       proposals: [row({ items: [item(), item()] })], hrefOf: href, empty: null,
     }))
     expect(markup).toContain('>2<')
     expect(markup).toContain('2026-09-05')
+  })
+
+  it('🔴 날짜 칸의 **머리와 값이 같은 것을 말한다** — 초안에 「올라온 날」이 붙지 않는다 (FINDINGS 165)', () => {
+    //  ★ 165 는 「머리는 「올라온 날」인데 값은 `created_at`」이었다. 넷이 전부 제출된
+    //    것이던 동안에는 안 보이다가, 163 이 `draft` 행을 세우자 **아직 안 올라온
+    //    제안에 「올라온 날 2026-09-01」** 이 붙었다.
+    const draft = row({ status: 'draft', created_at: '2026-09-01T02:00:00.000Z' })
+    const markup = html(createElement(ProposalTable, { proposals: [draft], hrefOf: href, empty: null }))
+
+    //  ① 머리는 표가 정한 그 낱말이고, 값은 그 표가 가리키는 칸이다.
+    expect(markup).toContain(PROPOSAL_DATE_COLUMN.head)
+    expect(markup).toContain(dateText(PROPOSAL_DATE_COLUMN.of(draft)))
+    expect(PROPOSAL_DATE_COLUMN.of(draft)).toBe(draft.created_at)
+
+    //  ② 그 낱말이 「올렸다/제출했다」를 말하면 안 된다 — `draft` 는 안 올라온 것이다.
+    expect(PROPOSAL_DATE_COLUMN.head).not.toMatch(/올라온|올린|제출/)
+    expect(markup).not.toContain('올라온 날')
+
+    //  ③ 🔴 **게이트의 본체** — 제출 시각을 말하려면 담을 칸이 있어야 한다. 지금
+    //     `proposals` 에는 없다. 누가 그 칸을 만드는 날 이 줄이 빨개져서, 머리 낱말을
+    //     다시 고를 자리로 데려온다 (「머리만 바꾸면 같은 거짓말이 다시 선다」).
+    const columns = Object.keys(getTableColumns(proposals))
+    expect(columns).toContain('createdAt')
+    expect(columns).not.toContain('submittedAt')
   })
 
   it('빈 목록은 **넘겨받은 빈 상태를 그대로** 그린다 — 표가 문구를 짓지 않는다 (FINDINGS 133)', () => {

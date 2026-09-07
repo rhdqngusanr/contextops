@@ -92,6 +92,23 @@ export function proposalEmptyMessage(status: ProposalStatus | null): string | un
   return `「${PROPOSAL_STATUS_CHIP[status].label}」 상태의 제안이 없습니다. [전체] 를 누르면 모두 봅니다.`
 }
 
+/**
+ * 🔴 **날짜 칸의 머리와 값은 한 자리에서 나온다** (FINDINGS 165).
+ *
+ * 111바퀴까지 머리는 「올라온 날」(= 제출한 날)인데 그리는 값은 `created_at`(만든 날)이었다.
+ * 넷이 전부 제출된 것이던 동안에는 둘이 사실상 같았는데, 163 이 `draft` 행을 세우자
+ * **아직 안 올라온 제안에 「올라온 날 2026-09-01」** 이 붙었다. 화면이 말하는 것과 값이 갈린다.
+ *
+ * ⚠ **제출 시각을 그리고 싶으면 머리 글자만 바꾸지 마라** — `proposals` 표에 그 칸이 없다
+ *   (`db/schema.ts` · `decided_at` 은 「이 상태로 옮긴 시각」이라 `draft` 에선 늘 `null` 이다).
+ *   표 → `packages/schema` → 라우트 → 여기 순으로 **같은 바퀴에** 칸을 만들어야 한다.
+ * ★ 그래서 머리와 값을 이 한 줄에 묶었다 — 한쪽만 고치면 시험이 먼저 빨개진다.
+ */
+export const PROPOSAL_DATE_COLUMN = {
+  head: '만든 날',
+  of: (proposal: ProposalRow) => proposal.created_at,
+} as const
+
 export function ProposalTable({
   proposals,
   hrefOf,
@@ -113,7 +130,7 @@ export function ProposalTable({
             <th>작성자</th>
             <th>관련 마일스톤</th>
             <th>항목</th>
-            <th>올라온 날</th>
+            <th>{PROPOSAL_DATE_COLUMN.head}</th>
             <th />
           </tr>
         </thead>
@@ -139,7 +156,7 @@ export function ProposalTable({
               </td>
               {/* 항목 수는 「무엇이 몇 개 바뀌나」다 — 모노로 그려야 표에서 세로로 읽힌다. */}
               <td className="mono">{p.items.length}</td>
-              <td className="mono">{dateText(p.created_at)}</td>
+              <td className="mono">{dateText(PROPOSAL_DATE_COLUMN.of(p))}</td>
               <td><a className="btn btn-sm" href={hrefOf(p)}>열기</a></td>
             </tr>
           ))}

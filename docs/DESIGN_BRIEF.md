@@ -274,7 +274,10 @@
 - 버전 히스토리: 세로 타임라인, 각 항목에 발행자·시각·변경 요약·[Pack 보기] [이 버전으로 롤백 발행].
 
 ### 화면 6 — Proposals `…/proposals`, `…/proposals/[id]`
-- 함 목록 테이블: 상태 chip(draft/submitted/approved/rejected/published — `PROPOSAL_STATUSES` 5종. 데모 씨앗이 다섯을 전부 한 번씩 세운다 · FINDINGS 163) | 제목 | 작성자 | 관련 마일스톤 칩(데모 씨앗이 심은 마일스톤 3종을 전부 한 번씩 가리키고, 안 가리키는 행은 「—」다 · FINDINGS 164) | 항목 수 | 제출 시각.
+- 함 목록 테이블: 상태 chip(draft/submitted/approved/rejected/published — `PROPOSAL_STATUSES` 5종. 데모 씨앗이 다섯을 전부 한 번씩 세운다 · FINDINGS 163) | 제목 | 작성자 | 관련 마일스톤 칩(데모 씨앗이 심은 마일스톤 3종을 전부 한 번씩 가리키고, 안 가리키는 행은 「—」다 · FINDINGS 164) | 항목 수 | **만든 날**(`created_at` · FINDINGS 165).
+  ⚠ **「올라온 날」이 아니다** — `proposals` 표에 제출 시각을 담는 칸이 없어서 화면이 말할 수 있는 것은 만든 날뿐이고,
+  `draft` 행(163)에 「올라온 날」을 적으면 아직 안 올라온 제안에 올라온 날짜가 붙는다. 머리와 값의 정본은 `PROPOSAL_DATE_COLUMN`
+  한 줄이고, 제출 시각을 그리려면 표 → `packages/schema` → 라우트 → 그 줄을 **같은 바퀴에** 고쳐야 한다.
 - 표 위에 **상태 거르개 칩** `[전체]` + 상태 5종 (`ProposalStatusFilter` · FINDINGS 112). 낱말과 값은 `PROPOSAL_STATUS_CHIP`·`PROPOSAL_STATUSES` 표에서 오고, 고른 것은 `aria-pressed` 로도 말한다(색만으로 구분하지 않는다).
   ⚠ **개수를 적지 않는다** — 거르는 것은 서버(`?status`)라 화면 손에는 거른 목록뿐이고, 「거절됨 3」은 그 상태의 수가 아니라 지금 보이는 수다. 그래서 화면 4 의 종류 칩과 달리 **한 장도 없는 상태도 그린다**(그 수를 모른다). 눌러서 비면 표가 「'거절됨' 상태의 제안이 없습니다」라고 말한다.
   ⚠ **author 거르개는 없다** — 고를 이름의 목록을 내는 문이 없다.
