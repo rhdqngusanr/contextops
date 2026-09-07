@@ -29,7 +29,7 @@ import { DEMO_GUEST_SUBJECT, DEMO_TENANT } from './tenant'
 //      · `test/demo-guest.test.ts` · `scripts/dump-demo.tsx`
 //
 //  ★ 무엇을 만드나 — paylab 씨앗(`seed.ts`) 위에 **데모에만 있는 것** 넷을 얹는다:
-//    ① 팀원 5명과 그들의 소속 ② 발행 두 번(v1.0.0 → v1.1.0) ③ 기기 12대와 마지막 보고
+//    ① 팀원 5명과 그들의 소속 ② 발행 두 번(v1.0.0 → v1.1.0) ③ 기기 14대와 마지막 보고(`SYNC_STATUSES` 5종을 전부 한 번씩)
 //    ④ 진행 보고 6건. 항목·문서는 한 줄도 여기서 안 만든다 — 정본은 `seed.ts` 하나다.
 //
 //  🔴 **읽는 값은 `fixtures/seed/demo.json` 이고 여기서 Zod 로 판다.** 픽스처도 외부

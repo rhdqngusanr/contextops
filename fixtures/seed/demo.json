@@ -19,7 +19,9 @@
   ],
 
   "_devices": [
-    "기기 12대 — applied 9 · outdated 2 · manual 1 (SPEC §10.3 · DESIGN_BRIEF §4 화면 9 의 예시 12행).",
+    "기기 14대 — applied 9 · outdated 2 · manual 1 · modified 1 · unknown 1 (SPEC §10.3 · DESIGN_BRIEF §4 화면 9 의 예시 14행).",
+    "🔴 **SYNC_STATUSES 5종을 전부 한 번씩은 보여 준다** — 심사위원이 첫 화면에서 보는 것이 이 표다.",
+    "적지 않으면 modified(손으로 고쳤다)·unknown(보고 없다)은 코드에만 살고 데모에는 안 선다 (FINDINGS 162).",
     "version 은 semver 를 적지 않고 'official'|'previous' 로 가리킨다 — 실제 semver 와 manifest_hash 는",
     "심는 쪽이 **그때 발행한 버전에서** 가져온다. 여기 숫자를 적으면 발행이 늘 때 조용히 거짓이 된다.",
     "report 가 null 이면 **한 번도 보고하지 않은 기기**다 (화면이 'unknown' 으로 그린다)."
@@ -36,7 +38,9 @@
     { "member": "demo-member-haeun", "name": "mac-haeun", "report": { "status": "applied", "version": "official", "hours_ago": 4 } },
     { "member": "demo-member-doyun", "name": "win-meeting-room", "report": { "status": "outdated", "version": "previous", "hours_ago": 96 } },
     { "member": "demo-member-haeun", "name": "mac-haeun-old", "report": { "status": "outdated", "version": "previous", "hours_ago": 120 } },
-    { "member": "demo-member-junho", "name": "win-junho-vm", "report": { "status": "manual", "version": "official", "hours_ago": 30 } }
+    { "member": "demo-member-junho", "name": "win-junho-vm", "report": { "status": "manual", "version": "official", "hours_ago": 30 } },
+    { "member": "demo-member-seoyeon", "name": "linux-seoyeon-box", "report": { "status": "modified", "version": "official", "hours_ago": 7 } },
+    { "member": "demo-member-minseo", "name": "mac-minseo-new", "report": null }
   ],
 
   "_progress": [

@@ -1,7 +1,7 @@
 import type { PGlite } from '@electric-sql/pglite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { AI_JOB_STATUSES } from '@contextops/schema'
+import { AI_JOB_STATUSES, SYNC_STATUSES } from '@contextops/schema'
 
 import { ACTOR_RULES } from '../src/lib/api/auth'
 import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_TENANT, demoBannerText } from '../src/lib/demo/tenant'
@@ -78,10 +78,10 @@ describe('데모 테넌트를 심으면', () => {
     seeded = await seedDemo(NOW)
   })
 
-  it('픽스처가 말한 만큼 들어간다 — 기기 12 · 보고 12 · 팀원 5', () => {
+  it('픽스처가 말한 만큼 들어간다 — 기기 14 · 보고 13 · 팀원 5', () => {
     const file = readDemoSeedFile()
     expect(seeded.deviceCount).toBe(file.devices.length)
-    expect(seeded.deviceCount).toBe(12)
+    expect(seeded.deviceCount).toBe(14)
     expect(seeded.memberCount).toBe(file.members.length)
     //  ⚠ 「보고한 기기 수」는 픽스처가 정한다 — 여기에 숫자를 또 적으면 갈라진다.
     expect(seeded.reportCount).toBe(file.devices.filter((d) => d.report !== null).length)
@@ -101,7 +101,7 @@ describe('데모 테넌트를 심으면', () => {
     expect(ACTOR_RULES.guest).toEqual({ maxRole: 'member', writes: false })
   })
 
-  it('화면 9 가 그릴 것이 있다 — applied 9 · outdated 2 · manual 1', async () => {
+  it('화면 9 가 그릴 것이 있다 — applied 9 · outdated 2 · manual 1 · modified 1 · unknown 1', async () => {
     const token = await guestToken()
     const data = await dataOf(await syncStatus(
       req('GET', `/api/v1/projects/${seeded.projectId}/sync-status`, { auth: token }),
@@ -109,10 +109,29 @@ describe('데모 테넌트를 심으면', () => {
     ))
     const rows = data.devices as { status: string; version: string | null; reported_at: string | null }[]
     const count = (status: string): number => rows.filter((r) => r.status === status).length
-    expect(rows).toHaveLength(12)
+    expect(rows).toHaveLength(14)
     expect(count('applied')).toBe(9)
     expect(count('outdated')).toBe(2)
     expect(count('manual')).toBe(1)
+    expect(count('modified')).toBe(1)
+    expect(count('unknown')).toBe(1)
+    //  🔴 **5종이 전부 화면에 선다** (FINDINGS 162 · loop/PROMPT.md ④2-B).
+    //  ★ 왜 위 다섯 줄로 안 끝내나 — 저 다섯은 **오늘의 수**라 `SYNC_STATUSES` 에 여섯째가
+    //    붙어도 그대로 초록이다. 종류를 표에서 세어야 「새 상태를 더했는데 데모에는
+    //    안 서는」 날 이 시험이 빨개진다. 종류가 늘면 픽스처에 한 줄을 더해라.
+    for (const status of SYNC_STATUSES) {
+      expect(count(status), `데모가 sync 상태 ${status} 를 한 번도 안 보여 준다`).toBeGreaterThan(0)
+    }
+    //  🔴 `unknown` 은 **한 번도 보고하지 않은 기기**다 — 버전도 시각도 없다.
+    //     여기에 기본값이 채워지면 「아직 아무것도 안 받은 기기」가 「낡은 기기」로 보인다.
+    for (const row of rows.filter((r) => r.status === 'unknown')) {
+      expect(row.version).toBeNull()
+      expect(row.reported_at).toBeNull()
+    }
+    //  🔴 `modified` 는 **버전은 공식인데 파일이 고쳐진** 기기다 (SYNC_MEANING).
+    for (const row of rows.filter((r) => r.status === 'modified')) {
+      expect(row.version).toBe(seeded.versions.official.semver)
+    }
     //  🔴 `outdated` 는 **앞 버전**을 보고한 기기다. 같은 버전을 보고했는데 outdated 면
     //     화면이 「무엇으로 맞춰야 하나」를 말할 수 없다.
     for (const row of rows.filter((r) => r.status === 'outdated')) {

@@ -23,7 +23,7 @@ import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SE
 //
 //  ★ 재는 것:
 //    ① 자물쇠 — `CRON_SECRET` 이 없거나 틀리면 **401** 이고 아무것도 안 심는다
-//    ② 리셋이 실제로 심는다 — 그 뒤 `/demo/session` 이 201 이고 화면 9 가 기기 12 를 본다
+//    ② 리셋이 실제로 심는다 — 그 뒤 `/demo/session` 이 201 이고 화면 9 가 기기 14 를 본다
 //    ③ 🔴 **두 번 돌려도 하나다** — 팀·기기·사람이 늘지 않는다 (지우기가 진짜로 지운다)
 //    ④ 지우기는 **데모 팀만** 지운다 — 옆 팀은 그대로다
 //    ⑤ 🔴 `project_id` 를 가진 표가 **전부** `PROJECT_SCOPED` 에 있다 — 새 표를 더한 사람이
@@ -95,7 +95,7 @@ describe('① 자물쇠 — CRON_SECRET', () => {
 })
 
 describe('② 리셋이 심는다', () => {
-  it('200 이고 수가 픽스처와 같다 · 그 뒤 /demo/session 이 201 이고 화면 9 가 기기 12 를 본다', async () => {
+  it('200 이고 수가 픽스처와 같다 · 그 뒤 /demo/session 이 201 이고 화면 9 가 기기 14 를 본다', async () => {
     const res = await reset(CRON_SECRET)
     expect(res.status).toBe(200)
     const data = await dataOf(res)

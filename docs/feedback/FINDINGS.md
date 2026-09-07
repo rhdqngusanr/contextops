@@ -33,6 +33,26 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 162. **데모가 sync 상태 5종 중 3종만 보여 준다** — `modified`·`unknown` 은 코드에만 산다   [구멍]
+- **증상**: 화면 9(Sync)의 칩 줄에 `applied 9 · outdated 2 · manual 1` 셋만 선다. 남은 둘은 **화면·서버·스키마가 이미 다 그릴 수 있는데**
+  데모 씨앗이 한 번도 안 만든다: `modified`(버전은 공식인데 파일이 로컬에서 고쳐졌다)와 `unknown`(그 기기에서 아직 보고가 안 왔다).
+  ⚠ 그중 `modified` 는 **이 제품이 무엇을 잡아 주는지**를 한 줄로 말하는 상태다 — 심사위원이 첫 화면에서 보는 표에 그게 없다.
+- **근거**: `.ci/shots/screen-sync.png` (110바퀴 · 관통이 찍은 진짜 브라우저) — 칩 3개 · 12행.
+  `fixtures/seed/demo.json` 의 `devices` 12줄이 `applied`·`outdated`·`manual` 뿐이고, `report: null`(= `unknown`) 줄이 0개다.
+  ⚠ **죽은 것은 코드가 아니라 픽스처다** — 배선은 다 살아 있다: `SYNC_STATUSES` 5종 · `SYNC_CHIP`/`SYNC_MEANING`/`SYNC_APPLY` 5줄 ·
+  `statusOfDevice()` 가 보고 없는 기기에 `NO_REPORT_STATUS` 를 매기고 · `DeviceTable` 이 그 행의 버전 칸에 「—」, 시각 칸에
+  「아직 보고가 없습니다」를 그린다. 아무도 그 길로 안 들어갈 뿐이다.
+- **정본**: `fixtures/seed/demo.json` (`devices`) · `docs/SPEC.md` §10.3 · `docs/DESIGN_BRIEF.md` §4 화면 9
+- **고칠 방향**: 픽스처에 두 줄. 수를 화면 코드나 시험에 손으로 적지 말고 **종류를 표에서 세어라** —
+  「오늘 5개」를 재는 시험은 여섯째가 붙는 날에도 초록이다.
+- **상태**: ✅ `CYCLE110` (110바퀴) — 기기 **12 → 14**: `linux-seoyeon-box`(`modified` · 공식 버전) ·
+  `mac-minseo-new`(`report: null` → `unknown`). 기존 12줄은 **안 건드렸다** (수가 바뀌면 SPEC §10.3 과 갈린다).
+  🔴 **게이트로 올렸다** — `demo-guest.test.ts` 화면 9 시험이 ① 다섯 수를 재고 ② **`SYNC_STATUSES` 를 돌며 종류마다 0보다 큰지**를
+  재고 ③ `unknown` 행은 버전·보고 시각이 **둘 다 `null`** 인지 ④ `modified` 행은 버전이 **공식**인지를 잰다.
+  ★ ②가 본체다 — ①만 있으면 `SYNC_STATUSES` 에 여섯째가 붙어도 초록이라 같은 구멍이 다시 난다.
+  덤으로 `DESIGN_BRIEF` §4 화면 9 의 예시가 `outdated` 를 **`v1.1.0`** 이라고 적고 있던 것을 `v1.0.0`(앞 버전)으로 고쳤다 —
+  `outdated` 는 정의상 앞 버전이고, 시험(`row.version === previous.semver`)과 화면이 이미 그렇게 말하고 있었다.
+
 ### 160. **앱 껍데기가 375px 에서 내비를 안 접는다** — 본문 칸이 76px 로 눌린다   [격차]
 - **증상**: 앱 화면(내비가 있는 모든 화면)을 375px 로 보면 좌측 내비가 `--nav-w: 220px` 를 그대로 차지해서
   `.main` 이 140px · `.main-inner` 가 **76px** 로 눌린다. 그 폭에 안 들어가는 것이 전부 밖으로 밀려
