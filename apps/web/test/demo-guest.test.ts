@@ -16,7 +16,7 @@ import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { seedDemo, readDemoSeedFile, demoGuestMembership, type DemoSeedResult } from '../src/lib/demo/seed-demo'
-import { seedSession, UNFINISHED_JOB_STATUSES } from '../src/lib/demo/seed'
+import { MILESTONES, seedSession, UNFINISHED_JOB_STATUSES } from '../src/lib/demo/seed'
 import { AI_JOB_STATUS_RULES } from '../src/db/schema'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from './helpers/db'
 
@@ -207,6 +207,31 @@ describe('데모 테넌트를 심으면', () => {
     for (const row of rows.filter((p) => p.status === 'draft')) {
       expect((row as { decided_by?: unknown }).decided_by ?? null).toBeNull()
     }
+  })
+
+  it('화면 6 이 로드맵과 이어져 있다 — `relates_to` 가 마일스톤 3종을 전부 가리킨다', async () => {
+    const token = await guestToken()
+    const data = await dataOf(await listProposals(
+      req('GET', `/api/v1/projects/${seeded.projectId}/proposals`, { auth: token }),
+      params({ id: seeded.projectId }),
+    ))
+    const rows = data.proposals as { relates_to: string[] }[]
+    const planted = MILESTONES.map(([, milestoneId]) => milestoneId)
+    const used = rows.flatMap((p) => p.relates_to)
+
+    //  🔴 **심은 마일스톤이 전부 한 번은 제안에 걸린다** (FINDINGS 164 · loop/PROMPT.md ④2-B).
+    //  ★ 왜 「빈 배열이 아닌 행이 있다」로 안 끝내나 — 그건 한 줄만 채워도 초록이라
+    //    `MILESTONES` 에 넷째가 붙는 날 그 마일스톤은 제안 화면에서 **영원히 안 보인다.**
+    //    화면 6 과 화면 8 을 잇는 줄은 이것 하나뿐이라, 종류를 표에서 세야 한다.
+    for (const milestoneId of planted) {
+      expect(used, `제안 어디에도 ${milestoneId} 를 가리키는 줄이 없다`).toContain(milestoneId)
+    }
+    //  ⚠ 없는 id 를 가리키면 화면에 뜻 없는 칩이 선다 — 씨앗이 심은 것만 써야 한다.
+    for (const milestoneId of used) expect(planted).toContain(milestoneId)
+    //  🔴 「관련 마일스톤이 없는 제안」의 「—」도 화면의 한 갈래다 — 둘 다 서 있어야 한다.
+    expect(rows.some((p) => p.relates_to.length === 0)).toBe(true)
+    //  칩이 **둘** 서는 행 — 화면 6 의 `row wrap` 이 한 번은 그려진다.
+    expect(rows.some((p) => p.relates_to.length > 1)).toBe(true)
   })
 
   it('화면 6 의 거르개가 종류마다 그 종류만 낸다 — 거르는 것은 서버다', async () => {

@@ -17,7 +17,7 @@ import { getDb } from '../../db/client'
 import { progressEvents, syncReports, teamMembers, users } from '../../db/schema'
 import { fixtureJson } from './fixtures'
 import { dataOf, params, req } from './inproc'
-import { seedEmail, seedPaylab, seedSession, type SeedResult } from './seed'
+import { MILESTONES, seedEmail, seedPaylab, seedSession, type SeedResult } from './seed'
 import { DEMO_GUEST_SUBJECT, DEMO_TENANT } from './tenant'
 
 // =====================================================================
@@ -112,6 +112,12 @@ export function demoSubjects(file: DemoSeedFile = readDemoSeedFile()): string[] 
 // ---------------------------------------------------------------------
 
 /**
+ * 씨앗이 **실제로 심는** 마일스톤 id (`PL-M1`·`PL-M2`·`PL-M3`). 표를 직접 읽으므로
+ * `MILESTONES` 에 한 줄이 늘면 여기도 저절로 는다 — 손으로 베낀 목록을 두지 않는다.
+ */
+type DemoMilestoneId = (typeof MILESTONES)[number][1]
+
+/**
  * 데모의 제안 셋. **화면 6 이 세 갈래를 다 그리게** 하는 것이 목적이다:
  * 승인되어 v1.1.0 에 실린 것 · 사유와 함께 거절된 것 · 아직 결정을 기다리는 것.
  *
@@ -130,6 +136,15 @@ type DemoProposal = {
    *  화면 6 의 before/after Diff 가 **진짜 지금 문장**과 견준다. */
   data: Record<string, unknown>
   reason: string
+  /**
+   * 🔴 이 제안이 **어느 마일스톤을 움직이나** (`relates_to` · FINDINGS 164).
+   *    화면 6(제안)과 화면 8(로드맵)을 잇는 **유일한 줄**이다. 씨앗이 한 줄도 안 쓰면
+   *    「관련 마일스톤」 칸이 전부 「—」로 서서, 두 화면이 이어진 적 없는 제품처럼 보인다.
+   * ⚠ 값은 **씨앗이 실제로 심는 id** 여야 한다 — 그래서 타입이 `MILESTONES` 를 직접 읽는다.
+   *   없는 id 는 화면에 뜻 없는 칩을 세우는데, 여기서 타입이 먼저 빨개진다.
+   * ⚠ **비워 두는 줄도 하나 남겨라** — 「관련 마일스톤이 없는 제안」의 「—」도 화면의 한 갈래다.
+   */
+  relatesTo?: readonly DemoMilestoneId[]
   /**
    * 🔴 화면 6 이 그려야 하는 **다섯 갈래** (`PROPOSAL_STATUSES` · `PROPOSAL_STATUS_CHIP`):
    * `published`(승인 → v1.1.0 에 실렸다) · `approved`(승인됐고 **다음 발행을 기다린다**) ·
@@ -165,6 +180,8 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
       enforcement: 'review',
     },
     reason: 'goals.md §3.1 이 말하는 「5회 + 백오프」와 코드가 어긋나 있다.',
+    //  M1 의 완료 기준이 「재시도 횟수와 간격」 그것이다.
+    relatesTo: ['PL-M1'],
     decision: 'published',
   },
   {
@@ -174,6 +191,8 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
     target: 'item_goal_success_rate',
     data: { outcome: '결제 승인 성공률 99.9% 를 유지한다', metric: '승인 성공률(월)' },
     reason: '이번 분기 실측이 99.7% 였다.',
+    //  ⚠ 이 하나는 **일부러 비운다** — 분기 목표는 세 마일스톤 중 어느 것도
+    //  안 움직인다. 그래야 화면 6 의 「—」도 한 줄 선다 (FINDINGS 164).
     decision: 'rejected',
     note: '근거가 한 분기치뿐이다. 목표는 반기 실측을 보고 정하자 — 다음 분기에 다시 올려 달라.',
   },
@@ -188,6 +207,8 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
       enforcement: 'hook',
     },
     reason: '리뷰만으로는 두 번 새어 나갔다.',
+    //  M3 의 경로가 `src/webhook/` 이고 완료 기준에 웹훅 payload 줄이 있다.
+    relatesTo: ['PL-M3'],
     decision: 'pending',
   },
   {
@@ -201,6 +222,10 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
       enforcement: 'review',
     },
     reason: 'goals.md §3.2 의 「환불 SLA 24h」가 항목에 안 적혀 있다.',
+    //  둘을 적는 유일한 줄이다 — 이 제안은 M2(환불 SLA 계측)의 재료이면서
+    //  문장 뒤의 「외부 호출에는 타임아웃」이 M1 의 완료 기준을 같이 건드린다.
+    //  ★ 칩 **둘**이 서는 행이 하나 있어야 화면 6 의 `row wrap` 이 그려진 적이 생긴다.
+    relatesTo: ['PL-M2', 'PL-M1'],
     //  ⚠ 이 하나는 v1.1.0 **발행 뒤에** 승인한다 — 그래야 「승인됐지만 아직 안 실린」
     //    상태가 데모에 선다.
     decision: 'approved',
@@ -215,6 +240,8 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
         + '받은 토큰은 결제 확정 후 90일까지만 보관하고 그 뒤에는 지운다.',
     },
     reason: '보관 기간이 항목에 없어서 리뷰마다 사람마다 다른 수를 말한다.',
+    //  M3(PII 마스킹·감사 로그)가 「언제까지 들고 있나」를 말하는 자리다.
+    relatesTo: ['PL-M3'],
     //  ⚠ 이 하나는 **제출하지 않는다** — 「올리다 만 초안」이 화면 6 에 한 줄 서야
     //    「초안」 칩이 빈 목록이 아니게 된다 (FINDINGS 163).
     decision: 'draft',
@@ -370,6 +397,9 @@ export async function seedDemo(now: Date = new Date()): Promise<DemoSeedResult> 
           title: p.title,
           summary: p.summary,
           base_version_id: v1.id,
+          //  🔴 화면 6 의 「관련 마일스톤」 칸 (FINDINGS 164) — 안 적은 줄은 빈 배열이고
+          //     화면이 그 자리에 「—」를 그린다. 계약의 기본값과 같다 (`upload.ts`).
+          relates_to: p.relatesTo ?? [],
           items: [{
             operation: 'update',
             target_item_id: p.target,
