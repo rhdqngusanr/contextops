@@ -457,6 +457,10 @@
       `<TerminalReplay>` 가 랜딩 C-3 에 섰고 오른쪽 Roadmap 미니 패널은 왼쪽 줄을 읽어서 바뀐다
       (근거 0/3 → 1/3 · 마일스톤은 씨앗의 PL-M1 과 글자 그대로). 계약 `ReplayFrames` 는 schema 에.
       ⚠ 스텝 썸네일(C-2)은 production 캡처가 생긴 뒤다 — 둘째 행의 몫.
+      → ③ **관통이 이제 진짜 화면을 찍는다** (103바퀴 · `f29133f`). `shots` 단계가 아홉 바퀴 만에
+      켜졌고(`apps/web/e2e` · CDP 헤드리스 Chrome · 의존성 0 · 37검사), `shotcopy` 가 세 장을
+      `apps/web/public/shots/` 로 옮긴다(10검사 · `manifest.json`). 관통 1119 → **1172검사 · SKIP 0**.
+      ⚠ 남은 것은 **랜딩이 그 manifest 를 읽는 것**뿐이다 (FINDINGS 131 ③) — 이 행의 마지막 격차다.
 - [ ] **Vercel production · Cron · 보안 캡처 증거 · 새 PC fresh install**
       **완료 기준**: production 으로 발표 시나리오 1회 완주
       → ① **Cron 의 코드 쪽은 됐다** (63바퀴 · FINDINGS 120 닫음). `GET /cron/demo-reset` 이
