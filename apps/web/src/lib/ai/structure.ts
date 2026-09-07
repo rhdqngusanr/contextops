@@ -14,7 +14,7 @@ import { ApiError } from '../api/error'
 import { withBudget } from './budget'
 import { OUTPUT_TRUNCATED_COMPLAINT, callModel, type ToolCallRequest } from './client'
 import { currentModel } from './model'
-import { AI_SYSTEM_COMMON, untrusted } from './prompt'
+import { AI_SYSTEM_COMMON, AI_SYSTEM_EVIDENCE_SLOTS, untrusted } from './prompt'
 
 // =====================================================================
 //  apps/web/src/lib/ai/structure.ts — 문서 구조화 (SPEC §7.1 · P3)
@@ -249,6 +249,9 @@ export const QUOTE_SPAN_LINES: readonly string[] = [
 
 const SYSTEM = [
   AI_SYSTEM_COMMON,
+  //  🔴 `confidence`·`span`·`open_question` 칸을 **가진 기능**이라 여기서 싣는다 (FINDINGS 55).
+  //     §7.2 는 그 칸이 없어서 안 싣는다 — 따를 수 없는 지시는 재시도를 늘린다.
+  AI_SYSTEM_EVIDENCE_SLOTS,
   '',
   '이번 일: 팀 문서의 한 조각을 읽고 ContextOps 항목으로 옮겨 적는다.',
   '- 항목 하나 = 문서에 실제로 적힌 목표·규칙·결정·절차 하나다. 요약문을 새로 쓰지 않는다.',

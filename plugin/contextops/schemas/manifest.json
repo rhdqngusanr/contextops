@@ -111,7 +111,25 @@
         "target",
         "source_item_ids"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "source_item_ids": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "path": {
+              "enum": [
+                ".claude/rules/workflow.md"
+              ]
+            }
+          }
+        }
+      ]
     },
     "__schema2": {
       "type": "string",

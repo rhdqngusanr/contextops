@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { ContextItem, ContextItemDraft } from './item'
-import { Manifest } from './manifest'
+import { Manifest, PRODUCT_TEXT_PACK_FILES } from './manifest'
 import { ContextItemDraftFile, PendingProposalFile, ProposalDraftFile } from './plugin'
 import { ContextItemsBatchDraft, ProgressEvent, Proposal, SyncReport } from './upload'
 
@@ -56,6 +56,31 @@ export type JsonSchemaName = keyof typeof JSON_SCHEMA_FILES
  * `io: 'input'` — 플러그인이 검증하는 것은 **보내기 전의 payload** 다.
  * default 가 있는 필드는 입력에서 빠져도 되므로 output 스키마로 재면 멀쩡한 초안이 빨개진다.
  */
+/**
+ * 🔴 **P7 의 근거 규칙을 JSON Schema 로 다시 적는 유일한 자리** (FINDINGS 47).
+ *
+ * `ManifestFile` 의 규칙은 Zod `.refine()` 이다 — 「`source_item_ids` 가 비지 않거나,
+ * 경로가 `PRODUCT_TEXT_PACK_FILES` 에 있거나」. `z.toJSONSchema` 는 refine 을 **조용히
+ * 버린다.** 그래서 배포되는 `schemas/manifest.json` 만으로 재면 **아무 경로나 빈
+ * `source_item_ids` 로 지나갔다** — 우리가 나눠 주는 계약 문서가 실제 계약보다 느슨했다.
+ *
+ * ⚠ **여기가 JSON Schema 를 손으로 짜는 유일한 자리다.** 「Zod 정본과 일치한다」를 재는
+ *   `test/json-schema.test.ts` 는 이 자리에서 아무것도 못 재므로, **예외를 넣었다는 사실
+ *   자체**를 `manifest-evidence.test.ts` 가 잠근다 (예외 목록이 표와 같은지까지).
+ * ⚠ 대상을 이름이 아니라 **모양**으로 고른다 — `$defs` 로 접히면 이름이 `__schema7` 이다.
+ */
+function applyP7Rule(jsonSchema: Record<string, unknown>): void {
+  const props = jsonSchema['properties']
+  if (typeof props !== 'object' || props === null) return
+  const p = props as Record<string, unknown>
+  //  `ManifestFile` 만 이 셋을 같이 갖는다.
+  if (!('source_item_ids' in p) || !('sha256' in p) || !('path' in p)) return
+  jsonSchema['anyOf'] = [
+    { properties: { source_item_ids: { minItems: 1 } } },
+    { properties: { path: { enum: [...PRODUCT_TEXT_PACK_FILES] } } },
+  ]
+}
+
 export function toJsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
   return z.toJSONSchema(schema, {
     target: 'draft-2020-12',
@@ -63,6 +88,8 @@ export function toJsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
     // 겹치는 부분 스키마는 `$defs` 로 한 번만 적는다. 인라인이면 항목 10종이 유니온마다
     // 통째로 복사돼 파일이 100KB 를 넘고, 사람이 열어 볼 수 없게 된다.
     reused: 'ref',
+    //  refine 이 버려지는 자리 하나를 되살린다 (위 주석).
+    override: (ctx) => { applyP7Rule(ctx.jsonSchema as Record<string, unknown>) },
   }) as Record<string, unknown>
 }
 

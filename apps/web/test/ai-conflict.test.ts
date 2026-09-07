@@ -161,10 +161,29 @@ describe('표가 실제로 프롬프트와 검증을 정한다 (SPEC §7.2)', ()
       expect(sent[0]!.system).toContain(`- ${kind}: ${CONFLICT_KIND_RULES[kind].hint}`)
     }
     //  낼 수 없는 종류는 종류 목록에도 도구 스키마에도 없다 — 고르게 해 놓고 버리면 재시도가 는다.
-    //  ⚠ `AI_SYSTEM_COMMON` 은 「확신이 없으면 open_question 으로 낸다」를 말한다.
-    //     그건 §7.1 의 낱말이므로 여기서 재는 것은 **종류 목록의 줄**이다.
     expect(sent[0]!.system).not.toContain('- open_question:')
     expect(JSON.stringify(sent[0]!.schema)).not.toContain('open_question')
+  })
+
+  //  🔴 **§7.2 가 따를 수 없는 지시가 프롬프트에 없다** (FINDINGS 55).
+  //  ★ 왜 시험인가 — 공통 블록(`AI_SYSTEM_COMMON`)은 넷이 함께 쓰는 정본이라, 한 기능을
+  //    보고 쓴 문장이 들어오면 **나머지 셋에서 조용히 무의미해진다.** 예전에 726바이트
+  //    7줄 중 3줄이 여기서 그랬다: `confidence`·`span`·`open_question` 은 §7.2 의 출력에
+  //    칸이 아예 없다. 따를 수 없는 지시는 재시도를 늘리고 재시도는 곧 돈이다 (§7.5).
+  //  ⚠ 공통에 줄을 더할 때 이 시험이 빨개지면 **그 줄은 공통이 아니다** — 칸을 가진
+  //    기능의 블록(`AI_SYSTEM_EVIDENCE_SLOTS`)으로 내려라.
+  it('🔴 출력에 없는 칸을 지시하지 않는다 — 공통 블록이 §7.1 만 보고 쓰이지 않았나', async () => {
+    await seedPair()
+    stubAi(() => ({ input: { conflicts: [] } }))
+    await detectConflicts({ projectId: PROJECT, changedItemIds: ['item_changed'], now: NOW })
+
+    const system = sent[0]!.system
+    for (const slot of ['confidence', 'span.quote', 'open_question']) {
+      expect(system, `§7.2 의 출력에 «${slot}» 칸이 없는데 프롬프트가 그것을 지시한다`).not.toContain(slot)
+    }
+    //  그래도 **넷 다에 참인 것**은 그대로 실려야 한다 — 나누다가 공통을 비워 버리면 안 된다.
+    expect(system).toContain('입력에 없는 사실')
+    expect(system).toContain('도구를 한 번 불러서 답한다')
   })
 
   it('도구 스키마가 계약에서 나온다 (SPEC §7 「input_schema = 해당 Zod 의 JSON Schema」)', async () => {
