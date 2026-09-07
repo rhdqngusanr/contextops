@@ -98,7 +98,15 @@ async function main(): Promise<void> {
   track(spawn(process.execPath, [join(webRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs'), 'scripts/demo-server.ts'], {
     cwd: webRoot,
     stdio: 'ignore',
-    env: { ...process.env, DEV_SEED: 'demo', DEV_DB_PORT: String(DB_PORT), DEV_INFO_PORT: String(INFO_PORT) },
+    //  🔴 `DEV_PIN=1` — id 와 시각을 결정론으로 박는다 (FINDINGS 161 · `test/helpers/pin.ts`).
+    //     ★ 왜 여기만 켜나 — 이 그림은 **저장소에 커밋된다.** 안 박으면 매 관통마다
+    //       `manifest_hash` 와 발행 시각 글자가 달라져서, 코드를 한 줄도 안 고친 바퀴의
+    //       커밋에도 `.png` 두 장이 섞인다 (108바퀴가 픽셀로 재서 확정한 원인이다).
+    env: {
+      ...process.env,
+      DEV_SEED: 'demo', DEV_PIN: '1',
+      DEV_DB_PORT: String(DB_PORT), DEV_INFO_PORT: String(INFO_PORT),
+    },
   }))
   await waitFor('씨앗 DB', async () => {
     try { return (await fetch(`http://127.0.0.1:${INFO_PORT}`)).ok } catch { return false }

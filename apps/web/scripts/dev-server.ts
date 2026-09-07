@@ -5,6 +5,7 @@ import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publis
 import { seedDemo } from '../src/lib/demo/seed-demo'
 import { seedPaylab } from '../src/lib/demo/seed'
 import { closeDb, dataOf, freshDb, params, req, TEST_JWT_SECRET } from '../test/helpers/db'
+import { pinDbDefaults, pinSeededClocks } from '../test/helpers/pin'
 
 // =====================================================================
 //  🔴 **화면을 눈으로 보기 위한 개발용 씨앗 서버** (loop/PROMPT.md ⑦3층 · GATE 1)
@@ -50,9 +51,23 @@ export type SeededDemo = {
  */
 const SEED_DEMO = process.env.DEV_SEED === 'demo'
 
+/**
+ * 🔴 **id 와 시각을 결정론으로 박을까** (`DEV_PIN=1` · FINDINGS 161).
+ *
+ * ★ 왜 기본값이 아닌가 — 사람이 `demo:db` 로 띄우는 화면에서는 발행 시각이
+ *   **지금**이어야 자연스럽다. 고정 시계가 필요한 쪽은 **관통의 캡처**뿐이다 —
+ *   그 그림은 저장소에 커밋되고, 매 바퀴 달라지면 커밋에 코드와 무관한 diff 가 섞인다.
+ *   그래서 `e2e/shots.ts` 만 이걸 켜고, 사람은 평소대로 본다.
+ */
+const PIN_DB = process.env.DEV_PIN === '1'
+
 async function main(): Promise<void> {
   process.env.SUPABASE_JWT_SECRET = TEST_JWT_SECRET
   const { pg } = await freshDb()
+  if (PIN_DB) {
+    const pinned = await pinDbDefaults(pg)
+    console.log(`dev-server: DB 기본값 ${pinned}칸을 결정론으로 박았다 (DEV_PIN=1)`)
+  }
 
   //  ⚠ 데모 테넌트는 **자기 팀**(slug `demo`)에 앉는다 — 아래 paylab 씨앗과 안 겹친다.
   //    그래서 한 DB 에서 「로그인한 팀」과 「게스트가 보는 팀」을 나란히 볼 수 있다.
@@ -63,6 +78,12 @@ async function main(): Promise<void> {
   const version = await dataOf(await publish(req('POST', `/api/v1/projects/${seed.projectId}/versions/publish`, {
     auth: seed.owner, body: { semver: '1.0.0', base_version_id: null, change_summary: '첫 정본' },
   }), params({ id: seed.projectId })))
+
+  //  🔴 심은 **뒤에** 한 번 더 — 발행 시각은 DB 기본값이 아니라 라우트가 준 값이라
+  //     기본값 고정으로는 안 잡힌다 (`test/helpers/pin.ts` 의 `pinSeededClocks`).
+  if (PIN_DB) {
+    console.log(`dev-server: 발행 시각 ${await pinSeededClocks(pg)}행을 계수 시계로 되돌렸다`)
+  }
 
   const info: SeededDemo = {
     team_slug: seed.teamSlug,
