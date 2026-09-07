@@ -8,7 +8,7 @@ import { fetchProposals, type ProjectRef } from '../../../../../../lib/web/queri
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import {
-  ProposalStatusFilter, ProposalTable, proposalEmptyMessage,
+  ProposalListIntro, ProposalStatusFilter, ProposalTable, proposalEmptyMessage,
 } from '../../../../../../components/proposals'
 import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
@@ -47,10 +47,10 @@ function ProposalList({ base, project }: { base: string; project: ProjectRef }) 
     <>
       <header className="col-tight">
         <h1 className="text-section">제안</h1>
-        <p className="meta">
-          Claude Code에서 <span className="mono ink">contextops propose</span> 로 올라온 변경 제안입니다.
-          승인된 제안만 다음 발행에 들어갑니다.
-        </p>
+        {/* 🔴 문장의 정본은 `ProposalListIntro` 다 (FINDINGS 166) — 여기서 다시 적지 마라.
+            표 머리의 낱말과 같은 자리에서 나와야 「만든 날」과 「올라온 제안」이 갈라지지
+            않고, 시험이 둘을 함께 읽는다. */}
+        <ProposalListIntro />
       </header>
 
       <ProposalStatusFilter value={status} onChange={setStatus} />

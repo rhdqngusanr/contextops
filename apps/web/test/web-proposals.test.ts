@@ -12,7 +12,8 @@ import {
 
 import {
   DECIDED_TEXT, DIFF_MISSING_TEXT, DiffView, ProposalDecisions, ProposalHead, ProposalItemCard,
-  PROPOSAL_DATE_COLUMN, ProposalStatusFilter, ProposalTable, availableActions, diffSidesOf,
+  PROPOSAL_DATE_COLUMN, ProposalListIntro, ProposalStatusFilter, ProposalTable, availableActions,
+  diffSidesOf,
   proposalEmptyMessage,
 } from '../src/components/proposals'
 import { PROPOSAL_STATUS_CHIP } from '../src/components/chips'
@@ -525,6 +526,31 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
     const columns = Object.keys(getTableColumns(proposals))
     expect(columns).toContain('createdAt')
     expect(columns).not.toContain('submittedAt')
+  })
+
+  it('🔴 목록 위 설명도 **만든 것과 올린 것을 갈라 말한다** (FINDINGS 166)', () => {
+    //  ★ 166 은 165 와 **같은 거짓말이 한 번 더** 있던 것이다 — 날짜 칸을 「만든 날」로
+    //    고친 뒤에도 그 위 한 줄은 「`contextops propose` 로 **올라온** 변경 제안입니다」
+    //    였다. 163 이 세운 `draft` 행은 만들어 놓기만 하고 아직 안 올린 것이다.
+    //  ⚠ 165 의 게이트는 표 머리만 물었다 — 문장이 `page.tsx` 안에 있어서 시험이 못 읽었다.
+    //    그래서 문장을 `ProposalListIntro` 로 옮기고 여기서 함께 읽는다.
+    const intro = html(createElement(ProposalListIntro))
+
+    //  ① 어디서 오는 것인지는 그대로 말한다 — 사람이 다음에 칠 명령이 이 한 줄뿐이다.
+    expect(intro).toContain('contextops propose')
+
+    //  ② 🔴 **머리와 같은 낱말이다.** 「만든 날」의 그 낱말이 이 문장에도 있어야 한다 —
+    //     한쪽만 「올라온」으로 되돌리면 여기서 갈라진다.
+    const madeVerb = PROPOSAL_DATE_COLUMN.head.split(' ')[0]
+    expect(intro).toContain(`${madeVerb} 변경 제안`)
+
+    //  ③ 안 올라온 것을 「올라온 제안」이라고 부르지 않는다.
+    expect(intro).not.toMatch(/올라온|제출된/)
+
+    //  ④ 🔴 **갈라 말한다** — 「만든 것」과 「올린 것」이 다르다는 말이 실제로 있어야 한다.
+    //     ③만 있으면 「올린」을 통째로 지워도 초록이고, 그러면 draft 가 왜 승인 대기로
+    //     안 가는지 화면이 아무 말도 안 하게 된다.
+    expect(intro).toContain('올린 것만')
   })
 
   it('빈 목록은 **넘겨받은 빈 상태를 그대로** 그린다 — 표가 문구를 짓지 않는다 (FINDINGS 133)', () => {

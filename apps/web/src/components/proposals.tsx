@@ -104,10 +104,39 @@ export function proposalEmptyMessage(status: ProposalStatus | null): string | un
  *   표 → `packages/schema` → 라우트 → 여기 순으로 **같은 바퀴에** 칸을 만들어야 한다.
  * ★ 그래서 머리와 값을 이 한 줄에 묶었다 — 한쪽만 고치면 시험이 먼저 빨개진다.
  */
+/**
+ * `contextops propose` 가 **하는 일**을 부르는 낱말 하나. 표 머리(「만든 날」)와 목록 위
+ * 설명(「…로 만든 변경 제안입니다」)이 여기서 같이 나온다 — 한쪽만 고치면 시험이 빨개진다.
+ */
+const MADE = '만든'
+
 export const PROPOSAL_DATE_COLUMN = {
-  head: '만든 날',
+  head: `${MADE} 날`,
   of: (proposal: ProposalRow) => proposal.created_at,
 } as const
+
+/**
+ * 🔴 **목록 위 한 줄은 「만든 것」과 「올린 것」을 갈라 말한다** (FINDINGS 166).
+ *
+ * 113바퀴까지 이 문장은 「`contextops propose` 로 **올라온** 변경 제안입니다」였다.
+ * 165 가 날짜 칸에서 고친 것과 **같은 거짓말**이 여기 한 번 더 있었다 — 163 이 세운
+ * `draft` 행은 `propose` 가 만들어 놓기만 하고 **아직 안 올린 것**이라, 「초안」 칩을
+ * 눌러 그 한 장만 봐도 화면은 「올라온 제안입니다」라고 적었다.
+ *
+ * ★ 왜 화면 밖으로 뺐나 — 이 문장이 `page.tsx` 안에 있던 동안에는 165 의 게이트가
+ *   **표 머리만** 물었다. 시험이 그리는 것은 조각들이지 페이지가 아니라서다.
+ *   여기로 옮겨야 같은 시험이 머리와 이 문장을 **함께** 읽는다.
+ * ⚠ 「올린」을 이 문장에서 지우지 마라 — 「만든 것 중 올린 것만 승인 대기로 간다」가
+ *   두 낱말이 갈라져 있다는 사실 자체이고, 시험이 그 갈라짐을 잰다.
+ */
+export function ProposalListIntro() {
+  return (
+    <p className="meta">
+      Claude Code에서 <span className="mono ink">contextops propose</span> 로 {MADE} 변경 제안입니다.
+      올린 것만 승인 대기로 가고, 승인된 제안만 다음 발행에 들어갑니다.
+    </p>
+  )
+}
 
 export function ProposalTable({
   proposals,
