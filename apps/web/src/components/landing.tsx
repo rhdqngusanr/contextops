@@ -1,6 +1,7 @@
-import { ReplayFrames } from '@contextops/schema'
+import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 
 import replayRecording from '../../../../fixtures/replay/sync.json'
+import shotsManifest from '../../public/shots/manifest.json'
 import styles from './landing.module.css'
 import { TerminalReplay } from './terminal-replay'
 
@@ -29,8 +30,15 @@ import { TerminalReplay } from './terminal-replay'
 //
 //  ⚠ **없는 것은 안 만든다** — 이 저장소의 규칙이다 (누르면 아무 일도 안 하는 버튼 금지):
 //    · [2분 영상 보기] — 영상이 없다 (PLAN P6). 영상이 생기는 바퀴에 버튼 한 줄이다.
-//    · 스텝 썸네일 — production 캡처가 아직 없다 (PLAN P5 둘째 행 · FINDINGS 123).
 //      터미널 재생(§10.4)은 있다 — `TERMINAL_REPLAY` · 녹화는 관통이 남긴 실제 출력이다.
+//
+//  🔴 **제품 화면은 손으로 만들지 않는다** (FINDINGS 131 · B-2 `PRODUCT_TOUR`).
+//     그림 목록의 정본은 이 파일이 **아니라** `apps/web/e2e/plan.ts` 의 `PUBLISHED` 이고,
+//     관통의 `shots` → `shotcopy` 단계가 진짜 화면을 찍어 `public/shots/manifest.json` 에
+//     적는다. 이 파일은 그 manifest 를 **읽기만** 한다.
+//     ⛔ **파일 이름을 여기 적지 마라** — 적는 순간 계획에 한 줄을 더해도 랜딩이 안 따라오고,
+//       「그림이 낡았는데 아무도 모르는」 상태가 그대로 돌아온다.
+//     ★ 새 화면을 첫 화면에 싣는 법: `e2e/plan.ts` 의 `PUBLISHED` 에 **한 줄** → 관통 한 번.
 //    · GitHub · Known limitations 링크 — **있다** (80바퀴 · `SUBMISSION_IDENTITY` · FINDINGS 122).
 //      `<marketplace>` 는 여전히 자리표시자다 — 저장소에 `.claude-plugin/marketplace.json` 이 없어
 //      URL 을 넣어도 첫 명령이 실패한다 (FINDINGS 140).
@@ -88,6 +96,26 @@ export const BEFORE_AFTER = {
     foot: 'A·B·C 모두 같은 답',
   },
 } as const
+
+/**
+ * B-2. 제품 화면 (FINDINGS 131 · DESIGN_BRIEF 화면 1 B-2).
+ *
+ * 🔴 **그림은 관통이 방금 찍은 진짜 화면이다.** 목록·대체텍스트·크기는 전부
+ *   `public/shots/manifest.json` 에서 오고, 그 파일은 `shotcopy` 단계가 쓴다.
+ *   여기 표에는 **절 제목과 설명**만 있다 — 파일 이름은 한 자도 없다.
+ */
+export const PRODUCT_TOUR = {
+  title: '제품 화면',
+  lead: '아래는 시안이 아니라 관통 시나리오가 실제 앱을 띄워 찍은 화면입니다. '
+    + '캡처마다 어느 주소의 화면인지 같이 적었습니다.',
+  foot: '캡처는 관통(tools/walkthrough.ps1)의 shots 단계가 매번 다시 찍습니다 — 낡은 그림이 남지 않습니다.',
+} as const
+
+/**
+ * 랜딩이 실을 캡처. 모듈을 읽을 때 한 번 계약으로 판다 — 모양이 어긋난 manifest 는
+ * **빌드에서** 죽는다 (렌더에서가 아니라). `REPLAY_FRAMES` 와 같은 자리다.
+ */
+export const PRODUCT_SHOTS = ShotsManifest.parse(shotsManifest).shots
 
 /** C-1. 왜 git 으로 안 되나요 — 세 문장 카드 + 한 줄. */
 export const WHY_NOT_GIT = {
@@ -291,6 +319,39 @@ function BeforeAfter() {
   )
 }
 
+function ProductShots() {
+  return (
+    <section className={styles.section} aria-labelledby="landing-shots">
+      <h2 id="landing-shots">{PRODUCT_TOUR.title}</h2>
+      <p className="ink">{PRODUCT_TOUR.lead}</p>
+      <div className={styles.shotRow}>
+        {PRODUCT_SHOTS.map((shot, i) => (
+          <figure key={shot.file} className={`card ${styles.shot}`}>
+            {/*  ⚠ `<img>` 다 — Next 의 `<Image>` 는 최적화 서버를 타는데, 이 세 장은 이미
+                관통이 낸 고정 파일이고 랜딩은 정적이어야 한다 (①).
+                🔴 폭·높이는 manifest 가 준다 — 그림이 늦게 떠도 자리가 안 튄다.
+                첫 장만 즉시 받는다 (첫 스크롤 안에 있다). */}
+            <img
+              className={styles.shotImg}
+              src={shot.file}
+              alt={shot.alt}
+              width={shot.width}
+              height={shot.height}
+              loading={i === 0 ? 'eager' : 'lazy'}
+            />
+            <figcaption className="col-tight">
+              <span className="ink">{shot.alt}</span>
+              {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
+              <span className="meta mono">{shot.src}</span>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <p className="meta">{PRODUCT_TOUR.foot}</p>
+    </section>
+  )
+}
+
 function WhyNotGit() {
   return (
     <section className={styles.section} aria-labelledby="landing-why">
@@ -408,6 +469,9 @@ export function Landing() {
       </header>
       <main className={styles.main}>
         <Hero />
+        {/* 🔴 히어로 **바로 아래**다 — 심사위원은 10초 안에 판단하고, 그때 제품 화면이
+            첫 스크롤 안에 있어야 한다 (FINDINGS 131 의 증상이 그것이었다). */}
+        <ProductShots />
         <WhyNotGit />
         <HowItWorks />
         <Replay />

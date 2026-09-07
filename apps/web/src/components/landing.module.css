@@ -94,6 +94,33 @@
   padding: var(--sp-5);
 }
 
+/* B-2 제품 화면 — 관통이 찍은 캡처 셋 (FINDINGS 131).
+   ⚠ 장수는 `e2e/plan.ts` 의 `PUBLISHED` 가 정한다. 그래서 `repeat(3, …)` 이 아니라
+     `auto-fit` 이다 — 계획에 한 줄이 늘어도 CSS 를 안 고친다. */
+.shotRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--shot-min), 1fr));
+  gap: var(--sp-4);
+}
+
+.shot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  margin: 0; /* figure 의 기본 여백을 지운다 */
+  min-width: 0; /* 1440px 캡처가 격자 칸을 밀지 않게 (FINDINGS 160 이 잰 자리) */
+}
+
+/* 캡처는 1440×900 이다 — 칸 폭에 맞춰 줄이되 비율은 `width`/`height` 속성이 지킨다. */
+.shotImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
 .codeBlock { padding: var(--sp-4); }
 .pre { margin: 0; font-size: var(--fs-table); line-height: 1.8; }
 

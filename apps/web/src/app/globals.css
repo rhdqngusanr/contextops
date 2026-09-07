@@ -98,6 +98,12 @@
        `design-tokens.test.ts` 가 문구의 글자 수와 이 값을 대조한다 (여유 2자). */
   --filter-input-ch: 26;
   --filter-input-w: calc(var(--filter-input-ch) * 1ch + var(--sp-3) * 2 + 2px);
+  /* 랜딩 B-2 의 제품 캡처 한 칸의 최소 폭 (FINDINGS 131).
+     🔴 `repeat(auto-fit, minmax(이 값, 1fr))` 의 그 값이다 — 장수를 CSS 에 적지 않으려고
+        칸 수 대신 **최소 폭**으로 짓는다. `e2e/plan.ts` 의 `PUBLISHED` 에 한 줄이 늘면
+        격자가 알아서 접힌다.
+     ⚠ 1200px(`--content-max`) 안쪽에서 세 칸이 서고, 좁은 폭에서는 한 칸으로 접히는 값이다. */
+  --shot-min: 300px;
 }
 
 /* ── 바탕 ─────────────────────────────────────────────────────────── */

@@ -20,6 +20,8 @@ import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'no
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { type ShotEntry, ShotsManifest } from '@contextops/schema'
+
 import { PUBLISHED_SHOTS } from './plan'
 import { copySummary } from './report'
 
@@ -27,14 +29,12 @@ const webRoot = fileURLToPath(new URL('..', import.meta.url))
 const shotsDir = join(webRoot, '..', '..', '.ci', 'shots')
 const outDir = join(webRoot, 'public', 'shots')
 
-/** 랜딩이 읽는 한 줄. **파일 이름의 정본은 이 파일이 아니라 `plan.ts` 다** */
-type ManifestEntry = {
-  file: string
-  src: string
-  alt: string
-  width: number
-  height: number
-}
+/**
+ * 랜딩이 읽는 한 줄. **파일 이름의 정본은 이 파일이 아니라 `plan.ts` 다.**
+ * 🔴 **모양의 정본은 `@contextops/schema` 의 `ShotEntry` 하나다** — 랜딩이 같은 계약으로
+ *   되판다. 여기서 모양을 따로 적으면 쓰는 쪽과 읽는 쪽이 조용히 갈린다 (FINDINGS 131).
+ */
+type ManifestEntry = ShotEntry
 
 let ok = 0
 let bad = 0
@@ -71,7 +71,14 @@ for (const shot of PUBLISHED_SHOTS) {
 
 //  ⚠ 시각도 파일 크기도 적지 마라 — 캡처는 관통마다 몇 바이트씩 달라지므로, 그 수를 여기 적으면
 //    manifest 가 **계획이 그대로인데도** 매 관통마다 바뀐다. 이 파일은 계획이 바뀔 때만 바뀌어야 한다.
-writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify({ shots: entries }, null, 2)}\n`, 'utf8')
+//  🔴 **쓰기 전에 계약으로 판다** — 랜딩은 같은 계약으로 되판다 (`ShotsManifest`).
+//    여기서 통과 못 할 것을 써 두면 터지는 자리가 관통이 아니라 **랜딩 빌드**가 된다.
+const parsed = ShotsManifest.safeParse({ shots: entries })
+check('manifest 가 ShotsManifest 계약을 지킨다', parsed.success,
+  parsed.success ? '' : parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(' · '))
+if (parsed.success) {
+  writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(parsed.data, null, 2)}\n`, 'utf8')
+}
 check('manifest 에 계획한 장수가 다 있다', entries.length === PUBLISHED_SHOTS.length,
   `${entries.length}/${PUBLISHED_SHOTS.length}`)
 

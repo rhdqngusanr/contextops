@@ -19580,6 +19580,18 @@ var ReplayFrames = external_exports.array(ReplayFrame).min(1).max(200).refine(
   { message: "t_ms \uB294 \uC904 \uC21C\uC11C\uB300\uB85C \uB298\uC5B4\uB098\uC57C \uD55C\uB2E4" }
 );
 
+// ../../packages/schema/src/shots.ts
+var ShotEntry = external_exports.object({
+  file: external_exports.string().startsWith("/shots/").endsWith(".png"),
+  src: external_exports.string().startsWith("/"),
+  alt: external_exports.string().min(1).max(200),
+  width: external_exports.int().positive(),
+  height: external_exports.int().positive()
+}).strict();
+var ShotsManifest = external_exports.object({
+  shots: external_exports.array(ShotEntry).min(1).max(6)
+}).strict();
+
 // src/cli/api.ts
 function apiUrl(origin, path) {
   return `${origin}/api/v1/${path.replace(/^\//, "")}`;
