@@ -50,6 +50,13 @@
       "when": 1788495239884,
       "tag": "0006_perfect_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788750119160,
+      "tag": "0007_outgoing_corsair",
+      "breakpoints": true
     }
   ]
 }

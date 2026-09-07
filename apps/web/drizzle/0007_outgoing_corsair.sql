@@ -1,0 +1,1 @@
+ALTER TABLE "pack_files" DROP COLUMN "source_map";

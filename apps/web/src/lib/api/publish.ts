@@ -185,7 +185,8 @@ export async function publishVersion(args: {
       path: f.path,
       content: f.text,
       sha256: f.sha256,
-      sourceMap: f.sourcemap,
+      //  ⚠ `f.sourcemap` 은 여기서 저장하지 않는다 (FINDINGS 34) — 역추적의 정본은
+      //     본문에 박힌 `<!-- ctx:… -->` 태그다 (`db/schema.ts` 의 pack_files 주석).
       target: f.target,
     })))
 

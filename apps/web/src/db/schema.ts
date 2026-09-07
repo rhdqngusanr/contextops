@@ -62,7 +62,7 @@ import {
   type Scope,
   type SourceRef,
 } from '@contextops/schema'
-import type { Snapshot, SourceMapEntry } from '@contextops/compiler'
+import type { Snapshot } from '@contextops/compiler'
 
 //  ⚠ 서버측 AI 의 기능 4종은 **계약이 아니라 서버 전용**이라 `packages/schema` 가 아니라
 //    `src/lib/ai/features.ts` 가 정본이다 (그 파일 머리 주석). 여기서는 **읽기만** 한다.
@@ -467,8 +467,11 @@ export const packFiles = pgTable('pack_files', {
   path: text('path').notNull(),
   content: text('content').notNull(),
   sha256: text('sha256').notNull(),
-  /** 줄 범위 → 항목 ID. P7 의 역추적이 이 표를 탄다. */
-  sourceMap: jsonb('source_map').$type<SourceMapEntry[]>().notNull().default([]),
+  //  🔴 여기에 `source_map`(줄 범위 → 항목 ID) 칸이 있었다. 지웠다 (FINDINGS 34).
+  //     P7 의 역추적 정본은 **본문에 박힌 `<!-- ctx:… -->` 태그**다 — 태그는 플러그인이
+  //     받는 바이트 안에 있어서 오프라인에서도 되짚어지고, 칸은 서버에 물어봐야만 살았다.
+  //     저장은 하는데 **읽는 라우트가 0곳**이라 아무 일도 안 했다. 되살리지 마라 —
+  //     역추적을 두 곳에 두면 둘이 갈리고, 그때 어느 쪽이 맞는지 아무도 모른다.
   target: packTarget('target').notNull(),
   createdAt: createdAt(),
   //  ⚠ `unique(version_id,path)` 은 복합 PK 가 이미 보장한다 (context_item_revisions 와 같다).

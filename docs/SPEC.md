@@ -133,7 +133,10 @@ proposals        { id, project_id, author_id, status enum('draft','submitted','a
                    client_request_id unique, decided_by, decided_at, decision_note }
 context_versions { id, project_id, semver text, snapshot_hash text, snapshot jsonb, manifest jsonb, published_by, published_at,
                    change_summary text, unique(project_id,semver), unique(project_id,snapshot_hash) }
-pack_files       { version_id, path, content text, sha256, source_map jsonb, target enum('claude','agents','cursor'), unique(version_id,path) }
+pack_files       { version_id, path, content text, sha256, target enum('claude','agents','cursor'), unique(version_id,path) }
+                   /* 🔴 `source_map jsonb`(줄 범위 → 항목 ID) 칸이 있었는데 지웠다 (FINDINGS 34 · 마이그레이션 0007).
+                      P7 의 역추적 정본은 **본문에 박힌 `<!-- ctx:… -->` 태그** 하나다 — 태그는 플러그인이 받는
+                      바이트 안에 있어서 오프라인에서도 되짚어지고, 칸은 저장만 되고 읽는 라우트가 0곳이었다. */
 devices          { id, user_id, project_id, name, token_hash text unique, last_seen_at, revoked_at }
 sync_reports     { id, device_id, project_id, version_id, status enum('applied','outdated','modified','failed','manual'), manifest_hash, reported_at }
 ai_usage         { id, project_id null /* 게스트 데모는 없다 */, feature enum('structure','conflict','ask','demo'), actor_hash text null /* sha256 — 원문 저장 금지 */,

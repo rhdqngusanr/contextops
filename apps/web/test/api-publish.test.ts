@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Manifest, SOURCE_REFS_MAX, SYNC_STATUSES } from '@contextops/schema'
-import { parseTraceTag } from '@contextops/compiler'
+import { parseTraceTag, traceLines } from '@contextops/compiler'
 
 import type { Db } from '../src/db/client'
 import { conflicts, contextItems, contextVersions, packFiles, projects, proposals, users } from '../src/db/schema'
@@ -153,8 +153,12 @@ describe('🔴 손으로 넣은 항목이 Pack 으로 나온다 (PLAN P1 셋째 
     const claude = files.find((f) => f.path === 'CLAUDE.md')
     //  P7 — 모든 줄이 역추적된다. 태그가 하나도 없으면 그 파일은 근거가 없는 것이다.
     expect(claude?.content).toContain('ctx:item_mission_one')
-    //  source_map 이 비어 있으면 Pack Explorer 가 줄→항목을 못 잇는다.
-    expect(claude?.sourceMap.length).toBeGreaterThan(0)
+    //  🔴 역추적의 정본은 **저장된 본문의 태그**다 (FINDINGS 34 로 `source_map` 칸을 지웠다).
+    //     그래서 화면 7 이 쓰는 파서(`traceLines`)로 여기서도 되읽는다 — 파싱을 손으로
+    //     다시 적으면 태그 형식이 바뀔 때 이 시험만 초록으로 남는다.
+    const traced = traceLines(claude?.content ?? '')
+    expect(traced.size).toBeGreaterThan(0)
+    expect([...traced.values()].map((t) => t.itemId)).toContain('item_mission_one')
   })
 
   it('공식 버전이 옮겨 가고, 목록이 is_official 로 그걸 말한다', async () => {
@@ -216,9 +220,12 @@ describe('🔴 충돌을 결정하면 진 항목이 다음 Pack 에서 빠진다
     //  이긴 쪽과, 이 결정과 상관없는 항목은 그대로 있다.
     expect(everything).toContain('ctx:item_mission_one')
     expect(everything).toContain('ctx:item_policy_dom')
-    //  🔴 진 쪽은 **어느 파일에도** 없다. `source_map` 도 그 항목을 안 가리킨다.
+    //  🔴 진 쪽은 **어느 파일에도** 없다 — 글자로도, 되읽은 태그로도.
+    //     (`source_map` 칸은 FINDINGS 34 로 지웠다. 저장된 바이트가 정본이다.)
     expect(everything).not.toContain('ctx:item_policy_one')
-    expect(files.flatMap((f) => f.sourceMap.map((m) => m.item_id))).not.toContain('item_policy_one')
+    const tracedIds = files.flatMap((f) => [...traceLines(f.content).values()].map((t) => t.itemId))
+    expect(tracedIds.length).toBeGreaterThan(0)
+    expect(tracedIds).not.toContain('item_policy_one')
   })
 })
 
