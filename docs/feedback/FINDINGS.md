@@ -45,7 +45,7 @@
 - **정본**: `fixtures/seed/demo.json` (`devices`) · `docs/SPEC.md` §10.3 · `docs/DESIGN_BRIEF.md` §4 화면 9
 - **고칠 방향**: 픽스처에 두 줄. 수를 화면 코드나 시험에 손으로 적지 말고 **종류를 표에서 세어라** —
   「오늘 5개」를 재는 시험은 여섯째가 붙는 날에도 초록이다.
-- **상태**: ✅ `CYCLE110` (110바퀴) — 기기 **12 → 14**: `linux-seoyeon-box`(`modified` · 공식 버전) ·
+- **상태**: ✅ `14a0719` (110바퀴) — 기기 **12 → 14**: `linux-seoyeon-box`(`modified` · 공식 버전) ·
   `mac-minseo-new`(`report: null` → `unknown`). 기존 12줄은 **안 건드렸다** (수가 바뀌면 SPEC §10.3 과 갈린다).
   🔴 **게이트로 올렸다** — `demo-guest.test.ts` 화면 9 시험이 ① 다섯 수를 재고 ② **`SYNC_STATUSES` 를 돌며 종류마다 0보다 큰지**를
   재고 ③ `unknown` 행은 버전·보고 시각이 **둘 다 `null`** 인지 ④ `modified` 행은 버전이 **공식**인지를 잰다.
