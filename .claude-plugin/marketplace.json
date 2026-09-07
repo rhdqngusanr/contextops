@@ -1,0 +1,13 @@
+{
+  "name": "contextops",
+  "owner": {
+    "name": "ContextOps"
+  },
+  "plugins": [
+    {
+      "name": "contextops",
+      "source": "./plugin/contextops",
+      "description": "Team context sync for Claude Code — 승인된 AI Context 를 팀 전체에 같은 버전으로 배포한다"
+    }
+  ]
+}

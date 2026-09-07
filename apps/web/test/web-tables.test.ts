@@ -177,6 +177,18 @@ describe('🔴 근거 4종이 서로 다른 한 줄을 낸다 (SPEC §3 · DESIG
     const bare: Extract<SourceRef, { kind: 'repository_path' }> = { kind: 'repository_path', repo: 'r', path: 'a.ts' }
     expect(SRC_LABEL.repository_path(bare)).toBe('r/a.ts')
   })
+
+  //  🔴 **어느 문서에서 왔는지 라벨이 말한다** (FINDINGS 87).
+  //  ★ 왜 이 시험이 따로 필요한가 — 위 시험은 `repository_path` 로만 잰다. 문서 쪽은
+  //    예전에 「문서 §보안 · 2100–2260자」였고, 화면 5·7 처럼 **다른 문서에서 온 근거가
+  //    나란히 놓이는 자리**에서 두 줄이 글자 그대로 같았다. P7 의 사슬이 거기서 끊긴다.
+  it('문서가 다르면 근거 라벨도 다르다 — 같은 절·같은 구간이어도', () => {
+    const docRef = SAMPLES.source_document as Extract<SourceRef, { kind: 'source_document' }>
+    const other = { ...docRef, document_version_id: '00000000-0000-4000-8000-000000000999' }
+    expect(SRC_LABEL.source_document(docRef)).not.toBe(SRC_LABEL.source_document(other))
+    //  앞 8자를 쓴다 — uuid 전체를 찍으면 좁은 칸에서 다른 것을 다 밀어낸다.
+    expect(SRC_LABEL.source_document(other)).toContain('00000000')
+  })
 })
 
 const designBrief = fileURLToPath(new URL('../../../docs/DESIGN_BRIEF.md', import.meta.url))

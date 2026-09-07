@@ -21,7 +21,13 @@ import { PROGRESS_REPORT } from './progress-report'
 //  1.4 (2026-09-07) — 항목의 `body`(사용자가 적은 설명)가 **모든 절**에서 Pack 에 나간다 (FINDINGS 9).
 //      ★ 왜 — 예전엔 `bodyLine()` 을 부르는 절이 넷뿐이라 mission·goal·roadmap·policy·constraint 의
 //      `body` 가 조용히 사라졌다. 자리는 이제 `src/sections.ts` 의 `SECTIONS` 표 `body` 칸이 정한다.
-export const TEMPLATE_VERSION = '1.4'
+//  1.5 (2026-09-08) — `.claude/rules/workflow.md` 의 제목이 **본문과 맞는다** (FINDINGS 46).
+//      ★ 왜 — 이 파일은 workflow 항목이 0개여도 나가고(`always`), 그때 본문은 ContextOps
+//      진행 보고 규칙 하나뿐인데 제목은 `# 작업 절차` 였다. 사람이 열면 「작업 절차라더니
+//      왜 우리 도구 사용법만 있나」로 읽힌다 — 팀 규칙으로 배포할 만한 파일인가에서 걸린다.
+//      ⚠ 제목을 항목 유무로 갈라 쓰지 않았다. 갈라 쓰면 같은 파일이 저장소마다 다른 제목을
+//      갖게 되고, `always` 를 표 한 칸으로 만든 뜻이 없어진다.
+export const TEMPLATE_VERSION = '1.5'
 
 /**
  * 🔴 **거울 문서** — 제 항목은 없고 다른 문서의 절을 **그대로** 모아 한 장으로 내는 문서
@@ -203,7 +209,8 @@ export const DOCS: Record<DocId, DocSpec> = {
     // 🔴 SPEC §4.3 의 「항상」은 **파일 자체가 항상 나간다**는 뜻이다.
     //    workflow 항목이 0개인 저장소도 진행 보고 방법을 배워야 한다.
     always: true,
-    head: (v) => ['# 작업 절차', notice(v)],
+    //  🔴 두 쪽이 다 참인 제목이다 (FINDINGS 46) — 항목이 있으면 절차가, 없어도 진행 보고가 있다.
+    head: (v) => ['# 작업 절차와 진행 보고', notice(v)],
     slots: [{ section: 'workflow' }],
     // 🔴 SPEC §4.3 — 이 문단은 항목에서 오지 않는다. 항상 붙는다.
     foot: () => [...PROGRESS_REPORT],

@@ -299,7 +299,10 @@ export const Manifest = z.object({ schema_version: z.literal('1.0'), compiler_ve
 ## 4. 컴파일러 (`packages/compiler`)
 
 ```ts
-export function compile(input: { snapshot: Snapshot; project: { slug, name }; templateVersion: '1.0'; compilerVersion: string }): CompileResult
+// `templateVersion` 은 `z.literal(TEMPLATE_VERSION)` 이다 — **숫자를 여기 적지 않는다.**
+// 정본은 `packages/compiler/templates/index.ts` 의 `TEMPLATE_VERSION` 하나이고, 그 위 주석이
+// 판마다 왜 올렸는지를 적는다. 안 맞는 입력은 `INVALID_INPUT` 이다.
+export function compile(input: { snapshot: Snapshot; project: { slug, name }; templateVersion: TemplateVersion; compilerVersion: string }): CompileResult
 // CompileResult = { files: PackFile[]; manifest: Manifest; excluded: {item_id, reason}[] }
 ```
 

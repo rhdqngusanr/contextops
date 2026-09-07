@@ -211,7 +211,7 @@ AI 코딩 도구는 **팀 규칙이 적힌 파일**을 읽고 답합니다. 문�
 ## 설치
 
 ```
-claude plugin marketplace add <marketplace>                      # 플러그인 저장소를 등록한다
+claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록한다
 claude plugin install contextops                                 # 플러그인을 깐다 (훅 · Skill · CLI)
 node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup          # 이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에
 /contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다

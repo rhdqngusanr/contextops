@@ -12,7 +12,7 @@
 | 항목 | 값 | 어디에도 같이 적나 |
 |---|---|---|
 | 제출 팀명 | 퇴직했는데저좀이직시켜주세요 | 정본은 랜딩의 `SUBMISSION_IDENTITY`(`apps/web/src/components/landing.tsx`) · README 머리 · 랜딩 푸터 (`LANDING_FOOT`) — 셋이 같은 글자인지 `apps/web/test/readme.test.ts` 가 잰다 |
-| 공개 저장소 URL | <https://github.com/rhdqngusanr/contextops> (PUBLIC · MIT) | 같은 정본 · README 머리 · 랜딩 푸터의 GitHub · Known limitations 링크. ⚠ `<marketplace>` 는 아직 못 채운다 — 저장소에 `.claude-plugin/marketplace.json` 이 없다 (FINDINGS 140) |
+| 공개 저장소 URL | <https://github.com/rhdqngusanr/contextops> (PUBLIC · MIT) | 같은 정본 · README 머리 · 랜딩 푸터의 GitHub · Known limitations 링크. 설치 첫 줄의 마켓플레이스 이름(`rhdqngusanr/contextops`)도 이 URL 에서 파생된다 — 목록 파일은 저장소 뿌리의 `.claude-plugin/marketplace.json` 이다 |
 | production URL | 🙋 (Vercel · Supabase 연결 뒤) | README 머리 — `docs/STATUS.md` 「막힌 것」 |
 | 2분 영상 링크 | 🙋 (PLAN P6 첫 행) | — |
 | 슬라이드 링크 | 🙋 (PLAN P6 첫 행) | — |
@@ -119,7 +119,7 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 **개발자 설치**
 
 ```
-claude plugin marketplace add <marketplace>                      # 플러그인 저장소를 등록한다
+claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록한다
 claude plugin install contextops                                 # 플러그인을 깐다 (훅 · Skill · CLI)
 node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup          # 이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에
 /contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다

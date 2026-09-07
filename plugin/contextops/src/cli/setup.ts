@@ -1,4 +1,14 @@
 import { basename } from 'node:path'
+
+/**
+ * 🔴 `claude plugin marketplace add` 가 받는 저장소 이름 (FINDINGS 140).
+ *
+ * ★ 왜 여기 글자로 적나 — 플러그인은 `apps/web` 을 import 할 수 없다 (의존 방향).
+ *   정본은 웹의 `SUBMISSION_IDENTITY.marketplaceRef`(= 저장소 URL 에서 파생)이고,
+ *   `apps/web/test/readme.test.ts` 가 **둘이 같은 문자열인지** 센다 — 저장소를 옮기면
+ *   그 시험이 먼저 빨개진다. 122(제출 팀명·URL)를 닫은 것과 같은 모양이다.
+ */
+const MARKETPLACE_REF = 'rhdqngusanr/contextops'
 import { ApiOrigin, DeviceToken, ProjectConfig } from '@contextops/schema'
 
 import { apiGet } from './api'
@@ -150,7 +160,10 @@ export async function runSetup(cli: Cli, flags: Flags): Promise<number> {
   }
   cli.io.out('')
   cli.io.out('다음 (아직 안 깔았다면):')
-  cli.io.out('  claude plugin marketplace add <marketplace>')
+  //  🔴 자리표시자가 아니다 (FINDINGS 140). 정본은 웹의 `SUBMISSION_IDENTITY.marketplaceRef`
+  //     이고 플러그인은 웹을 import 할 수 없어 **글자로** 적는다 —
+  //     `apps/web/test/readme.test.ts` 가 둘이 같은 문자열인지 센다 (122 와 같은 모양).
+  cli.io.out(`  claude plugin marketplace add ${MARKETPLACE_REF}`)
   cli.io.out('  claude plugin install contextops')
   cli.io.out('')
   cli.io.out('Claude Code 를 열고 /contextops:init 을 실행하세요.')

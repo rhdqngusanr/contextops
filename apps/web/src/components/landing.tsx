@@ -40,8 +40,10 @@ import { TerminalReplay } from './terminal-replay'
 //       「그림이 낡았는데 아무도 모르는」 상태가 그대로 돌아온다.
 //     ★ 새 화면을 첫 화면에 싣는 법: `e2e/plan.ts` 의 `PUBLISHED` 에 **한 줄** → 관통 한 번.
 //    · GitHub · Known limitations 링크 — **있다** (80바퀴 · `SUBMISSION_IDENTITY` · FINDINGS 122).
-//      `<marketplace>` 는 여전히 자리표시자다 — 저장소에 `.claude-plugin/marketplace.json` 이 없어
-//      URL 을 넣어도 첫 명령이 실패한다 (FINDINGS 140).
+//      설치 첫 줄의 마켓플레이스 이름도 **자리표시자가 아니다** (FINDINGS 140 · 2026-09-08) —
+//      저장소 뿌리에 `.claude-plugin/marketplace.json` 을 두었고, 이름은
+//      `SUBMISSION_IDENTITY.marketplaceRef`(= 저장소 URL 에서 파생)에서 온다.
+//      🙋 **새 PC 에서 add → install → /contextops:init 까지 밟는 것**은 아직이다 (PLAN P5 둘째 행).
 //
 //  ⚠ accent 는 이 화면에 **하나**다 — [샘플 팀으로 둘러보기]. 다른 버튼은 outline.
 // =====================================================================
@@ -218,23 +220,6 @@ export const TRUST_BOUNDARY = {
 } as const
 
 /**
- * C-5. 개발자 설치 — **지금 실제로 도는 명령**만 적는다 (SPEC §8.3 · `docs/evidence/2026-09-03-plugin`).
- * ⚠ `npx contextops` 는 아직 없다 (npm 에 올린 적이 없다). 없는 명령을 적으면 첫 시도가
- *   실패하고, 그건 「고장」으로 읽힌다. `<marketplace>` 는 `setup` 이 찍는 안내와 같은 자리다.
- * ⚠ `/contextops:…` 는 `plugin/contextops/skills/<이름>` 이 있어야 한다 (시험이 센다).
- */
-export const INSTALL_STEPS = {
-  title: '개발자 설치',
-  lines: [
-    { cmd: 'claude plugin marketplace add <marketplace>', note: '플러그인 저장소를 등록한다' },
-    { cmd: 'claude plugin install contextops', note: '플러그인을 깐다 (훅 · Skill · CLI)' },
-    { cmd: 'node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup', note: '이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에' },
-    { cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다' },
-  ],
-  foot: '그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.',
-} as const
-
-/**
  * 🔴 제출 정체 — **공개 저장소 URL 과 제출 팀명의 정본은 여기 하나다** (INBOX 2026-09-06 · FINDINGS 122).
  *
  * 랜딩 푸터(`LANDING_FOOT`)는 이 값을 읽고, README 머리 · `docs/SUBMISSION.md` 의 🙋 표 는 마크다운이라
@@ -247,8 +232,37 @@ export const INSTALL_STEPS = {
 export const SUBMISSION_IDENTITY = {
   team: '퇴직했는데저좀이직시켜주세요',
   repoUrl: 'https://github.com/rhdqngusanr/contextops',
+  /**
+   * `claude plugin marketplace add` 가 받는 이름 — **저장소 URL 에서 파생시킨다** (FINDINGS 140).
+   * 손으로 또 적으면 저장소를 옮길 때 한쪽만 바뀌고, 그러면 설치 첫 줄이 조용히 실패한다.
+   * ⚠ 이 이름이 먹히려면 저장소 뿌리에 `.claude-plugin/marketplace.json` 이 있어야 한다
+   *   (`plugins[0].source` → `./plugin/contextops`). 없으면 「목록을 못 찾는다」로 끝난다.
+   */
+  get marketplaceRef(): string {
+    return new URL(this.repoUrl).pathname.slice(1)
+  },
   /** Known limitations 는 앱에 페이지를 또 만들지 않는다 — 같은 문서가 두 곳이 된다. 저장소의 그 파일로 건다. */
   limitsPath: 'docs/KNOWN_LIMITATIONS.md',
+} as const
+
+/**
+ * C-5. 개발자 설치 — **지금 실제로 도는 명령**만 적는다 (SPEC §8.3 · `docs/evidence/2026-09-03-plugin`).
+ * ⚠ `npx contextops` 는 아직 없다 (npm 에 올린 적이 없다). 없는 명령을 적으면 첫 시도가
+ *   실패하고, 그건 「고장」으로 읽힌다.
+ * 🔴 첫 줄의 저장소 이름은 `SUBMISSION_IDENTITY.marketplaceRef` 에서 온다 (FINDINGS 140) —
+ *   자리표시자가 아니다. 플러그인 `setup` 이 찍는 같은 줄은 웹을 import 할 수 없어 글자로
+ *   적혀 있고, `test/readme.test.ts` 가 둘이 같은 문자열인지 센다.
+ * ⚠ `/contextops:…` 는 `plugin/contextops/skills/<이름>` 이 있어야 한다 (시험이 센다).
+ */
+export const INSTALL_STEPS = {
+  title: '개발자 설치',
+  lines: [
+    { cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록한다' },
+    { cmd: 'claude plugin install contextops', note: '플러그인을 깐다 (훅 · Skill · CLI)' },
+    { cmd: 'node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup', note: '이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에' },
+    { cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다' },
+  ],
+  foot: '그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.',
 } as const
 
 /** 푸터 (DESIGN_BRIEF 화면 1 C-6: 제출 팀명 · GitHub 링크 · Known limitations 링크). 값은 `SUBMISSION_IDENTITY` 하나에서 온다. */

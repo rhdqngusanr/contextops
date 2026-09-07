@@ -280,3 +280,52 @@ describe('⑥ 제출서(docs/SUBMISSION.md) — README·코드와 같은 말을 
     expect(limits).toContain('서버측 AI 4종 중 둘')
   })
 })
+
+// =====================================================================
+//  ⑦ 설치 첫 줄의 **마켓플레이스 이름**이 셋에서 같고, 그 목록 파일이 실재한다
+//     (FINDINGS 140)
+//
+//  ★ 왜 시험인가 — 이름이 사는 자리가 셋이다: 랜딩(`SUBMISSION_IDENTITY.marketplaceRef`) ·
+//    플러그인 `setup` 이 찍는 안내(웹을 import 할 수 없어 **글자**로 적힌다) · README·제출서
+//    (마크다운이라 import 를 못 한다). 저장소를 옮기면 한쪽만 바뀌고, 그때 사람이 처음
+//    치는 명령이 조용히 실패한다 — 그건 「고장」으로 읽힌다.
+//
+//  ⚠ 이름이 맞아도 **목록 파일이 없으면** `claude plugin marketplace add` 는 실패한다.
+//    그래서 파일의 존재와 `plugins[0].source` 가 진짜 폴더인지도 같이 잰다.
+// =====================================================================
+describe('⑦ 마켓플레이스 이름과 목록 파일 (FINDINGS 140)', () => {
+  const ref = SUBMISSION_IDENTITY.marketplaceRef
+
+  it('이름은 저장소 URL 에서 파생된다 — 손으로 또 적지 않는다', () => {
+    expect(ref).toBe(new URL(SUBMISSION_IDENTITY.repoUrl).pathname.slice(1))
+    expect(ref).not.toContain('<')
+  })
+
+  it('랜딩 설치 첫 줄이 그 이름을 쓴다', () => {
+    expect(INSTALL_STEPS.lines[0]?.cmd).toBe(`claude plugin marketplace add ${ref}`)
+  })
+
+  it('플러그인 setup 이 찍는 줄도 같은 이름이다 (웹을 import 못 하므로 글자로 적힌다)', () => {
+    const setup = readFileSync(join(repoRoot, 'plugin', 'contextops', 'src', 'cli', 'setup.ts'), 'utf8')
+    expect(setup).toContain(`const MARKETPLACE_REF = '${ref}'`)
+    expect(setup).not.toContain('<marketplace>')
+  })
+
+  it('README·제출서에도 자리표시자가 남아 있지 않다', () => {
+    for (const text of [readme, submission]) {
+      expect(text).not.toContain('<marketplace>')
+      expect(text).toContain(`claude plugin marketplace add ${ref}`)
+    }
+  })
+
+  it('목록 파일이 있고 가리키는 폴더가 실재한다', () => {
+    const path = join(repoRoot, '.claude-plugin', 'marketplace.json')
+    expect(existsSync(path), '.claude-plugin/marketplace.json 이 없다 — add 가 목록을 못 찾는다').toBe(true)
+    const market = JSON.parse(readFileSync(path, 'utf8')) as { plugins?: { name: string; source: string }[] }
+    const first = market.plugins?.[0]
+    expect(first?.name).toBe('contextops')
+    expect(existsSync(join(repoRoot, first?.source ?? '')), `source 가 없는 폴더다: ${String(first?.source)}`).toBe(true)
+    //  그 폴더가 진짜 플러그인인지 — manifest 가 있어야 `install` 이 된다.
+    expect(existsSync(join(repoRoot, first?.source ?? '', '.claude-plugin', 'plugin.json'))).toBe(true)
+  })
+})

@@ -20634,6 +20634,7 @@ async function report(cli2, root, origin, token, projectId, manifest, status) {
 }
 
 // src/cli/setup.ts
+var MARKETPLACE_REF = "rhdqngusanr/contextops";
 var SETUP_FLAGS = {
   "api-origin": { kind: "value", help: "ContextOps \uC11C\uBC84 \uC8FC\uC18C (https://\u2026)", env: "CONTEXTOPS_API_ORIGIN" },
   "project": { kind: "value", help: "\uD504\uB85C\uC81D\uD2B8 uuid", env: "CONTEXTOPS_PROJECT_ID" },
@@ -20735,7 +20736,7 @@ async function runSetup(cli2, flags) {
   }
   cli2.io.out("");
   cli2.io.out("\uB2E4\uC74C (\uC544\uC9C1 \uC548 \uAE54\uC558\uB2E4\uBA74):");
-  cli2.io.out("  claude plugin marketplace add <marketplace>");
+  cli2.io.out(`  claude plugin marketplace add ${MARKETPLACE_REF}`);
   cli2.io.out("  claude plugin install contextops");
   cli2.io.out("");
   cli2.io.out("Claude Code \uB97C \uC5F4\uACE0 /contextops:init \uC744 \uC2E4\uD589\uD558\uC138\uC694.");

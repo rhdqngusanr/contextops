@@ -20,7 +20,13 @@ export const SRC_LABEL: Record<SourceRefKind, (ref: SourceRef) => string> = {
   source_document: (ref) => {
     const r = ref as Extract<SourceRef, { kind: 'source_document' }>
     const head = r.heading_path.length > 0 ? ` §${r.heading_path.join(' › ')}` : ''
-    return `문서${head} · ${r.start_char}–${r.end_char}자`
+    //  🔴 **어느 문서인지 말한다** (FINDINGS 87). 예전엔 「문서 §보안 · 2100–2260자」였고,
+    //     화면 5·7 처럼 **다른 문서에서 온 근거가 나란히 놓이는 자리**에서 둘이 구별되지
+    //     않았다 — P7 은 「항목 ID → 원문」인데 그 사슬이 사람 눈앞에서 끊긴다.
+    //  ⚠ 문서 **제목**이 아니라 버전 id 앞 8자다. 제목까지 가려면 화면이 그 이름을 알아야
+    //    하는데 응답에 없다 (문서 목록을 내는 문이 아직 없다 — 지어내지 않는다).
+    //    `proposal` 이 이미 같은 모양이다 (`제안 c0ffee00`).
+    return `문서 ${r.document_version_id.slice(0, 8)}${head} · ${r.start_char}–${r.end_char}자`
   },
   repository_path: (ref) => {
     const r = ref as Extract<SourceRef, { kind: 'repository_path' }>

@@ -1,4 +1,4 @@
-# 작업 절차
+# 작업 절차와 진행 보고
 <!-- ContextOps generated. Do not edit by hand; run /contextops:propose to suggest changes. snapshot:31ece449 -->
 
 ## 결제 코드를 고칠 때

@@ -429,7 +429,12 @@ export const GOALS = [
   ['item_goal_refund_sla', '환불이 하루 안에 끝난다', '접수에서 종결까지의 시각 차이 p95 로 잰다.',
     '| G2 | 환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95 | 2026-06-30 |',
     '환불 접수→종결 24시간 이내 95%', '`refund.closed_at - refund.created_at` p95', '2026-06-30'],
-  ['item_goal_settlement_zero', '정산이 원장과 맞는다', '일 배치 뒤 원장 대사 차액으로 잰다.',
+  //  🔴 `body` 가 **비어 있다 — 일부러다** (FINDINGS 170). 원문(`fixtures/paylab-docs/goals.md`)이
+  //     G3 에 대해 세 칸(목표·지표·기한) 밖의 말을 하지 않는다. G1·G2 의 당김은 G1 의 body 가
+  //     이미 나르고, G2 의 body 는 식(`refund.closed_at - …`)을 사람 말로 푼 것이다.
+  //     ⚠ **여기를 지어내서 채우지 마라.** 지표를 말만 바꿔 되풀이하는 줄이 되고, 그것이
+  //       169·170 이 지운 바로 그 모양이다. roadmap 셋이 이미 빈 `body` 다.
+  ['item_goal_settlement_zero', '정산이 원장과 맞는다', '',
     '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |',
     '정산 오차 0원', '일 배치 후 원장 대사 차액', '2026-06-30'],
 ] as const satisfies readonly (readonly [
