@@ -411,7 +411,11 @@ const ARCHITECTURE_TOP_PRIORITY = 70
  *   그대로 잘라 온 것이고, 세 칸(`outcome`·`metric`·`deadline`)은 그 행의 세 칸을
  *   **글자 그대로** 옮긴다 (`QUOTED_DATA.goal` · FINDINGS 101) — 관통이 그 칸이 범위 안에
  *   있는지 센다. 전에 `metric` 을 「주간 승인 성공률」로 줄여 적었다가 그 낱말이 문서
- *   어디에도 없어서 잡혔다. 줄여 쓴 요약이 필요하면 그 자리는 `body` 다.
+ *   어디에도 없어서 잡혔다.
+ * 🔴 **`body` 는 세 칸이 안 말하는 것만 적는다** (FINDINGS 169) — `metric` 을 말만 바꿔
+ *   되풀이하면 종이에 같은 말이 두 줄로 선다. G1 의 `body` 가 「G2 와 서로 당긴다」인 것이
+ *   그 모양이다 (§2 의 표 아래 두 줄에서 왔다). 꼬리만 붙인 되풀이(`…성공률` -> `…성공률로
+ *   잰다`)는 관통의 메아리 검사가 문다 (`scripts/pack-echo.ts` · `test/pack-echo.test.ts`).
  * ⚠ **제목을 `outcome` 과 같게 적지 마라** (FINDINGS 100). goal 절은
  *   `- **{title}** — {data.outcome}` 를 내므로 둘이 같으면 한 줄에 같은 문장이 두 번 선다.
  *   제목은 **목록에서 읽는 이름**이고 `outcome` 이 **표에서 온 목표 문장**이다.
@@ -419,7 +423,7 @@ const ARCHITECTURE_TOP_PRIORITY = 70
  *    (`GOAL_TOP_PRIORITY - i`). 같은 값이면 컴파일러가 제목 코드포인트 순으로 세운다.
  */
 export const GOALS = [
-  ['item_goal_success_rate', '장애 구간에도 승인이 선다', 'PSP 장애 구간을 포함한 주간 성공률로 잰다.',
+  ['item_goal_success_rate', '장애 구간에도 승인이 선다', 'G2 와 서로 당긴다 — 재시도를 늘리면 승인률은 오르지만 환불이 늦어지고, 둘이 부딪히면 G2 가 우선이다.',
     '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-06-30 |',
     '결제 승인 성공률 99.5%', 'PSP 장애 구간을 포함한 주간 성공률', '2026-06-30'],
   ['item_goal_refund_sla', '환불이 하루 안에 끝난다', '접수에서 종결까지의 시각 차이 p95 로 잰다.',
@@ -636,7 +640,7 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
     fromDoc('item_constraint_settlement_batch', 'constraint', goals,
       '가맹점 정산은 하루 1회 배치이고 실시간이 아니다.', {
         title: '정산은 하루 1회 배치다',
-        body: '가맹점 정산은 즉시 일어나지 않는다 — 하루 한 번의 배치다.',
+        body: '원장(`ledger`)은 append only 라, 그날의 정산은 배치가 끝난 뒤에야 확정된다.',
         data: { statement: '가맹점 정산은 하루 1회 배치로만 한다 — 즉시 정산은 없다.' },
       }),
     //  🔴 §4 마일스톤 M1~M3 — 재료는 `MILESTONES` 하나다 (위 주석). `dependencies` 는 우리

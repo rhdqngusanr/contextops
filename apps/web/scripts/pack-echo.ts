@@ -36,6 +36,18 @@ import { traceLines } from '@contextops/compiler'
 const MIN_ECHO_CHARS = 6
 
 /**
+ * **들어 있는 것**을 메아리로 셀 때의 최소 길이(문자). 위보다 훨씬 높다.
+ *
+ * 🔴 왜 따로 있나 — 짧은 조각은 **정상적으로** 긴 조각 안에 들어 있다:
+ *   architecture 항목은 이름이 `payment` 이고 경로가 `src/payment/` 다. 6자 기준으로
+ *   세면 그 넷이 전부 빨개진다 (실측 — 파일 5개 × 항목 4개 = 20건).
+ * ⚠ 이 값을 내려서 「더 잡자」고 하지 마라. 잡히는 것은 이름과 경로뿐이고,
+ *   **늘 빨간 게이트는 꺼진다.** 169 가 잡으려는 것(`…주간 성공률` ⊂ `…주간 성공률로 잰다`)은
+ *   21자다 — 문장이지 이름이 아니다.
+ */
+const MIN_CONTAINED_ECHO_CHARS = 16
+
+/**
  * 한 줄을 **사람이 읽는 조각**으로 자르는 자리들.
  *
  * ⚠ ` · ` 는 **앞뒤에 공백이 있을 때만** 자른다 — `승인·매입` 은 한 낱말이다.
@@ -101,6 +113,21 @@ export function findEchoes(files: PackFiles): Echo[] {
       for (const f of fragments) {
         if (seen.has(f)) echoes.push({ itemId, path, fragment: f })
         seen.add(f)
+      }
+      //  🔴 **조각 하나가 다른 조각 안에 통째로 들어 있는 것도 메아리다** (FINDINGS 169).
+      //  ★ 왜 더했나 — `body` 가 종이에 나가기 시작하자(FINDINGS 9) 씨앗이 제 `data` 를
+      //    그대로 베끼고 **꼬리만 붙이는** 자리가 나왔다: `지표: PSP 장애 구간을 포함한 주간 성공률`
+      //    옆에 `PSP 장애 구간을 포함한 주간 성공률로 잰다`. 글자가 하나 달라 위의 **같음** 검사는
+      //    통과하고, 사람이 읽으면 같은 말이 두 번이다. 그 갈래를 여기서 잠근다.
+      //  ⚠ 여기서도 고칠 자리는 **씨앗**이다 — 템플릿을 깎지 마라 (머리말의 그 이유 그대로).
+      //  ⚠ 말을 **바꿔** 되풀이하는 것(`하루 1회 배치` ↔ `하루 한 번의 배치`)은 여기서 안 걸린다.
+      //    그건 사람이 읽고 잡는다 — 기준을 낱말까지 내리면 이 게이트가 늘 빨개진다.
+      const unique = [...seen]
+      for (const short of unique) {
+        if (short.length < MIN_CONTAINED_ECHO_CHARS) continue
+        if (unique.some((long) => long !== short && long.includes(short))) {
+          echoes.push({ itemId, path, fragment: short })
+        }
       }
     }
   }
