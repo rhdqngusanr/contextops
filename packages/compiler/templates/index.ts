@@ -18,7 +18,10 @@ import { PROGRESS_REPORT } from './progress-report'
 //  1.3 (2026-09-06) — `agents`·`cursor` 거울 문서가 생겼고, scoped_rule 줄이 제 범위(도메인·경로)를
 //      끝에 적는다. ★ 왜 — 거울 문서는 여러 파일의 규칙을 **한 장**에 모으므로 「어느 파일에 있었나」가
 //      없어진다. 줄이 스스로 범위를 말하지 않으면 경로 규칙이 전역 규칙처럼 읽힌다.
-export const TEMPLATE_VERSION = '1.3'
+//  1.4 (2026-09-07) — 항목의 `body`(사용자가 적은 설명)가 **모든 절**에서 Pack 에 나간다 (FINDINGS 9).
+//      ★ 왜 — 예전엔 `bodyLine()` 을 부르는 절이 넷뿐이라 mission·goal·roadmap·policy·constraint 의
+//      `body` 가 조용히 사라졌다. 자리는 이제 `src/sections.ts` 의 `SECTIONS` 표 `body` 칸이 정한다.
+export const TEMPLATE_VERSION = '1.4'
 
 /**
  * 🔴 **거울 문서** — 제 항목은 없고 다른 문서의 절을 **그대로** 모아 한 장으로 내는 문서

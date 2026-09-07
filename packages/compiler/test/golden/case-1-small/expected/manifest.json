@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "compiler_version": "0.1.0",
-  "template_version": "1.3",
+  "template_version": "1.4",
   "team_id": "b1a7d9e0-0000-4000-8000-000000000001",
   "project_id": "b1a7d9e0-0000-4000-8000-000000000002",
   "context_version": "1.0.0",
@@ -47,8 +47,8 @@
     },
     {
       "path": ".cursor/rules/contextops.mdc",
-      "sha256": "97e6854fbcec8fb8d638758526bf872a8e8cbf758c4cc779def80fa47edf6053",
-      "size": 3177,
+      "sha256": "7f0fce3f2e91738bcfb1623223285014ea832bfe1815864f0d4eb7621ab03a0a",
+      "size": 3256,
       "target": "cursor",
       "source_item_ids": [
         "item_pl_adr_retry",
@@ -65,8 +65,8 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "f1d7503190c40fbd65a0d393da3387da8a842ba9e429359d13f40b95b565e9e5",
-      "size": 3037,
+      "sha256": "fa6806a9e507d443b6d11acd7ec4086546e4456737dd4b02883de759d20d47e8",
+      "size": 3116,
       "target": "agents",
       "source_item_ids": [
         "item_pl_adr_retry",
@@ -83,8 +83,8 @@
     },
     {
       "path": "CLAUDE.md",
-      "sha256": "7ea1c7fd8d764e986ab0fab97792bc29a2eaa0e136b2b71e948e37e87bc379a2",
-      "size": 1825,
+      "sha256": "f69e2682588270a256e69d07cb3258bc7813a7fc5535fe6d28f79f407eb78dfd",
+      "size": 1904,
       "target": "claude",
       "source_item_ids": [
         "item_pl_arch_gateway",
@@ -131,5 +131,5 @@
       "reason": "open_question 은 Pack 에 나가지 않는다 — 웹에서 답한 뒤 다른 타입으로 승격된다"
     }
   ],
-  "manifest_hash": "32481bf1d7099d5aff4642eb85e28be1ffe892511e702b20dd489e50e00f8247"
+  "manifest_hash": "d33aa2134ad96607dac93bbb301e05a5aaee7003f54824b2256ad88dd92bfab3"
 }

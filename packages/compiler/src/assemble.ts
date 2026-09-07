@@ -2,7 +2,7 @@ import type { ContextItem, PackTarget } from '@contextops/schema'
 import { DOCS, type DocId, type DocVars, type SectionKey } from '../templates'
 import { CLAUDE_MD_MAX_CHARS, RULES_MAX_CHARS } from './limits'
 import { docKey, placeItem } from './partition'
-import { SECTIONS } from './sections'
+import { SECTIONS, renderSection } from './sections'
 import { sortItems } from './sort'
 import { traceTag } from './tag'
 import { normalizeText } from './hash'
@@ -87,7 +87,7 @@ export function collect(items: readonly ContextItem[]): { docs: DocDraft[]; excl
         item_id: item.id,
         revision: item.revision,
         tag: traceTag(item),
-        lines: SECTIONS[section].render(item),
+        lines: renderSection(section, item),
       })
       doc.sections.set(section, blocks)
     }

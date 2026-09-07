@@ -583,7 +583,7 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
     fromDoc('item_constraint_card', 'constraint', goals,
       '우리는 카드 정보를 저장하지 않는다. 토큰만 받는다.', {
         title: '카드 정보를 저장하지 않는다',
-        body: '토큰만 받는다.',
+        body: '카드 원본이 우리 망에 들어오는 경로 자체를 없앤다 — 결제창은 PSP 가 띄운다.',
         data: { statement: '카드 원본 정보를 저장하지 않는다 — 토큰만 받는다.' },
       }),
     //  🔴 §3.1 의 뒷부분 — 「무엇을 재시도하나」. 앞 항목(`item_policy_retry`)이 「몇 번 · 어떤
@@ -594,7 +594,7 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft
       '재시도 대상은 네트워크 오류와 5xx 뿐이다. 4xx 는 재시도하지 않는다.\n'
       + '멱등키(`Idempotency-Key`)가 없는 요청은 재시도하지 않는다.', {
         title: '재시도는 네트워크 오류와 5xx 에만',
-        body: '4xx 와 멱등키 없는 요청은 재시도하지 않는다.',
+        body: '멱등키가 없으면 서버가 같은 요청인지 못 알아본다 — 그 재시도는 곧 중복 결제다.',
         data: {
           rule: '네트워크 오류와 5xx 만 재시도한다 — 4xx 와 멱등키 없는 요청은 재시도하지 않는다',
           severity: 'must',

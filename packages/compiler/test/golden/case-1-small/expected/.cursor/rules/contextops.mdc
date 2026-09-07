@@ -7,7 +7,8 @@ alwaysApply: true
 
 ## Mission
 결제를 안전하고 예측 가능하게 만든다.
-> 작년 장애 7건 중 5건이 결제에서 났다. <!-- ctx:item_pl_mission rev:3 conf:high src:doc:b1a7d9e0-0000-4000-8000-0000000000a1#120-340 -->
+> 작년 장애 7건 중 5건이 결제에서 났다.
+팀이 제일 먼저 지키는 것은 중복 결제가 없다는 약속이다. <!-- ctx:item_pl_mission rev:3 conf:high src:doc:b1a7d9e0-0000-4000-8000-0000000000a1#120-340 -->
 
 ## Goals
 - **결제 실패율** — 결제 실패율 1% 미만 · 지표: payment_failure_rate · 기한: 2026-12-31 <!-- ctx:item_pl_goal_fail rev:1 conf:high src:doc:b1a7d9e0-0000-4000-8000-0000000000a1#400-520 -->

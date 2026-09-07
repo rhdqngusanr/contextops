@@ -155,6 +155,5 @@ export function seedDraft(q: SeedQuestion, answer: string): ContextItemDraft | u
     type: q.type,
     data: q.data(answer),
     question: q.question,
-    answer,
   })
 }

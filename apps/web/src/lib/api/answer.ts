@@ -42,6 +42,10 @@ export function questionItemId(questionId: string): string {
  *   그 원문은 충돌 행의 `resolution.note` 에 남는다 (P7 의 끝점). 그 한 줄을 여기서
  *   짓지 않는다 — `questionRef()` 하나다 (`conflict.ts`).
  * ⚠ 질문이 물고 있는 `a_ref`(원문 구간)를 물려주지 않는 이유도 거기 적혀 있다.
+ * ⚠ **`body` 는 비운다** (FINDINGS 9 · 2026-09-07). 답변 문장은 이미 `data`(rule·statement…)로
+ *   서고, 종이의 절은 그 `data` 를 그린다. 같은 문장을 `body` 에도 넣으면 **Pack 이 한 항목에서
+ *   같은 문장을 두 줄 적는다** — 관통의 메아리 검사(`pack-echo.ts` · FINDINGS 99·100)가 그걸 잡는다.
+ *   ★ 예전엔 `body` 를 컴파일러가 버려서 이 겹침이 안 보였을 뿐이다.
  *
  * @returns 파싱에 실패하면 `undefined` (답변이 목적지 칸보다 길 때 — 부르는 쪽이 400 을 낸다)
  */
@@ -52,14 +56,13 @@ export function answerDraft(input: {
   data: unknown
   /** 사람이 답한 그 질문. 제목이 아니라 **근거**로 쓰인다. */
   question: string
-  answer: string
 }): ContextItemDraft | undefined {
   try {
     return parseContextItemDraft({
       id: input.id,
       type: input.type,
       title: input.title,
-      body: input.answer,
+      body: '',
       scope: { kind: 'project' },
       priority: 50,
       tags: [],
@@ -92,6 +95,5 @@ export function slotDraft(
     type: slot.type,
     data: slot.data(input.answer),
     question: input.question,
-    answer: input.answer,
   })
 }

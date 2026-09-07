@@ -691,8 +691,11 @@ describe('conflicts — 선택 4개가 상태를 가른다', () => {
     //  근거는 **질문 하나**다. 질문이 물고 있던 원문 구간(`a_ref`)을 물려주지 않는다 —
     //  사람이 머리로 쓴 문장에 문서 구간을 달면 원문에 없는 말이 원문을 근거로 나간다.
     expect(rev!.sourceRefs).toEqual([{ kind: 'manual', note: question }])
-    //  답변은 본문이고, 제목은 **무엇에 답한 것인가**다.
-    expect(rev!.body).toBe('7일 안에 된다.')
+    //  🔴 답변은 **`data` 로만** 선다 — `body` 는 비운다 (FINDINGS 9 · 2026-09-07).
+    //  ★ 왜 — 종이의 절은 `data`(여기서는 `rule`)를 그리고, 이제 `body` 도 같이 나간다.
+    //    둘 다 같은 문장이면 Pack 이 한 항목에서 같은 줄을 두 번 적는다 (관통의 메아리 검사).
+    //  제목은 **무엇에 답한 것인가**다.
+    expect(rev!.body).toBe('')
     expect(rev!.title).toBe(question)
     //  고른 자리가 `data` 를 정한다 (`ANSWER_SLOTS.policy_must`).
     expect(rev!.data).toEqual({ rule: '7일 안에 된다.', severity: 'must', enforcement: 'review' })

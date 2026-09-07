@@ -31,10 +31,33 @@ function forTypes<T extends ItemType>(
 }
 
 /** 본문(`body`)은 있을 때만 한 줄로 붙인다. 없는 항목이 흔해서 빈 줄을 남기면 안 된다. */
-function bodyLine(body: string): Lines {
+function bodyLine(body: string, indent = ''): Lines {
   const text = esc(body)
-  return text.length > 0 ? [text] : []
+  return text.length > 0 ? [`${indent}${text}`] : []
 }
+
+/**
+ * 🔴 **「이 절에서 항목의 `body` 는 어디로 가나」의 정본 표 값** (FINDINGS 9).
+ *
+ * ★ 왜 표의 칸으로 올렸나 — 예전엔 `render` 안에서 절마다 손으로 `bodyLine()` 을 불렀고,
+ *   부르는 절이 넷(architecture·adr_full·domain·workflow)뿐이었다. 나머지 절에서
+ *   **사용자가 적은 설명이 Pack 에서 조용히 사라졌다.** 「부르는 걸 잊었나」는 눈에 안 보이지만
+ *   **표의 빈 칸은 보인다.** 그리고 이 칸이 있어야 「어느 절도 body 를 안 버린다」를 기계가 센다
+ *   (`test/liveness.test.ts` 「ItemType 10종의 body」).
+ *
+ * ⚠ 새 절을 더하면 이 칸을 **반드시** 골라야 한다 — 타입이 막는다.
+ */
+export type BodyStyle =
+  /** 블록의 마지막 줄로 한 줄 붙인다 (여러 줄짜리 절). */
+  | 'block'
+  /** 목록 한 줄 아래에 이어지는 들여쓴 줄로 붙인다 (`spaced: false` 인 목록 절). */
+  | 'indent'
+  /** 이 절의 `render` 가 **스스로** 자리를 정한다 (절 안에서 위치가 뜻을 갖는 절). */
+  | 'own'
+  /** 이 절은 요약이고, 같은 항목의 `body` 는 **다른 절**이 낸다 (같은 말을 두 번 적지 않는다). */
+  | 'elsewhere'
+
+const BODY_INDENT = '  '
 
 function backticked(paths: readonly string[]): string {
   return paths.map((p) => `\`${p}\``).join(', ')
@@ -65,11 +88,27 @@ export type SectionSpec = {
   render: (item: ContextItem) => Lines
   /** 블록 사이에 빈 줄을 넣나. 여러 줄짜리 블록은 붙여 놓으면 어디서 끊기는지 안 보인다. */
   spaced: boolean
+  /** 항목의 `body`(사용자가 적은 설명)가 이 절에서 어디로 가나. 위 `BodyStyle` 참조. */
+  body: BodyStyle
+}
+
+/**
+ * 절 하나가 만드는 줄 전부 — `render` 의 결과에 `body` 칸이 말하는 자리를 더한다.
+ * ⚠ `assemble` 은 이 문 하나로만 절을 그린다. `SECTIONS[...].render` 를 직접 부르지 마라 —
+ *   그러면 `body` 칸이 다시 조용히 무시된다 (FINDINGS 9 의 고장 그대로).
+ */
+export function renderSection(section: SectionKey, item: ContextItem): Lines {
+  const spec = SECTIONS[section]
+  const lines = spec.render(item)
+  if (spec.body === 'block') return [...lines, ...bodyLine(item.body)]
+  if (spec.body === 'indent') return [...lines, ...bodyLine(item.body, BODY_INDENT)]
+  return lines                                   // 'own' 은 render 가 이미 넣었고, 'elsewhere' 는 다른 절이 낸다
 }
 
 export const SECTIONS = {
   mission: {
     spaced: true,
+    body: 'block',
     render: forTypes(['mission'], (item) => [
       esc(item.data.statement),
       ...(item.data.rationale === undefined ? [] : [`> ${esc(item.data.rationale)}`]),
@@ -78,6 +117,7 @@ export const SECTIONS = {
 
   goal: {
     spaced: false,
+    body: 'indent',
     render: forTypes(['goal'], (item) => {
       const d = item.data
       const metric = d.metric === undefined ? '' : ` · 지표: ${esc(d.metric)}`
@@ -88,6 +128,7 @@ export const SECTIONS = {
 
   roadmap: {
     spaced: false,
+    body: 'indent',
     render: forTypes(['roadmap'], (item) => {
       const d = item.data
       const due = d.due === undefined ? '' : ` \`due: ${d.due}\``
@@ -100,11 +141,13 @@ export const SECTIONS = {
     }),
   },
 
-  policy: { spaced: false, render: policyLine },
-  constraint: { spaced: false, render: constraintLine },
+  policy: { spaced: false, body: 'indent', render: policyLine },
+  constraint: { spaced: false, body: 'indent', render: constraintLine },
 
   quickmap: {
+    //  한 줄 요약이다 — 같은 항목의 `body` 는 architecture 절(상세 파일)이 낸다.
     spaced: false,
+    body: 'elsewhere',
     render: forTypes(['architecture'], (item) => {
       const d = item.data
       const paths = d.paths.length === 0 ? '' : ` (${backticked(d.paths)})`
@@ -114,6 +157,7 @@ export const SECTIONS = {
 
   architecture: {
     spaced: true,
+    body: 'block',
     render: forTypes(['architecture'], (item) => {
       const d = item.data
       return [
@@ -121,13 +165,14 @@ export const SECTIONS = {
         `- 구성요소: \`${esc(d.component)}\``,
         `- 책임: ${esc(d.responsibility)}`,
         ...(d.paths.length === 0 ? [] : [`- 경로: ${backticked(d.paths)}`]),
-        ...bodyLine(item.body),
       ]
     }),
   },
 
   adr_summary: {
+    //  결정 요약 한 줄이다 — 같은 항목의 `body` 는 adr_full 절(결정 기록)이 낸다.
     spaced: false,
+    body: 'elsewhere',
     render: forTypes(['adr'], (item) => [
       `- **${esc(item.title)}** — ${esc(item.data.decision)} (${item.data.adr_status})`,
     ]),
@@ -135,6 +180,7 @@ export const SECTIONS = {
 
   adr_full: {
     spaced: true,
+    body: 'block',
     render: forTypes(['adr'], (item) => {
       const d = item.data
       return [
@@ -142,13 +188,15 @@ export const SECTIONS = {
         `- 결정: ${esc(d.decision)}`,
         `- 배경: ${esc(d.context)}`,
         `- 결과: ${esc(d.consequences)}`,
-        ...bodyLine(item.body),
       ]
     }),
   },
 
   domain: {
+    //  🔴 `own` — 도메인 설명은 **용어·불변식보다 먼저** 와야 읽힌다. 자리가 뜻을 가지므로
+    //     표가 끝에 붙이게 두지 않는다 (`render` 안의 `bodyLine` 이 그 자리다).
     spaced: true,
+    body: 'own',
     render: forTypes(['domain'], (item) => {
       const d = item.data
       return [
@@ -162,6 +210,7 @@ export const SECTIONS = {
 
   workflow: {
     spaced: true,
+    body: 'block',
     render: forTypes(['workflow'], (item) => {
       const d = item.data
       return [
@@ -170,7 +219,6 @@ export const SECTIONS = {
         '- 절차:',
         ...d.steps.map((s, n) => `  ${n + 1}. ${esc(s)}`),
         ...(d.done_when.length === 0 ? [] : [`- 완료 조건: ${d.done_when.map(esc).join(' · ')}`]),
-        ...bodyLine(item.body),
       ]
     }),
   },
@@ -179,6 +227,7 @@ export const SECTIONS = {
   // **범위**를 끝에 붙인다 (`SCOPE_INLINE_LABEL`).
   scoped_rule: {
     spaced: false,
+    body: 'indent',
     render: (item) => {
       const [line] = item.type === 'policy' ? policyLine(item) : constraintLine(item)
       if (item.scope.kind === 'project') return [line as string]   // partition 이 여기로 보내지 않는다 — 방어선

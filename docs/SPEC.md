@@ -276,6 +276,7 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
    - `priority` 는 <b>「먼저」</b>이고 **같은 타입 안에서만** 견줘진다 — 절은 타입별로 갈려 있고(§4.1 2단계), 절삭도 「type별 priority 상위」다(§7.3). 그래서 「중요도」가 아니라 <b>「그 타입 안에서 몇 번째로 읽히나」</b>로 써도 된다 (예: architecture 다섯 줄이 §7 그림의 흐름 순서로 선다).
 4. **render** — 템플릿 문자열 치환만. Markdown escape: `|`, 선행 `#`, `<!--`. 항목마다 역추적 태그 한 줄:
    `<!-- ctx:item_bs_m2 rev:6 src:doc:sdv_…#1840-1961,repo:parking-api:src/billing/fee.ts:14 -->`
+   - 🔴 **항목의 `body`(사람이 적은 설명)는 어느 절에서도 버려지지 않는다** (템플릿 1.4 · FINDINGS 9). 자리는 `packages/compiler/src/sections.ts` 의 `SECTIONS` 표 **`body` 칸 하나**가 정한다: `block`(블록 끝에 한 줄 — mission·architecture·adr_full·workflow) · `indent`(목록 줄 아래 두 칸 들여쓴 줄 — goal·roadmap·policy·constraint·scoped_rule) · `own`(절이 스스로 자리를 정한다 — domain 은 용어·불변식보다 **앞**) · `elsewhere`(요약 절이라 같은 항목의 body 는 다른 절이 낸다 — quickmap→architecture · adr_summary→adr_full). ★ 왜 표의 칸인가 — 예전엔 `render` 안에서 절마다 손으로 불렀고 넷만 불러서 나머지 절의 설명이 **조용히 사라졌다.** 「부르는 걸 잊었나」는 안 보이지만 표의 빈 칸은 보이고, 타입이 막는다. 잠근 것은 `test/liveness.test.ts` 「ItemType 10종의 body」 — 타입마다 body 를 채워 **그 문장이 Pack 본문에 실제로 있나**를 잰다 (지문으로 재면 `snapshot_hash` 가 늘 바뀌어 버려도 초록이다).
 5. **budget** — CLAUDE.md 12,000자 초과 시 policy/constraint를 `.claude/rules/policies.md`로 이동(경고 기록), rules 파일 30,000자 초과 시 domain 분할.
 6. **sourcemap** — 파일별 `[ {start_line, end_line, item_id, revision} ]`.
 7. **hash** — LF 정규화, 끝 개행 1개, UTF-8, `sha256`. manifest 생성.

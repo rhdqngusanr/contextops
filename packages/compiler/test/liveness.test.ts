@@ -1,7 +1,8 @@
 import { PACK_TARGETS, SCOPE_KINDS, SOURCE_REF_KINDS, SourceRef, type ContextItem, type ItemType, type ScopeKind } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 import { compile } from '../src'
-import { SCOPE_INLINE_LABEL } from '../src/sections'
+import { SCOPE_INLINE_LABEL, SECTIONS, type BodyStyle } from '../src/sections'
+import { PACK_EXCLUDED_TYPES } from '../src/partition'
 import { SCOPE_ORDER } from '../src/sort'
 import { srcKindOf, srcTag } from '../src/tag'
 import { ALL_TYPES, ANCHOR, SAMPLE_DATA, makeInput, makeItem } from './fixtures'
@@ -15,6 +16,9 @@ import { ALL_TYPES, ANCHOR, SAMPLE_DATA, makeInput, makeItem } from './fixtures'
 //
 //  판정법은 하나다: 값만 바꿔 컴파일하고 **산출물 지문이 서로 다른가**를 본다.
 // =====================================================================
+
+/** `BodyStyle` 의 값 전부 — 표의 칸이 이 넷 중 하나인지 재는 데만 쓴다. */
+const BODY_STYLES: readonly BodyStyle[] = ['block', 'indent', 'own', 'elsewhere']
 
 /** 산출물 전체의 지문 — 파일 내용·제외 목록·해시가 모두 들어간다. */
 function fingerprint(items: Parameters<typeof makeInput>[0]): string {
@@ -41,6 +45,42 @@ describe('ItemType 10종', () => {
   it('10종의 산출물이 서로 전부 다르다 (두 타입이 같은 줄을 내면 하나는 죽은 것이다)', () => {
     const prints = ALL_TYPES.map((type) => fingerprint(type === 'mission' ? [ANCHOR] : [ANCHOR, makeItem(type)]))
     expect(allDistinct(prints)).toBe(true)
+  })
+})
+
+describe('ItemType 10종의 body (FINDINGS 9)', () => {
+  //  🔴 「사용자가 적은 설명이 Pack 에서 조용히 사라진다」를 잠근다. 예전엔 `bodyLine()` 을
+  //     부르는 절이 넷뿐이라 mission·goal·roadmap·policy·constraint 의 `body` 가 버려졌고,
+  //     **화면에는 멀쩡히 뜨므로 눈으로 절대 안 잡혔다.** 이제 자리는 `SECTIONS` 표의
+  //     `body` 칸 하나가 정한다 (`src/sections.ts` 의 `BodyStyle`).
+  //
+  //  ★ 판정법 — 여기서만 지문(`fingerprint`)을 안 쓴다. `body` 는 `snapshot_hash` 에도 들어가서
+  //    **머리말의 `snapshot:` 한 줄이 늘 바뀐다.** 지문으로 재면 body 를 통째로 버려도 초록이다.
+  //    그래서 「그 문장이 Pack 본문에 실제로 있나」를 잰다.
+  const BODY = '사람이 손으로 적어 넣은 설명 한 줄이다.'
+  const filesWithBody = (type: ItemType): readonly string[] => {
+    const items = type === 'mission' ? [makeItem('mission', { body: BODY })] : [ANCHOR, makeItem(type, { body: BODY })]
+    return compile(makeInput(items)).files.filter((f) => f.text.includes(BODY)).map((f) => f.path)
+  }
+
+  const PACKED = ALL_TYPES.filter((type) => !(type in PACK_EXCLUDED_TYPES))
+
+  it.each(PACKED)('%s 의 body 가 Pack 본문에 그대로 나온다 (버려지지 않는다)', (type: ItemType) => {
+    expect(filesWithBody(type), `${type} 의 body 가 어느 파일에도 없다`).not.toEqual([])
+  })
+
+  it('Pack 에 안 나가는 타입의 body 는 어느 파일에도 없다 (표가 말하는 그대로)', () => {
+    for (const type of ALL_TYPES.filter((t) => t in PACK_EXCLUDED_TYPES)) {
+      expect(filesWithBody(type), `${type} 은 Pack 에 안 나가는데 body 가 실렸다`).toEqual([])
+    }
+  })
+
+  it('SECTIONS 의 모든 절이 body 칸을 골랐고, 요약 절만 남에게 미룬다', () => {
+    //  ⚠ 표를 손으로 베끼지 않는다 — 표를 읽어서 「빈 칸이 없다」와 「`elsewhere` 를 고른 절이 둘」임을
+    //    잰다. 그 둘(quickmap·adr_summary)이 미룬 body 를 실제로 누가 내는지는 위 시험이 확인한다.
+    const styles = Object.values(SECTIONS).map((spec) => spec.body)
+    expect(styles.every((style) => BODY_STYLES.includes(style))).toBe(true)
+    expect(styles.filter((style) => style === 'elsewhere').length).toBe(2)   // quickmap · adr_summary
   })
 })
 
