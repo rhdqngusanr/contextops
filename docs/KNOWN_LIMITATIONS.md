@@ -29,10 +29,11 @@
   모든 관통·데모·캡처는 개발 기계의 PGlite 위에서 돌았다. 배포에서만 볼 수 있는 셋 — 함수 안에서 `fixtures/` 를
   찾는가 · Supabase 에서 데모 리셋이 60초 안에 끝나는가 · Root Directory 설정이 `vercel.json` 을 읽게 하는가 — 은
   아직 못 쟀다.
-- **`npx contextops` 는 없다.** npm 에 올린 적이 없다. 설치는 `claude plugin marketplace add <marketplace>` 부터인데
-  그 `<marketplace>` 는 **아직 자리표시자다** — 공개 저장소(`https://github.com/rhdqngusanr/contextops`)는 생겼지만 그 저장소에
-  마켓플레이스 목록(`.claude-plugin/marketplace.json`)이 없어 URL 을 넣어도 첫 명령이 실패한다 (FINDINGS 140). `claude plugin install` 로
-  깐 기록도 아직 없다 — 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는 `node plugin/contextops/bin/contextops-cli.mjs` 를 직접 부른다.
+- **`npx contextops` 는 없다.** npm 에 올린 적이 없다. 설치는 `claude plugin marketplace add rhdqngusanr/contextops`
+  부터이고, 그 이름과 목록 파일(`.claude-plugin/marketplace.json`)은 이제 저장소에 있다 (`5d024ed`).
+  ⚠ 다만 **`claude plugin install` 로 깐 기록이 아직 없다** — 새 PC 에서 add → install → `/contextops:init` 까지
+  밟는 것은 🙋 사람 몫이다 (PLAN P5 둘째 행). 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는
+  `node plugin/contextops/bin/contextops-cli.mjs` 를 직접 부른다.
 - **Device code auth 미지원** — 웹에서 발급한 기기 토큰을 `setup` 에 붙여 넣는 방식이다
   (`plugin/contextops/src/cli/setup.ts`). 브라우저 콜백 서버는 없다.
 - **권한이 2단계뿐** (owner / member · `packages/schema/src/api.ts` 의 `ROLE_RANK`). 세밀한 권한 모델 없음.
@@ -51,9 +52,9 @@
   전부다. 데모용 항목을 따로 지어내지 않는다 — 지어내면 데모에서 본 것과 관통이 잰 것이 갈린다 (SPEC §10.3).
 - **가져오기의 zip 드롭존이 없다** — 문서 붙여넣기만 있다. 서버에 경로 검사·개수·용량 상한(SPEC §11)이 먼저
   서야 한다 (`apps/web/src/app/t/[team]/p/[project]/import/page.tsx` 머리).
-- **sync 상태 `manual` 을 보고하는 쪽이 없다.** Pack zip 을 내려받아 손으로 푸는 길은 있지만, 그 기기가 `status`
-  로 「manual」이라고 찍는 코드는 0곳이라 화면 9 는 네 값(applied · outdated · modified · unknown)만 그린다
-  (FINDINGS 69).
+- **sync 상태 `manual` 을 사람이 실제로 밟은 적은 없다.** 찍는 쪽은 생겼다 — `judge()` 가 「우리 캐시에 그 버전의
+  자취가 없는데 파일은 Manifest 와 다 맞다」를 `manual` 로 본다 (`9dd032b`). 다만 **zip 을 받아 손으로 푼 뒤
+  `status` 를 부르는 걸음**은 시험 안에서만 돌았다 — 사람이 브라우저로 zip 을 내려받아 밟는 것은 🙋 배포 뒤다.
 - **Claude가 지침을 100% 따른다고 보장하지 않는다** — Pack은 컨텍스트지 강제가 아니다.
 - **Codex / Cursor는 출력 파일만** 지원한다 — `AGENTS.md` · `.cursor/rules/contextops.mdc` 는 `CLAUDE.md` 와 본문이
   byte 로 같은 거울 문서다 (`packages/schema/src/manifest.ts` 의 `PACK_TARGETS`). 훅·Skill 연동은 없다.
