@@ -504,10 +504,27 @@
       값이 든 `.env` 를 심고 그 사본을 훑는다 — 심는 값의 정본은 `tools/walkthrough-stage.ts` 의 `PLANTED_ENV`
       하나(payload 단계와 같은 값). 잰 값 2개 · 0건 · 심은 키가 `env_keys` 에 있음(14 → 15) · **잰 값 0개면 FAIL**.
       scan 단계 49 → 50검사. 브라우저 네트워크 탭 캡처는 🙋 배포 뒤.
-      🙋 **남은 것은 전부 계정이 필요하다** — Vercel 연결(Root Directory `apps/web` ·
-      `CRON_SECRET`·`SUPABASE_JWT_SECRET`·`DATABASE_URL`) → 첫 리셋을 손으로 한 번
-      (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → `/demo` 가
-      production 에서 열리는지 → 보안 캡처 · fresh install.
+      → ④ **절차와 완료 기준이 생겼다** (2026-09-07 · 사람 세션). 이 행이 여러 바퀴 동안 안 움직인
+      이유는 「계정이 없다」였는데, 실은 **계정 말고도 두 가지가 없었다**: 절차가 한 곳에 없었고
+      (`.env.example` 주석 · `vercel.json` 의 `_comment` · 이 행에 흩어져 있었다), 완료 기준이
+      「사람이 한 번 눈으로 밟는다」라 **무인 루프가 영원히 못 닫는 모양**이었다. 둘을 고쳤다:
+      **`docs/DEPLOY.md`** 가 절차의 정본이고(걸음 8개 · 🙋 표시가 사람 몫), 완료 기준은
+      **`pnpm --filter web verify:prod -- --url https://<production>` 이 `0 failed`** 다
+      (`apps/web/e2e/production.ts`). 그 검증기는 **배포만이 증명하는 것**을 잰다 —
+      배포 함수가 DB 에 닿는가(`/health` 의 `db`) · `CRON_SECRET` 자물쇠가 배포 환경에 실제로
+      걸렸나(없으면 401 이 아니라 500 이다) · 데모 테넌트가 production DB 에 심어졌나 ·
+      그 위에서 **GATE 3**(빈 창 · 링크만 · 3분)이 production 응답 속도로도 지나는가.
+      헤드리스 Chrome 을 띄우는 절차는 사용자가 둘이 됐으므로 `apps/web/e2e/chrome.ts` 로
+      정본을 올렸다(`shots.ts` 도 그것을 읽는다). **자체 시험**: 로컬 데모 스택(`demo:db` +
+      `next dev`)에 걸어 **37검사 0실패** · GATE 3 는 17.3초 / 180초 · navigate 1회.
+      문서가 코드와 갈라지지 않게 `apps/web/test/deploy-doc.test.ts` 8검사가 잠근다
+      (`.env.example` 의 **모든 키**가 DEPLOY.md 에서 「넣는다/안 넣는다」로 한 번씩 결정되나 ·
+      cron 경로가 `vercel.json` 과 같나 · 적힌 명령이 실제 스크립트인가 · 가리키는 경로가 실존하나).
+      🔴 게이트가 무는 것을 확인했다 — `CRON_SECRET` 의 백틱을 지워 2 FAIL 을 보고 되돌렸다.
+      🙋 **남은 것은 전부 계정이 필요하다** — `docs/DEPLOY.md` 의 걸음 ②③④⑤⑧ 이다:
+      Vercel 연결(Root Directory `apps/web`) → `.env.vercel` 을 Import → 배포 → 첫 리셋을 손으로 한 번
+      (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → 걸음 ⑥ 의 검증기
+      → 보안 캡처 · fresh install.
 
 ## P6 — 발표 (SPEC 9/16~9/17)
 
