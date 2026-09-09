@@ -26,10 +26,10 @@ function Callback() {
     }
     writeSession({ access_token: result.access_token, expires_at: result.expires_at })
 
-    const next = new URL(window.location.href).searchParams.get('next') ?? '/t/new'
+    const next = new URL(window.location.href).searchParams.get('next') ?? '/t'
     //  ⚠ 바깥 주소로는 못 보낸다. `next` 는 그냥 문자열이고, 검사 없이 쓰면
     //    로그인 링크 하나로 남의 사이트로 보내는 문이 된다 (오픈 리다이렉트).
-    const safe = next.startsWith('/') && !next.startsWith('//') ? next : '/t/new'
+    const safe = next.startsWith('/') && !next.startsWith('//') ? next : '/t'
     window.location.replace(safe)
   }, [])
 

@@ -34,6 +34,8 @@ export default function ProjectLayout({
         <div className="col-tight">
           <span className="label">팀 · 프로젝트</span>
           <span className="mono ink">{team}/{project}</span>
+          {/* 「내 팀」 홈 — 다른 프로젝트·팀원 초대는 거기 있다 (INBOX H9). */}
+          <a className="meta" href="/t">내 팀</a>
         </div>
         {/* ⚠ 내비 안이다 — 「어디로 갈 수 있나」를 말하는 자리가 둘로 갈리지 않게. */}
         <CommandPalette base={base} pathname={path} team={team} project={project} />

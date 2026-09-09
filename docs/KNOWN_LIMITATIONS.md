@@ -58,6 +58,9 @@
   넷인데, 라우트에서 `withBudget()` 을 부르는 자리는 문서 구조화와 충돌 탐지 둘뿐이다. **질의창(§7.3 ·
   `POST …/ask`)과 「AI 한 번 실행해보기」(§7.4 · `POST /demo/ai-once`)는 없다** — 화면 9 에 질의창이 없고 게스트
   배너에 그 버튼이 없는 이유다 (FINDINGS 117 · SPEC §14 절삭 순서 1번).
+- **초대 메일은 보내지 않는다.** 팀원 초대(`/t` 의 owner 폼 · `POST /teams/{id}/members`)는 이메일을 적어 두는 것까지고, 그 사람은
+  owner 가 전한 `/login` 주소로 GitHub 로그인해야 팀원이 된다(첫 로그인에 승격). 발신 SMTP 가 없어서다 (`docs/DEPLOY.md` ①-b) —
+  화면이 그 사실을 초대 폼 위에 말한다 (INBOX H9).
 - **AI 처리 데이터의 행방 — 붙여넣은 문서는 Google Gemini API(국외)로 간다.** 지금 키는 **무료 티어**라 Google 약관상 그 입력이
   제품 개선에 쓰일 수 있다 (ai.google.dev/gemini-api/docs/pricing · 2026-09-10 확인). 그래서 붙여넣기 칸 바로 밑과 `/privacy` 가
   그 사실을 말하고(문장의 정본은 `apps/web/src/lib/web/privacy.ts` 의 `AI_TRANSFER_NOTICE` · 티어 상수 하나가 문장을 고른다),

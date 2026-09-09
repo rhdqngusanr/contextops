@@ -414,7 +414,9 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 |---|---|---|
 | GET /teams | 로그인 | → teams[{id, slug, name, role, projects[]}] — 화면의 주소는 slug 인데(§9) 라우트는 uuid 를 받는다. 이 문이 없으면 브라우저가 slug→uuid 를 못 바꾼다 |
 | POST /teams | 로그인 | {name, slug} → team |
-| POST /teams/{id}/projects | owner | {name, slug, description} → project |
+| POST /teams/{id}/projects | owner | {name, slug, description} → project — 팀당 프로젝트 상한은 `apps/web/src/lib/api/limits.ts` 의 `CREATION_LIMITS`(INBOX H11) |
+| GET /teams/{id}/members | member | → members[{user_id, name, role, status}] — 이메일은 내지 않는다 (INBOX H9 · 2026-09-10) |
+| POST /teams/{id}/members | owner | {email, role?} → member(201) — 그 이메일로 로그인한 적 있는 사람이면 바로 `active`, 아니면 자리표시 users 행(`auth_subject` = `invite:<email>`) + `invited`. 첫 로그인 때 `sessionActor()` 가 자리표시 행을 진짜 subject 로 바꾸고 `active` 로 올린다 (`lib/api/members.ts` `adoptInvitedUser`). 초대 메일은 보내지 않는다 — owner 가 `/login` 주소를 전한다 |
 | POST /projects/{id}/repos | owner | {name, remote_url?, path_prefix?} → repo |
 | POST /projects/{id}/tokens | member | {device_name} → {token(1회 표시), device_id} |
 | DELETE /devices/{id} | 본인·owner | → 204 |
@@ -519,7 +521,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 - 픽스처의 문서·코드 항목(고정 JSON)을 7.2에 넣어 충돌 카드 3장 생성. 결과는 24h 캐시. 게스트 IP당 일 5회.
 
 ### 7.5 예산 가드 `budget.ts`
-- 환경변수 `AI_DAILY_BUDGET_USD`(기본 3), `AI_MAX_INPUT_TOKENS`(기본 60k/`withBudget` 한 번). 토큰 추정 = chars/2.5(ko) 보수적. ⚠ 「한 번」은 LLM 왕복이 아니라 **문 하나를 지나는 일 하나**다 — 문서 구조화는 문서 하나가 한 번이고 그 안에 chunk 호출이 여럿 있다 (§7.1).
+- 환경변수 `AI_DAILY_BUDGET_USD`(기본 3 · 전역), `AI_PROJECT_DAILY_BUDGET_USD`(기본 1 · **프로젝트 하나** — 전역 안에서 다시 가르는 이중 상한 · INBOX H11 · 2026-09-10), `AI_MAX_INPUT_TOKENS`(기본 60k/`withBudget` 한 번). 토큰 추정 = chars/2.5(ko) 보수적. ⚠ 「한 번」은 LLM 왕복이 아니라 **문 하나를 지나는 일 하나**다 — 문서 구조화는 문서 하나가 한 번이고 그 안에 chunk 호출이 여럿 있다 (§7.1).
 - 초과 시 `BUDGET_EXCEEDED` → **화면은 그 사실만 말한다** (문구 정본은 `docs/DESIGN_BRIEF.md` §5).
 - 🔴 **픽스처 결과로 떨어지는 갈래는 없다** (2026-09-09 INBOX G9 — §7.4 의 `/demo/ai-once` 도 없으므로 「게스트 데모에만」도 참이 아니었다. 키가 없는 배포는 job 이 `AI_NOT_CONFIGURED`(503)로 끝나고 화면이 「운영자에게」를 말한다 · `/health` 의 `ai` 칸). SPEC 은 원래 여기서도 「샘플 결과 표시」를 적었는데 **표시하는 코드가 0곳이었고** 화면만 그것을 약속하고 있었다 (FINDINGS 66). 안 만들기로 정한 이유 둘: ① 실제 프로젝트에 픽스처 항목을 넣으면 그 줄은 **사용자의 원문으로 역추적되지 않는다** — P7 이 끊기는 자리다 (§7.4 는 픽스처가 곧 원문이라 안 끊긴다). ② 그러려면 job 이 「실패」도 「성공」도 아닌 **셋째 수명 모양**을 가져야 하는데 (`AI_JOB_STATUS_RULES`), 예산이 없어서 못 한 일을 성공으로 적는 것이 그 표의 뜻과 어긋난다.
 - Rate limit: IP·사용자당 분당 3회(`/ask`, `/demo`), 문서 구조화는 프로젝트당 시간당 5회, **충돌 탐지는 프로젝트당 시간당 10회**. Claude Console 월 한도는 운영자가 $30 설정.
@@ -631,7 +633,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | # | 라우트 | 핵심 컴포넌트 | 상태 |
 |---|---|---|---|
 | 1 | `/` 랜딩 | Before/After 비교, "샘플 팀으로 둘러보기", 2분 영상, 왜 git/DeepWiki가 아닌가 3+1문장, 설치 4줄, 신뢰 경계 표 | 정적 |
-| 2 | `/login`, `/t/new`, `/t/[team]/p/new` | OAuth 버튼, 폼 | loading/error |
+| 2 | `/login`, **`/t`(내 팀 홈 — 로그인 뒤 기본 목적지 · 팀·프로젝트 목록 · 팀원 목록 · owner 의 초대 폼 · INBOX H9)**, `/t/new`, `/t/[team]/p/new` | OAuth 버튼, 폼 | loading/error |
 | 3 | `…/import` 가져오기 | ~~zip 드롭존~~(아직 없다 — §11 상한이 먼저다) · 문서 붙여넣기 · **질문 카드 10장**(한 장씩 · `n / 10` · 건너뛰기 · 마지막 요약) | 구조화 진행 표시(polling) |
 | 4 | `…/review` 정리 | Conflict 카드(원문 A ↔ B/코드 라인, 선택 버튼 4개) · 병합 카드 · 질문 카드(답 칸 + **「이 답을 무엇으로 저장할까요」** — `answerSlot:'ask'` 인 종류에만 · §5) | empty("충돌 없음") |
 | 5 | `…/context` | 항목 테이블(type/status/scope 필터) · 상세 드로어(원문 패널) · 발행 모달(semver 추천·변경 요약·영향 파일 수) · 버전 히스토리 | 409 재로드 안내 |

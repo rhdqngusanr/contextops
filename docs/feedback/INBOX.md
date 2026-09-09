@@ -75,10 +75,11 @@
 8. **H8 2분 영상**(Claude 3h + 🙋 4h) — `docs/PITCH.md` 컷 표 8컷 + 슬라이드 8장 뼈대 → 🙋 9/17 production 위에서 녹화 · 「15분」 스톱워치 실측 · 플러그인 세 장면 GIF · mp4 두 곳 보관 · `demo:db` 로컬 리허설(본선 보험). 규정상 필수 아님 — 투표·본선 자산.
    → ✅ 2026-09-10 (Claude 몫) — `docs/PITCH.md`: 2분 컷 표 8컷(초·화면·대본·근거) · 슬라이드 8장 뼈대 · 플러그인 GIF 세 장면 · 「15분」 스톱워치 실측 절차 · 녹화 체크리스트. 🙋 9/17 production 위에서 녹화.
 9. **H9 로그인 뒤 「내 팀」 홈 + 팀원 초대 API**(7h) — `app/t/page.tsx` · `POST/GET /teams/{id}/members` · 첫 로그인 승격 · 시험 「초대 전 404 → 후 200 · member 는 publish 403」. 심사 두 번째 질문.
+   → ✅ 2026-09-10 — `/t` 「내 팀」 홈(팀·프로젝트·팀원 · owner 의 초대 폼 · 팀 없으면 `/t/new`) · `GET/POST /teams/{id}/members`(이메일 초대 → `invited` 자리표시 행 → 그 이메일 첫 로그인에 `sessionActor()` 가 승격 · 초대 메일은 없음 — owner 가 링크를 전한다) · 로그인 기본 목적지 `/t` · 프로젝트 셸에 「내 팀」 링크 · `api-members.test`(초대 전 404 → 초대 → 로그인 200 · member 발행 403 · 이메일은 응답에 0건) · `web-team-home.test`.
 10. **H10 플러그인 고장 3건**(6h) — G7 · 첫 sync 가 기존 CLAUDE.md 를 경고 없이 교체(`preexisting` 게이트) · G11. 밀리면 첫 번째로 자른다.
    → ✅ 2026-09-10 — G7 ✅ · 첫 sync 가 기존 CLAUDE.md 를 덮지 않는다(`--force` 없이는 exit 1 · 경로 나열 · `/contextops:propose` 안내 · `sync.test` 셋 · SPEC §8.5 3단계) · G11 ✅.
 11. **H11 발행 흐름 고장 2건 + AI 예산 actor 축 + 목록 상한**(5.5h) — G12 · G14 · `AI_FEATURE_LIMITS` 에 perActorDaily(팀별+전역 이중) · 팀 3/사용자 · 프로젝트 5/팀 · `fetchItems` limit 200 + 「200개까지만」.
-   → △ 2026-09-10 — G12·G14 ✅. `perActorDaily`(팀별+전역 이중 예산) · 팀 3/사용자 · 프로젝트 5/팀 · `fetchItems` limit 200 안내는 **남았다** — 다음 사람 세션.
+   → ✅ 2026-09-10 — G12·G14 ✅ · `AI_PROJECT_DAILY_BUDGET_USD`(기본 $1 · 전역 $3 안의 프로젝트별 이중 상한 · `ai-budget.test` 셋) · `CREATION_LIMITS` 팀 3/계정 · 프로젝트 5/팀(서버가 세고 `REASON_HINT` 가 같은 숫자로 말한다 · 400 `TEAM_LIMIT`/`PROJECT_LIMIT`) · `fetchItems` 가 상한 200 을 청하고 닿으면 「200개까지만 보여 줍니다」. ⚠ 「actor 축」은 프로젝트 축으로 풀었다 — `ai_usage.project_id` 가 이미 있어 팀 조인 없이 잰다.
 
 #### 하지 말 것 (시간을 먹고 점수는 안 오른다 — 근거는 evidence 의 plan)
 

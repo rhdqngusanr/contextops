@@ -19330,6 +19330,7 @@ var ListQuery = external_exports.object({
   limit: external_exports.coerce.number().int().min(1).max(LIST_LIMIT_MAX).default(LIST_LIMIT_DEFAULT),
   offset: external_exports.coerce.number().int().min(0).default(0)
 }).strict();
+var TEAM_ROLES = ["owner", "member"];
 var SOURCE_DOCUMENT_KINDS = ["goal", "policy", "roadmap", "adr", "notes", "wiki"];
 var CONFLICT_KINDS = ["contradiction", "stale", "duplicate", "doc_vs_code", "open_question", "seed_question"];
 var CONFLICT_STATUSES = ["open", "resolved", "dismissed"];
@@ -19424,6 +19425,10 @@ var AiConflictOutput = external_exports.object({
 var Slug = external_exports.string().min(2).max(60).regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "\uC18C\uBB38\uC790\xB7\uC22B\uC790\xB7\uD558\uC774\uD508\uB9CC");
 var Name = external_exports.string().min(1).max(120);
 var CreateTeam = external_exports.object({ name: Name, slug: Slug }).strict();
+var InviteMember = external_exports.object({
+  email: external_exports.email().max(200),
+  role: external_exports.enum(TEAM_ROLES).default("member")
+}).strict();
 var CreateProject = external_exports.object({
   name: Name,
   slug: Slug,

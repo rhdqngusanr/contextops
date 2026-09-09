@@ -23,7 +23,8 @@ import { PRIVACY_LABEL, PRIVACY_PATH } from '../../lib/web/privacy'
 
 function LoginCard() {
   const params = useSearchParams()
-  const next = params.get('next') ?? '/t/new'
+  //  로그인 뒤의 기본 목적지는 「내 팀」 홈이다 (INBOX H9) — 팀이 없으면 홈이 팀 만들기로 보낸다.
+  const next = params.get('next') ?? '/t'
   const config = authConfig()
 
   const [email, setEmail] = useState('')

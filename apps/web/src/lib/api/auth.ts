@@ -6,6 +6,7 @@ import { devices, users } from '../../db/schema'
 import { DEMO_GUEST_SUBJECT } from '../demo/tenant'
 import { ACTOR_RULES, type ActorKind } from './actor-rules'
 import { fail } from './error'
+import { adoptInvitedUser, normalizeEmail } from './members'
 import { verifySessionJwt } from './session'
 import { TOKEN_PREFIX, hashToken } from './token'
 
@@ -102,11 +103,16 @@ async function sessionActor(db: Db, jwt: string, now: Date): Promise<Actor> {
   //     이 갈래가 email 검사보다 위인 이유 — 게스트 토큰에는 email 이 없고, 있어서도 안 된다.
   if (claims.sub === DEMO_GUEST_SUBJECT) return guestActor(db, claims.sub)
 
-  const email = claims.email
+  //  ⚠ 소문자로 맞춘다 — 초대는 이메일로 오고(`inviteMember`), GitHub 은 대소문자를 섞어 준다. 섞인 채 저장하면
+  //    같은 사람이 초대 표에서 「모르는 사람」이 되어 자리표시 행이 하나 더 생긴다 (INBOX H9).
+  const email = claims.email ? normalizeEmail(claims.email) : undefined
   if (!email) fail('UNAUTHORIZED', '세션에 email 이 없다')
 
   //  ★ 처음 로그인한 사람의 행을 여기서 만든다. 별도의 「가입」 절차를 두면
   //    OAuth 로 들어온 사람이 어디에도 없는 상태가 생긴다.
+  //  🔴 초대받은 이메일이면 자리표시 행이 이 사람이 된다 — `invited` 가 `active` 로 (INBOX H9 · `lib/api/members.ts`).
+  //     upsert **전**이어야 한다. 뒤에 하면 같은 이메일의 행이 둘이 된다.
+  await adoptInvitedUser(db, claims.sub, email, now)
   const name = claims.name ?? email.split('@')[0] ?? email
   const [row] = await db
     .insert(users)

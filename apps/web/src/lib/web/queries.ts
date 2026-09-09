@@ -1,4 +1,4 @@
-import { ITEM_TYPES, SourceRef } from '@contextops/schema'
+import { ITEM_TYPES, SourceRef, LIST_LIMIT_MAX } from '@contextops/schema'
 import type {
   AiJobStatus, AnswerSlotKey, ConflictChoice, ConflictKind, ConflictSeverity, ConflictStatus, ContextItemView,
   ItemStatus, ItemType, Manifest, MilestoneStatus, ProgressEvidence, ProgressSource,
@@ -101,8 +101,10 @@ export function fetchItems(
 ): Promise<{ items: ContextItemView[]; limit: number; offset: number }> {
   const q = new URLSearchParams()
   for (const [k, v] of Object.entries(filter)) if (v) q.set(k, v)
-  const tail = q.toString()
-  return apiJson(`/projects/${projectId}/context-items${tail ? `?${tail}` : ''}`)
+  //  🔴 서버 기본(50)이 아니라 **상한(200)** 을 청한다 (INBOX H11) — 예전엔 51번째 항목부터 화면이 말없이 잘랐다.
+  //     200 을 넘는 프로젝트는 화면이 「200개까지만」이라고 말한다 (`items.length >= limit`).
+  q.set('limit', String(LIST_LIMIT_MAX))
+  return apiJson(`/projects/${projectId}/context-items?${q.toString()}`)
 }
 
 /**
@@ -684,4 +686,25 @@ export type IssuedDevice = {
  */
 export function createDeviceToken(projectId: string, deviceName: string): Promise<IssuedDevice> {
   return post(`/projects/${projectId}/tokens`, { device_name: deviceName })
+}
+
+// ---------------------------------------------------------------------
+//  팀원 — 목록 · 초대 (INBOX H9 · `GET/POST /teams/{id}/members`)
+// ---------------------------------------------------------------------
+
+export type TeamMemberView = {
+  user_id: string
+  name: string
+  role: TeamRole
+  /** `invited` 는 초대만 됐고 아직 그 이메일로 로그인한 적 없는 사람이다. */
+  status: 'active' | 'invited'
+}
+
+export function fetchMembers(teamId: string): Promise<{ members: TeamMemberView[] }> {
+  return apiJson(`/teams/${teamId}/members`)
+}
+
+/** owner 만. 이메일은 **들어가기만** 한다 — 목록으로 다시 나오지 않는다. */
+export function inviteMember(teamId: string, body: { email: string; role: TeamRole }): Promise<TeamMemberView> {
+  return post(`/teams/${teamId}/members`, body)
 }

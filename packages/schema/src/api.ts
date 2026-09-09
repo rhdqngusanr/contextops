@@ -685,6 +685,16 @@ const Name = z.string().min(1).max(120)
 /** `POST /teams` */
 export const CreateTeam = z.object({ name: Name, slug: Slug }).strict()
 
+/**
+ * `POST /teams/{id}/members` — 이메일로 초대한다 (INBOX H9 · 2026-09-10). 아직 로그인한 적 없는 사람이면
+ * `invited` 로 앉혔다가 그 이메일로 처음 로그인할 때 `active` 가 된다. 초대 메일은 보내지 않는다.
+ */
+export const InviteMember = z.object({
+  email: z.email().max(200),
+  role: z.enum(TEAM_ROLES).default('member'),
+}).strict()
+export type InviteMember = z.infer<typeof InviteMember>
+
 /** `POST /teams/{id}/projects` */
 export const CreateProject = z.object({
   name: Name,

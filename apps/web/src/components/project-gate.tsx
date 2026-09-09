@@ -45,7 +45,7 @@ export function ProjectGate({
       <div className="card state-box">
         <span aria-hidden="true" className="ink-4">◌</span>
         <p className="ink">그런 프로젝트를 찾을 수 없습니다.</p>
-        <a className="btn btn-sm" href="/t/new">내 팀 만들기</a>
+        <a className="btn btn-sm" href="/t">내 팀으로</a>
       </div>
     )
   }

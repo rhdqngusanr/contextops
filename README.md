@@ -283,7 +283,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `packages/compiler/` | 결정론 컴파일러 — partition · sort · render · 역추적 태그 · hash. 순수 함수만 |
 | `packages/compiler/templates/` | 버전 고정 템플릿 (`CLAUDE.md` · `.claude/rules/*` · `AGENTS.md` · `.cursor/rules/*.mdc`) |
 | `packages/compiler/test/golden/` | 같은 snapshot → 같은 byte 를 잠그는 golden 3종 (P4) |
-| `apps/web/src/app/` | Next.js 15 App Router — 화면 9개 + `/demo` |
+| `apps/web/src/app/` | Next.js 15 App Router — 화면 9개 + `/t` 내 팀 홈 + `/privacy` + `/demo` |
 | `apps/web/src/app/api/v1/` | Route Handlers — 모든 외부 입력은 `packages/schema` 로 판다 |
 | `apps/web/src/db/` | Drizzle 스키마·마이그레이션 (표 18 · enum 17 · 전 표 RLS) |
 | `apps/web/src/lib/api/` | 인증 · 권한 · 에러 코드 · 요청 로그(필드 표 하나) · Cron 자물쇠 |

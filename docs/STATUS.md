@@ -92,12 +92,22 @@ H4 `/privacy` + 붙여넣기 칸 위의 전송 고지 — 문장을 고르는 �
 H5 [예시 문서 붙여넣기](goals.md byte 그대로 · `sample:sync`) · Gemini 429 는 한 번 기다렸다 재전송(3s · Retry-After ≤10s · 두 번째 429 는 그대로 코드).
 H6 리셋이 `demo-next` 에 먼저 심고 성공하면 자리를 바꾼다 — **심기가 죽어도 어제 데모가 산다**(시험이 실패를 일부러 만든다) · `watch-prod.yml`(30분 · 🙋 `PROD_ORIGIN`) · GitHub Actions 에 `next build` 층(.env.local 없이 지어짐을 확인) · DEPLOY 「심사 기간 런북」.
 H7 쓰기 버튼 전부가 `writeDoor()` 를 지난다 — 게이트는 「queries.ts 의 쓰는 함수(post/patch)를 부르는 page.tsx 는 writeDoor() 를 읽는다」 · `ITEM_TYPE_LABEL` 10종 한글. H8 `docs/PITCH.md`(컷 표 · 슬라이드 뼈대 · 15분 스톱워치 절차 · 체크리스트). H10 첫 sync 가 기존 CLAUDE.md 를 덮지 않는다(--force · backups).
-남은 것 — **H9**(로그인 뒤 「내 팀」 홈 · 팀원 초대 API) · **H11 의 절반**(perActorDaily 예산 · 팀 3/사용자 · 프로젝트 5/팀 · 목록 200 안내).
+H9 `/t` 「내 팀」 홈 + `GET/POST /teams/{id}/members` — 이메일 초대는 자리표시 users 행(`invite:<email>`) + `invited`, 그 이메일로 처음 로그인하면 `sessionActor()` 가 승격한다(이메일은 소문자로 저장 — GitHub 은 대소문자를 섞어 준다). 초대 메일은 없다 — 화면이 그 사실을 먼저 말한다. 로그인 기본 목적지가 `/t` 가 됐다.
+H11 프로젝트별 하루 예산 $1(전역 $3 안의 이중 상한) · 팀 3/계정 · 프로젝트 5/팀(`CREATION_LIMITS` 한 표 · 화면 문장도 그 숫자) · 항목 목록이 상한 200 을 청하고 닿으면 말한다.
+**INBOX 의 Claude 몫은 전부 닫혔다** — 남은 것은 🙋 뿐이다 (아래 「사람이 지금 해야 하는 것」 · INBOX 날짜별).
 
 🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15(**전부 ✅** · G2 는 대시보드 🙋) · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
 루프는 `loop/STOP` 그대로 멈춰 있다 — 9/9~9/11 은 계정 작업과 섞여 사람이 붙은 세션이 맞고, 그 뒤 켤지는 사람이 정한다(INBOX B1).
 
-🙋 **사람이 지금 해야 하는 것** — 참가 접수(9/18 마감 · 폼 규격 캡처) · `git push` · 9/10 DEPLOY 「가장 빠른 길」(Supabase Auth 걸음 넷 · Data API 끄기 · Vercel · 첫 리셋 · verify:prod · 로그인 실측).
+🙋 **사람이 지금 해야 하는 것** (2026-09-10 갱신 · Claude 몫은 INBOX 에서 전부 ✅ — 남은 것은 이것뿐이다):
+1. **참가 접수** — 9/18(금) 23:59:59 마감 · 원티드 계정 · 접수 뒤 제출 폼의 칸·글자 수·썸네일 규격을 캡처해 `docs/SUBMISSION.md` 「제출 폼 원문」의 상한을 실제 값으로.
+2. **Supabase 대시보드** (DEPLOY ①-b) — GitHub 공급자 ON(GitHub OAuth App 만들기) · Site URL / Redirect URL · 세션 만료 최대 · JWT Keys CURRENT 종류 기록 · Data API OFF.
+3. **Vercel** (DEPLOY ②~⑥) — Import(Root `apps/web`) · Fluid compute 확인 · env Import(`.env.vercel`) + `NEXT_PUBLIC_SITE_ORIGIN` · 첫 배포 · `db:status`/`db:migrate`(0009 까지) · 첫 리셋 curl · `verify:prod` · 로그인 실측 → 팀 생성 201 · production URL 을 SUBMISSION 🙋 표에.
+4. **GitHub 저장소 Variables** 에 `PROD_ORIGIN` — `watch-prod.yml` 이 30분마다 두드린다. 만든 날 일부러 틀린 값으로 dispatch 해 실패 메일이 오는지 확인.
+5. **Gemini Tier 1 결정** — 빌링 연결 뒤 키 교체 · `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER` 를 `'paid'` 로(고지 문장이 같이 바뀐다) · Cloud Billing 알림 $20.
+6. **플러그인 실기 설치** (9/11) — `claude plugin marketplace add ./` → install → 새 저장소에서 `/contextops:setup` → `/contextops:sync` → `/contextops:progress` 가 Roadmap 을 움직이는지 · 세 장면 GIF(`docs/PITCH.md` §3).
+7. **「15분」 스톱워치 실측** (`docs/PITCH.md` §4) — 넘으면 랜딩 문장(`SITE`/`LANDING_HEAD.note`)을 고친다.
+8. **9/17 녹화** (`docs/PITCH.md` §1·§5) · **9/18 저녁** release 동결 · Preview 끄기 · 루프 STOP 유지 · **9/19 제출** · 루프 재개 여부는 사람이 정한다.
 
 ## 🧑 사람 세션 (2026-09-07 22:15~23:00 · 루프 밖) — **PLAN P5 첫 행을 열었다**
 
