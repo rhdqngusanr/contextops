@@ -1,7 +1,8 @@
 {
   "_comment": [
-    "docs/SPEC.md §8.1 · §8.6. 🔴 여기 적은 훅은 사용자가 세션을 열거나 닫을 때마다 묻지 않고 돈다 —",
-    "그래서 P6(훅은 사용자의 파일을 변경하지 않는다)이 이 파일의 전제다.",
+    "docs/SPEC.md §8.1 · §8.6. 🔴 여기 적은 훅은 묻지 않고 돈다 — SessionStart 는 세션을 열 때,",
+    "Stop 은 **Claude 가 한 턴을 마칠 때마다**(세션 끝이 아니다 · INBOX G7). 그래서 P6(훅은 사용자의",
+    "파일을 변경하지 않는다)이 이 파일의 전제이고, Stop 은 한 세션에 한 번만 보고하도록 표시를 남긴다.",
     "⚠ 아직 만들지 않은 스크립트를 여기 적지 마라. 없는 파일을 가리키면 사용자는",
     "  매 세션 오류 줄을 본다.",
     "★ 훅을 더하는 절차: ① scripts/<이름>.mjs ② 아래 hooks 에 한 줄 ③ 파일을 쓴다면",
@@ -16,10 +17,12 @@
     "     그래서 훅은 사용자가 커밋하거나 리뷰하는 파일을 한 바이트도 바꾸지 않는다.",
     "  ② 여기 없는 훅은 fs write 를 **하나도** 쓸 수 없다 (principles.ps1 이 이름을 센다).",
     "★ 왜 코드가 아니라 표인가 — 코드 안의 경로는 읽는 사람이 전부 찾아 읽어야 알 수 있다.",
-    "  훅이 무엇을 건드리는지는 **훅을 켜는 자리**에서 한눈에 보여야 한다."
+    "  훅이 무엇을 건드리는지는 **훅을 켜는 자리**에서 한눈에 보여야 한다.",
+    "⚠ `<session>` 은 자리표시자다 — 훅이 stdin 으로 받은 session_id 가 들어간다 (이름 규칙의 정본은",
+    "  src/cli/paths.ts 의 progressMarkerFile). test/hooks.test.ts 가 그 자리에 실제 세션 id 를 넣어 대조한다."
   ],
   "_writes": {
-    "stop.mjs": [".contextops/pending-proposal.json"]
+    "stop.mjs": [".contextops/pending-proposal.json", ".contextops/cache/progress-<session>.json"]
   },
   "hooks": {
     "SessionStart": [

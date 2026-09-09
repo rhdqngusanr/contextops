@@ -1,7 +1,7 @@
 import { execFile, execFileSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { mkdirSync, readFileSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -38,6 +38,17 @@ const STOP = join(packageRoot, 'scripts', 'stop.mjs')
 const DECLARED_WRITES: Record<string, string[]> = JSON.parse(
   readFileSync(join(packageRoot, 'hooks', 'hooks.json'), 'utf8'),
 )._writes ?? {}
+
+/**
+ * 선언표의 `<session>` 자리에 실제 세션 id 를 넣는다 — 그 이름 규칙의 정본은 `progressMarkerFile()` 이라
+ * **그 함수로** 채운다. 훅이 다른 규칙으로 이름을 지으면 여기서 어긋난다.
+ * ⚠ 선언에 `<session>` 이 있는데 그 자리에 무엇이 들어가는지 시험이 손으로 적으면, 훅과 CLI 가
+ *   서로 다른 이름을 내도 둘 다 초록이다.
+ */
+function declaredWrites(hook: string, repo: string, sessionId: string): string[] {
+  const marker = relative(repo, progressMarkerFile(repo, sessionId)).split(sep).join('/')
+  return (DECLARED_WRITES[hook] ?? []).map((p) => (p.includes('<session>') ? marker : p))
+}
 
 const ORIGIN = 'https://contextops.example.com'
 /** 닿을 수 없는 자리. 오프라인 갈래를 즉시(연결 거부) 만든다. */
@@ -250,7 +261,11 @@ describe('🔴 P6 — 훅은 선언한 자리 밖을 건드리지 않는다', ()
     const removed = Object.keys(before).filter((path) => !(path in after))
     //  🔴 선언 밖의 파일은 **하나도** 바뀌지 않았다. 지워진 것도 없다.
     expect(removed).toEqual([])
-    expect(changed).toEqual(DECLARED_WRITES['stop.mjs'])
+    //  ⚠ 마일스톤이 없어 보고는 안 나갔다 — 그래서 표시 파일은 없고 힌트 하나만이다.
+    //    선언은 **허가**라 둘 다 쓰지 않아도 된다. 둘 다 쓰는 경우는 아래 진행 보고 절이 잰다.
+    const declared = declaredWrites('stop.mjs', repo, 'sess-1')
+    expect(changed.length).toBeGreaterThan(0)
+    for (const path of changed) expect(declared, `${path} 는 _writes 에 없는 자리다`).toContain(path)
   })
 
   it('할 말이 없으면 stop 도 아무것도 안 쓴다 — 선언은 허가지 의무가 아니다', async () => {
@@ -323,6 +338,50 @@ describe('stop 훅 — 진행 보고 (SPEC §8.6)', () => {
     } finally {
       await server.close()
     }
+  })
+
+  it('🔴 **두 턴 → 보고 1건** — Stop 은 턴마다 돌고, 보낸 뒤엔 자기가 표시를 남긴다 (INBOX G7)', async () => {
+    const server = await listen()
+    try {
+      const { repo, home } = world()
+      connect(repo, home, server.origin)
+      gitRepo(repo)
+      writeLocalManifest(repo, PACK, { overrides: withMilestone })
+      mkdirSync(join(repo, 'migrations'), { recursive: true })
+      writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+
+      const before = snapshot(repo)
+      //  같은 세션의 두 턴 — 예전엔 둘 다 보냈다 (표시를 CLI 만 남겼고, CLI 는 env 이름이 틀려 한 번도 안 남겼다).
+      await runStop(repo, home, 'sess-twice')
+      await runStop(repo, home, 'sess-twice')
+      expect(server.bodies).toHaveLength(1)
+
+      //  🔴 P6 — 보고까지 한 턴이 쓴 것도 **선언한 둘**을 넘지 않는다 (힌트 + 표시).
+      const after = snapshot(repo)
+      const changed = Object.keys(after).filter((path) => after[path] !== before[path]).sort()
+      expect(changed).toEqual([...declaredWrites('stop.mjs', repo, 'sess-twice')].sort())
+      //  표시의 모양은 CLI 가 남기는 것과 같은 계약이다 — 읽는 쪽이 하나라서 그래야 한다.
+      const marker = JSON.parse(readFileSync(progressMarkerFile(repo, 'sess-twice'), 'utf8')) as Record<string, unknown>
+      expect(marker).toEqual({ session_id: 'sess-twice', milestone_id: 'M1', status: 'in_progress' })
+
+      //  다른 세션은 다시 보낸다 — 표시는 세션 단위다.
+      await runStop(repo, home, 'sess-other')
+      expect(server.bodies).toHaveLength(2)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('못 보냈으면 표시를 남기지 않는다 — 다음 턴에 한 번 더 기회가 있어야 한다', async () => {
+    const { repo, home } = world()
+    connect(repo, home, DEAD_ORIGIN)
+    gitRepo(repo)
+    writeLocalManifest(repo, PACK, { overrides: withMilestone })
+    mkdirSync(join(repo, 'migrations'), { recursive: true })
+    writeFileSync(join(repo, 'migrations', '001.sql'), 'create table t();\n', 'utf8')
+
+    await runStop(repo, home, 'sess-offline')
+    expect(existsSync(progressMarkerFile(repo, 'sess-offline'))).toBe(false)
   })
 
   it('같은 세션에 agent 가 이미 보고했으면 보내지 않는다 — 근거 개수를 부풀리지 않는다 (P7)', async () => {
@@ -418,7 +477,14 @@ describe('hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1)', () => 
       const source = readFileSync(join(packageRoot, 'scripts', name), 'utf8')
       const networkMs = Number(/NETWORK_TIMEOUT_MS = (\d+)/.exec(source)?.[1] ?? 0)
       expect(networkMs).toBeGreaterThan(0)
-      expect((entry.timeout ?? 0) * 1000).toBeGreaterThan(networkMs)
+      //  🔴 네트워크 한도만 재면 안 된다 — Stop 훅은 git 을 **두 번** 부르고 그 시간도 timeout 안이다.
+      //    1500 × 2 + 2500 = 5500 > 5000 으로 **최악의 경우 매 턴 강제 종료**되던 자리다 (INBOX G7).
+      //    git 호출 수는 소스에서 센다 — 호출을 하나 더하면 이 합이 저절로 는다.
+      const gitMs = Number(/GIT_TIMEOUT_MS = (\d+)/.exec(source)?.[1] ?? 0)
+      const gitCalls = (source.match(/\bgit\(root, \[/g) ?? []).length
+      const worstMs = networkMs + gitMs * gitCalls
+      expect((entry.timeout ?? 0) * 1000, `${name}: 최악 ${worstMs}ms (git ${gitCalls}×${gitMs} + 네트워크 ${networkMs})`)
+        .toBeGreaterThan(worstMs)
     },
   )
 })

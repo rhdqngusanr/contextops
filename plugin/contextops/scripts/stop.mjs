@@ -8,13 +8,20 @@ import { dirname, join } from 'node:path'
 // =====================================================================
 //  Stop 훅 (docs/SPEC.md §8.6)
 //
+//  🔴 **Stop 은 「세션 끝」이 아니라 「Claude 가 한 턴을 마칠 때마다」다** (INBOX G7 · 2026-09-09).
+//     한 세션에 스무 턴이면 이 파일이 스무 번 돈다. 그래서 진행 보고는 **한 세션에 한 번**만
+//     보내고, 보냈다는 표시를 `cache/progress-<session>.json` 에 남긴다 — agent 가
+//     `/contextops:progress` 로 보고했을 때 남기는 것과 **같은 파일**이다. 다음 턴의 이 훅은
+//     그 표시를 보고 물러선다. 표시가 없던 동안엔 턴마다 이벤트가 하나씩 쌓였고, 그 수는
+//     P7 의 「근거 n건」을 거짓말로 만들었다.
+//
 //  🔴 **P6 — 이 파일이 쓸 수 있는 자리는 `hooks/hooks.json` 의 `_writes` 에 선언한
-//     하나뿐이다**: `.contextops/pending-proposal.json`. 그 경로는 우리가 만든
-//     `.contextops/.gitignore` 안이라 **git 이 그 변화를 보지 못한다** — 사용자가
-//     커밋하거나 리뷰하는 파일은 한 바이트도 바뀌지 않는다.
+//     둘뿐이다**: `.contextops/pending-proposal.json` 과 `.contextops/cache/progress-<session>.json`.
+//     두 경로 다 우리가 만든 `.contextops/.gitignore` 안이라 **git 이 그 변화를 보지
+//     못한다** — 사용자가 커밋하거나 리뷰하는 파일은 한 바이트도 바뀌지 않는다.
 //     ★ 왜 이 예외가 필요한가 — 훅이 아는 것은 「무엇이 바뀌었나」뿐이고 그건
-//       **세션이 끝나는 지금**만 알 수 있다. 다음 세션에 전하려면 어딘가 남겨야 한다.
-//       서버에 두는 길도 있었지만, 힌트 하나 때문에 세션 종료가 네트워크를 기다리게
+//       **이 턴이 끝나는 지금**만 알 수 있다. 다음 세션에 전하려면 어딘가 남겨야 한다.
+//       서버에 두는 길도 있었지만, 힌트 하나 때문에 턴의 끝이 네트워크를 기다리게
 //       된다 (선택의 대가는 docs/feedback/FINDINGS.md 42 에 적었다).
 //     ⚠ `tools/principles.ps1` 과 `test/hooks.test.ts` 가 **둘 다** 이 경계를 잰다.
 //       새 경로에 쓰고 싶으면 코드가 아니라 `_writes` 표부터 고쳐라.
@@ -29,10 +36,16 @@ import { dirname, join } from 'node:path'
 //    필요한 칸만 조심스럽게 읽는다.
 // =====================================================================
 
-/** hooks.json 의 timeout(5초)보다 짧아야 한다. 세션 종료를 막는 훅이 제일 나쁘다. */
+/**
+ * 🔴 **최악의 경우 이 훅이 기다리는 시간의 합이 hooks.json 의 timeout(5초)보다 짧아야 한다.**
+ *    턴의 끝을 막는 훅이 제일 나쁘다 — 그리고 timeout 에 걸리면 그냥 죽는 것이 아니라
+ *    **매 턴** 죽는다. git 두 번(`changedPaths`) + 네트워크 한 번이 이 훅의 전부다:
+ *    2 × 1000 + 2500 = 4500ms < 5000ms. 예전엔 1500 × 2 + 2500 = 5500 으로 timeout 을
+ *    넘고 있었다 (INBOX G7). 합을 재는 시험은 `test/hooks.test.ts` 「timeout 이 …」다.
+ */
 const NETWORK_TIMEOUT_MS = 2500
-/** git 한 번에 주는 시간. 큰 저장소에서도 이 안에 끝난다. */
-const GIT_TIMEOUT_MS = 1500
+/** git 한 번에 주는 시간. 큰 저장소에서도 이 안에 끝난다. 두 번 부른다 (`changedPaths`). */
+const GIT_TIMEOUT_MS = 1000
 /** 한 번에 볼 변경 경로 수 (`PendingProposalFile.changed_paths` 상한과 같다). */
 const MAX_PATHS = 50
 
@@ -155,9 +168,10 @@ async function main() {
     const credentials = readJson(join(homedir(), LOCAL_DIR, 'credentials.json'))
     const token = credentials?.[config.api_origin]?.[config.project_id]?.token
     if (typeof token === 'string') {
-      await postProgress(config, token, {
+      const status = 'in_progress'
+      const sent = await postProgress(config, token, {
         milestone_id: milestone.id,
-        status: 'in_progress',
+        status,
         //  🔴 P1 — 근거는 **경로뿐이다.** 줄 번호조차 훅은 모른다 (diff 를 안 읽는다).
         evidence: paths.slice(0, 20).map((path) => ({ path })),
         summary: `이 세션에서 ${paths.length}개 경로가 바뀌었다`,
@@ -166,6 +180,11 @@ async function main() {
         source: 'hook',
         client_event_id: randomUUID(),
       })
+      //  🔴 보냈으면 **이 세션은 보고했다**고 남긴다 — 다음 턴의 이 훅이 물러서는 근거다.
+      //     ⚠ 못 보냈으면(오프라인) 안 남긴다 — 다음 턴에 또 기회가 있어야 한다.
+      //     모양은 `ProgressMarkerFile`(packages/schema) 그대로다 — CLI 가 남기는 것과 같은 파일이라
+      //     읽는 쪽이 하나다. 계약을 import 할 수 없어 칸을 손으로 적었다 (`test/hooks.test.ts` 가 판다).
+      if (sent) writeMarker(root, payload.session_id, { session_id: payload.session_id, milestone_id: milestone.id, status })
     }
   }
 
@@ -175,7 +194,7 @@ async function main() {
     MATCHERS.some((re) => re.test(p)) || scoped.some((re) => re.test(p)))
   if (touched.length === 0) return
 
-  //  🔴 여기가 이 훅이 쓰는 **유일한 파일**이다 (hooks.json 의 `_writes`).
+  //  🔴 여기가 이 훅이 쓰는 두 파일 중 하나다 (hooks.json 의 `_writes` 첫 줄 · 다른 하나는 `writeMarker`).
   writeHint(root, {
     changed_paths: touched,
     hint: `정책·아키텍처에 걸린 경로 ${touched.length}곳이 바뀌었다 — /contextops:propose 로 제안을 검토해라`,
@@ -189,13 +208,31 @@ async function main() {
  */
 function alreadyReported(root, sessionId) {
   if (typeof sessionId !== 'string' || sessionId.length === 0) return true
-  //  ⚠ 이름 규칙의 정본은 `src/cli/paths.ts` 의 `progressMarkerFile()` 이다.
-  //    여기는 번들이 아니라 import 를 못 해서 규칙을 옮겨 적었다 —
-  //    둘이 같은 이름을 내는지는 `test/hooks.test.ts` 의 「같은 세션에 agent 가 이미
-  //    보고했으면 보내지 않는다」가 잰다 (그 시험은 progressMarkerFile() 로 파일을 쓴다).
-  //    고칠 때 둘을 같이 고쳐라 — 갈리면 훅이 못 찾고 **중복 보고**를 한다.
+  return existsSync(markerPath(root, sessionId))
+}
+
+/**
+ * `.contextops/cache/progress-<session>.json` — 「이번 세션은 이미 보고했다」.
+ * ⚠ 이름 규칙의 정본은 `src/cli/paths.ts` 의 `progressMarkerFile()` 이다.
+ *   여기는 번들이 아니라 import 를 못 해서 규칙을 옮겨 적었다 —
+ *   둘이 같은 이름을 내는지는 `test/hooks.test.ts` 의 「같은 세션에 agent 가 이미
+ *   보고했으면 보내지 않는다」가 잰다 (그 시험은 progressMarkerFile() 로 파일을 쓴다).
+ *   고칠 때 둘을 같이 고쳐라 — 갈리면 훅이 못 찾고 **중복 보고**를 한다.
+ */
+function markerPath(root, sessionId) {
   const safe = sessionId.replace(/[^A-Za-z0-9_-]/g, '_')
-  return existsSync(join(root, LOCAL_DIR, 'cache', `progress-${safe}.json`))
+  return join(root, LOCAL_DIR, 'cache', `progress-${safe}.json`)
+}
+
+/** 보고했다는 표시를 남긴다 (hooks.json `_writes` 의 둘째 줄). 실패는 조용히 — 다음 턴에 한 번 더 보낼 뿐이다. */
+function writeMarker(root, sessionId, value) {
+  try {
+    const path = markerPath(root, sessionId)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+  } catch {
+    //  cache 폴더를 못 만드는 저장소(읽기 전용 마운트)라면 중복 보고 하나가 남는다 — 죽는 것보단 낫다.
+  }
 }
 
 /** rules 에 scoped 된 경로들 (`scope.kind === 'path'` 인 항목이 만든 파일의 대상). */

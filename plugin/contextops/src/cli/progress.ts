@@ -36,7 +36,10 @@ export const PROGRESS_FLAGS: FlagSpecs = {
   'summary': { kind: 'value', help: '한 줄 요약 (필수)' },
   'status': { kind: 'value', help: `상태 (${PROGRESS_STATUSES.join('·')} · 기본은 아래 표)` },
   'source': { kind: 'value', help: `보고 주체 (${PROGRESS_SOURCES.join('·')} · 기본 agent)` },
-  'session': { kind: 'value', help: '세션 id — 같은 세션에서 Stop 훅이 겹쳐 보고하지 않게', env: 'CLAUDE_SESSION_ID' },
+  //  🔴 env 이름은 **`CLAUDE_CODE_SESSION_ID`** 다 (INBOX G7). 예전 이름 `CLAUDE_SESSION_ID` 는 Claude Code 가
+  //     한 번도 준 적이 없는 변수라 표시 파일이 **한 번도 안 남았고**, Stop 훅은 매 턴 겹쳐 보고했다.
+  //     2026-09-10 실측: Claude Code 의 Bash 환경에서 이 변수의 값이 훅 stdin 의 `session_id` 와 같았다.
+  'session': { kind: 'value', help: '세션 id — 같은 세션에서 Stop 훅이 겹쳐 보고하지 않게', env: 'CLAUDE_CODE_SESSION_ID' },
 }
 
 /**
