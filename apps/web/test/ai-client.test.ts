@@ -2,12 +2,16 @@ import { describe, expect, it, afterEach, vi } from 'vitest'
 import { AiConflictOutput, AiStructureOutput, ERROR_STATUS, toJsonSchemaOf } from '@contextops/schema'
 
 import {
+  GEMINI_429_BACKOFF_MAX_MS,
+  GEMINI_429_BACKOFF_MS,
   GEMINI_HTTP_ERROR_CODES,
+  GEMINI_RATE_LIMIT_STATUS,
   GEMINI_THINKING_LEVEL,
   GEMINI_TRUNCATED_FINISH_REASON,
   GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS,
   callModel,
   geminiTransport,
+  retryAfterMs,
   setAiClientForTest,
   toGeminiSchema,
   type GenerateBody,
@@ -194,5 +198,65 @@ describe('geminiTransport — HTTP 상태를 이름으로 (FINDINGS 144 · SPEC 
       expect(ERROR_STATUS[code].status, `${status} → ${code}`).toBeGreaterThanOrEqual(400)
     }
     expect(Object.keys(GEMINI_HTTP_ERROR_CODES).length).toBeGreaterThan(0)
+  })
+})
+
+describe('geminiTransport — 429 는 한 번 기다렸다 다시 보낸다 (INBOX H5)', () => {
+  const KEY = 'GEMINI_API_KEY'
+  let saved: string | undefined
+  const body = { systemInstruction: { parts: [] }, contents: [], generationConfig: {} } as unknown as GenerateBody
+
+  /** 상태를 차례로 내는 fetch — 몇 번 불렸는지 센다. */
+  function sequence(statuses: number[], headers: Record<string, string> = {}): ReturnType<typeof vi.fn> {
+    const fn = vi.fn(async () => {
+      const status = statuses.shift() ?? 200
+      return new Response(status === 200 ? '{}' : '', { status, headers })
+    })
+    vi.stubGlobal('fetch', fn)
+    return fn
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    if (saved === undefined) delete process.env[KEY]
+    else process.env[KEY] = saved
+  })
+
+  it('429 → 200 이면 성공이고 fetch 는 두 번이다', async () => {
+    saved = process.env[KEY]
+    process.env[KEY] = 'test-key'
+    const fn = sequence([429, 200])
+    await expect(geminiTransport({ backoffMs: 1 }).generate('m', body)).resolves.toEqual({})
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  it('429 → 429 면 RATE_LIMITED 이고 세 번째 왕복은 없다', async () => {
+    saved = process.env[KEY]
+    process.env[KEY] = 'test-key'
+    const fn = sequence([429, 429, 200])
+    const err = await geminiTransport({ backoffMs: 1 }).generate('m', body).catch((e: unknown) => e)
+    expect((err as ApiError).code).toBe('RATE_LIMITED')
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  it('429 가 아닌 실패(500)는 기다리지 않는다 — 한 번이다', async () => {
+    saved = process.env[KEY]
+    process.env[KEY] = 'test-key'
+    const fn = sequence([500, 200])
+    await expect(geminiTransport({ backoffMs: 1 }).generate('m', body)).rejects.toThrow('500')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('`Retry-After` 는 존중하되 상한 안에서만 · 없거나 이상하면 기본값', () => {
+    expect(retryAfterMs(null, 3000)).toBe(3000)
+    expect(retryAfterMs('abc', 3000)).toBe(3000)
+    expect(retryAfterMs('0', 3000)).toBe(3000)
+    expect(retryAfterMs('2', 3000)).toBe(2000)
+    expect(retryAfterMs('60', 3000)).toBe(GEMINI_429_BACKOFF_MAX_MS)
+    //  기본 기다림은 함수 시간 300초의 안쪽이어야 한다 — 두 번 기다려도 job 이 죽지 않게.
+    expect(GEMINI_429_BACKOFF_MS).toBeLessThan(GEMINI_429_BACKOFF_MAX_MS)
+    expect(GEMINI_429_BACKOFF_MAX_MS).toBeLessThan(60_000)
+    //  상태 숫자는 표의 RATE_LIMITED 줄과 같은 것이다.
+    expect(GEMINI_HTTP_ERROR_CODES[GEMINI_RATE_LIMIT_STATUS]).toBe('RATE_LIMITED')
   })
 })

@@ -115,20 +115,30 @@ export function aiConfigured(): boolean {
  *   밖에서 쓰는 곳은 `scripts/p3-measure.ts` 하나다: 진짜 응답을 **기록만** 하는 껍데기로
  *   감싸 `setAiClientForTest` 로 꽂는다 (실패한 job 의 이유는 P1 때문에 DB 에 없다 · 84바퀴).
  */
-export function geminiTransport(): AiTransport {
+export function geminiTransport(options: { backoffMs?: number } = {}): AiTransport {
   const apiKey = process.env.GEMINI_API_KEY
   //  🔴 조용히 undefined 로 돌지 않게 여기서 죽인다 (.env.example ③).
   //     ⚠ 키가 없는 배포는 **고장이 아니라 설정이 안 된 것**이다 — 그래서 `INTERNAL` 이 아니라
   //        `AI_NOT_CONFIGURED`(503) 다 (INBOX G9). job 은 그 코드로 끝나고 화면은 「운영자에게」를
   //        말한다. 예전 주석·문서가 말하던 「픽스처 결과로 떨어지는」 갈래는 **코드에 없었다.**
   if (!apiKey) throw new ApiError('AI_NOT_CONFIGURED', 'GEMINI_API_KEY 가 없다 — apps/web/.env.example 을 보고 .env.local 을 만들어라')
+  const backoffMs = options.backoffMs ?? GEMINI_429_BACKOFF_MS
   return {
     async generate(model, body) {
-      const res = await fetch(`${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+      const send = () => fetch(`${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify(body),
       })
+      let res = await send()
+      //  🔴 429 는 **한 번** 기다렸다 다시 보낸다 (INBOX H5). 무료 티어의 분당 제한은 몇 초면 풀리는데,
+      //     그 몇 초 때문에 job 이 `RATE_LIMITED` 로 죽고 사람이 [다시 시도] 를 누르는 것은 예산 가드가
+      //     막으려던 것도 아니고 사람이 할 일도 아니다. 두 번째 429 는 그대로 코드가 된다 — 세 번째 왕복은 없다.
+      //     ⚠ 이 재시도는 `withBudget()` 한 번 안의 일이다 — 429 응답에는 usage 가 없어 장부에 두 줄이 생기지 않는다.
+      if (res.status === GEMINI_RATE_LIMIT_STATUS && backoffMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, retryAfterMs(res.headers.get('retry-after'), backoffMs)))
+        res = await send()
+      }
       //  ⚠ 응답 본문을 오류 메시지에 싣지 않는다 — 오류 메시지는 로그로 간다 (SPEC §11).
       //    상태 코드만으로 가른다 — 표(`GEMINI_HTTP_ERROR_CODES`)에 있는 상태는 그 코드의
       //    `ApiError`, 없는 것(키가 틀린 400/403 · 5xx)은 그냥 Error → job 은 `INTERNAL`.
@@ -140,6 +150,19 @@ export function geminiTransport(): AiTransport {
       return (await res.json()) as GenerateResponse
     },
   }
+}
+
+/** 분당 제한의 HTTP 상태 — `GEMINI_HTTP_ERROR_CODES` 의 `RATE_LIMITED` 줄과 같은 숫자다 (시험이 대조한다). */
+export const GEMINI_RATE_LIMIT_STATUS = 429
+/** 429 뒤 한 번 기다리는 시간. 무료 티어의 창은 1분이지만 대개 몇 초면 풀린다 — 함수 시간(300초)의 1% 다. */
+export const GEMINI_429_BACKOFF_MS = 3000
+/** `Retry-After` 를 존중하되 **상한** 안에서만 — 서버가 60 을 줘도 60초를 기다리진 않는다 (그건 두 번째 429 로 끝낸다). */
+export const GEMINI_429_BACKOFF_MAX_MS = 10_000
+
+export function retryAfterMs(header: string | null, fallbackMs: number): number {
+  const seconds = header === null ? NaN : Number(header)
+  if (!Number.isFinite(seconds) || seconds <= 0) return fallbackMs
+  return Math.min(seconds * 1000, GEMINI_429_BACKOFF_MAX_MS)
 }
 
 /**
