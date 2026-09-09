@@ -1,0 +1,229 @@
+{
+  "origin": "https://contextops-rosy.vercel.app",
+  "team_slug": "demo",
+  "at": "2026-09-09T18:17:53.615Z",
+  "passed": 44,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "vercel.json 의 cron 문이 전부 이 검사의 표에 있다",
+      "ok": true,
+      "detail": "2개"
+    },
+    {
+      "name": "랜딩이 200 이다",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "health 가 200 이다",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "health 가 DB 에 닿았다 (db:true)",
+      "ok": true,
+      "detail": "{\"ok\":true,\"db\":true,\"ai\":true,\"version\":\"v1\"}"
+    },
+    {
+      "name": "health 의 계약 버전이 v1 이다",
+      "ok": true,
+      "detail": "v1"
+    },
+    {
+      "name": "health 가 AI 를 부를 수 있다 (ai:true — GEMINI_API_KEY 가 Vercel env 에 있다)",
+      "ok": true,
+      "detail": "{\"ok\":true,\"db\":true,\"ai\":true,\"version\":\"v1\"}"
+    },
+    {
+      "name": "Cron 문이 자격증명 없이는 401 이다",
+      "ok": true,
+      "detail": "401"
+    },
+    {
+      "name": "Cron 문이 틀린 자격증명에도 401 이다",
+      "ok": true,
+      "detail": "401"
+    },
+    {
+      "name": "보호된 문이 자격증명 없이 401 이다 (500 이 아니다)",
+      "ok": true,
+      "detail": "401"
+    },
+    {
+      "name": "게스트 세션 문이 201 이다 (데모 테넌트가 심어져 있다)",
+      "ok": true,
+      "detail": "201"
+    },
+    {
+      "name": "게스트 세션에 토큰이 있다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "서버가 들어갈 자리를 말한다 (entry_path)",
+      "ok": true,
+      "detail": "/t/demo/p/paylab-api/context vs /t/demo/p/paylab-api/context"
+    },
+    {
+      "name": "게스트 응답의 칸이 셋뿐이다 (이름·이메일이 없다)",
+      "ok": true,
+      "detail": "access_token,entry_path,expires_at"
+    },
+    {
+      "name": "게스트 응답 본문에 이메일 글자가 0건이다",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Supabase 검사에 쓸 NEXT_PUBLIC_SUPABASE_URL · ANON_KEY 가 있다 (.env.local)",
+      "ok": true,
+      "detail": "ummnsrwztpjmuhxcdxgh.supabase.co"
+    },
+    {
+      "name": "Supabase 에서 GitHub 로그인 공급자가 켜져 있다 (/auth/v1/settings external.github)",
+      "ok": true,
+      "detail": "켜진 공급자: github,email"
+    },
+    {
+      "name": "JWKS 의 서명 방식이 전부 검증기 표에 있다 (legacy HS256 secret 은 JWKS 에 안 나온다)",
+      "ok": true,
+      "detail": "ES256 · 표: HS256,ES256"
+    },
+    {
+      "name": "anon 키로 Data API 가 표를 내주지 않는다 (Data API 를 껐다 · RLS 만으로는 200 + [] 다)",
+      "ok": true,
+      "detail": "503"
+    },
+    {
+      "name": "GATE 3: 시크릿 창(빈 컨텍스트)이 열렸다",
+      "ok": true,
+      "detail": "98ADC9A740CC9DC0BA11F698047CB30A"
+    },
+    {
+      "name": "GATE 3: 링크 하나로 랜딩이 열린다",
+      "ok": true,
+      "detail": "https://contextops-rosy.vercel.app/"
+    },
+    {
+      "name": "GATE 3: 들고 온 것이 없다 (localStorage 0칸)",
+      "ok": true,
+      "detail": "0칸"
+    },
+    {
+      "name": "GATE 3 · 랜딩의 accent 를 누른다 → 게스트 세션이 붙는다: 누를 것이 화면에 보인다",
+      "ok": true,
+      "detail": ".btn-primary"
+    },
+    {
+      "name": "GATE 3 · 랜딩의 accent 를 누른다 → 게스트 세션이 붙는다: 도착했다",
+      "ok": true,
+      "detail": "/t/demo/p/paylab-api/context ~ /^\\/t\\/demo\\/p\\/paylab-api\\//"
+    },
+    {
+      "name": "GATE 3 · 랜딩의 accent 를 누른다 → 게스트 세션이 붙는다: 화면이 다 그려졌다 (skeleton 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Context」 링크: 누를 것이 화면에 보인다",
+      "ok": true,
+      "detail": "a.nav-link[href=\"/t/demo/p/paylab-api/context\"]"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Context」 링크: 링크의 글자가 화면 표와 같다",
+      "ok": true,
+      "detail": "«Context» vs «Context»"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Context」 링크: 도착했다",
+      "ok": true,
+      "detail": "/t/demo/p/paylab-api/context ~ /\\/context$/"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Context」 링크: 화면이 다 그려졌다 (skeleton 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GATE 3 · 내비에서 「제안」 링크: 누를 것이 화면에 보인다",
+      "ok": true,
+      "detail": "a.nav-link[href=\"/t/demo/p/paylab-api/proposals\"]"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「제안」 링크: 링크의 글자가 화면 표와 같다",
+      "ok": true,
+      "detail": "«제안» vs «제안»"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「제안」 링크: 도착했다",
+      "ok": true,
+      "detail": "/t/demo/p/paylab-api/proposals ~ /\\/proposals(\\/|$)/"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「제안」 링크: 화면이 다 그려졌다 (skeleton 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Roadmap」 링크: 누를 것이 화면에 보인다",
+      "ok": true,
+      "detail": "a.nav-link[href=\"/t/demo/p/paylab-api/roadmap\"]"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Roadmap」 링크: 링크의 글자가 화면 표와 같다",
+      "ok": true,
+      "detail": "«Roadmap» vs «Roadmap»"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Roadmap」 링크: 도착했다",
+      "ok": true,
+      "detail": "/t/demo/p/paylab-api/roadmap ~ /\\/roadmap$/"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Roadmap」 링크: 화면이 다 그려졌다 (skeleton 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Sync」 링크: 누를 것이 화면에 보인다",
+      "ok": true,
+      "detail": "a.nav-link[href=\"/t/demo/p/paylab-api/sync\"]"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Sync」 링크: 링크의 글자가 화면 표와 같다",
+      "ok": true,
+      "detail": "«Sync» vs «Sync»"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Sync」 링크: 도착했다",
+      "ok": true,
+      "detail": "/t/demo/p/paylab-api/sync ~ /\\/sync$/"
+    },
+    {
+      "name": "GATE 3 · 내비에서 「Sync」 링크: 화면이 다 그려졌다 (skeleton 0)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GATE 3: 주소를 친 것은 첫 링크 하나뿐이다 (나머지는 눌렀다)",
+      "ok": true,
+      "detail": "navigate 1회"
+    },
+    {
+      "name": "GATE 3: 180초 예산 안에 화면 5·6·8·9 를 다 봤다",
+      "ok": true,
+      "detail": "4.6초 · 랜딩의 accent 를 누른다 → 게스트 세션이 붙는다 1.5s · 「Context」 링크 0.7s · 「제안」 링크 0.6s · 「Roadmap」 링크 0.6s · 「Sync」 링크 0.7s"
+    },
+    {
+      "name": "로그인 화면에 [GitHub로 계속] 이 실제로 그려진다 (Supabase 환경변수가 빌드에 들어갔다)",
+      "ok": true,
+      "detail": "https://ummnsrwztpjmuhxcdxgh.supabase.co"
+    },
+    {
+      "name": "그 링크가 .env.local 과 같은 Supabase 프로젝트를 가리킨다",
+      "ok": true,
+      "detail": "ummnsrwztpjmuhxcdxgh.supabase.co"
+    }
+  ]
+}

@@ -11,7 +11,7 @@ ContextOps는 흩어진 규칙을 모아 **팀장이 승인한 하나로** 만�
 
 <sub>
 <b>Wanted AI Championship 2026</b> 출품작 · 제출 2026-09-20 · 개발 1인 + Claude Code<br>
-팀명 <b>퇴직했는데저좀이직시켜주세요</b> · <a href="https://github.com/rhdqngusanr/contextops">공개 저장소</a> (MIT) ·
+<a href="https://contextops-rosy.vercel.app/demo"><b>샘플 팀으로 둘러보기</b></a> (로그인 없이 · 매일 03:00 초기화) · 팀명 <b>퇴직했는데저좀이직시켜주세요</b> · <a href="https://github.com/rhdqngusanr/contextops">공개 저장소</a> (MIT) ·
 지금 되는 것과 안 되는 것은 <a href="docs/KNOWN_LIMITATIONS.md">여기</a>에 정직하게 적었습니다<br>
 <i>팀명·저장소 주소의 정본은 <code>apps/web/src/components/landing.tsx</code> 의 <code>SUBMISSION_IDENTITY</code> 하나이고, 이 README·제출서와 같은 글자인지 시험이 잽니다.</i>
 </sub>
@@ -187,7 +187,7 @@ AI 코딩 도구는 **팀 규칙이 적힌 파일**을 읽고 답합니다. 문�
 
 ## 직접 보기
 
-**설치도, 가입도 필요 없습니다.** `/demo` 를 열면 샘플 팀 안으로 바로 들어갑니다.
+**설치도, 가입도 필요 없습니다.** <https://contextops-rosy.vercel.app/demo> 를 열면 샘플 팀 안으로 바로 들어갑니다.
 
 | 무엇 | 어디서 보나 |
 |---|---|

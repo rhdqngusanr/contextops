@@ -25,10 +25,10 @@
 
 ## 제품
 
-- **production 이 아직 없다.** Vercel · Supabase 연결은 🙋 사람이 한다 (`docs/STATUS.md` 「막힌 것」). 지금까지의
-  모든 관통·데모·캡처는 개발 기계의 PGlite 위에서 돌았다. 배포에서만 볼 수 있는 셋 — 함수 안에서 `fixtures/` 를
-  찾는가 · Supabase 에서 데모 리셋이 60초 안에 끝나는가 · Root Directory 설정이 `vercel.json` 을 읽게 하는가 — 은
-  아직 못 쟀다.
+- **production 은 Vercel Hobby 위다** (<https://contextops-rosy.vercel.app> · 2026-09-10 첫 배포 · `docs/evidence/2026-09-10-production/`).
+  배포에서만 볼 수 있던 셋은 그날 쟀다 — 함수가 `fixtures/` 를 찾았고(첫 리셋 200) · 데모 리셋은 **7.6초**였고 ·
+  Root Directory `apps/web` 이 `vercel.json` 을 읽었다(Cron 둘 · 리전 icn1). Hobby 의 한도는 그대로 남는다: cron 하루 1회
+  (정각이 아니라 그 시간 안 임의 분) · 함수 300초 · 비상업 이용. 실제 GitHub 로그인 → 팀 생성 201 은 🙋 사람이 손으로 잰다.
 - **기기 토큰이 `/contextops:setup` 의 인자로 Claude Code 를 지난다.** 웹이 준 한 줄을 사람이 Claude Code 에 붙여 넣고 Skill 이
   CLI 를 부르므로, 그 토큰 문자열은 사용자 자신의 모델 컨텍스트(그 세션의 대화)에 한 번 실린다. 서버에는 해시만 남고 저장은
   `~/.contextops/credentials.json`(저장소 밖)뿐이다. 터미널에 직접 치는 길(`node <플러그인 경로>/bin/contextops-cli.mjs setup …`)은

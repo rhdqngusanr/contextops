@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-10 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · 대회 감사 + 블로커 2~6 의 코드·문서 + **INBOX 고장 G7~G15 아홉** · **CI GREEN 전 층** · 일감의 입구는 이제 `docs/feedback/INBOX.md` 맨 위 「대회 제출 계획」이다._
+_마지막 갱신: 2026-09-10 밤 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **production 첫 배포 <https://contextops-rosy.vercel.app> · verify:prod 44/0** · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄._
 
 ---
 
@@ -99,15 +99,15 @@ H11 프로젝트별 하루 예산 $1(전역 $3 안의 이중 상한) · 팀 3/�
 🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15(**전부 ✅** · G2 는 대시보드 🙋) · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
 루프는 `loop/STOP` 그대로 멈춰 있다 — 9/9~9/11 은 계정 작업과 섞여 사람이 붙은 세션이 맞고, 그 뒤 켤지는 사람이 정한다(INBOX B1).
 
-🙋 **사람이 지금 해야 하는 것** (2026-09-10 갱신 · Claude 몫은 INBOX 에서 전부 ✅ — 남은 것은 이것뿐이다):
-1. **참가 접수** — 9/18(금) 23:59:59 마감 · 원티드 계정 · 접수 뒤 제출 폼의 칸·글자 수·썸네일 규격을 캡처해 `docs/SUBMISSION.md` 「제출 폼 원문」의 상한을 실제 값으로.
-2. **Supabase 대시보드** (DEPLOY ①-b) — GitHub 공급자 ON(GitHub OAuth App 만들기) · Site URL / Redirect URL · 세션 만료 최대 · JWT Keys CURRENT 종류 기록 · Data API OFF.
-3. **Vercel** (DEPLOY ②~⑥) — Import(Root `apps/web`) · Fluid compute 확인 · env Import(`.env.vercel`) + `NEXT_PUBLIC_SITE_ORIGIN` · 첫 배포 · `db:status`/`db:migrate`(0009 까지) · 첫 리셋 curl · `verify:prod` · 로그인 실측 → 팀 생성 201 · production URL 을 SUBMISSION 🙋 표에.
-4. **GitHub 저장소 Variables** 에 `PROD_ORIGIN` — `watch-prod.yml` 이 30분마다 두드린다. 만든 날 일부러 틀린 값으로 dispatch 해 실패 메일이 오는지 확인.
-5. **Gemini Tier 1 결정** — 빌링 연결 뒤 키 교체 · `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER` 를 `'paid'` 로(고지 문장이 같이 바뀐다) · Cloud Billing 알림 $20.
-6. **플러그인 실기 설치** (9/11) — `claude plugin marketplace add ./` → install → 새 저장소에서 `/contextops:setup` → `/contextops:sync` → `/contextops:progress` 가 Roadmap 을 움직이는지 · 세 장면 GIF(`docs/PITCH.md` §3).
-7. **「15분」 스톱워치 실측** (`docs/PITCH.md` §4) — 넘으면 랜딩 문장(`SITE`/`LANDING_HEAD.note`)을 고친다.
-8. **9/17 녹화** (`docs/PITCH.md` §1·§5) · **9/18 저녁** release 동결 · Preview 끄기 · 루프 STOP 유지 · **9/19 제출** · 루프 재개 여부는 사람이 정한다.
+🙋 **사람이 지금 해야 하는 것** (2026-09-10 밤 갱신 · 배포는 됐다 — <https://contextops-rosy.vercel.app>):
+1. **참가 접수** — 9/18(금) 23:59:59 마감 · 접수 뒤 제출 폼의 칸·글자 수·썸네일 규격을 캡처해 `docs/SUBMISSION.md` 「제출 폼 원문」의 상한을 실제 값으로.
+2. **로그인 실측** (DEPLOY ⑥-b · 10분) — 시크릿 창에서 https://contextops-rosy.vercel.app/login → [GitHub로 계속] → `/t` → 팀 만들기 → Network 의 `POST /api/v1/teams` 가 201 인지 캡처. 콜백에서 튕기면 화면의 원인 코드를 Claude 에게.
+3. **GitHub 저장소 Variables 에 `PROD_ORIGIN`** = 위 URL — `watch-prod.yml` 이 30분마다 두드린다. 만든 날 일부러 틀린 값으로 dispatch 해 실패 메일이 오는지 확인 뒤 되돌린다.
+4. **Gemini Tier 1 결정** — 빌링 연결 뒤 키 교체(Vercel env 갱신 + Redeploy) · `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER` 를 `'paid'` 로 · Cloud Billing 알림 $20.
+5. **플러그인 실기 설치** (9/11) — `claude plugin marketplace add ./` → install → 새 저장소에서 `/contextops:setup`(웹 Sync 화면 [기기 추가]가 주는 한 줄) → `/contextops:sync` → `/contextops:progress` 가 Roadmap 을 움직이는지 · 세 장면 GIF(`docs/PITCH.md` §3).
+6. **「15분」 스톱워치 실측** (`docs/PITCH.md` §4) — 넘으면 랜딩 문장(`SITE`/`LANDING_HEAD.note`)을 고친다.
+7. **9/17 녹화** (`docs/PITCH.md` §1·§5) · **9/18 저녁** release 동결 · Preview 끄기 · 루프 STOP 유지 · **9/19 제출** · 루프 재개 여부는 사람이 정한다.
+8. Vercel Project Settings → Data Preferences 의 「Improve models with this project's data」를 끈다(끄지 않았다면).
 
 ## 🧑 사람 세션 (2026-09-07 22:15~23:00 · 루프 밖) — **PLAN P5 첫 행을 열었다**
 
@@ -1035,9 +1035,9 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 | ~~Supabase 프로젝트 생성 · `DATABASE_URL` · `SUPABASE_JWT_SECRET`~~ | ✅ **2026-09-06 사람이 꽂았다** (`.env.local` · Session pooler · IPv4) | 71바퀴가 마이그레이션을 실제로 적용했다 (`adac632` · 표 18 · 인덱스 8). **표는 비어 있다** — 데모 테넌트는 Cron 리셋 문(`/api/v1/cron/demo-reset`)이 심는다. 같은 값을 Vercel 에도 꽂는 것은 아래 행 |
 | ~~Anthropic API 키~~ → **Gemini 키** | ✅ **2026-09-06 사람이 꽂았다** (`GEMINI_API_KEY`·`GEMINI_MODEL=gemini-3.5-flash` · 79바퀴가 `836a0a9` 로 갈아끼웠다 · 진짜 호출 통과) | 🙋 남은 것 하나: **`gemini-3.5-flash`·`3.6-flash` 의 정가**를 `apps/web/src/lib/ai/features.ts` `AI_MODELS` 에 — 지금은 2.5 flash 공개가(0.30/2.50 USD/M)가 임시로 있다. 틀리면 하루 예산(`AI_DAILY_BUDGET_USD=3`)의 셈이 틀린다. 같은 값을 Vercel 에도 |
 | **참가 접수**(원티드 · 9/18 23:59:59 마감 · 제출과 별개) + 제출 폼의 칸·글자 수·썸네일 규격 캡처 | 원티드 계정 | **🔴 오늘.** 접수 없이는 제출 화면이 안 열린다 (INBOX B1) |
-| **`git push`** — 로컬이 origin 보다 앞서 있다(`loop/STOP` 이라 AutoPush 도 멈춤) | 사람의 자격증명 | **🔴 오늘.** 공개 저장소에 `.claude-plugin/marketplace.json` 이 없어 README 설치 첫 줄이 지금 실패한다 |
-| **Supabase Auth 걸음 넷 + Data API 끄기** — GitHub 공급자 켜기(OAuth App) · Site URL·Redirect URLs · 세션 만료 최대치 · JWT Keys 의 CURRENT 종류 기록 · Data API OFF (`docs/DEPLOY.md` ①-b) | 대시보드 | **🔴 9/10 첫 걸음.** 2026-09-09 실측: 공급자 OFF · ES256 · anon REST 200 — 이 걸음 없이는 로그인이 죽어 있고 표가 열려 있다 (INBOX B3) |
-| Vercel 프로젝트 연결(**Root Directory `apps/web`** · Fluid compute 켜짐 확인) · `.env.vercel` Import → 첫 배포 로그 → `pnpm --filter web db:status`(pending 0 · rls 18/18) → 첫 리셋 한 번(`time curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset` · 소요 초 기록) → `verify:prod` 0 failed → anon REST 거부 캡처 · GitHub 로그인 → 팀 생성 201 캡처 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처(P1 증거의 나머지 절반) | 계정 연결이 필요하다 | **🔴 9/10 · 5~8h.** 배포를 막던 코드 4건(cron · 리전 · maxDuration · RLS)은 2026-09-09 에 고쳤다 — 순서와 시간은 `docs/DEPLOY.md` 「가장 빠른 길」 (INBOX B2) |
+| ~~`git push`~~ | ✅ **2026-09-10** — origin/main == 로컬 · GitHub Actions 초록 | — |
+| ~~Supabase Auth 걸음 넷 + Data API 끄기~~ | ✅ **2026-09-10 사람이 했다** — 공개 엔드포인트로 재확인: 공급자 github·email ON · JWKS ES256 · anon REST 503 · 세션 만료 최대치 | — |
+| ~~Vercel 프로젝트 연결 · env · 첫 배포 · 첫 리셋 · verify:prod~~ | ✅ **2026-09-10** — <https://contextops-rosy.vercel.app> · 마이그레이션 0009 까지(Claude) · 첫 리셋 7.6초 · verify:prod 44/0 · 근거 `docs/evidence/2026-09-10-production/` | 🙋 남은 것: 로그인 실측(⑥-b) · GitHub 변수 `PROD_ORIGIN` |
 | Gemini **Tier 1** 결정(AI Studio 빌링 연결 → 키 교체 → Cloud Billing 알림 $20) — 무료 티어는 Google 약관상 입력이 학습에 쓰일 수 있고 심사 트래픽에서 429 | 결제 계정 | 9/10 계정 작업 묶음에 같이 — 결정이 `/privacy`·KNOWN_LIMITATIONS 의 문장을 정한다 (INBOX H4) |
 | 실데이터 픽스처(`brain`) 공개 가능 여부 판단 | 제품 결정이다 | P5 (안 되면 paylab 만 · SPEC §14 절삭 6번) |
 

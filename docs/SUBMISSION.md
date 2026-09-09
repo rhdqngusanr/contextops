@@ -13,7 +13,7 @@
 |---|---|---|
 | 제출 팀명 | 퇴직했는데저좀이직시켜주세요 | 정본은 랜딩의 `SUBMISSION_IDENTITY`(`apps/web/src/components/landing.tsx`) · README 머리 · 랜딩 푸터 (`LANDING_FOOT`) — 셋이 같은 글자인지 `apps/web/test/readme.test.ts` 가 잰다 |
 | 공개 저장소 URL | <https://github.com/rhdqngusanr/contextops> (PUBLIC · MIT) | 같은 정본 · README 머리 · 랜딩 푸터의 GitHub · Known limitations 링크. 설치 첫 줄의 마켓플레이스 이름(`rhdqngusanr/contextops`)도 이 URL 에서 파생된다 — 목록 파일은 저장소 뿌리의 `.claude-plugin/marketplace.json` 이다 |
-| production URL | 🙋 (Vercel · Supabase 연결 뒤) | README 머리 — `docs/STATUS.md` 「막힌 것」 |
+| production URL | https://contextops-rosy.vercel.app (Vercel Hobby · 서울 icn1 · 2026-09-10 첫 배포 · `verify:prod` 44/0) | README 머리 · 「서비스 링크」 · 근거 `docs/evidence/2026-09-10-production/` |
 | 2분 영상 링크 | 🙋 (PLAN P6 첫 행 · 규정상 필수는 아니다 — 투표·본선 자산) | 컷 표·대본·녹화 체크리스트는 [PITCH.md](PITCH.md) |
 | 슬라이드 링크 | 🙋 (PLAN P6 첫 행 · 규정상 필수는 아니다) | 8장 뼈대는 [PITCH.md](PITCH.md) |
 | 참가 접수 | 🙋 (원티드 계정 · **2026-09-18(금) 23:59:59 마감** · 제출과 별개의 마감이다) | 접수 없이는 제출 화면이 안 열린다. 접수 뒤 폼의 칸·글자 수·썸네일 규격을 캡처해(`docs/evidence/` 아래 2026-09-09-submission-form 폴더) 아래 「제출 폼 원문」의 괄호 상한을 그 값으로 바꾼다 |
@@ -39,7 +39,7 @@
 
 ### 서비스 링크
 
-`https://<production>/demo` — 로그인 없이 열린다. 🙋 표의 production URL 이 오면 여기도 같은 값이다.
+<https://contextops-rosy.vercel.app/demo> — 로그인 없이 열린다. 저장소는 <https://github.com/rhdqngusanr/contextops>.
 
 ### 한 줄 (≤ 60자)
 
@@ -57,13 +57,9 @@ AI 는 사람이 결정하기 전 단계에만 있습니다. ① 서버(Gemini A
 
 Claude Code — 개발 전 과정(자율 루프 · 6일 300여 커밋)과 제품 플러그인의 실행 환경(Skill · 훅). Gemini API(3.5 Flash) — 서버측 문서 구조화·충돌 탐지, 우리 API 키 · JSON 스키마 출력 · 일일 예산, SDK 없이 fetch.
 
-## production URL 이 오면 지울 문장
+## production URL 이 온 뒤 지운 문장 (2026-09-10 반영)
 
-URL 이 🙋 표에 적히는 순간 아래 문장은 거짓이 된다 — 남기면 심사의 첫 질문이 된다. `apps/web/test/readme.test.ts` 가 「🙋 표의 production URL 에 `https://` 가 있으면 세 문서에 이 문장이 0건」을 잰다.
-
-- 이 문서 「알려진 한계」의 첫 줄 — 「production 이 아직 없습니다」
-- `docs/KNOWN_LIMITATIONS.md` 의 「production 이 아직 없다」 항목 (그 항목의 나머지 문장은 「배포 뒤 첫 리셋에서 잰다」로 바꾼다)
-- README 머리에 URL 을 적는다 (지금은 자리가 없다 — 적으면서 「직접 보기」의 `/demo` 를 실제 주소로)
+URL 이 🙋 표에 적히는 순간 「배포가 없다」는 문장은 거짓이 된다. `apps/web/test/readme.test.ts` 가 「🙋 표의 production URL 에 `https://` 가 있으면 세 문서에 그 문장이 0건」을 잰다 — 이 문서 「알려진 한계」 첫 줄 · `docs/KNOWN_LIMITATIONS.md` 의 그 항목 · README 머리를 같은 날 고쳤다.
 
 ---
 
@@ -203,7 +199,7 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 
 ## 어떻게 보나
 
-**샘플 팀** — `/demo` 를 열면 게스트 세션으로 샘플 팀에 들어갑니다. 읽기 전용이고 매일 03:00(KST) 초기화됩니다.
+**샘플 팀** — <https://contextops-rosy.vercel.app/demo> 를 열면 게스트 세션으로 샘플 팀에 들어갑니다. 읽기 전용이고 매일 03:00(KST) 초기화됩니다.
 로그인 없이 앱 화면(가져오기 · 정리 · Context · 제안 · Pack Explorer · Roadmap · Sync)을 그대로 봅니다.
 「정리」의 **AI 제안 카드 3장**은 2026-09-07 에 gemini-3.5-flash 가 샘플 팀의 두 문서에서 실제로 찾은 모순의 기록이고, 카드 본문이
 「이 데모에서는 다시 탐지하지 않습니다」라고 스스로 말합니다 — 게스트는 쓸 수 없어서, AI 가 새로 도는 장면은 로그인한 팀장이
@@ -240,7 +236,7 @@ claude plugin install contextops                                 # 플러그인�
 정직하게 적습니다 — 전부 [`docs/KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) 에 있고, 각 줄은 코드에서 이름을 찾은 뒤 적었습니다.
 심사 전에 읽어 두시면 좋은 것 넷:
 
-- **production 이 아직 없습니다** — 모든 관통·데모·캡처는 개발 기계의 PGlite 위에서 돌았습니다.
+- **배포는 Vercel Hobby 위입니다** — cron 은 하루 1회(리셋이 03:00 정각이 아니라 그 시간 안 임의 분에 돕니다) · 함수 300초 · 리전 하나(서울). 심사 기간의 링크 유지는 30분 감시와 「옆자리에 심고 바꾸는」 리셋이 지킵니다 (`docs/DEPLOY.md` 「심사 기간 런북」).
 - **`upload-draft` 의 `body` 에 사람이 코드를 붙여 넣으면 계약은 못 막습니다** — P1 은 「규칙대로 썼을 때 파이프라인이 본문을 안 나른다」까지입니다.
 - **서버측 AI 4종 중 둘(질의 · 데모 AI 한 번)은 문이 없습니다** (FINDINGS 117).
 - **모든 상태는 「마지막 보고 기준」입니다** — 화면은 폴링으로 갱신됩니다. 라이브 갱신은 없습니다.

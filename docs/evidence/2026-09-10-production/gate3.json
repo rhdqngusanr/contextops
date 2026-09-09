@@ -1,0 +1,38 @@
+{
+  "budget_ms": 180000,
+  "total_ms": 4642,
+  "within_budget": true,
+  "navigations": 1,
+  "steps": [
+    {
+      "name": "랜딩의 accent 를 누른다 → 게스트 세션이 붙는다",
+      "ms": 1485,
+      "ok": true,
+      "at": "/t/demo/p/paylab-api/context"
+    },
+    {
+      "name": "내비에서 「Context」 링크",
+      "ms": 656,
+      "ok": true,
+      "at": "/t/demo/p/paylab-api/context"
+    },
+    {
+      "name": "내비에서 「제안」 링크",
+      "ms": 628,
+      "ok": true,
+      "at": "/t/demo/p/paylab-api/proposals"
+    },
+    {
+      "name": "내비에서 「Roadmap」 링크",
+      "ms": 614,
+      "ok": true,
+      "at": "/t/demo/p/paylab-api/roadmap"
+    },
+    {
+      "name": "내비에서 「Sync」 링크",
+      "ms": 657,
+      "ok": true,
+      "at": "/t/demo/p/paylab-api/sync"
+    }
+  ]
+}

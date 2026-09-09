@@ -18,6 +18,8 @@
 
 **`pnpm --filter web verify:prod -- --url https://<production>` 이 `0 failed` 다.**
 
+✅ **2026-09-10 충족** — <https://contextops-rosy.vercel.app> · 44 passed · 0 failed · 첫 리셋 7.6초 · 근거 `docs/evidence/2026-09-10-production/`. 밟으며 만난 것 둘은 그 README 에 적었다 (`vercel.json` 의 `_comment` 거부 · Import 가 자동 감지한 빈 env). 남은 손 걸음은 ⑥-b 의 로그인 실측과 GitHub 변수 **PROD_ORIGIN** 이다.
+
 그 명령이 재는 것은 `apps/web/e2e/production.ts` 의 머리말에 있다 — 배포만이 증명하는
 넷(DB 에 닿는가 · Cron 자물쇠가 걸렸나 · 데모가 심어졌나 · GATE 3 가 production 속도로도
 지나는가)이다. **눈으로 한 번 밟는 것으로 두지 않는 이유**도 거기 적혀 있다.
