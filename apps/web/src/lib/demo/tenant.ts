@@ -29,8 +29,13 @@
  */
 export const DEMO_GUEST_SUBJECT = 'contextops-demo-guest'
 
-/** 게스트 세션의 수명(초). 3분 체험(GATE 3)의 열 배쯤이면 넉넉하고, 하루를 안 넘긴다. */
-export const DEMO_SESSION_TTL_SEC = 60 * 60 * 2
+/**
+ * 게스트 세션의 수명(초) — **하루** (INBOX H2 · 2026-09-10). 예전 2시간은 심사위원이 오후에 열어 둔 탭을 저녁에
+ * 다시 보면 모든 화면이 「로그인이 필요합니다」였다. 하루면 데모 리셋(03:00 KST) 주기와 같고, 만료돼도
+ * `NeedsLogin` 이 [샘플 팀으로 둘러보기] 를 같이 내므로 한 번 눌러 돌아온다. 하루를 넘기지 않는다 —
+ * 리셋 뒤의 팀은 다른 행이라 옛 세션의 멤버십이 없다.
+ */
+export const DEMO_SESSION_TTL_SEC = 60 * 60 * 24
 
 /**
  * 데모 팀·프로젝트의 이름과 주소.

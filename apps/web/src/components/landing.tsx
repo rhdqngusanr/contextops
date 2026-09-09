@@ -2,6 +2,7 @@ import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 
 import replayRecording from '../../../../fixtures/replay/sync.json'
 import shotsManifest from '../../public/shots/manifest.json'
+import { SITE } from '../lib/web/site'
 import styles from './landing.module.css'
 import { TerminalReplay } from './terminal-replay'
 
@@ -50,11 +51,10 @@ import { TerminalReplay } from './terminal-replay'
 
 /** A. 헤드라인 (DESIGN_BRIEF 화면 1 A). */
 export const LANDING_HEAD = {
-  eyebrow: 'Team Context for Claude Code',
-  title: '팀의 지식과 Claude의 기억을 같은 방향으로',
-  subtitle:
-    '팀장이 승인한 목표·로드맵·결정을 모든 팀원의 Claude Code에 같은 버전으로 배포하고, '
-    + '로드맵이 실제로 진행되는지 근거와 함께 보여줍니다.',
+  //  🔴 머리 세 문장의 정본은 `lib/web/site.ts` 다 — 링크 미리보기(`<head>` · og.png)와 같은 문장이어야 한다 (INBOX H2).
+  eyebrow: SITE.eyebrow,
+  title: SITE.tagline,
+  subtitle: SITE.description,
   note: '팀장은 브라우저에서 15분, 개발자는 명령 한 줄.',
   /** 🔴 이 화면의 유일한 accent. `/demo` 가 게스트 세션을 받아 샘플 팀으로 보낸다. */
   cta: { label: '샘플 팀으로 둘러보기', href: '/demo' },
@@ -281,6 +281,8 @@ export const LANDING_FOOT = {
   github: { label: 'GitHub', href: SUBMISSION_IDENTITY.repoUrl },
   limits: { label: 'Known limitations', href: `${SUBMISSION_IDENTITY.repoUrl}/blob/main/${SUBMISSION_IDENTITY.limitsPath}` },
   health: { label: '서버 상태', href: '/api/v1/health' },
+  //  개인정보 처리방침 — 문장의 정본은 `lib/web/privacy.ts` (INBOX H4). 앱 안 링크라 rel 이 없다.
+  privacy: { label: '개인정보 처리방침', href: '/privacy' },
 } as const
 
 /** 문장 하나에 `/contextops:x` 가 여럿일 수 있다 — Skill 이름을 전부 뽑는다 (시험이 쓴다). */
@@ -479,6 +481,7 @@ function Foot() {
       <a className="meta" href={LANDING_FOOT.github.href} rel="noreferrer">{LANDING_FOOT.github.label}</a>
       <a className="meta" href={LANDING_FOOT.limits.href} rel="noreferrer">{LANDING_FOOT.limits.label}</a>
       <a className="meta" href={LANDING_FOOT.health.href}>{LANDING_FOOT.health.label}</a>
+      <a className="meta" href={LANDING_FOOT.privacy.href}>{LANDING_FOOT.privacy.label}</a>
     </footer>
   )
 }

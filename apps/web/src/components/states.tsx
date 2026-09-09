@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { ApiClientError, ERROR_HINT, messageOf } from '../lib/web/api'
+import { NO_ACCOUNT_HINT } from '../lib/web/auth'
 import { EMPTY_PLACES, emptyNextHref, type EmptySlot } from '../lib/web/screens'
 
 // =====================================================================
@@ -78,13 +79,20 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
   )
 }
 
-/** 로그인이 없어서 못 여는 화면. 오류가 아니라 **다음 걸음**을 보여 준다. */
+/**
+ * 로그인이 없어서 못 여는 화면. 오류가 아니라 **다음 걸음**을 보여 준다.
+ * ★ 두 번째 문이 있다 — 게스트 세션이 만료된 심사위원이 여기 온다 (INBOX H2). 「로그인하러 가기」만 있으면
+ *   계정이 없는 사람은 막다른 길이다. 문구·주소의 정본은 로그인 화면과 같은 `NO_ACCOUNT_HINT` 다.
+ */
 export function NeedsLogin({ next }: { next: string }) {
   return (
     <div className="state-box">
       <span aria-hidden="true" className="ink-4">◌</span>
       <p className="ink">{ERROR_HINT.UNAUTHORIZED}</p>
-      <a className="btn btn-sm" href={`/login?next=${encodeURIComponent(next)}`}>로그인하러 가기</a>
+      <span className="row">
+        <a className="btn btn-sm" href={`/login?next=${encodeURIComponent(next)}`}>로그인하러 가기</a>
+        <a className="btn btn-sm" href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
+      </span>
     </div>
   )
 }
