@@ -85,6 +85,15 @@ G13 게스트에게 [승인 요청] 이 활성이고 「owner 만」·「낸 사
 G14 경로의 `-->`·`,`·`"` 가 역추적 태그·scoped frontmatter 를 깨뜨리던 것 — `safe()` 가 경로도 지나고 `,`→`%2C` · `paths:` 는 `JSON.stringify` · **TEMPLATE_VERSION 1.6 → 1.7** · golden 3종 재생성.
 G15 「브라우저 e2e 가 없다 · e2e 폴더가 없다」 — 사실로(CDP 헤드리스 Chrome 9파일 · 클릭 흐름 시나리오는 없음) · `readme.test ⑨` 가 「없다고 적은 경로가 실존하면 FAIL」 + 관통 9단계·표 18·enum 17 을 코드에서 세어 대조.
 
+🔴 **고가치 H1~H8 · H10 을 닫았다** (2026-09-10 · 같은 세션 · H9 와 H11 의 절반이 남았다). 잰 것·만든 것:
+H2 링크 미리보기 — `public/og.png`(1200×630 · 헤드리스 Chrome 으로 그렸고 눈으로 봤다) · `icon.svg`(색은 토큰 값뿐 · 시험이 DESIGN_BRIEF 표와 대조) · metadata 의 문장 정본 `lib/web/site.ts` 가 랜딩 머리와 같은 문장 · `NeedsLogin` 에 샘플 팀 문 · 게스트 TTL 24h.
+H3 「AI 활용」의 숫자를 근거 JSON 에서 다시 센다 — `readme.test ⑩` 이 probe-87-run3.json 과 `AI_MODELS` 로 표의 줄을 만들어 README·제출서에 그 줄이 있는지 본다 (항목 후보 22 · 충돌 5 · 인용 26/26 · 약 29초 · **약 $0.08** — 예전 「$0.02」는 2.5 Flash 정가로 센 값).
+H4 `/privacy` + 붙여넣기 칸 위의 전송 고지 — 문장을 고르는 것은 `GEMINI_DATA_TIER` 하나다(지금 `free`: 「Google 이 제품 개선에 쓸 수 있다」 — pricing 페이지에서 확인). 🙋 Tier 1 로 바꾸는 날 그 상수 한 줄.
+H5 [예시 문서 붙여넣기](goals.md byte 그대로 · `sample:sync`) · Gemini 429 는 한 번 기다렸다 재전송(3s · Retry-After ≤10s · 두 번째 429 는 그대로 코드).
+H6 리셋이 `demo-next` 에 먼저 심고 성공하면 자리를 바꾼다 — **심기가 죽어도 어제 데모가 산다**(시험이 실패를 일부러 만든다) · `watch-prod.yml`(30분 · 🙋 `PROD_ORIGIN`) · GitHub Actions 에 `next build` 층(.env.local 없이 지어짐을 확인) · DEPLOY 「심사 기간 런북」.
+H7 쓰기 버튼 전부가 `writeDoor()` 를 지난다 — 게이트는 「queries.ts 의 쓰는 함수(post/patch)를 부르는 page.tsx 는 writeDoor() 를 읽는다」 · `ITEM_TYPE_LABEL` 10종 한글. H8 `docs/PITCH.md`(컷 표 · 슬라이드 뼈대 · 15분 스톱워치 절차 · 체크리스트). H10 첫 sync 가 기존 CLAUDE.md 를 덮지 않는다(--force · backups).
+남은 것 — **H9**(로그인 뒤 「내 팀」 홈 · 팀원 초대 API) · **H11 의 절반**(perActorDaily 예산 · 팀 3/사용자 · 프로젝트 5/팀 · 목록 200 안내).
+
 🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15(**전부 ✅** · G2 는 대시보드 🙋) · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
 루프는 `loop/STOP` 그대로 멈춰 있다 — 9/9~9/11 은 계정 작업과 섞여 사람이 붙은 세션이 맞고, 그 뒤 켤지는 사람이 정한다(INBOX B1).
 

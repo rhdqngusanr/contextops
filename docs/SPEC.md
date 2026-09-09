@@ -607,7 +607,7 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 1. preflight: project.json·토큰·디스크 쓰기 가능·로컬 `manifest.json` 이 계약과 맞는지 확인
    (⚠ 발행자 키 서명은 **아직 없다** — Manifest 스키마에 서명 칸이 없다. 넣으려면 §2.1·§3 을 같이 고쳐야 한다)
 2. latest manifest GET(If-None-Match) → 같으면 "최신" 종료
-3. 로컬 managed 파일 hash 계산 → manifest와 비교 → modified 파일 목록
+3. 로컬 managed 파일 hash 계산 → manifest와 비교 → modified 파일 목록. **로컬 Manifest 가 없는 첫 sync 에서 Pack 이 덮을 경로에 파일이 이미 있으면 그것도 modified 와 같다** — `--force` 없이는 안 덮고(exit 1) 경로를 나열한다 (INBOX H10 · 2026-09-10). 새로 붙이는 저장소의 CLAUDE.md 는 사람이 쓴 것이다.
 4. 변경 파일만 `cache/<semver>/`로 다운로드 → sha256 검증(불일치 시 즉시 중단, exit 20)
 5. 기존 managed 파일 → `backups/<ts>-<from>-to-<to>/`
 6. 같은 볼륨 temp → `rename` atomic replace (allowlist: `CLAUDE.md`, `AGENTS.md`, `.claude/rules/*.md`, `.cursor/rules/*.mdc`, `.contextops/manifest.json`; 절대경로·`..`·심볼릭 링크 거부)

@@ -20497,7 +20497,7 @@ async function runScan(cli2, flags) {
 import { basename as basename2 } from "node:path";
 
 // src/cli/sync.ts
-import { mkdirSync as mkdirSync2, readdirSync as readdirSync2, rmSync as rmSync2 } from "node:fs";
+import { existsSync as existsSync2, mkdirSync as mkdirSync2, readdirSync as readdirSync2, rmSync as rmSync2 } from "node:fs";
 import { dirname as dirname2, join as join6 } from "node:path";
 var SYNC_FLAGS = {
   "dir": { kind: "value", help: "\uC800\uC7A5\uC18C \uB8E8\uD2B8 (\uAE30\uBCF8: \uC9C0\uAE08 \uD3F4\uB354)" },
@@ -20600,6 +20600,15 @@ async function runSync(cli2, flags) {
     return await report(cli2, root, origin, token, config2.project_id, official, "applied");
   }
   const semver = official.context_version;
+  if (local === void 0 && !flags.bool("force")) {
+    const preexisting = official.files.map((f) => f.path).filter((p) => existsSync2(join6(root, ...p.split("/"))));
+    if (preexisting.length > 0) {
+      cli2.io.err(`\uC774 \uC800\uC7A5\uC18C\uC5D0 \uC774\uBBF8 \uC788\uB294 \uD30C\uC77C\uC744 Pack \uC774 \uB36E\uC73C\uB824 \uD55C\uB2E4 (${preexisting.length}\uAC1C) \u2014 \uC6B0\uB9AC\uAC00 \uB193\uC740 \uAC83\uC774 \uC544\uB2C8\uB2E4:`);
+      for (const p of preexisting) cli2.io.err(`  ${p}`);
+      cli2.io.err("\uB0B4\uC6A9\uC744 \uD655\uC778\uD558\uACE0 --force \uB85C \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C (\uC6D0\uBCF8\uC740 backups/ \uC5D0 \uB0A8\uB294\uB2E4). \uC9C0\uD0A4\uACE0 \uC2F6\uC740 \uBB38\uC7A5\uC740 /contextops:propose \uB85C \uC81C\uC548\uD574\uB77C.");
+      return EXIT.MODIFIED;
+    }
+  }
   const wanted = [];
   for (const file2 of official.files) {
     const verdict = checkWritable(root, file2.path);

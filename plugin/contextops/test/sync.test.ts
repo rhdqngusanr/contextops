@@ -103,7 +103,8 @@ describe('sync — 처음 받는다', () => {
     const { cli, repo } = ready({ responses: serve(manifest, PACK, [okEnvelope({ ok: true })]) })
     writeFileSync(join(repo, 'CLAUDE.md'), '# 내가 쓰던 규칙\n', 'utf8')
 
-    await runCommand(cli, ['sync'])
+    //  ⚠ 첫 sync 인데 파일이 이미 있다 — `--force` 없이는 안 덮는다 (INBOX H10 · 아래 「첫 sync 와 기존 CLAUDE.md」).
+    await runCommand(cli, ['sync', '--force'])
 
     const backups = readdirSync(join(repo, LOCAL_DIR, 'backups'))
     expect(backups).toHaveLength(1)
@@ -178,6 +179,46 @@ describe('sync — 멈춰야 할 때 멈춘다', () => {
     expect(code).toBe(EXIT.MODIFIED)
     expect(read(repo, 'CLAUDE.md')).toBe('# 사람이 고쳤다\n')
     expect(cli.err.join('\n')).toContain('--force')
+  })
+
+  //  🔴 **첫 sync 와 기존 CLAUDE.md** (INBOX H10). 로컬 Manifest 가 없으면 `modified` 검사가 아무것도 안 잡아서
+  //     새로 붙이는 저장소의 CLAUDE.md 가 말없이 덮였다 — 사람이 쓴 파일이 우리가 처음 하는 일에 사라지는 것이 제일 나쁘다.
+  it('🔴 첫 sync 인데 저장소에 CLAUDE.md 가 이미 있으면 --force 없이는 안 덮는다 (exit 1 · 파일 그대로)', async () => {
+    const manifest = manifestOf(PACK)
+    const { cli, repo } = ready({ responses: serve(manifest, PACK, [okEnvelope({ ok: true })]) })
+    writeFileSync(join(repo, 'CLAUDE.md'), '# 우리 팀이 손으로 쓴 규칙\n', 'utf8')
+
+    const code = await runCommand(cli, ['sync'])
+
+    expect(code).toBe(EXIT.MODIFIED)
+    expect(read(repo, 'CLAUDE.md')).toBe('# 우리 팀이 손으로 쓴 규칙\n')
+    //  받지도 않았다 — 매니페스트 하나만 읽었다 (경로 목록으로 충분하다).
+    expect(cli.sent.filter((s) => s.url.includes('/files/'))).toHaveLength(0)
+    expect(has(repo, LOCAL_FILES.manifest)).toBe(false)
+    const err = cli.err.join('\n')
+    expect(err).toContain('CLAUDE.md')
+    expect(err).toContain('--force')
+    expect(err).toContain('/contextops:propose')
+  })
+
+  it('첫 sync + --force 면 덮되 기존 파일은 backups/ 에 남는다', async () => {
+    const manifest = manifestOf(PACK)
+    const { cli, repo } = ready({ responses: serve(manifest, PACK, [okEnvelope({ ok: true })]) })
+    writeFileSync(join(repo, 'CLAUDE.md'), '# 우리 팀이 손으로 쓴 규칙\n', 'utf8')
+
+    expect(await runCommand(cli, ['sync', '--force'])).toBe(EXIT.OK)
+    expect(read(repo, 'CLAUDE.md')).toBe(CLAUDE_MD)
+    const backups = readdirSync(join(repo, LOCAL_DIR, 'backups'))
+    expect(readFileSync(join(repo, LOCAL_DIR, 'backups', backups[0]!, 'CLAUDE.md'), 'utf8'))
+      .toBe('# 우리 팀이 손으로 쓴 규칙\n')
+  })
+
+  it('첫 sync 라도 겹치는 파일이 없으면 그냥 쓴다 — 빈 저장소가 보통의 길이다', async () => {
+    const manifest = manifestOf(PACK)
+    const { cli, repo } = ready({ responses: serve(manifest, PACK, [okEnvelope({ ok: true })]) })
+    writeFileSync(join(repo, 'README.md'), '# 남의 파일\n', 'utf8')
+    expect(await runCommand(cli, ['sync'])).toBe(EXIT.OK)
+    expect(read(repo, 'CLAUDE.md')).toBe(CLAUDE_MD)
   })
 
   it('--force 면 덮되 원본은 backup 에 남는다', async () => {

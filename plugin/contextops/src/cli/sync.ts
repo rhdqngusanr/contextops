@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { Manifest, SyncReceiptFile, type SyncReport } from '@contextops/schema'
 
@@ -163,6 +163,21 @@ export async function runSync(cli: Cli, flags: Flags): Promise<number> {
 
   // ── ④ 받아서 sha256 검증 — **디스크를 건드리기 전에 전부 확보한다** ──
   const semver = official.context_version
+
+  //  🔴 **첫 sync 가 사람이 쓴 CLAUDE.md 를 말없이 덮지 않는다** (INBOX H10 · 2026-09-10). 로컬 Manifest 가 없으면
+  //     `judge()` 는 `unknown` 이라 `modified` 검사가 아무것도 안 잡는다 — 그런데 새로 붙이는 저장소에는 **이미
+  //     CLAUDE.md 가 있는 것이 보통**이다. 그 파일은 우리가 놓은 것이 아니므로 `modified` 와 같은 대접이다:
+  //     `--force` 없이는 안 덮고, `--force` 면 backups/ 에 남기고 덮는다 (⑤ 가 그것을 한다).
+  if (local === undefined && !flags.bool('force')) {
+    const preexisting = official.files.map((f) => f.path).filter((p) => existsSync(join(root, ...p.split('/'))))
+    if (preexisting.length > 0) {
+      cli.io.err(`이 저장소에 이미 있는 파일을 Pack 이 덮으려 한다 (${preexisting.length}개) — 우리가 놓은 것이 아니다:`)
+      for (const p of preexisting) cli.io.err(`  ${p}`)
+      cli.io.err('내용을 확인하고 --force 로 다시 실행해라 (원본은 backups/ 에 남는다). 지키고 싶은 문장은 /contextops:propose 로 제안해라.')
+      return EXIT.MODIFIED
+    }
+  }
+
   const wanted: { path: string; text: string }[] = []
   for (const file of official.files) {
     const verdict = checkWritable(root, file.path)

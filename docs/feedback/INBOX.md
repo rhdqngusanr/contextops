@@ -59,16 +59,26 @@
 #### 고가치 11 — 효과/시간 순 (블로커·고장이 닫힌 뒤)
 
 1. **H1 문서 정직성 묶음**(3h) — G9 의 「픽스처」 4곳 · G15 · 「관통 7단계」(실제 9) · README 숫자(표 16→18) · SPEC §12 Playwright · readme.test 에 「없다고 적은 경로가 실존하면 FAIL」.
+   → ✅ 2026-09-10 — G9·G15 와 함께 닫았다. 관통 9단계 · 표 18 · enum 17 을 `readme.test ⑨` 가 코드에서 세어 대조하고, 「없다고 적은 경로가 실존하면 FAIL」·「픽스처 긍정문 0」(⑧) 이 게이트다.
 2. **H2 OG 태그·파비콘·metadataBase·게스트 재방문 복구**(2.5h) — `app/icon.svg` · `app/opengraph-image.png` 1200×630 · `layout.tsx` metadata · NeedsLogin 에 [샘플 팀 다시 열기 → /demo] · 게스트 TTL 24h. 온라인 투표 20%.
+   → ✅ 2026-09-10 — `public/icon.svg` · `public/og.png`(1200×630 · `pnpm --filter web og:image` 가 헤드리스 Chrome 으로 그린다 · 문장 정본 `lib/web/site.ts` = 랜딩 머리) · `layout.tsx` metadata(OG·Twitter·metadataBase = NEXT_PUBLIC_SITE_ORIGIN → Vercel production 호스트 → 로컬) · `NeedsLogin` 에 [샘플 팀으로 둘러보기] · 게스트 TTL 24h · `web-metadata.test`. 🙋 production URL 이 정해지면 Vercel env 에 `NEXT_PUBLIC_SITE_ORIGIN`(없어도 Vercel 호스트로 맞는다).
 3. **H3 제출서·README·랜딩의 「AI 활용」을 숫자와 이유로**(5h) — 실측 표(3,900자 · 항목 16 · 충돌 5 · 인용 20/20 · 약 20초 · 약 $0.02) · 「왜 서버는 Gemini」(P2·P3 · 공급자 교체가 `client.ts` 하나) · 도구 3층 · 사업 모델 4문장(코어 MIT+셀프호스팅 · 팀 단위 과금 · 첫 고객 = Claude Code 표준 10~50인 조직) · 경쟁 카드 · 「왜 지금」 · 심사위원 3분 코스 · README 첫 스크롤 캡처 3장 · 랜딩 하단 제출 4칸 텍스트.
+   → ✅ 2026-09-10 — SUBMISSION 「AI 활용」에 실측 표(probe-87-run3.json 에서 계산 · 항목 후보 22 · 충돌 5 · 인용 26/26 · 약 29초 · 약 $0.08 — 정가를 고치니 비용이 넷 배였다) · 「왜 서버쪽은 Gemini」 · 도구 세 층 표 · 지속 계획 4문장 · README 「AI 는 어디에 · 얼마나」 · 폼 600자 문장 갱신 · `readme.test ⑩` 이 JSON+정가표에서 줄을 만들어 대조. ⚠ 랜딩은 문장 정본(`SITE`)만 공유하고 숫자는 안 넣었다 — 랜딩 시험이 문장을 엄격히 잠가 두어 README/제출서로 충분하다고 봤다.
 4. **H4 개인정보 처리방침 + Gemini 전송 고지 + 🙋 Gemini Tier 1 결정**(3h) — `app/privacy` · 랜딩 푸터·로그인 카드 링크 · PasteCard 에 「Google Gemini API 로 전송(국외)」 · KNOWN_LIMITATIONS 「AI 처리 데이터의 행방」. 🙋 AI Studio 빌링 연결이 문장을 정하므로 9/10 계정 작업에 같이.
+   → ✅ 2026-09-10 — `/privacy`(정본 `lib/web/privacy.ts` · 네 절 · 정적) · 랜딩 푸터·로그인 카드 링크 · 붙여넣기 칸 **위**에 전송 고지(`AI_TRANSFER_NOTICE[GEMINI_DATA_TIER]` — 무료 티어 문장: 「Google 이 제품 개선에 쓸 수 있다」 pricing 페이지 확인) · KNOWN_LIMITATIONS 「AI 처리 데이터의 행방」 · `web-privacy.test`. 🙋 Tier 1 로 바꾸는 날 `GEMINI_DATA_TIER = 'paid'` 한 줄.
 5. **H5 라이브 구조화 실패 처리**(4h) — G8 · G10 · [예시 문서 붙여넣기] 버튼(goals.md · 실측 20/20) · 힌트 문구 · RATE_LIMITED 백오프 1회.
+   → ✅ 2026-09-10 — G8·G10 ✅ · [예시 문서 붙여넣기](goals.md 를 byte 그대로 · `sample:sync` 스크립트 · 시험이 픽스처와 대조) · 429 는 한 번 기다렸다 재전송(`GEMINI_429_BACKOFF_MS` 3s · Retry-After 존중 · 상한 10s · `ai-client.test` 넷) · 상한 뒤 힌트 「문서를 나눠 올려보세요」(`RETRY_EXHAUSTED`).
 6. **H6 심사 기간을 견디는 장치**(4.5h) — `reset.ts` 를 「임시 slug 로 먼저 심고 성공 시 교체」로(실패 = 옛 데모 유지) · `.github/workflows/watch-prod.yml`(30분 · dispatch · 🙋 만든 날 일부러 깨서 메일 확인) · `ci.yml` 에 `pnpm --filter web build` · DEPLOY 「심사 기간 런북」 · 배너 「03시경」.
+   → ✅ 2026-09-10 — `reset.ts` 가 `demo-next` 옆자리에 끝까지 심은 뒤 옛 팀을 지우고 slug 를 바꾼다(심기 실패 = 어제 데모 유지 · `demo-reset-swap.test` 넷) · `.github/workflows/watch-prod.yml`(30분 · `/`·health db/ai·demo/session · 🙋 저장소 Variables `PROD_ORIGIN` · 만든 날 일부러 깨서 메일 확인) · `ci.yml` 에 `pnpm --filter web build`(.env.local 없이 지어짐 확인) · DEPLOY 「심사 기간 런북」.
 7. **H7 게스트 UX 2종**(6h) — `writeDoor()` 를 PasteCard·QuestionStack·Answer·ProposalDecisions 앞에 + G13 + 「쓰기 버튼은 전부 writeDoor 를 지난다」 게이트 · `ITEM_TYPE_LABEL` 표 · 칩 한글 · 드로어 KeyValue.
+   → ✅ 2026-09-10 (드로어 KeyValue 제외) — PasteCard·QuestionsCard·후보 수락·팀 만들기·프로젝트 만들기·로드맵 확정이 전부 `writeDoor()` 를 지나고, `web-write-door.test` 가 「queries.ts 의 쓰는 함수를 부르는 page.tsx 는 전부 writeDoor() 를 읽는다」를 센다 · `ITEM_TYPE_LABEL`(10종 한글 · 표·드로어·후보 목록·툴팁) · G13 ✅.
 8. **H8 2분 영상**(Claude 3h + 🙋 4h) — `docs/PITCH.md` 컷 표 8컷 + 슬라이드 8장 뼈대 → 🙋 9/17 production 위에서 녹화 · 「15분」 스톱워치 실측 · 플러그인 세 장면 GIF · mp4 두 곳 보관 · `demo:db` 로컬 리허설(본선 보험). 규정상 필수 아님 — 투표·본선 자산.
+   → ✅ 2026-09-10 (Claude 몫) — `docs/PITCH.md`: 2분 컷 표 8컷(초·화면·대본·근거) · 슬라이드 8장 뼈대 · 플러그인 GIF 세 장면 · 「15분」 스톱워치 실측 절차 · 녹화 체크리스트. 🙋 9/17 production 위에서 녹화.
 9. **H9 로그인 뒤 「내 팀」 홈 + 팀원 초대 API**(7h) — `app/t/page.tsx` · `POST/GET /teams/{id}/members` · 첫 로그인 승격 · 시험 「초대 전 404 → 후 200 · member 는 publish 403」. 심사 두 번째 질문.
 10. **H10 플러그인 고장 3건**(6h) — G7 · 첫 sync 가 기존 CLAUDE.md 를 경고 없이 교체(`preexisting` 게이트) · G11. 밀리면 첫 번째로 자른다.
+   → ✅ 2026-09-10 — G7 ✅ · 첫 sync 가 기존 CLAUDE.md 를 덮지 않는다(`--force` 없이는 exit 1 · 경로 나열 · `/contextops:propose` 안내 · `sync.test` 셋 · SPEC §8.5 3단계) · G11 ✅.
 11. **H11 발행 흐름 고장 2건 + AI 예산 actor 축 + 목록 상한**(5.5h) — G12 · G14 · `AI_FEATURE_LIMITS` 에 perActorDaily(팀별+전역 이중) · 팀 3/사용자 · 프로젝트 5/팀 · `fetchItems` limit 200 + 「200개까지만」.
+   → △ 2026-09-10 — G12·G14 ✅. `perActorDaily`(팀별+전역 이중 예산) · 팀 3/사용자 · 프로젝트 5/팀 · `fetchItems` limit 200 안내는 **남았다** — 다음 사람 세션.
 
 #### 하지 말 것 (시간을 먹고 점수는 안 오른다 — 근거는 evidence 의 plan)
 
