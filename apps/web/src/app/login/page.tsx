@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-import { authConfig, oauthUrl, sendMagicLink } from '../../lib/web/auth'
+import { NO_ACCOUNT_HINT, authConfig, oauthUrl, sendMagicLink } from '../../lib/web/auth'
 
 // =====================================================================
 //  화면 2 — 로그인 (SPEC §9 · DESIGN_BRIEF §4 「화면 2」)
@@ -77,35 +77,40 @@ function LoginCard() {
           </a>
         )}
 
-        <div className="col-tight">
-          <label className="label" htmlFor="email">이메일 링크 받기</label>
-          <div className="row">
-            <input
-              id="email"
-              className="input"
-              type="email"
-              placeholder="you@team.com"
-              value={email}
-              disabled={config === null || busy}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn"
-              disabled={config === null || busy || email.length === 0}
-              onClick={magicLink}
-            >
-              {busy ? '보내는 중' : '보내기'}
-            </button>
+        {/* 🔴 이메일 문은 플래그 뒤다 (`lib/web/auth.ts` 머리) — 기본 SMTP 로는 심사위원에게 메일이
+            절대 안 가서, 열어 두면 「✓ 보냈습니다」 뒤에 아무것도 안 오는 문이 된다. */}
+        {config?.emailLogin ? (
+          <div className="col-tight">
+            <label className="label" htmlFor="email">이메일 링크 받기</label>
+            <div className="row">
+              <input
+                id="email"
+                className="input"
+                type="email"
+                placeholder="you@team.com"
+                value={email}
+                disabled={busy}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn"
+                disabled={busy || email.length === 0}
+                onClick={magicLink}
+              >
+                {busy ? '보내는 중' : '보내기'}
+              </button>
+            </div>
+            {sent ? <p className="meta ink-ok">✓ 메일을 보냈습니다. 링크를 열면 로그인됩니다.</p> : null}
+            {error ? <p className="meta ink-bad">✕ {error}</p> : null}
           </div>
-          {sent ? <p className="meta ink-ok">✓ 메일을 보냈습니다. 링크를 열면 로그인됩니다.</p> : null}
-          {error ? <p className="meta ink-bad">✕ {error}</p> : null}
-        </div>
+        ) : null}
 
         <p className="meta">
-          {/* DESIGN_BRIEF 화면 2 「심사위원이신가요? → 샘플 팀으로 둘러보기」.
+          {/* DESIGN_BRIEF 화면 2 「심사위원이신가요? → 샘플 팀으로 둘러보기」 — 문구의 정본은
+              `NO_ACCOUNT_HINT` 하나다(GitHub 계정이 없는 사람에게도 같은 문이다).
               ⚠ 주소는 랜딩과 같은 `/demo` 하나다 — 게스트 세션을 받는 자리가 둘이 되면 안 된다. */}
-          심사위원이신가요? <a href="/demo">샘플 팀으로 둘러보기</a>
+          {NO_ACCOUNT_HINT.text} <a href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
         </p>
       </div>
     </div>

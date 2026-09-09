@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 
-import { readCallbackHash } from '../../../lib/web/auth'
+import { NO_ACCOUNT_HINT, readCallbackHash } from '../../../lib/web/auth'
 import { writeSession } from '../../../lib/web/session'
 
 // =====================================================================
@@ -16,12 +16,12 @@ import { writeSession } from '../../../lib/web/session'
 // =====================================================================
 
 function Callback() {
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ message: string; code?: string } | null>(null)
 
   useEffect(() => {
     const result = readCallbackHash(window.location.hash, new Date())
     if (!result.ok) {
-      setError(result.message)
+      setError({ message: result.message, code: result.code })
       return
     }
     writeSession({ access_token: result.access_token, expires_at: result.expires_at })
@@ -34,11 +34,18 @@ function Callback() {
   }, [])
 
   if (error) {
+    //  ⚠ 원인 코드를 mono 로 같이 보인다 — 운영자가 「공급자가 꺼져 있다」(validation_failed)와
+    //    「사람이 취소했다」(access_denied)를 화면만 보고 가른다. 그리고 심사위원에게는 로그인
+    //    없이 볼 수 있는 문(`/demo`)을 그 자리에서 준다.
     return (
       <div className="center">
         <div className="card center-card">
-          <p className="ink">✕ {error}</p>
-          <a className="btn" href="/login">로그인으로 돌아가기</a>
+          <p className="ink">✕ {error.message}</p>
+          {error.code ? <p className="meta">원인 코드: <span className="mono">{error.code}</span></p> : null}
+          <div className="row">
+            <a className="btn" href="/login">로그인으로 돌아가기</a>
+            <a className="btn" href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
+          </div>
         </div>
       </div>
     )

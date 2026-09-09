@@ -99,8 +99,12 @@ describe('🔴 ③ accent 는 하나 — [샘플 팀으로 둘러보기] → /de
   })
 
   it('로그인 화면의 「심사위원이신가요?」도 같은 주소로 간다 (게스트 입구는 하나다)', () => {
+    //  문구·주소의 정본은 `lib/web/auth.ts` 의 `NO_ACCOUNT_HINT` 하나다 (로그인 카드와 콜백 오류 카드가
+    //  같이 읽는다 · 2026-09-09). 화면이 그 상수를 쓰고, 그 상수가 랜딩과 같은 `/demo` 를 가리키는지 둘 다 본다.
     const login = readFileSync(join(webRoot, 'src', 'app', 'login', 'page.tsx'), 'utf8')
-    expect(login).toContain('href="/demo"')
+    const auth = readFileSync(join(webRoot, 'src', 'lib', 'web', 'auth.ts'), 'utf8')
+    expect(login).toContain('href={NO_ACCOUNT_HINT.href}')
+    expect(auth).toMatch(/NO_ACCOUNT_HINT = \{[\s\S]*?href: '\/demo'/)
     expect(login).not.toContain('준비 중')
   })
 })

@@ -99,11 +99,12 @@ select tablename, tableowner from pg_tables where schemaname = 'public';
 | GitHub 공급자 켜기 | GitHub → Settings → Developer settings → OAuth Apps → New · Supabase → Authentication → Sign In / Providers → GitHub | Homepage `https://<production>` · Authorization callback URL `https://<ref>.supabase.co/auth/v1/callback` → Client ID · Secret 을 Supabase 에 붙여 넣고 Enable |
 | URL 등록 | Supabase → Authentication → URL Configuration | Site URL `https://<production>` · Redirect URLs 에 `https://<production>/auth/callback` 과 `http://localhost:3000/auth/callback` — 없으면 로그인이 조용히 Site URL 로 튕긴다 |
 | 세션 길이 | Supabase → Authentication → Sessions | access token 만료를 최대치로 — 세션 갱신 코드가 없어 만료 = 강제 로그아웃이다 (INBOX 블로커 3 · refresh 는 안 만든다) |
-| 서명키 종류 기록 | Supabase → Project Settings → JWT Keys | CURRENT 키가 ES256 이면 `apps/web/src/lib/api/session.ts` 가 **HS256 만 받는 지금 코드로는 아무도 로그인하지 못한다** — Claude 가 ES256 갈래를 넣는다(INBOX 블로커 3). HS256 을 CURRENT 로 돌릴 수 있으면 그것이 더 빠르다 |
+| 서명키 종류 기록 | Supabase → Project Settings → JWT Keys | CURRENT 키가 ES256 이든 HS256(legacy secret)이든 검증기(`apps/web/src/lib/api/session.ts`)의 표에 둘 다 있다 — ES256 이면 공개키를 `NEXT_PUBLIC_SUPABASE_URL` 의 JWKS 에서 받으므로 그 변수가 **서버에도** 있어야 한다(`.env.vercel` 에 이미 있다). `SUPABASE_JWT_SECRET` 은 게스트·시드 세션(HS256)에 여전히 필요하다 |
 | **Data API 끄기** | Supabase → Project Settings → Data API | 끄거나 Exposed schemas 에서 `public` 을 뺀다. ★ 왜 안전한가 — 제품 코드는 Drizzle 직결만 쓴다(PostgREST 호출 0건). ★ 왜 필요한가 — anon 키는 브라우저 번들에 실리고, RLS 만으로는 SELECT 가 200 + 빈 배열이라 「열려 있다」는 사실이 남는다 |
 
 이메일 매직링크는 Supabase 기본 SMTP 라 **프로젝트 팀 멤버 주소로만** 간다(시간당 소수 건). 심사위원에게는 절대 도착하지
-않으므로 심사 기간에는 이메일 문을 숨기고 `/demo` 를 안내한다 — 코드 쪽은 INBOX 블로커 3, 커스텀 SMTP 는 나중이다.
+않으므로 심사 기간에는 이메일 문을 숨긴다 — `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` 을 비워 두면 화면이 그 문 대신 `/demo` 를 안내한다.
+커스텀 SMTP(Resend 등)를 붙인 뒤에만 `1` 로 켠다.
 
 ### ② 🙋 Vercel 프로젝트를 만든다
 
@@ -137,6 +138,7 @@ Vercel → Project → Settings → Environment Variables → **Import `.env`** 
 |---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | 코드에 소비처가 **0곳**이다 — 안 쓰는 최고 권한 키가 배포 환경에 남는다 (`.env.vercel` 의 마지막 절) |
 | `AI_MAX_INPUT_TOKENS` | 기본값이 있다 (`src/lib/ai/features.ts` 의 `DEFAULT_MAX_INPUT_TOKENS`). 바꿀 이유가 생기면 그때 넣는다 |
+| `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` | 비우면 이메일 매직링크 문이 **숨겨진다** — 기본 SMTP 는 팀 멤버 주소로만 보내서 심사위원에게는 안 간다. 커스텀 SMTP(Resend 등)를 붙인 뒤에만 `1` 로 |
 
 ### ④ 🙋 배포한다
 
@@ -170,21 +172,17 @@ pnpm --filter web verify:prod -- --url https://<production>
 `0 failed` 여야 한다. 빨간 줄이 나오면 그 줄이 어느 걸음을 안 했는지 말한다
 (예: 게스트 세션 404 → 걸음 ⑤ 를 아직 안 했다).
 
-### ⑥-b 배포만이 증명하는 것 둘을 손으로 잰다
+### ⑥-b 배포만이 증명하는 것 — 검증기가 재는 것과 손으로 재는 것
 
-검증기가 아직 안 재는 둘이다(둘 다 자격증명이나 계정이 필요하다):
+검증기(`apps/web/e2e/production.ts`)는 `apps/web/.env.local` 의 `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` 를
+읽어 **Supabase 프로젝트 쪽**도 잰다 — GitHub 공급자가 켜져 있나(`/auth/v1/settings`) · JWKS 의 서명 방식이 검증기 표에 있나 ·
+**anon 키로 Data API 가 표를 내주지 않나**(`rest/v1/users` 가 200 이 아니어야 한다 · RLS 만으로는 200 + `[]` 라 Data API 를 꺼야 한다) ·
+로그인 화면에 GitHub 버튼이 실제로 그려지나(헤드리스 Chrome). 그 두 변수가 없으면 그 검사들은 FAIL 로 적힌다 — 건너뛰지 않는다.
 
-1. **anon 키로 표가 안 읽힌다** — 브라우저 번들에 실리는 그 키로 REST 를 두드린다:
-
-   ```bash
-   curl -s -o /dev/null -w "%{http_code}\n" -H "apikey: <anon key>" "https://<ref>.supabase.co/rest/v1/users?select=id&limit=1"
-   ```
-
-   Data API 를 껐으면 200 이 **아니어야** 한다(404 또는 401). 200 이 오면 ①-b 의 마지막 걸음을 안 한 것이다 — RLS 만으로는
-   200 + `[]` 라 이 검사가 필요하다. 결과를 캡처해 ⑦ 의 폴더에 둔다.
-2. **실제 로그인이 통과한다** — 시크릿 창에서 `https://<production>/login` → [GitHub로 계속] → `/t/new` 에서 팀 하나 만들기 →
-   201 이 왔는지(개발자 도구 Network) 캡처. 콜백 화면이 아니라 **로그인 뒤 쓰기 한 번**이 성공 기준이다. 되돌아오거나 모든
-   화면이 다시 로그인하러 가면 ①-b 의 공급자·서명키 항목을 본다.
+손으로 재는 것 하나: **실제 로그인이 통과한다** — 시크릿 창에서 `https://<production>/login` → [GitHub로 계속] → `/t/new` 에서
+팀 하나 만들기 → 201 이 왔는지(개발자 도구 Network) 캡처. 콜백 화면이 아니라 **로그인 뒤 쓰기 한 번**이 성공 기준이다. 되돌아오면
+콜백 화면이 **원인 코드**를 보여 준다(`validation_failed` = 공급자 꺼짐 · `access_denied` = 사람이 취소) — ①-b 를 본다. 로그인은
+됐는데 모든 화면이 다시 로그인하러 가면 서명키 갈래(①-b 「서명키 종류」)다.
 
 ### ⑦ 근거를 밖으로 복사한다
 

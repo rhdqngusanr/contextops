@@ -97,7 +97,7 @@ async function guestActor(db: Db, sub: string): Promise<Actor> {
 }
 
 async function sessionActor(db: Db, jwt: string, now: Date): Promise<Actor> {
-  const claims = verifySessionJwt(jwt, now)
+  const claims = await verifySessionJwt(jwt, now)
   //  🔴 게스트인지는 **sub 하나로** 갈린다 (`lib/demo/tenant.ts` 의 주석).
   //     이 갈래가 email 검사보다 위인 이유 — 게스트 토큰에는 email 이 없고, 있어서도 안 된다.
   if (claims.sub === DEMO_GUEST_SUBJECT) return guestActor(db, claims.sub)

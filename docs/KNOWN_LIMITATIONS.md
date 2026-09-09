@@ -34,6 +34,11 @@
   ⚠ 다만 **`claude plugin install` 로 깐 기록이 아직 없다** — 새 PC 에서 add → install → `/contextops:init` 까지
   밟는 것은 🙋 사람 몫이다 (PLAN P5 둘째 행). 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는
   `node plugin/contextops/bin/contextops-cli.mjs` 를 직접 부른다.
+- **이메일 매직링크 문은 숨겨져 있다** — Supabase 기본 SMTP 는 프로젝트 팀 멤버 주소로만 보내고 시간당 몇 통이라,
+  심사위원이 눌러도 메일이 오지 않는다. 그래서 `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` 이 비어 있으면 로그인 화면이 그 문 대신
+  `/demo` 를 안내한다 (`apps/web/src/lib/web/auth.ts`). 커스텀 SMTP 를 붙이기 전까지 로그인 공급자는 GitHub 하나다.
+- **세션 갱신이 없다** — access token 이 만료되면 다시 로그인이다(`refresh_token` 을 쓰지 않는다). 배포에서는 Supabase
+  대시보드의 만료 시간을 길게 잡는 것으로 대신한다 (`docs/DEPLOY.md` ①-b).
 - **Device code auth 미지원** — 웹에서 발급한 기기 토큰을 `setup` 에 붙여 넣는 방식이다
   (`plugin/contextops/src/cli/setup.ts`). 브라우저 콜백 서버는 없다.
 - **권한이 2단계뿐** (owner / member · `packages/schema/src/api.ts` 의 `ROLE_RANK`). 세밀한 권한 모델 없음.

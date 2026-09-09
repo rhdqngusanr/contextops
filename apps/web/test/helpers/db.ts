@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/pglite'
 
 import { setDbForTest, type Db } from '../../src/db/client'
 import { setJobStarterForTest } from '../../src/lib/ai/job'
+import { SELF_ISSUER, SESSION_AUDIENCE } from '../../src/lib/api/session'
 import * as schema from '../../src/db/schema'
 
 // =====================================================================
@@ -71,8 +72,11 @@ export async function closeDb(pg: PGlite | undefined): Promise<void> {
 
 // ---------------------------------------------------------------------
 //  세션 JWT — Supabase 가 주는 것과 **같은 모양**으로 우리가 만든다
-//  ★ 왜 — 그래야 `verifySessionJwt` 의 서명·만료·alg 검사를 실제로 지나간다.
+//  ★ 왜 — 그래야 `verifySessionJwt` 의 서명·만료·alg·aud·iss 검사를 실제로 지나간다.
 //    검사를 우회하는 시험용 인증 문을 만들면 그 문이 배포에도 남는다.
+//  ⚠ `iss` 는 우리 자신의 발급자(`SELF_ISSUER`)다 — Supabase 발급자(`<url>/auth/v1`)와
+//    ES256 갈래는 `test/session-jwt.test.ts` 가 따로 잰다. 여기서 env 를 심으면 모든 시험이
+//    그 env 에 기대게 된다.
 // ---------------------------------------------------------------------
 
 export const TEST_JWT_SECRET = 'contextops-test-jwt-secret'
@@ -83,13 +87,15 @@ function b64url(value: Buffer | string): string {
 
 export function sessionJwt(
   sub: string,
-  opts: { email?: string; name?: string; expiresInSec?: number; alg?: string } = {},
+  opts: { email?: string; name?: string; expiresInSec?: number; alg?: string; aud?: string; iss?: string } = {},
 ): string {
   const header = b64url(JSON.stringify({ alg: opts.alg ?? 'HS256', typ: 'JWT' }))
   const payload = b64url(JSON.stringify({
     sub,
     email: opts.email ?? `${sub}@example.test`,
     name: opts.name ?? sub,
+    aud: opts.aud ?? SESSION_AUDIENCE,
+    iss: opts.iss ?? SELF_ISSUER,
     exp: Math.floor(Date.now() / 1000) + (opts.expiresInSec ?? 3600),
   }))
   const sig = createHmac('sha256', TEST_JWT_SECRET).update(`${header}.${payload}`).digest('base64url')

@@ -14,6 +14,12 @@
 //        아니라 500 이고, 그 배포는 누구나 데모를 리셋할 수 있다 (FINDINGS 120)
 //     ③ **데모 테넌트가 production DB 에 심어져 있나** — Cron 을 한 번도 안 불렀으면 404 다
 //     ④ 그 위에서 **GATE 3**(빈 창 · 링크만 · 3분)이 production 응답 속도로도 지나는가
+//     ⑤ **Supabase 프로젝트 쪽**(2026-09-09 · INBOX 블로커 3) — GitHub 로그인 공급자가 켜져 있나 ·
+//        JWKS 의 서명 방식이 검증기 표(`VERIFIER_ALGS`)에 있나 · **anon 키로 Data API 가 표를 내주지
+//        않나**. 셋 다 실측에서 어긋나 있었고 코드로는 못 고치는(대시보드) 것이라 검증기가 잰다.
+//        `.env.local` 의 `NEXT_PUBLIC_SUPABASE_URL`·`ANON_KEY` 로 두드린다 — 없으면 FAIL 로 적는다.
+//     ⑥ 로그인 화면에 [GitHub로 계속] 이 **실제로 그려지나** — 클라이언트 렌더라 HTML 텍스트로는
+//        못 재고 GATE 3 의 Chrome 으로 본다
 //
 //  🔴 **걸음을 더하려면**: 아래 `DOORS` 표에 한 줄이다. `vercel.json` 의 cron 이 늘면
 //     ①의 검사가 「표에 없다」로 **빨개진다** — 문이 늘었는데 아무도 안 재는 상태가
@@ -29,12 +35,13 @@
 // =====================================================================
 
 import { type ChildProcess, spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { VERIFIER_ALGS } from '../src/lib/api/session'
 import { DEMO_ENTRY_PATH, DEMO_TENANT } from '../src/lib/demo/tenant'
-import { sleep } from './cdp'
+import { connectCdp, sleep, waitFor, type Cdp } from './cdp'
 import { connectBrowser, launchChrome } from './chrome'
 import { runGate3 } from './gate3'
 import { DEMO_BASE } from './plan'
@@ -102,6 +109,90 @@ function targetOrigin(): string {
     throw new Error(`https 가 아니다: ${url.protocol}//${url.host}`)
   }
   return url.origin
+}
+
+/**
+ * Supabase 프로젝트 쪽 검사에 쓰는 두 값. env 에 없으면 `.env.local` 을 읽는다
+ * (`scripts/migrate.ts` 와 같은 파일 · 값은 어디에도 찍지 않는다).
+ */
+function supabaseEnv(): { url: string; anonKey: string } | undefined {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const envLocal = join(webRoot, '.env.local')
+    if (existsSync(envLocal)) process.loadEnvFile(envLocal)
+  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  return url && anonKey ? { url: url.replace(/\/+$/, ''), anonKey } : undefined
+}
+
+/** JSON 을 읽되 못 읽으면 빈 객체 — 검사가 「형식이 아니다」로 FAIL 을 적게. */
+async function jsonOf(res: Response): Promise<Record<string, unknown>> {
+  try { return (await res.json()) as Record<string, unknown> } catch { return {} }
+}
+
+/**
+ * ⑤ Supabase 프로젝트 쪽 — 대시보드에서만 고칠 수 있는 셋 (`docs/DEPLOY.md` ①-b).
+ * ⚠ anon 키는 브라우저 번들에 실리는 공개 값이지만 여기서도 찍지 않는다.
+ */
+async function checkSupabaseProject(): Promise<void> {
+  const sb = supabaseEnv()
+  check('Supabase 검사에 쓸 NEXT_PUBLIC_SUPABASE_URL · ANON_KEY 가 있다 (.env.local)', sb !== undefined,
+    sb ? new URL(sb.url).hostname : '없음 — 아래 셋은 잴 수 없다')
+  if (!sb) return
+
+  const settings = await jsonOf(await fetch(`${sb.url}/auth/v1/settings`, { headers: { apikey: sb.anonKey } }))
+  const external = (settings.external ?? {}) as Record<string, boolean>
+  const enabled = Object.entries(external).filter(([, v]) => v).map(([k]) => k)
+  check('Supabase 에서 GitHub 로그인 공급자가 켜져 있다 (/auth/v1/settings external.github)',
+    external.github === true, `켜진 공급자: ${enabled.join(',') || '없음'}`)
+
+  const jwks = await jsonOf(await fetch(`${sb.url}/auth/v1/.well-known/jwks.json`))
+  const keys = Array.isArray(jwks.keys) ? (jwks.keys as { alg?: string; kty?: string }[]) : []
+  const algs = keys.map((k) => k.alg ?? k.kty ?? '?')
+  check('JWKS 의 서명 방식이 전부 검증기 표에 있다 (legacy HS256 secret 은 JWKS 에 안 나온다)',
+    algs.every((a) => VERIFIER_ALGS.includes(a)), `${algs.join(',') || '(키 없음 = HS256 legacy)'} · 표: ${VERIFIER_ALGS.join(',')}`)
+
+  const rest = await fetch(`${sb.url}/rest/v1/users?select=id&limit=1`, {
+    headers: { apikey: sb.anonKey, authorization: `Bearer ${sb.anonKey}` },
+  })
+  check('anon 키로 Data API 가 표를 내주지 않는다 (Data API 를 껐다 · RLS 만으로는 200 + [] 다)',
+    rest.status !== 200, `${rest.status}`)
+}
+
+/**
+ * ⑥ 로그인 화면 — [GitHub로 계속] 이 실제로 그려지는가. `useSearchParams` 때문에 클라이언트 렌더라
+ * HTML 텍스트에는 링크가 없다 — GATE 3 가 띄운 Chrome 으로 본다.
+ */
+async function checkLoginDoor(browser: Cdp, origin: string): Promise<void> {
+  const created = await browser.send('Target.createTarget', { url: 'about:blank' })
+  const targetId = created.targetId as string | undefined
+  if (targetId === undefined) {
+    check('로그인 화면: 탭이 생겼다', false)
+    return
+  }
+  const page = await connectCdp(`ws://127.0.0.1:${CDP_PORT}/devtools/page/${targetId}`)
+  try {
+    await page.send('Page.enable')
+    await page.send('Runtime.enable')
+    await page.send('Page.navigate', { url: `${origin}/login` })
+    let href = ''
+    try {
+      await waitFor('로그인 화면', async () => {
+        href = (await page.evalJs<string>(
+          `(() => { const a = document.querySelector('a[href*="/auth/v1/authorize"]'); return a && a.getClientRects().length > 0 ? (a.getAttribute('href') || '') : '' })()`,
+        )) ?? ''
+        return href !== ''
+      }, 60_000)
+    } catch { /* 아래 검사가 FAIL 로 적는다 */ }
+    check('로그인 화면에 [GitHub로 계속] 이 실제로 그려진다 (Supabase 환경변수가 빌드에 들어갔다)',
+      href.includes('provider=github'), href === '' ? '링크 없음 — NEXT_PUBLIC_SUPABASE_* 가 빌드에 없거나 화면이 안 떴다' : new URL(href).origin)
+    const sb = supabaseEnv()
+    if (sb && href !== '') {
+      check('그 링크가 .env.local 과 같은 Supabase 프로젝트를 가리킨다', href.startsWith(sb.url), new URL(href).hostname)
+    }
+  } finally {
+    page.close()
+  }
 }
 
 /** 응답 하나를 재고, 본문을 문자열로 돌려준다 (검사 세부에 쓴다) */
@@ -176,6 +267,9 @@ async function main(origin: string): Promise<void> {
     keys.join(',') === 'access_token,entry_path,expires_at', keys.join(','))
   check('게스트 응답 본문에 이메일 글자가 0건이다', !session.text.includes('@'))
 
+  // ⑧-b Supabase 프로젝트 쪽 — 공급자 · 서명키 · Data API (대시보드 걸음이 됐는지)
+  await checkSupabaseProject()
+
   // ⑨ GATE 3 — 빈 창에서 링크만으로 3분 (production 응답 속도로)
   //  ⚠ 여기가 마지막인 이유 — 위 문들이 배포 함수를 한 번씩 깨워 놨다. 서버리스는
   //    첫 요청이 콜드 스타트라, 안 깨우고 재면 3분의 일부가 「배포가 잠에서 깨는 시간」이다.
@@ -192,6 +286,8 @@ async function main(origin: string): Promise<void> {
       jsonPath: join(outDir, 'gate3.json'),
       check,
     })
+    // ⑩ 로그인 화면의 GitHub 버튼 — 같은 Chrome 으로 (GATE 3 뒤라 함수가 깨어 있다)
+    await checkLoginDoor(browser, origin)
   } finally {
     browser.close()
   }
