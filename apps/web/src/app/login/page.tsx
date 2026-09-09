@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 import { NO_ACCOUNT_HINT, authConfig, oauthUrl, sendMagicLink } from '../../lib/web/auth'
+import { PRIVACY_LABEL, PRIVACY_PATH } from '../../lib/web/privacy'
 
 // =====================================================================
 //  화면 2 — 로그인 (SPEC §9 · DESIGN_BRIEF §4 「화면 2」)
@@ -112,6 +113,8 @@ function LoginCard() {
               ⚠ 주소는 랜딩과 같은 `/demo` 하나다 — 게스트 세션을 받는 자리가 둘이 되면 안 된다. */}
           {NO_ACCOUNT_HINT.text} <a href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
         </p>
+        {/* 로그인 전에 읽을 수 있어야 한다 — 무엇을 받고 AI 가 무엇을 보는지 (INBOX H4). */}
+        <p className="meta"><a href={PRIVACY_PATH}>{PRIVACY_LABEL}</a></p>
       </div>
     </div>
   )
