@@ -286,7 +286,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `apps/web/src/lib/demo/` | 데모 테넌트 — 시드 · 리셋 · 지우기 (제품 코드다 · Cron 이 부른다) |
 | `apps/web/src/components/` | 화면 컴포넌트 — 문구는 표에, JSX 는 표를 읽기만 |
 | `apps/web/scripts/` | 개발용 씨앗 서버 · 화면 덤프 · 관통 단계 스크립트 (제품에 안 들어간다) |
-| `apps/web/vercel.json` | Cron 둘 — health 6시간마다 · 데모 리셋 매일 |
+| `apps/web/vercel.json` | Cron 둘 — health 하루 1회 · 데모 리셋 매일 · 함수 리전 서울 (한도의 정본은 `apps/web/src/lib/api/vercel.ts`) |
 | `plugin/contextops/` | Claude Code 플러그인 — `skills/` 3 · `hooks/hooks.json` · `scripts/` 훅 2 · `bin/contextops-cli.mjs` 단일 번들 |
 | `plugin/contextops/src/cli/` | CLI 소스 — 명령 표 하나(`commands.ts`) · exit 코드 표 하나 |
 | `plugin/contextops/schemas/` | `packages/schema` 에서 낸 JSON Schema (로컬 검증용) |

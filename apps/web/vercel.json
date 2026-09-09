@@ -2,15 +2,23 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "_comment": [
     "Vercel 프로젝트의 Root Directory 는 apps/web 이다 — 이 파일은 그 자리에서만 읽힌다.",
+    "regions: 함수는 서울(icn1) 한 곳에서 돈다 — DB(Supabase ap-northeast-2)와 같은 도시다. 리전을 안 적으면",
+    "기본 iad1(워싱턴)이고, 데모 리셋처럼 DB 를 수백 번 왕복하는 문이 시간 상한을 넘긴다. 정본은",
+    "src/lib/api/vercel.ts 의 FUNCTION_REGION 이고 test/demo-reset.test.ts ⑥ 이 이 값과 대조한다 (Hobby 는 리전 하나).",
     "crons 의 시각은 UTC 다. demo-reset 의 18:00 UTC = 03:00 KST 이고, 그 셈은",
     "src/lib/demo/tenant.ts 의 DEMO_TENANT.resetAt · resetUtcOffsetHours 가 정본이다 —",
     "test/demo-reset.test.ts 가 이 파일과 그 값이 같은 시각인지 센다. 여기만 고치지 마라.",
+    "🔴 모든 cron 은 하루 1회 이하여야 한다 — Vercel Hobby 는 더 잦은 표현식을 배포 단계에서 거부한다",
+    "(2026-09-09 감사 · 예전 health 는 0 */6 이라 첫 배포가 실패할 값이었다). 시험이 「분·시 칸이 숫자 하나」를 잰다.",
+    "⚠ Hobby 의 cron 은 정각이 아니라 그 시간 안 임의 분에 돈다 (최대 59분 늦음) — 배너가 「03:00」이라고 못 박지 않는 이유다.",
     "Cron 은 CRON_SECRET 환경변수가 있으면 Authorization: Bearer <값> 을 붙여 GET 으로 부른다",
     "(src/lib/api/cron.ts). 그 변수가 없으면 두 문 중 demo-reset 은 401 이다 — 의도다.",
-    "health 는 SPEC §11 「Vercel Cron /api/health 6시간마다」(Supabase pause 방지)다."
+    "health 는 SPEC §11 「Supabase pause 방지」다 — 하루 1회 21:00 UTC(06:00 KST). demo-reset(18:00 UTC)과",
+    "다른 시각이라 두 문이 하루 두 번 DB 를 깨운다."
   ],
+  "regions": ["icn1"],
   "crons": [
-    { "path": "/api/v1/health", "schedule": "0 */6 * * *" },
+    { "path": "/api/v1/health", "schedule": "0 21 * * *" },
     { "path": "/api/v1/cron/demo-reset", "schedule": "0 18 * * *" }
   ]
 }

@@ -69,6 +69,8 @@ export type MigrateReport = {
   tables: { db: number; ts: number }
   indexes: { present: string[]; missing: string[] }
   enums: number
+  /** RLS 가 켜진 표 / 전체 표 — 전부여야 한다 (schema.ts `.enableRLS()` · 2026-09-09) */
+  rls: { on: number; total: number }
 }
 
 type Ledger = { hash: string; created_at: string | number }
@@ -115,6 +117,7 @@ export async function migrateDatabase(url: string, opts: { dryRun?: boolean } = 
       tables: { db: await countTables(sql), ts: TS_TABLE_COUNT },
       indexes: await checkIndexes(sql),
       enums: await countEnums(sql),
+      rls: await countRls(sql),
     }
   } finally {
     await sql.end({ timeout: 5 })
@@ -170,6 +173,15 @@ async function countEnums(sql: postgres.Sql): Promise<number> {
   return Number(row?.n ?? 0)
 }
 
+/**
+ * RLS 가 켜진 표 수 — 전부여야 한다. `test/migration.test.ts` 가 PGlite 에서 같은 것을 재고,
+ * 여기서는 **진짜 서버**에서 센다: 배포 DB 에 0008 이 안 올라갔으면 `db:status` 가 여기서 말한다.
+ */
+async function countRls(sql: postgres.Sql): Promise<{ on: number; total: number }> {
+  const rows = await sql<{ rowsecurity: boolean }[]>`select rowsecurity from pg_tables where schemaname = 'public'`
+  return { on: rows.filter((r) => r.rowsecurity).length, total: rows.length }
+}
+
 // ---------------------------------------------------------------------
 //  CLI — `tsx scripts/migrate.ts [--status]`
 // ---------------------------------------------------------------------
@@ -206,10 +218,12 @@ async function main(): Promise<void> {
   console.log(`tables        ${r.tables.db} in db · ${r.tables.ts} in src/db/schema.ts`)
   console.log(`indexes       ${r.indexes.present.length}/${INDEX_NAMES.length}${r.indexes.missing.length ? ` · missing: ${r.indexes.missing.join(', ')}` : ''}`)
   console.log(`enums         ${r.enums}`)
+  console.log(`rls           ${r.rls.on}/${r.rls.total} 표에 켜짐`)
 
   if (dryRun) return
   const problems: string[] = []
   if (r.pendingAfter > 0) problems.push(`남은 마이그레이션 ${r.pendingAfter}개`)
+  if (r.rls.on !== r.rls.total) problems.push(`RLS 가 꺼진 표 ${r.rls.total - r.rls.on}개`)
   if (r.tables.db !== r.tables.ts) problems.push(`표 수가 다르다 (db ${r.tables.db} · ts ${r.tables.ts})`)
   if (r.indexes.missing.length > 0) problems.push(`없는 인덱스 ${r.indexes.missing.length}개`)
   if (problems.length > 0) {

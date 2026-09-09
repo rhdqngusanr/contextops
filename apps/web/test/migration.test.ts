@@ -14,6 +14,8 @@
 //    ③ 인덱스 5개가 실제로 생긴다 (SPEC §2 마지막 줄)
 //    ④ DB enum 이 `@contextops/schema` 의 정본 표와 **같다** — 값을 손으로 적어
 //       갈라뜨리면 빨개진다. 그리고 표에 없는 값은 INSERT 가 거부된다
+//    ⑤ 🔴 모든 표에 RLS 가 켜져 있다 — 브라우저에 실리는 anon 키가 Supabase Data API 로
+//       표를 읽고 쓰는 길의 방어선이다 (2026-09-09 · 마이그레이션 0008)
 // =====================================================================
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -123,6 +125,17 @@ describe('drizzle 마이그레이션이 Postgres 에서 실제로 적용된다',
     ).map((r) => r.indexname)
     expect(INDEX_NAMES.length).toBe(8)
     for (const name of INDEX_NAMES) expect(inDb, `인덱스 ${name}`).toContain(name)
+  })
+
+  it('🔴 모든 표에 RLS 가 켜져 있다 — 브라우저의 anon 키가 Data API 로 두드려도 한 행도 못 읽고 못 쓴다', async () => {
+    //  정책이 하나도 없는 RLS = anon/authenticated 전면 거부. 서버는 표 소유자 역할로 붙어 영향이 없다.
+    //  (시험의 PGlite 사용자는 superuser 라 이 파일의 INSERT 들은 그대로 지난다 — 그래서 켜짐 여부만 센다)
+    const r = await rows<{ tablename: string; rowsecurity: boolean }>(
+      `select tablename, rowsecurity from pg_tables where schemaname = 'public'`,
+    )
+    expect(r.length).toBe(tables.length)
+    const off = r.filter((t) => !t.rowsecurity).map((t) => t.tablename)
+    expect(off, 'RLS 가 꺼진 표 — schema.ts 에 .enableRLS() 를 빼먹었거나 db:generate 를 안 돌렸다').toEqual([])
   })
 
   it('DB enum 이 TS 스키마의 값과 같다', async () => {

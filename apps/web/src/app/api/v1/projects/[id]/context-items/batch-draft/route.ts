@@ -25,6 +25,8 @@ import { issuesOf, parseBody, pathUuid, route } from '../../../../../../../lib/a
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
+//  ⚠ 응답 뒤 `after()` 에서 충돌 탐지 job 이 돈다 — 상한의 정본과 이유는 `lib/api/vercel.ts`. 리터럴이어야 Next 가 읽는다.
+export const maxDuration = 300
 
 export const POST = route<{ id: string }>('POST /projects/{id}/context-items/batch-draft', async (ctx) => {
   const actor = await ctx.actor()

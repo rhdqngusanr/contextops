@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import { route } from '../../../../lib/api/route'
 
 // =====================================================================
-//  `GET /api/v1/health` — 공개 (SPEC §5 마지막 줄 · §11 「Vercel Cron 6시간마다」)
+//  `GET /api/v1/health` — 공개 (SPEC §5 마지막 줄 · §11 「Vercel Cron 하루 1회」 — Hobby 는 하루 1회가 상한이다 · `vercel.json`)
 //
 //  ★ 왜 DB 를 실제로 한 번 두드리나 — 프로세스가 살아 있다는 것과 DB 에 닿는다는 것은
 //    다르다. Supabase 무료 플랜은 안 쓰면 재우고, 그때 앱은 멀쩡히 200 을 낸다.

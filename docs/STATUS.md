@@ -5,9 +5,48 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-07 · 루프 117바퀴 · 코드 `89c80e9`(FINDINGS 169 ✅ — 씨앗의 `body` 가 제 `data` 를 되풀이하지 않는다 · 꼬리만 붙인 되풀이는 `pack-echo` 가 문다 · `test/pack-echo.test.ts` 5개) · **CI GREEN 전 층** · 관통 1275검사 · 9단계 SKIP 0 · 문서는 그 다음 커밋_
+_마지막 갱신: 2026-09-09 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · 대회 감사 + 배포를 막던 코드 4건 · **CI GREEN 전 층** · 일감의 입구는 이제 `docs/feedback/INBOX.md` 맨 위 「대회 제출 계획」이다_
 
 ---
+
+## 🧑 사람 세션 (2026-09-09 · 루프 밖) — **대회 감사 · 배포를 막던 코드 4건 · 일감을 INBOX 로**
+
+> 사용자 지시: 「루프 말고 직접, 지금까지의 상태를 확인하고 원티드 AI 챔피언십 기준으로 부족한 점·추가할 점을 확실히 파악해라」 →
+> 에이전트 65개(영역 감사 11 · 모의 심사위원 4 · 반박 검증 · 종합 · 완전성 비평 + 추가 조사 4)로 감사했다. 발견 122 → 생존 97.
+> 결과는 `docs/evidence/2026-09-09-audit/` 와 INBOX 맨 위 절. 그 뒤 사용자 지시 「블로커 1(INBOX 이관)과 블로커 2(코드 4건)를 전부 해라」.
+
+🔴 **대회 규칙을 처음으로 원문으로 읽었다** (공식 랜딩은 SPA 안 iframe · FAQ 는 브라우저 JS 로 펼쳐야 보인다 · 약관은 고객센터 문서):
+참가 접수 **9/18 23:59:59** 와 과제 제출 **9/20 23:59:59** 가 별개의 마감 · 제출물은 링크(정상 작동 필수)·해결 문제·AI 활용·**AI 툴(필수 기재)** 넷뿐 ·
+영상·슬라이드 요구 없음 · **심사 기간 링크 미접속 = 제외 가능** · 예선 심사 80% + 투표 20% · 리더보드 50 · 제3자 평가 솔루션 가능. 저장소 어디에도 없던 것이라 INBOX 와 evidence 에 적었다.
+
+🔴 **이 세션이 직접 잰 것** (에이전트 주장이 아니라 명령·요청으로 재확인):
+
+| 무엇 | 잰 것 |
+|---|---|
+| 로컬 vs 원격 | `git rev-list --left-right --count origin/main...HEAD` = **0 10** — 공개 저장소에 `.claude-plugin/marketplace.json` 이 없어 README 설치 첫 줄이 실패하는 상태 · `loop/STOP` 이 있어 AutoPush 도 멈춤 |
+| Supabase 프로젝트(공개 엔드포인트 · anon 키 · 값은 안 찍음) | `/auth/v1/settings` → external ON = **email 뿐**(GitHub OFF) · JWKS = **EC/ES256 하나** · `rest/v1/{users,teams,context_items,devices}` 가 **HTTP 200** (Content-Range `*/0` · 표는 비어 있음) → Data API 열림 + RLS 없음 |
+| 마이그레이션 | 0000~0007 어디에도 RLS 0건 · 표 18개 전부 `public` |
+| 배포 설정 | `vercel.json` health `0 */6`(Hobby 는 하루 1회) · 리전 없음 · cron 라우트 `maxDuration` 60 · `layout.tsx` metadata title·description 두 줄뿐 · `ci.yml` 에 build·관통 없음 |
+| CI | `tools/ci.ps1` 6층 GREEN(20:08 · 관통 1306검사) — 고치기 전 기준선 |
+
+🔴 **고친 것 — 블로커 2 의 코드 4건 (제품 코드 · 시험 · 문서)**
+
+| 무엇 | 어디 | 잰 것 |
+|---|---|---|
+| health cron 하루 1회(`0 21 * * *` · 06:00 KST) · `regions: ["icn1"]` | `apps/web/vercel.json` | 시험 ⑥ 「모든 cron 의 분·시 칸이 숫자 하나」 · 「regions == [FUNCTION_REGION]」 |
+| 배포 한도의 정본 표 — `FUNCTION_REGION` · `FUNCTION_MAX_DURATION_SEC` 300 · `LONG_RUNNING_ROUTES` 4문 | `apps/web/src/lib/api/vercel.ts`(새 파일) | Next 는 `maxDuration` 을 **리터럴만** 읽어서 import 로 못 대신한다 → 라우트 4개(cron · documents · batch-draft · retry)에 리터럴을 두고 시험 ⑥이 정본과 대조 · `startJob()` 을 부르는 route.ts 가 전부 표에 있는지도 잰다(표의 완전성) |
+| RLS — 표 18개 `.enableRLS()` → `drizzle-kit generate` → **0008_lumpy_wind_dancer** (ALTER … ENABLE ROW LEVEL SECURITY × 18) | `apps/web/src/db/schema.ts` · `apps/web/drizzle/` | `migration.test` 「rowsecurity 꺼진 표 0」 · `scripts/migrate.ts` 가 `rls N/N` 을 찍고 다르면 FAIL · `migrate-script.test` 가 두 경로(migrator · helper)의 rls 모양까지 대조 |
+| 문서 | `docs/DEPLOY.md`(「가장 빠른 길」 순서표 · Hobby 한도 표 · ①-b Supabase Auth 걸음 넷 + Data API 끄기 · ⑥-b anon REST 거부·로그인 실측) · SPEC §1.2·§5·§11 · README 지도 · PLAN P5 ⑤ | `deploy-doc.test` 가 키 전부·cron 경로·명령·경로 실존을 잰다 |
+
+★ **왜 RLS 를 켜도 서버가 안 막히나** — 정책 없는 RLS 는 anon/authenticated 를 전면 거부하지만 **표 소유자**는 RLS 를 지나지 않는다. 마이그레이션을 돌린
+`postgres` 역할이 소유자다(DEPLOY ① 에 확인 SQL). 시험의 PGlite 사용자는 superuser 라 기존 INSERT 시험은 그대로 지난다 — 그래서 켜짐 여부만 센다.
+★ **왜 300 인가** — Fluid compute(새 프로젝트 기본) 위의 Hobby 는 300 이 기본·최대다. 60 이면 구조화 job(`after()` 안 조각 12 × 20~47초)이 중간에 죽는다.
+⚠ **Fluid 가 꺼진 프로젝트면 300 이 배포를 거부한다** — DEPLOY ② 에 확인 걸음을 넣었다. 그 경우 고칠 자리는 정본 하나 + 리터럴 넷(시험이 안내한다).
+
+🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15 · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
+루프는 `loop/STOP` 그대로 멈춰 있다 — 9/9~9/11 은 계정 작업과 섞여 사람이 붙은 세션이 맞고, 그 뒤 켤지는 사람이 정한다(INBOX B1).
+
+🙋 **사람이 지금 해야 하는 것** — 참가 접수(9/18 마감 · 폼 규격 캡처) · `git push` · 9/10 DEPLOY 「가장 빠른 길」(Supabase Auth 걸음 넷 · Data API 끄기 · Vercel · 첫 리셋 · verify:prod · 로그인 실측).
 
 ## 🧑 사람 세션 (2026-09-07 22:15~23:00 · 루프 밖) — **PLAN P5 첫 행을 열었다**
 
@@ -934,7 +973,11 @@ Policies 4 · Constraints 3 이고 줄마다 `src:manual:<질문 문장>` 이 �
 |---|---|---|
 | ~~Supabase 프로젝트 생성 · `DATABASE_URL` · `SUPABASE_JWT_SECRET`~~ | ✅ **2026-09-06 사람이 꽂았다** (`.env.local` · Session pooler · IPv4) | 71바퀴가 마이그레이션을 실제로 적용했다 (`adac632` · 표 18 · 인덱스 8). **표는 비어 있다** — 데모 테넌트는 Cron 리셋 문(`/api/v1/cron/demo-reset`)이 심는다. 같은 값을 Vercel 에도 꽂는 것은 아래 행 |
 | ~~Anthropic API 키~~ → **Gemini 키** | ✅ **2026-09-06 사람이 꽂았다** (`GEMINI_API_KEY`·`GEMINI_MODEL=gemini-3.5-flash` · 79바퀴가 `836a0a9` 로 갈아끼웠다 · 진짜 호출 통과) | 🙋 남은 것 하나: **`gemini-3.5-flash`·`3.6-flash` 의 정가**를 `apps/web/src/lib/ai/features.ts` `AI_MODELS` 에 — 지금은 2.5 flash 공개가(0.30/2.50 USD/M)가 임시로 있다. 틀리면 하루 예산(`AI_DAILY_BUDGET_USD=3`)의 셈이 틀린다. 같은 값을 Vercel 에도 |
-| Vercel 프로젝트 연결 · 환경변수 (**Root Directory `apps/web`** · `CRON_SECRET` · `SUPABASE_JWT_SECRET` · `DATABASE_URL`) → 첫 리셋 한 번 (`curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset`) → `/demo` 가 열리나 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처 한 장(P1 증거의 나머지 절반 · `docs/evidence/2026-09-06-p1-payload/` 옆에) | 계정 연결이 필요하다 | **🔴 지금.** 코드 쪽(Cron · 리셋 문 · `vercel.json`)은 63바퀴에, P1 증거의 코드 쪽은 64·65바퀴에 다 됐다 — 값만 꽂으면 데모가 production 에서 매일 03:00 KST 에 다시 선다 |
+| **참가 접수**(원티드 · 9/18 23:59:59 마감 · 제출과 별개) + 제출 폼의 칸·글자 수·썸네일 규격 캡처 | 원티드 계정 | **🔴 오늘.** 접수 없이는 제출 화면이 안 열린다 (INBOX B1) |
+| **`git push`** — 로컬이 origin 보다 앞서 있다(`loop/STOP` 이라 AutoPush 도 멈춤) | 사람의 자격증명 | **🔴 오늘.** 공개 저장소에 `.claude-plugin/marketplace.json` 이 없어 README 설치 첫 줄이 지금 실패한다 |
+| **Supabase Auth 걸음 넷 + Data API 끄기** — GitHub 공급자 켜기(OAuth App) · Site URL·Redirect URLs · 세션 만료 최대치 · JWT Keys 의 CURRENT 종류 기록 · Data API OFF (`docs/DEPLOY.md` ①-b) | 대시보드 | **🔴 9/10 첫 걸음.** 2026-09-09 실측: 공급자 OFF · ES256 · anon REST 200 — 이 걸음 없이는 로그인이 죽어 있고 표가 열려 있다 (INBOX B3) |
+| Vercel 프로젝트 연결(**Root Directory `apps/web`** · Fluid compute 켜짐 확인) · `.env.vercel` Import → 첫 배포 로그 → `pnpm --filter web db:status`(pending 0 · rls 18/18) → 첫 리셋 한 번(`time curl -H "Authorization: Bearer $CRON_SECRET" https://<앱>/api/v1/cron/demo-reset` · 소요 초 기록) → `verify:prod` 0 failed → anon REST 거부 캡처 · GitHub 로그인 → 팀 생성 201 캡처 → 브라우저 네트워크 탭에서 `batch-draft`·`progress` 요청 body 캡처(P1 증거의 나머지 절반) | 계정 연결이 필요하다 | **🔴 9/10 · 5~8h.** 배포를 막던 코드 4건(cron · 리전 · maxDuration · RLS)은 2026-09-09 에 고쳤다 — 순서와 시간은 `docs/DEPLOY.md` 「가장 빠른 길」 (INBOX B2) |
+| Gemini **Tier 1** 결정(AI Studio 빌링 연결 → 키 교체 → Cloud Billing 알림 $20) — 무료 티어는 Google 약관상 입력이 학습에 쓰일 수 있고 심사 트래픽에서 429 | 결제 계정 | 9/10 계정 작업 묶음에 같이 — 결정이 `/privacy`·KNOWN_LIMITATIONS 의 문장을 정한다 (INBOX H4) |
 | 실데이터 픽스처(`brain`) 공개 가능 여부 판단 | 제품 결정이다 | P5 (안 되면 paylab 만 · SPEC §14 절삭 6번) |
 
 ⚠ 루프는 위 항목을 **추측으로 진행하지 않는다.** 값은 `.env.local` 에만 산다 (P1).

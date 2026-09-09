@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import nextConfig from '../next.config'
 import * as schema from '../src/db/schema'
+import { FUNCTION_MAX_DURATION_SEC, FUNCTION_REGION, LONG_RUNNING_ROUTES } from '../src/lib/api/vercel'
 import { GET as demoReset } from '../src/app/api/v1/cron/demo-reset/route'
 import { POST as demoSession } from '../src/app/api/v1/demo/session/route'
 import { GET as syncStatus } from '../src/app/api/v1/projects/[id]/sync-status/route'
@@ -29,7 +30,9 @@ import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SE
 //    ⑤ 🔴 `project_id` 를 가진 표가 **전부** `PROJECT_SCOPED` 에 있다 — 새 표를 더한 사람이
 //       지우는 표를 빠뜨리면 여기서 빨개진다 (빠뜨리면 리셋이 FK 위반으로 500 이 된다)
 //    ⑥ `vercel.json` 의 Cron 이 **실제로 있는 라우트**를, `DEMO_TENANT.resetAt` 과 같은
-//       시각에 부른다 (UTC ↔ KST 셈) · SPEC §11 의 health 6시간마다
+//       시각에 부른다 (UTC ↔ KST 셈) · 🔴 모든 cron 이 **하루 1회 이하**(Vercel Hobby 는 더 잦으면
+//       배포를 거부한다) · 함수 리전이 정본(`lib/api/vercel.ts`)과 같다 · 오래 도는 문의
+//       `maxDuration` 리터럴이 정본과 같고, `startJob()` 을 부르는 문이 전부 그 표에 있다
 //    ⑦ 배포 함수에 `fixtures/` 가 실린다 (`outputFileTracingIncludes`) · `CRON_SECRET` 이
 //       `.env.example` 에 있다
 //    ⑧ 🔴 `src/` 가 `test/`·`scripts/` 를 import 하지 않는다 — 시드가 제품 코드로 올라온
@@ -173,9 +176,9 @@ describe('⑤ 지우는 표의 목록이 스키마와 같다', () => {
   })
 })
 
-describe('⑥ vercel.json 의 Cron', () => {
+describe('⑥ vercel.json 의 Cron · 리전 · 함수 상한 — 정본은 lib/api/vercel.ts', () => {
   type Cron = { path: string; schedule: string }
-  const vercel = JSON.parse(readFileSync(join(webRoot, 'vercel.json'), 'utf8')) as { crons: Cron[] }
+  const vercel = JSON.parse(readFileSync(join(webRoot, 'vercel.json'), 'utf8')) as { crons: Cron[]; regions?: string[] }
 
   it('부르는 경로마다 라우트 파일이 실제로 있다', () => {
     expect(vercel.crons.length).toBeGreaterThan(0)
@@ -196,9 +199,51 @@ describe('⑥ vercel.json 의 Cron', () => {
     expect(Number(minute)).toBe(kstMinute)
   })
 
-  it('health 는 6시간마다다 (SPEC §11)', () => {
-    const cron = vercel.crons.find((c) => c.path === '/api/v1/health')
-    expect(cron?.schedule).toBe('0 */6 * * *')
+  it('🔴 모든 cron 이 하루 1회 이하다 — Vercel Hobby 는 더 잦은 표현식을 배포 단계에서 거부한다', () => {
+    //  분·시 칸이 숫자 하나면 하루 1회다. `*/6`·`*`·`1,13` 은 그보다 잦다
+    //  (2026-09-09 감사 · health 가 `0 */6` 이라 첫 배포가 실패할 값이었다 — 그 값을 이 시험이 잠가 두고 있었다).
+    for (const cron of vercel.crons) {
+      const [minute, hour] = cron.schedule.split(' ')
+      expect(minute, `${cron.path} 의 분 칸`).toMatch(/^\d+$/)
+      expect(hour, `${cron.path} 의 시 칸`).toMatch(/^\d+$/)
+    }
+  })
+
+  it('health 가 스케줄에 있고 리셋과 다른 시각이다 (Supabase pause 방지 · SPEC §11)', () => {
+    const health = vercel.crons.find((c) => c.path === '/api/v1/health')
+    const reset = vercel.crons.find((c) => c.path === '/api/v1/cron/demo-reset')
+    expect(health).toBeDefined()
+    expect(health?.schedule).not.toBe(reset?.schedule)
+  })
+
+  it('함수 리전이 정확히 하나이고 정본(FUNCTION_REGION)과 같다 — Hobby 는 리전 하나 · DB 와 같은 도시', () => {
+    expect(vercel.regions).toEqual([FUNCTION_REGION])
+  })
+
+  it('오래 도는 문마다 maxDuration 리터럴이 정본(FUNCTION_MAX_DURATION_SEC)과 같다 — Next 는 리터럴만 읽는다', () => {
+    for (const rel of LONG_RUNNING_ROUTES) {
+      const file = join(webRoot, 'src', 'app', ...rel.split('/'), 'route.ts')
+      expect(existsSync(file), `${rel} 의 route.ts 가 없다`).toBe(true)
+      const m = /^export const maxDuration = (\d+)$/m.exec(readFileSync(file, 'utf8'))
+      expect(m, `${rel} 에 export const maxDuration 리터럴이 없다`).not.toBeNull()
+      expect(Number(m?.[1]), rel).toBe(FUNCTION_MAX_DURATION_SEC)
+    }
+  })
+
+  it('startJob() 을 부르는 문은 전부 LONG_RUNNING_ROUTES 에 있다 — 응답 뒤 after() 가 상한 안에서 돌아야 한다', () => {
+    const appRoot = join(webRoot, 'src', 'app')
+    const callers: string[] = []
+    const visit = (dir: string): void => {
+      for (const name of readdirSync(dir)) {
+        const at = join(dir, name)
+        if (statSync(at).isDirectory()) visit(at)
+        else if (name === 'route.ts' && readFileSync(at, 'utf8').includes('startJob(')) callers.push(at)
+      }
+    }
+    visit(appRoot)
+    const listed = LONG_RUNNING_ROUTES.map((rel) => join(appRoot, ...rel.split('/'), 'route.ts'))
+    expect(callers.length).toBeGreaterThan(0)
+    expect(callers.filter((c) => !listed.includes(c)), 'startJob() 을 부르는데 표에 없는 문').toEqual([])
   })
 })
 

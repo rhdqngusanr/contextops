@@ -111,13 +111,13 @@ contextops/
 | 언어 | TypeScript · Node — **버전 숫자는 여기 적지 않는다** | 정본은 `.nvmrc`(Node · 지금 **22**)와 `pnpm-workspace.yaml` 의 `catalog`(typescript 등) · `package.json` 의 `packageManager`(pnpm). ★ 왜 — 숫자가 두 곳에 살면 한쪽만 올라가고 조용히 갈라진다 (FINDINGS 2 · 3) |
 | 웹+API | Next.js 15 (App Router, Route Handlers) | 별도 백엔드 없음 |
 | UI | Tailwind CSS 4 + shadcn/ui, TanStack Query 5 | Claude Design 산출물을 그대로 컴포넌트화 |
-| DB | Supabase Postgres, Drizzle ORM + drizzle-kit | RLS 미사용, 서버 service role + 앱 레벨 권한 검사 |
+| DB | Supabase Postgres, Drizzle ORM + drizzle-kit | 권한 검사는 앱 레벨(`lib/api/guard.ts` · `route.ts`). **RLS 는 모든 표에 켠다(정책 없음)** — 브라우저에 실리는 anon 키가 Supabase Data API 로 표를 읽고 쓰는 길을 막는 방어선이다 (2026-09-09 감사 · 마이그레이션 0008 · `test/migration.test.ts` 가 「꺼진 표 0」을 잰다). 서버는 표 소유자 역할로 직결이라 RLS 의 영향을 받지 않고, Data API 자체도 끈다(`docs/DEPLOY.md`) |
 | Auth | Supabase Auth (GitHub OAuth + Email magic link) | 플러그인은 프로젝트 토큰(opaque, sha256 저장) |
 | 실시간 | Supabase Realtime (progress_events, context_versions 구독) | Roadmap·Sync 즉시 갱신 |
 | 서버 AI | Gemini `generateContent` 를 **SDK 없이 `fetch`** 로 (`apps/web/src/lib/ai/client.ts` 하나 · 2026-09-06 Anthropic 에서 바꿈). 모델은 `GEMINI_MODEL` 환경변수로 교체 가능 · 기본값과 쓸 수 있는 이름의 정본은 `apps/web/src/lib/ai/features.ts` 의 `AI_MODELS` 표 **한 곳**(버전 숫자를 여기 적지 않는다) · `responseJsonSchema` 로 구조화 출력 | 예산 가드 필수 · 무료 티어는 분당 요청 제한 |
 | 플러그인 CLI | esbuild → 단일 ESM 번들, 런타임 의존 0 | `node ${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs` |
 | 테스트 | vitest (schema·compiler·api·plugin) · e2e 는 **헤드리스 Chrome 을 CDP 로 직접** (`apps/web/e2e/`) | Playwright 는 **안 쓴다** — 의존이 하나 늘고 관통이 이미 같은 것을 잰다 (`shots.ts`·`gate3.ts`·`production.ts`) |
-| 배포 | Vercel (web), Supabase cloud | Vercel Cron `0 */6 * * *` → `/api/health` (Supabase pause 방지) |
+| 배포 | Vercel (web · Hobby · 함수 리전 서울 `icn1`), Supabase cloud (서울) | Cron 둘 다 **하루 1회** — Hobby 는 더 잦은 표현식을 배포에서 거부한다(2026-09-09 감사 · 예전 `0 */6` 은 첫 배포가 실패할 값이었다). health 21:00 UTC → `/api/v1/health`(Supabase pause 방지) · demo-reset 18:00 UTC. 리전·`maxDuration` 의 정본은 `apps/web/src/lib/api/vercel.ts` 하나이고 `apps/web/vercel.json` 과 라우트 리터럴은 시험이 대조한다 |
 
 ---
 
@@ -442,7 +442,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 | POST /projects/{id}/ask | member | {question} → {answer, cited_item_ids[]} (§7.3, 예산 가드) |
 | POST /demo/session | **공개** | → `{access_token, expires_at, entry_path}` — 🔴 **인증 없이 부르는 유일한 쓰기 문**이다. 데모 팀·데모 프로젝트·게스트 `users` 행·그 소속이 **넷 다** 있을 때만 200 이고, 하나라도 없으면 `NOT_FOUND` 다 (「일단 토큰은 주고 화면에서 404 를 보게」 하면 심사위원이 보는 것은 빈 화면이고 원인은 화면에 안 적힌다). 행을 **만들지 않는다** — 게스트도 팀도 시드가 만든다. 응답에 이메일·사람 이름이 없다. ⚠ 빈도 제한이 없다: LLM 을 안 부르고 행을 안 만든다(서명 한 번). 돈이 드는 쪽은 아래 `/demo/ai-once` 이고 그건 `withBudget()` 이 센다 |
 | POST /demo/ai-once | 게스트 | {fixture:'paylab'|'bookstack'} → 충돌 카드 결과 (§7.4) |
-| GET /cron/demo-reset | **Cron** (`CRON_SECRET`) | → `{team_slug, existed, official_version, items, members, devices, reports, progress, proposals}` — 데모 테넌트를 **지우고 다시 심는다** (§9 「매일 03:00 리셋」 · `lib/demo/reset.ts`). 🔴 **GET 으로 상태를 바꾸는 유일한 문**이다 — Vercel Cron 은 GET 으로만 부른다. 그래서 `/cron/` 밑에 따로 살고, 주체(`ctx.actor()`)가 아니라 `CRON_SECRET` 자물쇠(`lib/api/cron.ts`)로 잠긴다 — 세션·기기·게스트 토큰으로는 401 이다. 변수가 없으면 **아무도 못 부른다**(조용히 통과시키지 않는다 — 발표 도중 남이 리셋한다). 심다가 던지면 다시 지운다 — 반쯤 심긴 데모보다 없는 데모가 낫다(`/demo/session` 이 404 로 말한다). 응답에 토큰·이름·이메일이 없다. `maxDuration` 60 |
+| GET /cron/demo-reset | **Cron** (`CRON_SECRET`) | → `{team_slug, existed, official_version, items, members, devices, reports, progress, proposals}` — 데모 테넌트를 **지우고 다시 심는다** (§9 「매일 03:00 리셋」 · `lib/demo/reset.ts`). 🔴 **GET 으로 상태를 바꾸는 유일한 문**이다 — Vercel Cron 은 GET 으로만 부른다. 그래서 `/cron/` 밑에 따로 살고, 주체(`ctx.actor()`)가 아니라 `CRON_SECRET` 자물쇠(`lib/api/cron.ts`)로 잠긴다 — 세션·기기·게스트 토큰으로는 401 이다. 변수가 없으면 **아무도 못 부른다**(조용히 통과시키지 않는다 — 발표 도중 남이 리셋한다). 심다가 던지면 다시 지운다 — 반쯤 심긴 데모보다 없는 데모가 낫다(`/demo/session` 이 404 로 말한다). 응답에 토큰·이름·이메일이 없다. `maxDuration` 은 정본(`lib/api/vercel.ts` · 300 · Fluid compute 전제)과 같은 리터럴 |
 | GET /health | 공개 | {ok, db, version} |
 
 에러 코드: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `STALE_BASE`, `REVISION_CONFLICT`, `BUDGET_EXCEEDED`, `RATE_LIMITED`, `COMPILE_FAILED`, `INTERNAL`, `AI_OUTPUT_INVALID`.
@@ -680,7 +680,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
     `query`·`parameters`·`detail` 등 질의문·값이 드는 필드는 안 남기고, message 가 자기 `query` 를 품으면 message 를 통째로 뺀다.
     표는 `apps/web/src/lib/api/log.ts` 의 `ERROR_FIELD_RULES` 하나 (FINDINGS 128).
 - CORS: 웹 origin만. 플러그인은 Bearer만 사용.
-- 비용: §7.5. Supabase: Vercel Cron `/api/v1/health` 6시간마다 · `/api/v1/cron/demo-reset` 매일 18:00 UTC(03:00 KST) — 둘 다 `apps/web/vercel.json`. Cron 문의 자물쇠는 `CRON_SECRET`(Vercel 이 `Authorization: Bearer` 로 붙인다 · `lib/api/cron.ts` · 없으면 401).
+- 비용: §7.5. Supabase: Vercel Cron `/api/v1/health` 하루 1회(21:00 UTC · Hobby 는 하루 1회가 상한) · `/api/v1/cron/demo-reset` 매일 18:00 UTC(03:00 KST · Hobby 의 cron 은 그 시간 안 임의 분에 돈다) — 둘 다 `apps/web/vercel.json`. Cron 문의 자물쇠는 `CRON_SECRET`(Vercel 이 `Authorization: Bearer` 로 붙인다 · `lib/api/cron.ts` · 없으면 401).
 - 프롬프트 인젝션: 문서·코드 항목 텍스트는 `<untrusted>` 블록으로 감싸 data로만 취급, 도구 호출 없음.
 
 ---

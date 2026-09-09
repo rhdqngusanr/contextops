@@ -20,11 +20,12 @@ import { DEMO_TENANT } from '../../../../../lib/demo/tenant'
 //  ⚠ 응답은 **수**뿐이다 — 토큰·이름·이메일은 안 나간다 (Cron 로그는 사람이 못 보는 곳에
 //    쌓이지 않는다).
 //  ⚠ `maxDuration` — 시드는 라우트를 수십 번 부른다. 배포 DB 에서 10초 기본값을 넘길 수
-//    있어서 올린다 (Vercel Hobby 의 상한이 60 이다).
+//    있어서 올린다. 값의 정본과 이유(왜 300 · Fluid compute 전제 · 리전 서울)는 `lib/api/vercel.ts` 다 —
+//    Next 는 리터럴만 읽어서 여기 숫자를 import 로 못 대신하고, 대신 시험(⑥)이 둘을 대조한다.
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export const GET = route('GET /cron/demo-reset', async (ctx) => {
   requireCronSecret(ctx.req)

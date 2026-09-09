@@ -525,6 +525,18 @@
       Vercel 연결(Root Directory `apps/web`) → `.env.vercel` 을 Import → 배포 → 첫 리셋을 손으로 한 번
       (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → 걸음 ⑥ 의 검증기
       → 보안 캡처 · fresh install.
+      → ⑤ **배포를 막던 코드 4건을 고쳤다** (2026-09-09 · 사람 세션 · 대회 감사). 그대로 올렸으면
+      첫 배포가 실패할 값이 셋 있었다: health cron `0 */6`(Vercel Hobby 는 하루 1회가 상한 → 배포 거부 ·
+      그 값을 `demo-reset.test.ts` 가 `toBe` 로 잠가 두고 있었다) · 리전 미지정(기본 iad1 에서 서울 DB 를
+      수백 번 왕복) · `maxDuration` 60(구조화 job 이 `after()` 안에서 중간에 죽는 값). 그리고 표 18개가 RLS 없는
+      `public` 이라 브라우저의 anon 키로 Data API 를 두드리면 전 표가 읽혔다(이 세션에서 실측: REST 200).
+      고친 것 — `vercel.json` 을 하루 1회 · `regions: ["icn1"]` 로 · 정본 표 `apps/web/src/lib/api/vercel.ts`
+      (`FUNCTION_REGION` · `FUNCTION_MAX_DURATION_SEC` 300 · `LONG_RUNNING_ROUTES` 4문) + 라우트 넷의 리터럴 ·
+      `schema.ts` 전 표 `.enableRLS()` → 마이그레이션 **0008** · 시험: ⑥ 「하루 1회 이하 · 리전 하나 ·
+      maxDuration 리터럴 = 정본 · `startJob()` 호출부가 전부 표에」 + migration.test 「RLS 꺼진 표 0」 +
+      `db:migrate` 가 `rls N/N` 을 찍고 다르면 FAIL. `docs/DEPLOY.md` 에 「가장 빠른 길」 순서표 ·
+      Supabase Auth 걸음(GitHub provider 켜기 · Redirect URL · Data API 끄기) · Hobby 한도 표.
+      🙋 **남은 것은 전부 계정이다** — `docs/DEPLOY.md` 의 🙋 걸음. 나머지 대회 일감은 `docs/feedback/INBOX.md` 맨 위.
 
 ## P6 — 발표 (SPEC 9/16~9/17)
 

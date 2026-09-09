@@ -11,6 +11,81 @@
 
 ## 할 것
 
+### 🔴 대회 제출 계획 — 2026-09-09 감사 (제출 마감 9/20 · 참가 접수 마감 9/18)
+
+> **출처**: 사람 세션이 에이전트 65개로 저장소를 감사했다(영역 11 · 모의 심사위원 4 · 발견 122 → 반박 검증 생존 97).
+> 상세·근거(file:line)는 `docs/evidence/2026-09-09-audit/`. 대회 규칙 원문(FAQ·약관)은 그 폴더의 README 에.
+> **이 절이 비기 전에는 아래 옛 절·FINDINGS·PLAN 보다 위다.** 순서는 블로커 → 고장 → 고가치.
+> 🙋 는 계정·녹화·결정이 필요해 **사람만** 할 수 있다 — 루프는 그 항목을 건너뛴다.
+> 한 바퀴에 한 항목. 끝나면 「끝난 것」으로 옮기고 해시를 붙인다.
+
+#### 대회가 요구하는 것 (공식 페이지 · 2026-09-09 확인)
+
+- 제출물 = **배포된 서비스 링크(정상 작동 필수)** + 해결 문제 + AI 활용 방식 + **사용 AI 툴(필수 기재)**. 영상·슬라이드·썸네일은 요구 없음. 임시저장 불인정.
+- 예선 = 내부 심사 80%(기획력 · 실현 가능성 · 확장성 · AI 활용 적절성) + 온라인 투표 20%. 본선 = 기획력 · 확장성 · 기술력 · 발표 전달력.
+- **심사 기간(9/21~10/5) 링크 접속 불가 = 제외될 수 있음.** 개인정보·기밀 포함 금지. 유료 API 비용 본인 부담.
+
+#### 블로커 — 이것 없이는 제출이 안 되거나 첫 질문에서 무너진다
+
+| # | 무엇 | 누가 | 언제 | 완료 기준 | 상태 |
+|---|---|---|---|---|---|
+| B1 | 🙋 **참가 접수** + 제출 폼의 칸·글자 수·썸네일 규격 캡처(`docs/evidence/2026-09-09-submission-form/`) · 🙋 **밀린 커밋 push**(공개 저장소가 이틀 전 코드라 README 설치 첫 줄이 실패한다) · 이 계획의 INBOX 이관 | 사람 + Claude | 9/9 | 접수 완료 · origin/main == 로컬 · 이 절이 있다 | 이관 ✅(이 커밋) · 접수·push 🙋 |
+| B2 | **배포를 막는 코드 4건 → production** — cron 하루 1회 · 함수 리전 서울 · `maxDuration` 300(정본 `apps/web/src/lib/api/vercel.ts`) · RLS 마이그레이션 0008 → 🙋 Vercel Import → 첫 리셋 curl → `verify:prod` 0 failed. 절차·시간은 `docs/DEPLOY.md` 「가장 빠른 길」 | Claude → 사람 5~8h | 9/9 코드 · 9/10 배포 | verify.json 이 evidence 에 · SUBMISSION 🙋 표에 https:// | 코드 4건 ✅(이 커밋) · 배포 🙋 |
+| B3 | **Supabase 로그인 실제 통과 + Data API 끄기** — 실측: GitHub 공급자 OFF · 서명키 ES256(검증기는 HS256 만) · anon 키 REST 200. 🙋 대시보드 걸음(`docs/DEPLOY.md` ①-b) · Claude: `session.ts` alg 표 두 갈래(HS256 secret · ES256 JWKS kid · aud/iss) + 시험 3 · 이메일 문을 플래그 뒤로 숨기고 `/demo` 안내 · `e2e/production.ts` 에 로그인 문 검사 2 | 사람 1h + Claude 4.5h | 9/10 | GitHub 로그인 → 팀 생성 201 캡처 · anon REST 가 200 이 아님 | 대기 |
+| B4 | **플러그인 사용자 경로 실기** — SKILL.md 셋의 `$CLAUDE_PLUGIN_ROOT` 를 `${…}` 형태로(+ 그 반대를 강제하던 `skills.test` 뒤집기) · `/contextops:setup` · `/contextops:progress` Skill 추가 · Pack 진행 문단이 그 Skill 을 가르치게(TEMPLATE_VERSION↑ · golden 재생성) · 「기기 추가」 명령 문자열을 Skill 호출로 · 설치 첫 줄 「Node 20+」 · plugin.json repository/homepage/license → 🙋 이 기계에서 `claude plugin marketplace add ./` → install → 새 저장소 세션 → 훅 → setup → sync → progress 가 production Roadmap 을 움직이는지 transcript(`docs/evidence/2026-09-11-plugin-install/`) | Claude 6.5h + 사람 2.5h | 9/11 | transcript 가 있다 · skills.test 가 `${}` 를 강제 | 대기 |
+| B5 | **게스트 데모에 AI 산출물 심기** — ① 9/12 `fixtures/paylab-docs/goals.md` 의 M1~M3·G1~G3 기한을 **같은 10자**(2026-10-31 · 11-30 · 12-31)로 교체(인용 offset 보존 · 따라오는 씨앗·시험·리플레이 갱신 · offset 대조 1회 · evidence README 에 변경 이력 한 줄) ② 9/13 씨앗에 `docs/evidence/2026-09-07-p3-gemini/` probe-87-run3 의 충돌 3장(a/b 항목 id 매핑) + AiBadge 「AI 제안 · gemini-3.5-flash」 + 본문 「2026-09-07 실측 기록 · 이 데모에서는 재실행되지 않습니다」 + 완료된 구조화 job 1건 · SUBMISSION 에 같은 문장 ③ 조건부(9/14 저녁 판단 · 앞이 다 닫혔을 때만 9/15) `POST /demo/ai-once`(게스트 IP 축 · 일 5회 · 24h 캐시) — 9/16 안에 안 끝나면 버린다 | Claude 6.5h (+9h 조건부) | 9/12~13 | 정리 화면에 AI 배지 카드 3장 · 카드 본문에 기록 문장 · Roadmap due 전부 미래 | 대기 |
+| B6 | **제출 요건 문서·동결** — `docs/SUBMISSION.md` 맨 위에 「대회 규정 원문(2026-09-09 확인)」 절 + 「제출 폼 원문」 절(4칸 초안은 evidence 의 plan · 폼 상한으로 길이 시험) + 「URL 이 오면 지울 문장 목록」 + URL 이 있으면 세 문서에 「production 이 아직 없」 0건 시험 · 🙋 표에 「참가 접수」 행 · 9/15 랜딩 HTML 에 제출 4칸 텍스트(제3자 평가 솔루션용) · 🙋 9/18 저녁 `release` 브랜치 → Vercel Production Branch · Preview 끄기 · `loop/STOP` · 🙋 9/19 제출(임시저장 아님) | Claude 1.5h + 사람 1.5h | 9/10 · 9/18 · 9/19 | 폼 4칸 == SUBMISSION 절 · Production Branch=release · 제출 확인 캡처 | 대기 |
+
+#### 고장 15 — 심사 중 터질 수 있는 것 (B 에 든 것은 표시)
+
+| # | 고장 | 근거 | 고침 | 시간 |
+|---|---|---|---|---|
+| G1 | ~~health cron 6시간 → Hobby 배포 거부~~ | `vercel.json` · `demo-reset.test.ts` | ✅ 이 커밋 (B2) | — |
+| G2 | Supabase GitHub 공급자 꺼짐 — 로그인 버튼이 죽어 있음 | `/auth/v1/settings` external.github=false | 🙋 켜기 (B3) + `production.ts` 검사 | 1.5h |
+| G3 | 세션 검증기 HS256 만 · 프로젝트 키는 ES256 | JWKS · `src/lib/api/session.ts:53` | alg 표 두 갈래 (B3) | 2.5h |
+| G4 | 매직링크 실패가 사용자 탓으로 읽힘 — 기본 SMTP 는 외부 주소 거절 | `lib/web/auth.ts:55-62` | 이메일 문 숨김 + 문구 (B3) | 1h |
+| G5 | SKILL.md 셋 + Pack 진행 문단의 `$CLAUDE_PLUGIN_ROOT`(중괄호 없음) | `skills/sync/SKILL.md:16,38,55` · `skills.test.ts:66-71` | (B4) | 4h |
+| G6 | 「기기 추가」가 복사해 주는 `contextops setup …` 은 PATH 에 없다 | `schema/plugin.ts:81` → `sync.tsx:389` | (B4) | 2h |
+| G7 | Stop 훅이 **매 턴** 돌아 진행 이벤트가 턴마다 쌓임 · 중복 방지 env 이름 오타(`CLAUDE_SESSION_ID`→`CLAUDE_CODE_SESSION_ID`) · 5.5s > timeout 5s | `stop.mjs:151-168` · `progress.ts:39` | SessionEnd 로 이전 또는 세션·마일스톤 표시 파일(`_writes` 선언) + 「두 번 → 1건」 시험 | 3h |
+| G8 | `AI_OUTPUT_INVALID` retryable:false — 화면은 「다시 시도」인데 버튼이 없음 · 실측 실패율 약 1/3 은 비결정 | `schema/api.ts:107` · `retry/route.ts:17-21` | retryable:true + 재시도 상한 2 + 닻 시험 뒤집기 | 1.5h |
+| G9 | 「GEMINI_API_KEY 없으면 픽스처 결과로 떨어진다」 문서 4곳이 거짓 — 실제는 INTERNAL | `.env.example:42,44,50` · `DEPLOY.md` · `SUBMISSION.md:130` · `README.md:243` · `lib/ai` 에 fixture 갈래 0 | 문서 정정 + `AI_NOT_CONFIGURED`(503) 코드 + `/health` 에 ai 칸 | 2h |
+| G10 | AI 모델 정가가 실제의 1/5(입력)·1/3.6(출력) — $3 가드가 $11~15 통과 | `features.ts:142-143` | 🙋 정가 확인 뒤 두 줄 + 출처 주석 | 0.5h |
+| G11 | manifest.json 이 커밋된 저장소를 clone 한 팀원이 `manual` 로 오판 | `managed.ts:179-190` | git 추적 중이면 applied · clone 시험 | 1h |
+| G12 | 승인 0개 발행의 정답 문장이 「입력한 내용을 다시 확인해주세요」로 뭉개짐 | `publish.ts:52-56` · `lib/web/api.ts:85` | EMPTY_SNAPSHOT 이면 정본 문장 + [초안 보기] | 1h |
+| G13 | 게스트에게 draft 제안 [승인 요청] 활성 · 「owner 가 합니다」 두 문장이 게스트에겐 거짓 | `proposals.tsx:425-429,463` · `conflict-card.tsx:186-189` | author 갈래 + `writeDoor().reason` 우선 + 게이트 | 1h |
+| G14 | 경로가 escape 없이 태그·frontmatter·백틱에 들어감 — `-->`·`,` 한 글자로 P7 태그가 깨짐 | `tag.ts:38` · `common.ts:65-66` | 방어선만(safe + 치환 + JSON.stringify) · escape.test 표본 5 | 1.5h |
+| G15 | KNOWN_LIMITATIONS 「브라우저 e2e 가 없다 · e2e 폴더가 없다」 — 실제 `apps/web/e2e` 9파일 | `KNOWN_LIMITATIONS.md:66-67` | 사실로 교체 + 「없다고 적은 경로가 실존하면 FAIL」 시험 | 0.5h |
+
+#### 고가치 11 — 효과/시간 순 (블로커·고장이 닫힌 뒤)
+
+1. **H1 문서 정직성 묶음**(3h) — G9 의 「픽스처」 4곳 · G15 · 「관통 7단계」(실제 9) · README 숫자(표 16→18) · SPEC §12 Playwright · readme.test 에 「없다고 적은 경로가 실존하면 FAIL」.
+2. **H2 OG 태그·파비콘·metadataBase·게스트 재방문 복구**(2.5h) — `app/icon.svg` · `app/opengraph-image.png` 1200×630 · `layout.tsx` metadata · NeedsLogin 에 [샘플 팀 다시 열기 → /demo] · 게스트 TTL 24h. 온라인 투표 20%.
+3. **H3 제출서·README·랜딩의 「AI 활용」을 숫자와 이유로**(5h) — 실측 표(3,900자 · 항목 16 · 충돌 5 · 인용 20/20 · 약 20초 · 약 $0.02) · 「왜 서버는 Gemini」(P2·P3 · 공급자 교체가 `client.ts` 하나) · 도구 3층 · 사업 모델 4문장(코어 MIT+셀프호스팅 · 팀 단위 과금 · 첫 고객 = Claude Code 표준 10~50인 조직) · 경쟁 카드 · 「왜 지금」 · 심사위원 3분 코스 · README 첫 스크롤 캡처 3장 · 랜딩 하단 제출 4칸 텍스트.
+4. **H4 개인정보 처리방침 + Gemini 전송 고지 + 🙋 Gemini Tier 1 결정**(3h) — `app/privacy` · 랜딩 푸터·로그인 카드 링크 · PasteCard 에 「Google Gemini API 로 전송(국외)」 · KNOWN_LIMITATIONS 「AI 처리 데이터의 행방」. 🙋 AI Studio 빌링 연결이 문장을 정하므로 9/10 계정 작업에 같이.
+5. **H5 라이브 구조화 실패 처리**(4h) — G8 · G10 · [예시 문서 붙여넣기] 버튼(goals.md · 실측 20/20) · 힌트 문구 · RATE_LIMITED 백오프 1회.
+6. **H6 심사 기간을 견디는 장치**(4.5h) — `reset.ts` 를 「임시 slug 로 먼저 심고 성공 시 교체」로(실패 = 옛 데모 유지) · `.github/workflows/watch-prod.yml`(30분 · dispatch · 🙋 만든 날 일부러 깨서 메일 확인) · `ci.yml` 에 `pnpm --filter web build` · DEPLOY 「심사 기간 런북」 · 배너 「03시경」.
+7. **H7 게스트 UX 2종**(6h) — `writeDoor()` 를 PasteCard·QuestionStack·Answer·ProposalDecisions 앞에 + G13 + 「쓰기 버튼은 전부 writeDoor 를 지난다」 게이트 · `ITEM_TYPE_LABEL` 표 · 칩 한글 · 드로어 KeyValue.
+8. **H8 2분 영상**(Claude 3h + 🙋 4h) — `docs/PITCH.md` 컷 표 8컷 + 슬라이드 8장 뼈대 → 🙋 9/17 production 위에서 녹화 · 「15분」 스톱워치 실측 · 플러그인 세 장면 GIF · mp4 두 곳 보관 · `demo:db` 로컬 리허설(본선 보험). 규정상 필수 아님 — 투표·본선 자산.
+9. **H9 로그인 뒤 「내 팀」 홈 + 팀원 초대 API**(7h) — `app/t/page.tsx` · `POST/GET /teams/{id}/members` · 첫 로그인 승격 · 시험 「초대 전 404 → 후 200 · member 는 publish 403」. 심사 두 번째 질문.
+10. **H10 플러그인 고장 3건**(6h) — G7 · 첫 sync 가 기존 CLAUDE.md 를 경고 없이 교체(`preexisting` 게이트) · G11. 밀리면 첫 번째로 자른다.
+11. **H11 발행 흐름 고장 2건 + AI 예산 actor 축 + 목록 상한**(5.5h) — G12 · G14 · `AI_FEATURE_LIMITS` 에 perActorDaily(팀별+전역 이중) · 팀 3/사용자 · 프로젝트 5/팀 · `fetchItems` limit 200 + 「200개까지만」.
+
+#### 하지 말 것 (시간을 먹고 점수는 안 오른다 — 근거는 evidence 의 plan)
+
+역추적 태그 형식 변경 · 제출 전 질의창(ask) · 9/16 이후 ai-once · 브라우저 e2e GATE1·진짜 Next 위 e2e-sync·관통 ubuntu 이식(합 17h) ·
+CSP 헤더·프로세스 내 레이트 리밋·대안 배포 · refresh_token 갱신 코드·9/10 SMTP · 리셋 시각 이동을 실패 대응으로 삼기 ·
+9/18 동결 뒤 스키마 변경·main 자동 배포 유지·Preview 켜 두기 · 씨앗 질문에 roadmap 추가 · RepoPath 정규식 조이기 ·
+씨앗 AI 카드를 「방금 찾은」 것처럼 보이게 하기 · 랜딩 절 순서·팀명·i18n·STATUS 축약.
+
+#### 날짜별 (하루 사람 + Claude 합 6~8h · 예비일은 9/20 하루)
+
+9/9 접수·push·코드 4건(✅) → 9/10 배포·로그인 실측·Gemini 티어·SUBMISSION 규정 절 → 9/11 플러그인 실기(+ 저녁 루프 재개 여부 결정) →
+9/12 기한 문자열 교체·구조화 실패 처리 → 9/13 AI 산출물 심기·문서 정직성·OG → 9/14 감시·리셋 구조·privacy · **저녁 판단 지점** →
+9/15 AI 활용 문서·PITCH(또는 ai-once) → 9/16 팀원 초대·/t 홈·writeDoor → 9/17 🙋 녹화·한글 라벨·Stop 훅 → 9/18 최종 대조·🙋 release 동결·STOP →
+9/19 🙋 제출 → 9/20 예비(손대지 않는다).
+
+---
+
 ### 🔴 사람이 화면을 직접 열어 QC 했다 — 확인된 결함 넷 (2026-09-06)
 
 `pnpm --filter web demo:db` + `next dev` 로 **실제로 띄워서** 브라우저로 봤다.

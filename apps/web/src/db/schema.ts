@@ -14,6 +14,10 @@
 //    ② `pgEnum` 한 줄 · 테이블 한 블록
 //    ③ `pnpm --filter web db:generate` 로 마이그레이션 SQL 을 낸다 (손으로 쓰지 마라)
 //    ④ 인덱스를 더했으면 `INDEX_NAMES` 에 한 줄 — 그 표가 시험의 기대값이다
+//    ⑤ 🔴 **`.enableRLS()` 를 끝에 붙인다.** 모든 표는 RLS 가 켜져 있다(정책 없음 = anon/authenticated
+//       전면 거부). 브라우저에 실리는 anon 키가 Supabase Data API 로 표를 읽고 쓰는 길을 막는
+//       방어선이다 — 서버는 표 소유자 역할로 직결이라 영향이 없다 (2026-09-09 · 마이그레이션 0008 ·
+//       `test/migration.test.ts` 가 「꺼진 표 0」을 잰다 · Data API 자체는 docs/DEPLOY.md 걸음에서 끈다)
 //
 //  ⚠ 컬럼은 SPEC §2 의 「필수만」을 따른다. 모든 테이블에 `created_at`,
 //    갱신이 있는 테이블에 `updated_at`, 삭제가 있는 테이블에 `deleted_at`(soft delete).
@@ -182,7 +186,7 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-})
+}).enableRLS()
 
 export const teams = pgTable('teams', {
   id: id(),
@@ -193,7 +197,7 @@ export const teams = pgTable('teams', {
     .default({ auto_apply: false, auto_submit: false }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-})
+}).enableRLS()
 
 export const teamMembers = pgTable('team_members', {
   teamId: uuid('team_id').notNull().references(() => teams.id),
@@ -202,7 +206,7 @@ export const teamMembers = pgTable('team_members', {
   status: teamMemberStatus('status').notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-}, (t) => [primaryKey({ columns: [t.teamId, t.userId] })])
+}, (t) => [primaryKey({ columns: [t.teamId, t.userId] })]).enableRLS()
 
 export const projects = pgTable('projects', {
   id: id(),
@@ -220,7 +224,7 @@ export const projects = pgTable('projects', {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   deletedAt: deletedAt(),
-}, (t) => [unique('projects_team_slug_uq').on(t.teamId, t.slug)])
+}, (t) => [unique('projects_team_slug_uq').on(t.teamId, t.slug)]).enableRLS()
 
 export const repos = pgTable('repos', {
   id: id(),
@@ -240,7 +244,7 @@ export const repos = pgTable('repos', {
   lastScanAt: timestamp('last_scan_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-})
+}).enableRLS()
 
 export const sourceDocuments = pgTable('source_documents', {
   id: id(),
@@ -252,7 +256,7 @@ export const sourceDocuments = pgTable('source_documents', {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
   deletedAt: deletedAt(),
-})
+}).enableRLS()
 
 /**
  * ⚠ `content` 는 **팀 문서 본문**이다 — P1 이 막는 것은 코드 본문·secret·개인 기억·
@@ -267,7 +271,7 @@ export const sourceDocumentVersions = pgTable('source_document_versions', {
   contentHash: text('content_hash').notNull(),
   createdBy: uuid('created_by').references(() => users.id),
   createdAt: createdAt(),
-}, (t) => [unique('source_document_versions_doc_rev_uq').on(t.documentId, t.revision)])
+}, (t) => [unique('source_document_versions_doc_rev_uq').on(t.documentId, t.revision)]).enableRLS()
 
 export const contextItems = pgTable('context_items', {
   id: id(),
@@ -291,7 +295,7 @@ export const contextItems = pgTable('context_items', {
 }, (t) => [
   index('context_items_project_status_idx').on(t.projectId, t.status),
   unique('context_items_project_public_id_uq').on(t.projectId, t.publicId),
-])
+]).enableRLS()
 
 export const contextItemRevisions = pgTable('context_item_revisions', {
   itemId: uuid('item_id').notNull().references(() => contextItems.id),
@@ -316,7 +320,7 @@ export const contextItemRevisions = pgTable('context_item_revisions', {
   createdAt: createdAt(),
   //  ⚠ SPEC §2 는 `unique(item_id,revision)` 이라고만 적지만 복합 PK 로 둔다 —
   //    같은 유일성이고, PK 가 없으면 개정 행을 한 줄로 지목할 방법이 없다.
-}, (t) => [primaryKey({ columns: [t.itemId, t.revision] })])
+}, (t) => [primaryKey({ columns: [t.itemId, t.revision] })]).enableRLS()
 
 /**
  * 🔴 **충돌 한 장의 모양을 `CONFLICT_KIND_RULES` 표에서 DB 제약으로 내린다.**
@@ -420,7 +424,7 @@ export const conflicts = pgTable('conflicts', {
   conflictShapeCheck('a_ref', (r) => r.anchor === 'document'),
   conflictShapeCheck('b_ref', (r) => r.anchor === 'document' && r.needsB),
   conflictShapeCheck('severity', (r) => r.detected),
-])
+]).enableRLS()
 
 export const proposals = pgTable('proposals', {
   id: id(),
@@ -440,7 +444,7 @@ export const proposals = pgTable('proposals', {
   decisionNote: text('decision_note'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
-}, (t) => [index('proposals_project_status_created_idx').on(t.projectId, t.status, t.createdAt.desc())])
+}, (t) => [index('proposals_project_status_created_idx').on(t.projectId, t.status, t.createdAt.desc())]).enableRLS()
 
 export const contextVersions = pgTable('context_versions', {
   id: id(),
@@ -460,7 +464,7 @@ export const contextVersions = pgTable('context_versions', {
 }, (t) => [
   unique('context_versions_project_semver_uq').on(t.projectId, t.semver),
   unique('context_versions_project_snapshot_uq').on(t.projectId, t.snapshotHash),
-])
+]).enableRLS()
 
 export const packFiles = pgTable('pack_files', {
   versionId: uuid('version_id').notNull().references(() => contextVersions.id),
@@ -475,7 +479,7 @@ export const packFiles = pgTable('pack_files', {
   target: packTarget('target').notNull(),
   createdAt: createdAt(),
   //  ⚠ `unique(version_id,path)` 은 복합 PK 가 이미 보장한다 (context_item_revisions 와 같다).
-}, (t) => [primaryKey({ columns: [t.versionId, t.path] })])
+}, (t) => [primaryKey({ columns: [t.versionId, t.path] })]).enableRLS()
 
 export const devices = pgTable('devices', {
   id: id(),
@@ -494,7 +498,7 @@ export const devices = pgTable('devices', {
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   createdAt: createdAt(),
-})
+}).enableRLS()
 
 export const syncReports = pgTable('sync_reports', {
   id: id(),
@@ -505,7 +509,7 @@ export const syncReports = pgTable('sync_reports', {
   manifestHash: text('manifest_hash').notNull(),
   reportedAt: timestamp('reported_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: createdAt(),
-}, (t) => [index('sync_reports_project_device_reported_idx').on(t.projectId, t.deviceId, t.reportedAt.desc())])
+}, (t) => [index('sync_reports_project_device_reported_idx').on(t.projectId, t.deviceId, t.reportedAt.desc())]).enableRLS()
 
 export const progressEvents = pgTable('progress_events', {
   id: id(),
@@ -526,7 +530,7 @@ export const progressEvents = pgTable('progress_events', {
   /** 같은 이벤트가 두 번 와도 한 행이다 (SPEC §5 — 중복은 200 idempotent). */
   clientEventId: uuid('client_event_id').notNull().unique(),
   createdAt: createdAt(),
-}, (t) => [index('progress_events_project_milestone_created_idx').on(t.projectId, t.milestoneId, t.createdAt.desc())])
+}, (t) => [index('progress_events_project_milestone_created_idx').on(t.projectId, t.milestoneId, t.createdAt.desc())]).enableRLS()
 
 /**
  * 🔴 **서버측 AI 호출 장부** (SPEC §2 · §7.5 · P3).
@@ -557,7 +561,7 @@ export const aiUsage = pgTable('ai_usage', {
 }, (t) => [
   index('ai_usage_day_feature_idx').on(t.day, t.feature),
   index('ai_usage_created_idx').on(t.createdAt),
-])
+]).enableRLS()
 
 /**
  * 🔴 **한 요청 안에서 안 끝나는 AI 일 하나** (SPEC §7.1·§7.2 · §9 화면 3).
@@ -617,7 +621,7 @@ export const aiJobs = pgTable('ai_jobs', {
   aiJobShapeCheck('finished_at', (r) => r.finished),
   aiJobShapeCheck('result', (r) => r.result),
   aiJobShapeCheck('error_code', (r) => r.error),
-])
+]).enableRLS()
 
 /** `conflictShapeCheck` 와 같은 자리 — 표의 한 줄을 보고 그 상태가 그 칸을 갖는지 답한다. */
 function aiJobShapeCheck(column: string, needs: (rule: AiJobStatusRule) => boolean) {

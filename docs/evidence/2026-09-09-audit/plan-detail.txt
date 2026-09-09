@@ -1,0 +1,428 @@
+
+
+########## EXEC ##########
+ContextOps 의 뼈대는 대회 평균을 훌쩍 넘는다 — 결정론 컴파일러(P4 golden 3종)·전 줄 역추적(P7)·withBudget 한 문(P3)·훅 무변경(P6)·게스트 데모 GATE 3 가 전부 코드와 게이트로 실재하고, 진짜 Gemini 실측(probe 17개)까지 남아 있다. 그러나 오늘(9/9) 기준 제출 요건인 「정상 작동하는 서비스 링크」가 없고, 이번 감사에서 확인된 사실은 더 구체적이다: Supabase 프로젝트의 GitHub provider 가 꺼져 있어(/auth/v1/settings external.github=false) 로그인 화면의 유일한 accent 버튼이 지금 죽어 있고, JWKS 에는 ES256 키만 있는데 session.ts:53 은 HS256 만 받으며, vercel.json:13 의 6시간 health cron 은 Vercel Hobby 에서 첫 배포 자체를 거부하고, loop/STOP 이 9/7 22:35 부터 있어 AutoPush 가 멈춘 채 공개 저장소가 10커밋 뒤(README 설치 첫 줄 marketplace add 가 지금 실패)다. 가장 큰 구멍 셋은 ① 심사위원이 /demo 에서 AI 가 돈 흔적을 한 개도 못 본다(게스트 writes:false · 씨앗에 AI job/충돌 0 · ai-once 라우트 없음) ② 플러그인 사용자 경로가 한 번도 돈 적 없다(`$CLAUDE_PLUGIN_ROOT` bare 형태 · `contextops setup` 이라는 PATH 에 없는 명령 · 실제 install 기록 0) ③ RLS 없는 public 스키마 + 브라우저 anon key 라 Data API 가 켜져 있으면 앱 가드가 통째로 우회된다. 대회 규정 원문(FAQ·약관·API 값)을 읽은 결과 제출물은 링크·해결 문제·AI 활용·AI 도구 넷뿐이고 영상·슬라이드는 요구되지 않으며, 참가 접수(9/18 23:59:59)가 제출(9/20 23:59:59)과 별개의 마감이라 접수는 오늘 밤 한다. 순서는 명확하다: 오늘 저녁 이 계획을 docs/feedback/INBOX.md 로 옮기고(루프의 일감 입구는 그것뿐이다) 배포를 막는 코드 4건(cron·regions·maxDuration·RLS)을 고쳐 사람이 push → 9/10 사람이 Vercel·Supabase 계정 작업(현실적으로 5~8h · 하루를 넘기면 9/11 오전으로) + 로그인 실측(성공 기준은 콜백 화면이 아니라 로그인 뒤 POST /teams 201) → 9/11 플러그인 경로 수리 + 실제 설치 transcript → 9/12 goals.md 기한을 같은 길이의 문자열로 옮겨 offset 을 보존한 뒤 9/13 실측 Gemini 충돌 카드 3장을 「2026-09-07 기록물 · 이 데모에서 재실행되지 않음」이라 적고 심기 → 그 뒤 문서 정직성·OG·개인정보/Gemini 고지·감시 장치·2분 대본. 팀원 초대 API 와 /t 홈은 심사 두 번째 질문이라 9/16 에 넣고, ai-once 는 서버리스 IP 추출이 코드에 없어 9h 짜리라 9/14 저녁 판단 지점에서 앞 일정이 전부 닫혔을 때만 9/15 에 하며, 질의창(ask)은 제출 전엔 하지 않는다. 9/18 release 브랜치 동결(Preview 배포 끄기 · 루프 STOP), 9/19 제출 완료, 9/20 은 예비다. 이대로면 모의 심사 평균 4.6 → 7.3 이 현실적이고, 그 위로 올리는 것은 데모 안의 라이브 AI 와 영상이다.
+
+########## BLOCKERS ##########
+
+[B1] 이 계획을 저장소의 일감 체계로 옮기고 「누가 Claude 시간을 돌리나」를 정한다 — INBOX.md 이관 · loop/STOP 결정 · 밀린 10커밋 push
+ owner=둘 다 effort=1.5h criteria=["INBOX.md 맨 위에 이 계획이 있고 각 항목에 owner·날짜·완료 기준이 있다","origin/main == 로컬 HEAD","9/12 아침 루프 창이 떠 있고 첫 바퀴가 INBOX 의 Claude 항목을 집는다"]
+ WHY: CLAUDE.md 는 일감을 INBOX → FINDINGS 고장 → PLAN `- [ ]` 맨 위 순으로만 고른다. 지금 PLAN 의 `- [ ]` 는 488(Vercel)·531(영상)·532(제출서) 셋뿐이라 이 계획의 Claude 항목 40여 개는 INBOX 에 적히지 않으면 어느 세션도 집지 않는다. loop/STOP 이 2026-09-07 22:35 부터 있어 루프와 AutoPush(loop/env.ps1:132) 둘 다 멈춰 있고 그래서 origin/main 이 10커밋 뒤다 — 공개 저장소의 README 설치 첫 줄이 지금 실패하고 FINDINGS 44(업로드 성공을 실패로 보고) 번들이 공개돼 있다. STOP 을 치우면 루프가 PLAN 순서대로 다른 일을 하고, 안 치우면 계획의 Claude 시간은 전부 사람이 붙은 대화 세션이다 — 11일 × 7h 의 전제가 여기서 갈린다.
+ ACTIONS:
+  - [Claude·오늘] docs/feedback/INBOX.md 「할 것」 맨 위에 「대회 제출 계획(2026-09-09 감사)」 절을 만들고 이 보고서의 blockers → bugs_to_fix → high_value 순으로 항목·완료 기준·날짜를 옮긴다. 각 항목에 owner(사람/Claude)를 적고 사람 항목은 🙋 로 표시해 루프가 건너뛰게 한다
+  - [사람·오늘] 결정: 9/9~9/11 은 계정 작업과 인터리브라 대화 세션(사람이 붙은)으로 처리하고 STOP 은 둔다. 9/12 아침 STOP 을 치우고 `loop/ctl.ps1 start`(보이는 터미널 창)로 INBOX 순서를 루프에 맡긴다. 9/18 release 동결 때 다시 STOP
+  - [사람·오늘] `git push` — 루프가 없으니 매 CI GREEN 커밋마다 사람이 push 한다(9/12 이후는 AutoPush). 작업 트리의 apps/web/public/shots/screen-context.png 변경은 커밋에 섞지 않는다(관통 churn)
+  - [Claude] docs/STATUS.md 「막힌 것」 표를 이 계획의 사람 항목 목록으로 갱신하고 「GitHub 초록」 문장에 어느 커밋까지의 초록인지 해시를 적는다
+ SOURCES: 비평가 지적 1(작업 진입 규칙 미연결 · loop/STOP) | 시험·CI/로컬 main 이 origin 보다 10커밋 앞
+
+[B2] production 배포 — 배포를 막는 코드 4건을 오늘 고치고, 사람이 Vercel 을 연결해 verify:prod 0 failed 를 남긴다(사람 시간은 5~8h 로 잡는다)
+ owner=둘 다 effort=9h criteria=["verify:prod 0 failed 의 verify.json 이 docs/evidence 에 있다","시크릿 창에서 https://<prod>/demo → Context 까지 3분 안에 열린다","첫 리셋 실측 초가 기록돼 있고 maxDuration 의 1/3 이하다","SUBMISSION.md 의 production URL 행에 https:// 가 있다"]
+ WHY: 제출물 첫 줄이 「서비스 접속 링크(정상 작동 필수)」이고 FAQ 는 「심사 기간 링크 미접속 시 제외」라 명시한다. 지금 올리면 apps/web/vercel.json:13 `0 */6 * * *` 가 Hobby 「Cron expressions that would run more frequently will fail during deployment」에 걸려 첫 배포가 거부되고(demo-reset.test.ts:199-201 이 그 값을 잠가 둠 — 고치면 CI 도 같이 손봐야 한다), regions 미지정(iad1)에서 서울 Supabase(aws-0-ap-northeast-2)로 수백 번 왕복하는 리셋이 maxDuration 60(cron/demo-reset/route.ts:27 · 「Hobby 상한 60」은 Fluid 이전 옛 값, 지금 기본·최대 300)을 넘기면 reset.ts 가 팀을 지워 /demo 가 하루 종일 404 다. 마이그레이션 0007 이 production 에 올라갔는지 기록이 없고 outputFileTracingIncludes 가 픽스처를 싣는지는 첫 리셋 curl 에서만 안다. 첫 배포는 env 오타·pnpm·트레이싱 하나로 두세 번 재배포가 나므로 사람 시간은 3h 가 아니라 5~8h 다.
+ ACTIONS:
+  - [Claude·오늘] apps/web/vercel.json: health cron 을 하루 1회 `0 21 * * *`(06:00 KST · 리셋 18:00 UTC 와 다른 시각)로 바꾸거나 watch-prod 가 keep-alive 를 겸하면 삭제 · `regions: [icn1]` 추가 · demo-reset.test.ts:199-202 를 「모든 cron 의 분·시 필드가 숫자 하나(하루 1회 이하)」+「regions 가 정확히 하나」검사로 · README.md:289 · vercel.json _comment · SPEC §11(:120·:683) · health/route.ts:6 의 「6시간마다」 갱신
+  - [Claude·오늘] cron/demo-reset/route.ts:27 maxDuration 을 상수 하나(300 · 주석 「Fluid compute 기본 켜짐 기준 Hobby 기본·최대 300」)로 올리고 documents·jobs/retry·batch-draft 라우트에도 export · 시험 ⑥에 「maxDuration ≤ 300」 · SPEC.md:445 갱신
+  - [Claude·오늘] docs/DEPLOY.md 머리에 「가장 빠른 길」 순서표(코드 → Vercel Import(Root apps/web · env Import · Fluid 켜짐 확인) → Supabase Auth 걸음 → db:status → 첫 리셋 curl → verify:prod → 로그인 실측 → URL 기입 · 각 걸음 예상 시간) + 「배포 전 `pnpm --filter web db:status` 가 pending 0」 + 「Hobby 한도 표(확인일 2026-09-09): Cron 1회/일·±59분 · 리전 1 · Fluid/300 · WAF 3+1)」
+  - [사람·9/10 · 5~8h] Vercel Import → 첫 배포 로그(실패하면 원인 한 줄을 STATUS 에 적고 재배포) → `pnpm --filter web db:status`(pending 이면 db:migrate · 0007+0008) → `time curl -H "Authorization: Bearer $CRON_SECRET" https://<prod>/api/v1/cron/demo-reset` 로 items 27 과 소요 초를 docs/evidence/<날짜>-production/ 에 기록(outputFileTracing 실패 시 키를 `/api/v1/cron/demo-reset/route` 로 바꿔 1회 재배포)
+  - [사람·9/10] `pnpm --filter web verify:prod -- --url https://<prod>` 0 failed → .ci/production/verify.json 을 docs/evidence 로 복사 → SUBMISSION.md:16 · README 머리에 URL · 9/10 안에 못 끝나면 9/11 오전을 사람 시간으로 쓰고 9/11 의 플러그인 항목을 오후로 민다
+  - [Claude·리셋이 100초를 넘으면] seed-demo.ts 의 기기 14대·progress 루프를 Promise.all 로 병렬화(1h) — 60초 근처가 아니라 300 의 1/3 을 기준으로
+ SOURCES: 배포 준비/health cron 6시간 → Hobby 거부 | Vercel Hobby/health Cron 배포 실패 | Vercel Hobby/리전 미지정 iad1 | Vercel Hobby/「Hobby 상한 60」 옛 정보 | 배포 준비/DEPLOY.md 가 가장 빠른 길이 아니다 | API·DB/마이그레이션 0007 pending 미검사 | 서버측 AI/Vercel maxDuration 없음 | 배포 준비/outputFileTracingIncludes 미검증 | 시험·CI/verify:prod 실제 production 0회 | 비평가 지적 2(사람 시간 과소평가)
+
+[B3] Supabase Auth 를 처음으로 실제로 통과시킨다 — GitHub provider 가 꺼져 있고(확인) 서명키는 ES256(확인)인데 검증기는 HS256 만 받는다 · 매직링크는 남의 주소엔 안 간다 · 같은 대시보드 방문에서 RLS/Data API 도 닫는다
+ owner=둘 다 effort=7.5h criteria=["docs/evidence 에 GitHub 로그인 → 팀 생성 201 캡처와 access_token alg 기록이 있다","verify:prod 에 로그인 문 검사 2개가 추가돼 초록이다","production 에서 anon key 로 rest/v1/users 가 거부된다(캡처) · migration.test rowsecurity 게이트 초록","로그인 화면의 이메일 칸이 숨겨졌거나 SMTP 가 붙어 있고, 실패 문구가 사용자 탓이 아니다"]
+ WHY: 이 세션에서 공개 엔드포인트를 읽었다: /auth/v1/settings external.github=false → login/page.tsx:75 의 유일한 accent 버튼 「GitHub로 계속」을 누르면 provider not enabled 로 되돌아와 callback/page.tsx:22-25 가 「다시 시도해주세요」를 띄운다. /auth/v1/.well-known/jwks.json 에는 ES256 키(kid b1bbd8ac…) 하나뿐이고 2026-09-06 생성 프로젝트라 access_token 은 ES256 일 가능성이 높은데 session.ts:53 은 `alg !== 'HS256'` 이면 401 이다 — provider 를 켜도 「로그인은 됐는데 모든 화면이 로그인하러 가기」 무한 고리가 된다(api.ts:127 401→clearSession→NeedsLogin). 이메일 문은 기본 SMTP 라 프로젝트 팀 멤버 외에는 「Email address not authorized」인데 auth.ts:61 은 「주소를 다시 확인해주세요」라고 사용자 탓을 한다. DEPLOY.md 에 Site URL·Redirect URLs·Providers·SMTP 걸음이 0줄이다. 그리고 schema.ts 표 18개가 RLS 없는 public 이고 anon key 가 번들에 실리므로 Data API 가 켜져 있으면 `curl <ref>.supabase.co/rest/v1/devices -H apikey:<anon>` 한 줄로 모든 팀의 토큰 해시·이메일·문서를 읽고 쓴다 — 제품 코드는 전부 Drizzle(`.from(` 은 PostgREST 호출 0건)이라 Data API 를 꺼도 안전하다. 성공 기준은 「콜백 화면 캡처」가 아니라 「로그인 뒤 POST /teams 201」이어야 한다.
+ ACTIONS:
+  - [사람·9/10 첫 걸음 · 0.5h] Supabase → Authentication → JWT Keys 에서 CURRENT 키 종류 기록 → Providers → GitHub 켜기(GitHub → Developer settings → OAuth App · callback `https://<ref>.supabase.co/auth/v1/callback`) → URL Configuration: Site URL=https://<prod> · Redirect URLs 에 `https://<prod>/auth/callback` 과 `http://localhost:3000/auth/callback` → JWT expiry 를 최대치로(1시간 컷 회피 · refresh 코드 대신) → Settings → API → Data API 끄기(또는 Exposed schemas 에서 public 제거)
+  - [Claude·9/10 · 2.5h] session.ts 를 alg 표로 두 갈래: HS256 → SUPABASE_JWT_SECRET(게스트·시드 토큰 signSessionJwt 는 그대로), ES256 → `${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/.well-known/jwks.json` 을 kid 로 골라 node:crypto createPublicKey(jwk)+verify('sha256', …, {dsaEncoding:'ieee-p1363'}) · JWKS 는 globalThis 캐시 1h · 알고리즘은 헤더가 아니라 키 종류가 정한다 · `aud==='authenticated'`·iss 접두 검사 같은 자리 · 시험(ES256 키쌍 생성→통과 · kid 불일치→401 · alg none→401). 대시보드에서 HS256 을 CURRENT 로 돌릴 수 있으면 코드는 보험으로 남긴다
+  - [Claude·9/10 · 1h] 이메일 문 결정 B: lib/web/auth.ts authConfig 에 `emailLogin: NEXT_PUBLIC_AUTH_EMAIL_LOGIN==='1'` 플래그(.env.example → DEPLOY 표 한 줄 · deploy-doc.test 가 강제) · login/page.tsx:80-103 블록을 플래그로 숨기고 그 자리에 「GitHub 계정이 없으신가요? → 샘플 팀으로 둘러보기(/demo)」 · auth.ts:61 문구를 「이 주소로는 보낼 수 없습니다 — 심사위원이시면 /demo 로」 · callback/page.tsx:36-45 오류 카드에 /demo 링크 + error_code 를 meta mono 로 · KNOWN_LIMITATIONS 에 「매직링크: 기본 SMTP 는 팀 멤버 주소만 · 시간당 2통」(Resend 연결은 nice_to_have)
+  - [Claude·9/10 · 1h] docs/DEPLOY.md 에 🙋 「①-b Supabase Auth」 표(위 항목 그대로) + deploy-doc.test 절 제목 검사 · e2e/production.ts DOORS 에 (a) `/login` HTML 에 `href*="/auth/v1/authorize?provider=github"` 링크 존재 (b) 그 href 에서 Supabase origin 을 파싱해 `/auth/v1/settings` external.github===true — 자격증명 없이 기계가 Provider 미설정을 잡는다
+  - [Claude·오늘] apps/web/drizzle/0008_*.sql: 표 18개 `ALTER TABLE … ENABLE ROW LEVEL SECURITY`(정책 없음 = anon/authenticated 전면 거부) · migrate.ts 장부 · test/migration.test.ts 에 「pg_tables.rowsecurity 전부 true」 게이트 · SPEC.md:114 「RLS 미사용」 갱신 · DEPLOY 검증 넷에 다섯째 「anon key 로 GET /rest/v1/users 가 401/404」
+  - [사람·9/10 · db:migrate 직전 2분] `SELECT current_user; SELECT tablename, tableowner FROM pg_tables WHERE schemaname='public'` 로 DATABASE_URL 의 역할이 표 소유자(postgres)인지 확인 — 소유자가 아니면 정책 없는 RLS 가 서버도 막는다. 소유자면 0008 적용 → anon key 로 rest/v1/users curl 이 거부되는 캡처
+  - [사람·9/10 · 0.3h] 시크릿 창에서 GitHub 로그인 → /t/new → 팀 생성 201 → localStorage access_token 헤더의 alg 를 기록 → 캡처를 docs/evidence/<날짜>-auth/ 에
+ SOURCES: 로그인 두 문/GitHub provider 꺼짐(확인) | 로그인 두 문/ES256 서명키 세대(JWKS 확인) | 로그인 두 문/매직링크 기본 SMTP | 로그인 두 문/DEPLOY.md Auth 걸음 없음 | 로그인 두 문/로그인 게이트 0개 | 로그인 두 문/콜백·OTP 실패 원인 삼킴 | API·DB/실제 Supabase 로그인 0회 · HS256 전용 | 배포 준비/HS256 전용 세션 검증 | 보안/RLS 없는 public 스키마 + anon key | 보안/실제 로그인 미검증 | owner 여정/로그인 0회 · 관통이 ① 을 안 잰다 | 제품·확장성/로그인 걸음 없음 | API·DB/세션 갱신 없음(JWT expiry 로 대체) | 비평가 지적 4(이메일 문 반쪽) · 11(Data API 근거 · 역할 확인)
+
+[B4] 플러그인 사용자 경로를 처음으로 끝까지 밟는다 — `$CLAUDE_PLUGIN_ROOT` bare · `contextops setup` 없는 명령 · Node 요구 미기재 · 실제 install 기록 0
+ owner=둘 다 effort=9h criteria=["docs/evidence 에 실제 install → /contextops:sync → progress 성공 transcript 가 있다","웹 「기기 추가」의 한 줄을 Claude Code 프롬프트에 붙이면 setup 이 끝난다","skills.test 가 `${CLAUDE_PLUGIN_ROOT}` 형태를 강제하고 골든 3종이 새 문단으로 초록이다","README 설치 블록 첫 줄에 Node 요구가 있다"]
+ WHY: SKILL.md 셋(sync:16,38,55 · init · propose)이 중괄호 없는 `$CLAUDE_PLUGIN_ROOT` 를 쓰는데 Claude Code 2.1.260 바이너리의 치환은 `${CLAUDE_PLUGIN_ROOT}` 형태뿐이고 Bash 도구 env 에도 그 변수가 없다(이 세션에서 재현). skills.test.ts:66-71 이 오히려 잘못된 형태를 강제한다. Pack 이 모든 팀원 저장소에 심는 progress-report.ts:13 문단도 같은 변수라 진행 보고가 영원히 죽고(Roadmap 이 안 움직인다), 웹 「기기 추가」가 복사해 주는 `contextops setup …`(plugin.ts:81 → sync.tsx:389)은 PATH 에 없다. README·랜딩·SUBMISSION 설치 4줄 어디에도 Node 요구가 없다. 심사위원이 「링크 → 플러그인 설치 → 첫 sync」를 따라 하면 3번째 줄에서 멈춘다 — 제출물의 핵심 주장이 「Claude Code 플러그인」인데 그 설치 경로를 한 번도 지나지 않았다.
+ ACTIONS:
+  - [Claude·9/11] skills/*/SKILL.md 의 경로를 `${CLAUDE_PLUGIN_ROOT}` 로 · skills.test.ts 검사를 중괄호 형태로 뒤집기 · progress.ts:39 env 를 `CLAUDE_CODE_SESSION_ID` 로
+  - [Claude·9/11] skills/progress/SKILL.md(모델 호출 가능 · `node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" progress $ARGUMENTS`) 추가 · progress-report.ts 문단을 `/contextops:progress --milestone …` 으로 · TEMPLATE_VERSION 올리고 골든 3종 재생성(UPDATE_GOLDEN=1) · skills.test 의 이름 배열·invocation 표 갱신
+  - [Claude·9/11] skills/setup/SKILL.md(disable-model-invocation · `… setup $ARGUMENTS --no-browser`) 추가 · SETUP_COMMAND_NAME 을 `/contextops:setup` 으로 · setup.ts 마지막 안내 · README:216 · landing.tsx:262 · SUBMISSION:124 동기화 · readme.test 로 네 자리 같은 문자열 잠금 · KNOWN_LIMITATIONS 에 「토큰이 사용자 자신의 모델 컨텍스트를 지난다」 한 줄
+  - [Claude·9/11] 설치 블록 첫 줄 「Node 20+ 필요 — node -v」(상수 하나) · setup 이 process.version 20 미만이면 경고 · plugin.json 에 repository/homepage/license/keywords
+  - [사람·9/11 · 2h] 이 기계에서 `claude plugin marketplace add ./` → `claude plugin install contextops` → 새 저장소 세션 → 훅 알림 → `/contextops:setup`(웹 카드 한 줄 붙여넣기) → `/contextops:sync` → 작업 후 progress 가 production Roadmap 을 움직이는지 → transcript 캡처를 docs/evidence/2026-09-11-plugin-install/ 에. Skill 본문 `${}` 치환은 바이너리 문자열로만 확인했으므로 이 실기 없이는 어떤 수정도 확인된 것이 아니다 — 안 되면 그 자리에서 고친다(하루 지연 예비)
+  - [사람·9/11 · 0.5h] production 에 CLI 를 손으로 붙인다: 웹에서 토큰 발급 → setup → sync → status → Sync 화면에 applied — 진짜 Next API 와 CLI 의 런타임 계약(봉투·ETag/304·401)을 소켓 위에서 한 번 맞춘다
+ SOURCES: 플러그인/$CLAUDE_PLUGIN_ROOT 는 없는 변수 | 플러그인/contextops setup 은 PATH 에 없다 | 플러그인/claude plugin install 기록 0 | 플러그인/Node 요구 미기재 | 플러그인/Claude Code 안에서 도는 장면 캡처 없음 | 시험·CI/플러그인 번들이 진짜 Next API 와 통신하는 검사 없음(30분 손 리허설로 대체) | 시험·CI/claude plugin validate 9/3 이후 재검증 없음
+
+[B5] 게스트 데모에 AI 가 만든 것을 심는다 — goals.md 기한을 같은 길이로 먼저 옮긴 뒤(offset 보존) 실측 Gemini 충돌 카드 3장을 「기록물」로 명시해 심는다 · ai-once 는 판단 지점 뒤로
+ owner=Claude effort=6.5h criteria=["게스트가 /demo → 정리 화면에서 AI 배지 붙은 충돌 카드 3장을 보고 카드 본문에 「기록」 문장이 있다","카드의 a/b 항목을 누르면 Context 드로어와 원문 offset 이 열린다(P7 · 새 goals.md 바이트 기준)","Roadmap 의 모든 due 가 2026-10 이후이고 관통·시험이 초록","ai-once 를 만들었다면 같은 IP 6번째 호출이 429 이고 withBudget 장부에 남는다"]
+ WHY: 심사위원·투표자의 첫 클릭은 /demo 인데 거기엔 AI 산출물이 0 이다 — actor-rules.ts:31 guest.writes=false, seed.ts:936-948 이 미완 job 을 지우고, 충돌 카드는 픽스처 open_question 뿐이라 정리 화면 머리가 「AI가 찾은 0건」이다. 「작동하는 AI 서비스」를 강조하는 대회에서 첫 질문이 「AI 는 어디서 돌아요?」가 된다. probe-87-run3.json 의 실제 충돌(a/b 항목 id · 질문 · severity)이 데모 테넌트의 goals.md/old-roadmap 항목을 가리키므로 역추적이 끊기지 않는다. 다만 두 제약이 있다: ① 그 인용·offset 은 지금의 goals.md 바이트를 가리키므로 기한(2026-04-30 등)을 다른 길이로 바꾸면 카드의 P7 역추적이 조용히 끊긴다 — 「2026-04-30→2026-10-31 · 05-29→11-30 · 06-30→12-31」처럼 같은 10자로만 바꾸고 날짜 변경을 카드보다 먼저 한다 ② 리셋마다 다시 심기는 기록물이 「지금 AI 가 돌았다」로 읽히면 제품이 내세운 정직성과 어긋난다 — 카드 본문과 SUBMISSION 에 같은 문장을 적는다. ai-once(§7.4)는 features.ts:86 의 게스트 IP 축이 코드에 없어(x-forwarded-for 추출 0건) 7h 가 아니라 9h 이고, 제출 직전 새 LLM 표면은 429·비용 노출을 키운다 — ask 를 자른 것과 같은 논리로 9/14 저녁 판단 지점 뒤에만.
+ ACTIONS:
+  - [Claude·9/12 · 3.5h] fixtures/paylab-docs/goals.md 의 M1~M3·G1~G3 기한을 같은 길이의 문자열(2026-10-31 · 2026-11-30 · 2026-12-31)로 바꾸고 seed.ts:465 인용문 · demo-guest.test.ts:178 · ai-structure.test.ts:382 · structure.ts · replay 픽스처를 따라 갱신 · probe-87-run3 의 인용 offset 이 새 바이트에서도 같은 글자를 가리키는지 스크립트로 한 번 대조 · docs/evidence/2026-09-07-p3-gemini/README 에 「픽스처 변경 이력: 2026-09-12 기한 문자열 같은 길이 교체 · offset 불변」 한 줄 · roadmap.tsx 에 `due < today` 면 「기한 지남 N일」 낱말 · 씨앗 두 발행 사이 시각 차(v1.0.0 은 -7일)
+  - [Claude·9/13 · 3h] 데모 씨앗에 probe-87-run3 의 충돌 3장을 contradiction 행으로(a/b 항목 id 매핑) · AiBadge 「AI 제안 · gemini-3.5-flash」 + 카드 본문에 「2026-09-07 실측 기록 · 이 데모에서는 재실행되지 않습니다」 · 완료된 structure job 1건을 succeeded 로 심어 화면 3 진행 카드가 「항목 후보 N개 · 조각 n/m」을 보이게 · SPEC §10.3 씨앗 정본에 근거 · SUBMISSION 「어떻게 보나」에 같은 문장 · 게스트 내비에서 Context 가 「가져오기」 앞에 오도록 screens.ts 순서 조정
+  - [Claude] ai-budget.test 의 demo 행 주석(features.ts:26-27 「죽은 기능 시험이 빨개진다」)을 사실로 정정
+  - [판단 지점 9/14 저녁 · 조건부 9/15 · 9h] 앞 항목이 전부 닫히고 CI GREEN 이면 POST /api/v1/demo/ai-once: route.ts 에 x-forwarded-for 첫 항목 → actor 키(IP 축 신설) → withBudget('demo') 일 5회 → 픽스처 goals.md+old-roadmap 으로 detectConflicts → 24h 캐시 행(같은 픽스처 해시면 재호출 없음) → 배너 [AI 한 번 실행해보기] + 정리 화면 폴링 · 키 없음/429/예산 초과면 기록 카드를 「기록된 결과」 배지로 · 9/16 안에 안 끝나면 버리고 본선용으로
+ SOURCES: 웹 화면/게스트가 AI 도는 모습을 못 본다 | 서버측 AI/게스트 심사위원 AI 체감 0 | 제품·확장성/투표자가 AI 를 눌러 볼 수 없다 | 웹 화면/데모 시간축 어긋남 | 비평가 지적 3(9/12·9/13 순서 · offset) · 5(ai-once 모순 · IP 축) · 9(기록물 표기)
+
+[B6] 제출 요건 자체 — 참가 접수를 오늘 밤 하고 폼 규격을 캡처한다 · 규정 원문 절 · 제출 폼 4칸 원문 · 링크는 /demo · release 브랜치 동결 + Preview 끄기 · 「production 없음」 문장 제거 게이트
+ owner=둘 다 effort=3h criteria=["9/9 참가 접수 완료 · 폼 규격 캡처가 docs/evidence 에 있다 · 9/19 제출 완료 캡처","제출 폼 4칸이 SUBMISSION.md 「제출 폼 원문」과 글자 그대로 같고 길이 시험이 초록","Vercel Production Branch 가 release 이고 Preview 배포가 꺼져 있으며 loop/STOP 이 있다","URL 기입 뒤 세 문서에 「production 이 아직 없」이 0건(시험)"]
+ WHY: 이번에 읽은 공식 원문: 참가 접수 9/18(금) 23:59:59 · 과제 제출 9/20(일) 23:59:59 · 제출물은 배포 링크·해결 문제·AI 활용 방식·사용 AI 툴 넷뿐(영상·슬라이드 요구 없음) · 원티드 회원 필수 · 1인 1회 · 임시저장 불인정 · 심사 기간 링크 미접속 시 제외 · 과제는 사이트에 게재되고 제3자 평가 솔루션이 분석할 수 있음 — 이 중 어느 것도 저장소에 없고 PLAN 의 `- [ ]` 3행에 「참가 접수」가 없다. 접수 없이는 제출 화면이 열리지 않고 접수 마감이 제출보다 이틀 이르다. 신청 폼은 Wanted OneID 로그인 벽 뒤라 칸·글자 수·「세션데이터」 항목은 사람이 열어야 안다 — SUBMISSION.md 의 문제 357자·AI 활용 1,796자는 폼 제한 안으로 바로 못 뽑고 마감일에 급히 자르면 차별점이 빠진다. URL 을 붙여도 SUBMISSION:146·KNOWN_LIMITATIONS:17-19·28-31 의 「production 이 아직 없다」가 남을 위험(readme.test 는 🙋 만 잰다)이 있고, Vercel 이 main push 마다 배포하므로 제출 뒤 심사 2주 동안 루프 커밋이 그대로 라이브다.
+ ACTIONS:
+  - [사람·오늘 밤 · 0.5h] 원티드 계정으로 참가 접수(개인 · 팀명 그대로) → /apply 와 과제 제출 폼의 모든 칸·글자 수·필수 표시·파일 규격·「세션데이터」 항목을 캡처해 docs/evidence/2026-09-09-submission-form/ 에 → 링크 자리만 비운 초안을 폼에 임시저장
+  - [Claude·9/10] docs/SUBMISSION.md 맨 위에 「대회 규정 원문 — 2026-09-09 확인」 절(마감 두 개 KST 시각 · 제출물 4종 · 참가 자격 · 링크 생존 조건 · 권리 조항 8조 · 투표 규정 · URL) + 「제출 폼 원문」 절(아래 submission_draft · 폼 캡처의 실제 글자 수 상한으로 readme.test 길이 시험) + 「URL 이 오면 지울 문장 목록」 + production 행에 https:// 가 있으면 세 문서에 「production 이 아직 없」이 없어야 하는 시험 · 🙋 표에 「참가 접수 완료」 행 · SPEC §13 의 9/18 「버퍼」를 「참가 접수 마감」으로
+  - [Claude·9/15] 제3자 평가 솔루션이 읽을 수 있게 랜딩 HTML 에 「해결한 문제 · AI 활용 · 사용 도구」 세 문단을 텍스트로 박는다(LANDING 표 · readme.test 로 SUBMISSION 과 같은 문장)
+  - [사람·9/18 오전] 접수 상태 재확인 · 제출 폼에 4칸 원문 + 링크 `https://<prod>/demo`(로그인 벽 없음) 입력 · 임시저장이 아니라 제출까지 갈 수 있는 상태인지 확인
+  - [사람·9/18 저녁] `release` 브랜치 생성 → Vercel Production Branch=release · Git 설정에서 Preview 배포 끄기(Ignored Build Step 또는 브랜치 배포 비활성 — DATABASE_URL 을 빼는 것만으로는 health 빨간 Preview URL 이 커밋 상태에 붙는다) · loop/STOP 생성 · 이후 스키마 마이그레이션·새 LLM 표면 금지 · DEPLOY.md 한 줄
+  - [사람·9/19] 제출 완료 전 체크: verify:prod 재실행 · 시크릿 창 3분 코스 · GitHub 로그인 1회 → 팀 생성 · `pnpm --filter web ai:smoke` 1회 · Vercel 함수 로그 5xx 0 → 제출 → 제출 확인 캡처 docs/evidence
+ SOURCES: 대회 규정/규정 원문이 저장소에 없다 | 대회 규정/참가 접수 별도 마감 · 폼 규격 미확인 | 문서·제출서/제출 양식 4칸 | 문서·제출서/production 없음 문장 잔존 위험 | 배포 준비/제출 뒤 main push 마다 production 변경 | 비평가 지적 12(Preview 배포)
+
+
+########## HIGH_VALUE ##########
+
+[H1] 문서 정직성 묶음 — 「키 없으면 픽스처」 거짓 3곳 + AI_NOT_CONFIGURED 코드 · KNOWN_LIMITATIONS 「e2e 없음」 낡은 줄 · 「관통 7단계」 · README 숫자 · SPEC §12 Playwright
+ owner=Claude effort=3h criteria=["grep '픽스처 결과' 가 네 문서에서 0건","readme.test 의 새 게이트가 초록","KNOWN_LIMITATIONS 의 e2e 문장이 apps/web/e2e 와 일치"]
+ WHY: 정직함을 파는 제품의 문서가 코드와 다른 말을 한다 — .env.example:42·DEPLOY.md:68·SUBMISSION.md:130·README:243 의 「픽스처 결과로 떨어진다」는 코드에 없고(client.ts:105 throw → job.ts:339 INTERNAL · 영원히 실패하는 [다시 시도]), KNOWN_LIMITATIONS:66-67 은 자기 강점(실브라우저 GATE 3)을 「없다」고 적으며, README:266·SUBMISSION:136 「7단계」는 9단계, 「표 16·enum 14」는 18·17 이다. 모의 심사위원 4명 중 3명이 「픽스처」 문장을 첫 질문으로 꼽았다. 전부 30분~1h 짜리다.
+ ACTIONS:
+  - 세 문서의 「픽스처」 문장을 「키가 없으면 구조화·충돌 탐지 job 이 실패로 끝나고 화면이 그 사실을 말한다 — 나머지는 전부 돈다」로 · ErrorCode 에 AI_NOT_CONFIGURED(503 · retryable:false) 한 줄 + client.ts:105 가 그 ApiError 를 던짐 + ERROR_HINT 「이 배포에는 AI 키가 없습니다 — 운영자에게 알려 주세요」 + /api/v1/health 에 `ai: configured|missing`(키 값 아님) · ai-job.test.ts:423-431 의 닻을 새 코드로
+  - KNOWN_LIMITATIONS:66-67 을 「e2e 는 Playwright 가 아니라 CDP 직결(apps/web/e2e/) — shots 단계가 매 CI 헤드리스 Chrome 으로 25검사·캡처·GATE 3 를 밟는다 · 다중 브라우저/모바일 에뮬레이션은 없다」로 · SPEC §12 e2e 행 「(Playwright)」→「CDP · gate3.ts」
+  - README:266·299 · SUBMISSION:136 의 「7단계」를 단계 이름 나열로(walkthrough.ps1 정본) · README:283·293 숫자는 지우고 성질만(「의도된 어긋남 3곳 · 값이 든 secret 0건」)
+  - readme.test 에 「KNOWN_LIMITATIONS 가 『없다』고 적은 경로가 실존하면 FAIL」 한 줄
+
+[H2] OG 태그 · 파비콘 · metadataBase · 게스트 재방문 복구 — 온라인 투표 20% 의 첫인상과 재방문
+ owner=Claude effort=2.5h criteria=["공유 카드에 그림·제목·한 줄이 뜬다(캡처)","만료된 게스트가 NeedsLogin 에서 한 번 눌러 /demo 로 돌아온다"]
+ WHY: layout.tsx:15-18 metadata 는 title·description 두 줄, app/ 에 icon.*·opengraph-image.* 0건, public 에 favicon 없음 → 카톡·슬랙 공유 카드가 회색 빈 카드이고 탭 아이콘이 기본이다(대회 측은 og_image + summary_large_image 를 쓴다). 게스트 세션은 2시간 뒤 만료되면 「로그인이 필요합니다. 다시 로그인해주세요」로 끝나 샘플 팀으로 돌아갈 길이 login 페이지 맨 아래 한 줄뿐 — 투표자는 탭을 다시 연다. 둘 다 1.5h 이하.
+ ACTIONS:
+  - app/icon.svg(ctx 한 글자) · app/opengraph-image.png 1200×630(랜딩 히어로 Before/After 정적 PNG · DESIGN_BRIEF 토큰 색) · layout.tsx metadata 에 metadataBase(NEXT_PUBLIC_SITE_URL · .env.example→DEPLOY 표 한 줄) · title template · openGraph · twitter summary_large_image · description 을 LANDING_HEAD.subtitle 로 통일 + 시험 한 줄 · 폼에 썸네일 칸이 있으면 같은 이미지
+  - components/states.tsx NeedsLogin 에 [샘플 팀 다시 열기 → /demo] 버튼(주소가 /t/demo/… 이면 첫째로) · tenant.ts DEMO_SESSION_TTL_SEC 을 24h 로
+  - 배포 뒤 opengraph.xyz 류로 미리보기 1회 확인(사람 5분)
+
+[H3] 제출서·README·랜딩의 「AI 활용」을 숫자와 이유로 채운다 — 실측 표 · 왜 서버는 Gemini 인가 · 개발 과정 숫자 · 확장 축 세 표 · 사업 모델 4문장 · 경쟁 카드 · 왜 지금 · 3분 코스 · 랜딩에 제출 텍스트 박기
+ owner=Claude effort=5h criteria=["SUBMISSION 에 실측 표·왜 Gemini·사업 모델·확장 축이 있고 readme.test 가 랜딩과 같은 문장임을 잰다","README 첫 스크롤에 캡처가 보이고 개발 메모가 화면에 없다","랜딩 HTML 에 제출 4칸 텍스트가 있다"]
+ WHY: 근거는 다 있는데(probe.txt 항목 16~25 · 충돌 3~5 · 인용 20/20 · 19~23초 · ≈$0.02/실행 · 6일 296커밋 · FINDINGS 189) 문서에 없다. 「Claude 도구인데 왜 서버는 Gemini」가 AI 리드의 첫 질문이고 답이 코드 주석(client.ts:13)에만 있다. VC 심사위원의 확장성은 사업 확장성인데 pricing/ICP/경쟁 문장이 저장소 전체 0건이다. 약관 6조 3항의 제3자 평가 솔루션이 랜딩 HTML 을 읽을 수 있으니 제출 텍스트를 화면에 그대로 박는 것이 싸다. 코드 0줄로 3개 기준(AI활용·기획력·확장성)을 동시에 올리는 최저 비용 항목.
+ ACTIONS:
+  - SUBMISSION·README 에 「실측」 표 1개(입력 크기·항목/질문/충돌 수·인용 검증률·지연·비용·재시도율 약 1/3) + evidence 경로 링크 · demo:db + next start 로 /import 에 goals.md 를 붙여 진행 막대→후보→충돌 카드 캡처 4장을 docs/evidence 에
+  - 「AI 활용」 끝에 한 문단: 「서버 모델이 Claude 가 아닌 이유 — P2(사용자 구독을 절대 대신 쓰지 않음) · P3(우리 키·일일 예산) · SDK 없이 fetch+JSON 스키마라 공급자 교체가 client.ts 한 파일(9/6 Anthropic→Gemini 하루 만에) · 사용자의 Claude 는 Skill 을 직접 실행할 때만」 · 「도구」절을 3층(개발 Claude Code 루프 · 제품 실행 환경 사용자의 Claude Code · 서버 Gemini 2기능)으로
+  - 「어떻게 지속하나」 4문장: 코어 MIT+셀프호스팅(DEPLOY 8걸음) · 팀 단위 월 과금(프로젝트 수 × AI 예산 · AI_FEATURE_LIMITS 표) · 첫 고객 = AI 코딩 도구를 팀 표준으로 정한 10~50인 개발 조직 · 락인은 승인 이력·역추적이지 파일 포맷이 아님 · 고객 인터뷰 0건은 정직하게 · 「확장」에 소스 어댑터 로드맵 한 줄(source_documents.kind 표 · Notion export 다음 · GitHub 연동은 일부러 안 함)
+  - landing.tsx WHY_NOT_GIT 표에 카드 한 장(「도구가 팀 규칙 공유를 내놓아도 그것은 배포다 — 어긋남을 사람이 정하고 모든 줄의 출처가 남고 진행이 보이는 것은 도구 밖에 있어야 한다 · 그래서 Pack 은 Claude·Codex·Cursor 가 같은 것을 받는다」) + 확장 축 한 줄(「PACK_TARGETS 3 · 진행 보고 훅은 지금 Claude Code 만」) · 「왜 지금」 한 문장 · eyebrow 에 「Wanted AI Championship 2026 출품작」 · 랜딩 하단에 제출 4칸 텍스트 절(readme.test 로 SUBMISSION 과 동일)
+  - README:3 아래 public/shots 3장 <table> · :16 정본 메모를 HTML 주석으로 · 「직접 보기」+「3분 코스」5걸음(각 걸음의 직접 URL 은 시크릿 창에서 열리는지 확인 후 · gate3 4화면 + Pack Explorer) 을 세 걸음 바로 뒤로 · 루프 절 제목 「이 제품은 어떻게 만들어졌나」+숫자 3개(제출 전날 `git rev-list --count` 로 갱신), 나머지는 loop/README 링크
+
+[H4] 개인정보 처리방침 페이지 + 「원문이 Google Gemini 로 간다」 고지 + Gemini 티어 결정 — 신뢰 경계를 파는 제품의 빠진 경계 하나
+ owner=둘 다 effort=3h criteria=["/privacy 가 열리고 랜딩 푸터·로그인 카드에서 링크된다","/import 화면과 README·SUBMISSION 표에 Gemini 전송 사실이 있다","KNOWN_LIMITATIONS 의 티어 문장이 실제 키의 티어와 일치한다"]
+ WHY: 제품 코드·docs 전체에 「개인정보」·「privacy」·「이용약관」 0건, app/ 에 privacy 라우트 없음, 로그인 카드에 동의 한 줄 없음(create_user:true 로 고지 없이 계정 생성). /import 의 「서버가 받는 것은 여기 붙여넣은 글자뿐입니다」(import/page.tsx:132)는 그 글자가 chunk 그대로 generativelanguage.googleapis.com 으로 나간다는 사실(structure.ts:190,290 · client.ts:30,108)을 말하지 않고, 화면 어디에도 Gemini·Google 이 없다. KNOWN_LIMITATIONS:43 이 「무료 티어」라고 자인하는데 Google 약관은 Unpaid 입력을 제품 개선·인간 검토에 쓰고 「기밀·개인정보를 제출하지 마라」고 한다 — AI 전문가 심사위원이 한 번 물으면 드러나는 모순이고, 유료 전환은 코드 0줄이다.
+ ACTIONS:
+  - [사람·9/10 계정 작업 묶음] Google AI Studio 프로젝트에 빌링 연결 → Tier 1(학습 미사용 · RPM 상향) → GEMINI_API_KEY 를 그 키로 교체 · Cloud Billing 예산 알림 $20 · Vercel AI_DAILY_BUDGET_USD 확인 — 「무료 유지」로 결정하면 아래 문장을 「학습에 쓰일 수 있다」로 적는다(결정이 문장을 정하므로 9/10 에 먼저)
+  - [Claude·9/14] app/privacy/page.tsx 정적 페이지(수집: email·name·auth_subject / 목적: 팀 멤버 식별 / 저장: Supabase 서울 리전 / 제3자 처리: Google Gemini API 로 문서 원문 chunk·항목 제목/본문 300자 전송(국외 · 티어와 약관 조항 인용) / 안 가는 것: 이메일·팀 이름·경로·커밋·코드 본문 / 삭제·열람 요청은 연락처로 수동 처리 · 발행 버전이 참조하는 항목은 원문을 비우고 참조만 남김(P7) / 베타·무보증 3줄) — 법률문이 아니라 README 「받는 것/못 받는 것」 표를 옮긴 데이터 지도 · LANDING_FOOT 에 privacy 한 줄 · 로그인 카드 하단 「계속하면 개인정보 처리방침에 동의한 것으로 봅니다」
+  - [Claude·9/14] PasteCard meta 를 「서버가 받는 것은 여기 붙여넣은 글자뿐이고, 그 글자는 항목 후보를 뽑기 위해 Google Gemini API 로 전송됩니다(국외) · 자세히 → /privacy」(상수 · 시험이 Gemini 낱말을 센다) · AiBadge title 「Google Gemini · 우리 API 키 · 승인 이후엔 AI 없음(P4)」 · README·SUBMISSION 표에 셋째 열 「Gemini 로 가는 것 / 안 가는 것」 · KNOWN_LIMITATIONS 에 「AI 처리 데이터의 행방」 항목(티어·학습 사용 여부·로깅 기간)을 /privacy 와 같은 상수 문장으로
+
+[H5] 라이브 구조화의 실패 처리 — AI_OUTPUT_INVALID 를 retryable 로 · 가격표 정정 · 예시 문서 버튼 · 힌트 문구 · 429 백오프 1회
+ owner=Claude effort=4h criteria=["AI_OUTPUT_INVALID 실패 카드에 [다시 시도] 버튼이 있고 눌러서 성공한 캡처가 있다","features.ts 가격이 출처 주석과 함께 실제 정가","예시 문서 버튼으로 구조화가 끝까지 간다(캡처)"]
+ WHY: 진짜 Gemini 실측에서 인용 실패가 실행의 약 1/3 이고 같은 입력을 다시 돌리면 성공하는 비결정 실패인데, schema/api.ts:107 retryable:false 라 화면은 「다시 시도해주세요」라고 말하면서 버튼을 안 그린다 — 사람은 문서를 재업로드하고 그러면 duplicate 카드가 생긴다(retry/route.ts:17-21 이 스스로 적은 해악). features.ts:142-143 정가는 실제의 1/5 이라 「비용은 얼마나 드나」 답의 숫자가 틀리다. 심사위원이 자기 문서를 붙여 넣는 순간이 AI활용이 채점되는 순간이다.
+ ACTIONS:
+  - schema/api.ts:107 retryable:true + 근거 주석을 실측(FINDINGS 152)으로 · error-codes.test 의 닻 뒤집기 · ai-job/web-job-progress 시험에 「AI_OUTPUT_INVALID 도 requeue」 · 같은 job 재시도 상한 2 를 ai_jobs 칸 하나로
+  - features.ts AI_MODELS 를 3.5-flash 1.50/9.00 · 3.6-flash 0.75/3.75(2026-12-31 까지 도입가)로 + 출처·날짜 주석 · SPEC.md:520 「Claude Console」→「Google Cloud Billing 예산 알림」
+  - import/page.tsx PasteCard 에 [예시 문서 붙여넣기](fixtures/paylab-docs/goals.md · 실측 20/20 문서) 버튼 · ERROR_HINT.AI_OUTPUT_INVALID 를 「AI 응답의 인용이 원문과 달랐습니다 — 대개 다시 시도하면 됩니다」로 · structureChunk 루프에 RATE_LIMITED 전용 1회 백오프(20초 · maxDuration 300 안)
+
+[H6] 심사 기간 2주를 견디는 장치 — 리셋 실패 모드를 구조로 고친다 · watch-prod(만든 날 dispatch 로 메일 확인) · ci.yml build step · 런북 한 절
+ owner=둘 다 effort=4.5h criteria=["심기 실패 시험에서 옛 데모 팀이 남고 /demo 가 열린다","watch-prod 가 dispatch 로 초록 1회 · 일부러 깬 1회에 메일이 왔다(9/14 당일)","ci.yml 에 build step 이 있다 · DEPLOY.md 에 런북 절이 있다"]
+ WHY: reset.ts:32-44 는 「지우고 → 심고 → 실패하면 다시 지운다」라 실패 = 하루 종일 /demo 404 인데 알림·감시가 0 이다. 예선 2주 동안 14번 도는 리셋 중 한 번의 Supabase 순간 장애가 그날 심사위원 전원에게 「작동 안 함」으로 보인다. 감시로만 덮으면(리셋 시각 이동 + 아침 손 복구) 아침 9시 이전 심사위원에게는 그대로 404 라 구조 변경이 먼저다. GitHub Actions schedule 은 부하 시 10~30분 지연·건너뜀이 흔하고 실패 메일 수신자는 워크플로 마지막 커밋 작성자라 루프(Claude)가 커밋한 파일이면 메일이 안 갈 수 있다 — 만든 날 workflow_dispatch 로 사람이 실행해 수신자를 고정한다. GitHub Actions 는 next build 를 안 돌아 빌드 깨진 커밋이 초록으로 지나간다.
+ ACTIONS:
+  - reset.ts 재구성(2h): ① 최소 — 심기 실패 시 즉시 1회 재시도(지우고 다시 심기) 후에만 팀을 비운다(0.5h) ② 권장 — 새 팀을 임시 slug(`demo-next`)로 먼저 심고 성공했을 때만 옛 팀 삭제 + slug 를 `demo` 로 UPDATE(한 트랜잭션 · 실패하면 옛 팀이 그대로 남아 어제 데모라도 열린다) · seedDemo 가 slug 를 인자로 받게 · demo-reset.test 에 「심기 실패 시 옛 팀이 남는다」 1건 · demo/page.tsx 오류 카드를 「샘플 팀을 준비 중입니다 — 잠시 후 다시 열어 주세요」로 감싸기(states.tsx 는 공용이라 건드리지 않음) · 배너 문구 「매일 03시경 초기화」(Hobby ±59분)
+  - .github/workflows/watch-prod.yml: schedule `*/30 * * * *` + workflow_dispatch 로 `curl -f -X POST <prod>/api/v1/demo/session` 과 `/api/v1/health` · 실패 시 workflow 실패 → GitHub 메일 · 만든 날 사람이 dispatch 로 한 번 실행하고 일부러 잘못된 URL 로 한 번 깨서 메일 수신 확인 · README 배지는 「살아 있음」 표시일 뿐 SLA 문구 금지 · (Supabase keep-alive 겸함 → health cron 삭제 근거)
+  - ci.yml 에 `pnpm --filter web build` step 한 줄(관통 ubuntu 이식은 안 함)
+  - DEPLOY.md 「심사 기간 런북」: Vercel 로그 route/user_id 필터 · `AI_DAILY_BUDGET_USD=0` 으로 AI 만 끄기 · `UPDATE team_members SET status='suspended'` 한 줄 · 리셋 curl · Supabase 사용량 확인 주기 · 배포 뒤 1회 `ai:smoke`(withBudget 장부 밖 · 그대로 둠) · Vercel Firewall 기본 룰(사람 10분)
+
+[H7] 게스트 UX 2종 — writeDoor 를 나머지 4자리에 + 「owner 만」 거짓 문구 · 화면 문구 한글 라벨(개발자 방언 제거)
+ owner=Claude effort=6h criteria=["게스트가 어떤 쓰기 버튼을 눌러도 403 대신 사전 안내를 본다(게이트 시험 초록)","Context 표의 셀·필터·드로어에 영문 enum 원어가 직접 보이지 않는다(캡처)"]
+ WHY: 심사위원은 3분 안에 뭔가를 누른다. 지금은 문서를 붙여 넣고 [구조화하기]를 눌러야 403 이 뜨고(import/page.tsx 에 writeDoor 0건), draft 제안에서 게스트에게 [승인 요청]이 활성이며(proposals.tsx:425-429), conflict-card.tsx:189·proposals.tsx:463 「owner 가 합니다」는 게스트에겐 거짓이다(대장 121 이 잡아 고친 문장이 두 자리에 잔존 — 같은 지적 두 번이면 게이트). Context 첫 표는 `architecture · constraint · high/medium/low · JSON 덤프` 라 원티드랩 PM 심사위원에게 「개발자 내부 도구」로 분류된다. (마일스톤 기한 이동은 블로커 5 로 옮겼다.)
+ ACTIONS:
+  - writeDoor() 판정을 PasteCard·QuestionStack 저장·Answer·ProposalDecisions 의 「누르기 전」에(패턴 context/page.tsx:101-109 그대로) · availableActions 에 `by==='author' && !isAuthor` 갈래(게스트면 빈 배열) · 두 문장은 writeDoor().reason 을 먼저 읽게 · test/web-guest-doors.test.ts 「쓰기 버튼이 있는 컴포넌트는 전부 writeDoor 를 지난다」 게이트
+  - chips.tsx 에 ITEM_TYPE_LABEL: Record<ItemType,string> 한 표(CHIP_TABLES 시험에 한 줄 · 10종 전부 값) · SYNC_CHIP 「적용됨·낡음·수정됨·수동·보고 없음」+title 에 원어 · 표 머리 「범위·확신도·판」+원어 괄호 · 드로어 JSON 을 키-값 행 KeyValue 컴포넌트로(타입별 분기 없음)
+
+[H8] 2분 영상 — 규정상 필수는 아니지만 온라인 투표·본선의 자산: docs/PITCH.md 컷 표(Claude 3h) + production 위에서 녹화(사람 4h) + 본선 오프라인 보험
+ owner=둘 다 effort=7h criteria=["docs/PITCH.md 에 초 단위 컷 표가 있다","2분 영상 링크가 SUBMISSION·README 에 있고 랜딩 히어로에 버튼이 있다","mp4 원본이 로컬에 있고 demo:db 로컬 리허설 기록이 있다"]
+ WHY: 대회 규정은 영상을 요구하지 않는다(제출물 4종) — 그래서 production·제출 텍스트보다 뒤다. 그러나 예선 온라인 투표 20% 와 본선 「발표 전달력」은 이 2분이 좌우하고, 대본·컷 표·슬라이드가 문서에 0개이며 SPEC §10.5 는 6분 타임라인뿐이다. 저장소에 gif/mp4 가 0개라 플러그인 쪽 절반이 말로만 있다. 녹화는 production 과 플러그인 실기(블로커 4)가 끝난 뒤 한 번에 찍고, 같은 재료로 본선 발표장 네트워크가 죽었을 때의 보험(오프라인 파일 · demo:db 로컬 모드 · 플러그인 미리 설치된 노트북)을 만든다.
+ ACTIONS:
+  - docs/PITCH.md: [0:00-0:15] 훅(같은 질문 다른 답 5회 vs 3회) · [0:15-0:30] 왜(CLAUDE.md 는 개인 파일 · 팀장은 git 안 씀 · 올해 모든 도구가 팀 규칙 파일을 읽기 시작) · [0:30-1:00] owner 로그인 → 문서 붙여넣기 → 진행 막대 → 인용 붙은 후보 → AI 배지 충돌 카드에서 사람이 고름 → 발행 v1.1.0 · [1:00-1:25] 터미널: 훅 알림 → /contextops:sync → 같은 질문 같은 답 → Pack Explorer 줄 → goals.md §3.1/retry.ts:11 · [1:25-1:40] Roadmap 0/3→1/3 근거 · Sync 기기별 버전 · [1:40-1:55] 「서버가 받는 것/못 받는 것」 표 + 네트워크 탭에 코드 본문 없음(P1 근거 캡처 겸함) · [1:55-2:00] 한 줄 + URL · 슬라이드 8장 뼈대(캡처는 public/shots 3장 + gate3 png) · 나레이션은 SUBMISSION 문장 재사용 · 6분 본선판은 이 컷 표의 확장으로 예약
+  - [사람·9/17] production 위에서 녹화 · 촬영 중 가져오기→정리→발행을 스톱워치로 재서 「15분」을 실측치로 바꾸거나 지운다 · 플러그인 세 장면(훅 알림·sync 확인·progress→Roadmap) GIF 를 랜딩 터미널 재생 옆·README 머리에 · 영상 원본 mp4 를 로컬·클라우드 두 곳에 보관 · demo:db 로컬 모드로 같은 코스가 도는지 1회 리허설(본선 보험)
+  - [Claude] 영상이 생기면 히어로 outline [2분 영상 보기](자리 예약 주석 있음) · SUBMISSION:17-18 링크
+
+[H9] 로그인 뒤 「내 팀」 홈 /t + 팀원 초대 API — 심사 두 번째 질문 「팀원은 어떻게 초대하나요」의 답
+ owner=Claude effort=7h criteria=["두 번째 계정이 초대 뒤 그 팀의 Roadmap 을 보고 발행은 403 인 시험이 초록","로그인 뒤 재방문이 /t 에서 자기 프로젝트 카드를 본다"]
+ WHY: app/t/ 에 t/page.tsx 가 없고 login·callback 기본 next 가 /t/new 라 재방문 owner 는 팀 만들기 폼으로 떨어진다(문 GET /teams 는 있다). teamMembers 를 넣는 제품 코드는 teams/route.ts:96(만든 본인)뿐이고 seed-demo.ts:38-39 가 「사람을 팀에 넣는 라우트가 아직 없다」고 자인 — 「모든 팀원의 Claude Code」가 새 팀에서 재현 불가이고 owner/member 2단계가 실제 두 사람 사이에서 한 번도 갈리지 않는다. 게스트 데모로 제출 요건은 충족되므로 블로커는 아니지만 4명 중 3명이 물었다.
+ ACTIONS:
+  - app/t/page.tsx: fetchTeams() → 팀별 프로젝트 카드(마지막 공식 버전) + [새 팀] · 팀 0개면 /t/new 로 replace · login·callback 기본 next 를 /t 로
+  - POST /teams/{id}/members {email, role}(owner) — users 에 있으면 active, 없으면 invited 행 + sessionActor 가 첫 로그인 때 email 로 그 행을 active 로 · GET /teams/{id}/members · 팀 홈에 「팀원」 시트(이름·역할·이메일 입력 1줄 · 역할은 ROLE_RANK 표 읽기만) · seed-demo.ts:291 직접 INSERT 를 이 라우트로 바꿔 시드가 곧 시험 · api-auth.test 「초대 전 404 → 초대 후 200 · member 는 publish 403」 · 초대 메일은 범위 밖으로 정직하게(「링크를 전달하세요」)
+
+[H10] 플러그인 고장 3건 — Stop 훅이 매 턴 이벤트를 쌓는다 · 첫 sync 가 기존 CLAUDE.md 를 경고 없이 교체 · clone 한 팀원이 manual 로 오판
+ owner=Claude effort=6h criteria=["hooks.test 의 「두 번 Stop → 1건」 초록","기존 CLAUDE.md 가 있는 저장소에서 첫 sync 가 멈추고 --check 가 경로를 찍는다","clone 시나리오에서 status 가 applied"]
+ WHY: stop.mjs 는 Stop 을 세션 종료로 봤지만 실제로는 응답마다 돈다 — 미커밋 변경이 있는 동안 턴마다 randomUUID 로 새 in_progress 행이 쌓여 Roadmap 근거 수가 턴 수만큼 부풀고(P5·P7 신뢰 훼손) git 2회+fetch = 5.5s 로 timeout 5s 를 넘는다. managed.ts:142-152 는 로컬 manifest 가 없으면 디스크를 안 봐 이미 있던 CLAUDE.md 를 백업만 남기고 덮는다 — 도입 팀의 첫 경험이 「내 CLAUDE.md 가 사라졌다」가 된다. managed.ts:179-190 은 cache 폴더가 없으면 무조건 manual 이라 가장 흔한 합류 경로(clone)가 「zip 으로 손으로 놓였다」로 뜬다. 심사 화면(웹)에는 안 보이므로 9/17 이후 여유에 한다 — 첫 번째로 잘리는 항목.
+ ACTIONS:
+  - 훅 이벤트를 SessionEnd 로 옮기거나 Stop 에 남기되 `.contextops/cache/progress-<session>.json` 표시를 훅이 직접 쓰고(_writes 선언 한 줄 · principles.ps1 이 잰다) 같은 세션·같은 마일스톤이면 재전송 금지 · 문구 「이 세션에서」→「이 작업 트리에서」 · hooks.test 「같은 세션 Stop 두 번 → POST 1건」
+  - judge() 의 unknown 분기에서 official.files 경로의 existsSync 로 `preexisting` 목록을 내고 sync.ts:154 게이트가 --force 없이는 멈추며 printStatus 가 「기존 파일 N개가 교체된다(백업됨)」를 경로별로 · 시험 1건 · SPEC 검토 항목에 「rules 만 소유하는 모드」 한 줄(구현은 안 함)
+  - manual 판정 문구를 「이 기기의 sync 가 놓은 것이 아니다(clone 또는 zip)」로 · 서버 보고 전 `git ls-files --error-unmatch .contextops/manifest.json` 추적 중이면 applied · cache 폴더는 sync/setup 에서만 만든다(status 는 파일을 안 바꾼다는 README 약속) · managed.test clone 시나리오
+
+[H11] 발행 흐름의 작은 고장 2건 + AI 예산 actor 축 + 목록 상한 최소 방어 — EMPTY_SNAPSHOT 문구 · RepoPath 태그 escape · 팀당 상한 · limit=200
+ owner=Claude effort=5.5h criteria=["승인 0개 발행에서 정답 문장이 뜬다(캡처)","escape.test 의 `-->` 경로 표본이 초록","actor 축 상한 시험 초록"]
+ WHY: 첫 사용자 최단 경로(질문 답 → 바로 발행)에서 서버의 정답 문장 「승인된 항목이 하나도 없습니다」가 화면에선 「입력한 내용을 다시 확인해주세요」로 뭉개진다(api.ts:85 가 서버 message 를 버림). RepoPath 정규식이 `-->`·`,`·줄바꿈을 통과시켜 tag.ts:38 에서 P7 태그가 깨질 수 있다 — 제품 문장의 핵심. budget.ts:88-93 하루 예산이 전 테넌트 합이라 VC 심사위원의 「유료 팀 100개면?」 질문에 답이 없고 가입 개방 상태에서 한 사람이 심사 기간 AI 를 끌 수 있다. fetchItems 가 limit 을 안 넘겨 51개째부터 화면이 「50개」라고 거짓말한다.
+ ACTIONS:
+  - PublishModal 이 err.details.code==='EMPTY_SNAPSHOT' 이면 정본 문장(COMPILE_ERROR_FAULT 표를 lib/web 이 읽게) + [Context 에서 초안 보기] · 헤더에 「승인 M개」 잰 값
+  - tag.ts:38 path 에 safe()+`,` 치환 · sections.ts 백틱 안 경로에서 백틱 제거 · templates/index.ts:230 JSON.stringify(p) · escape.test 표본 5개 — RepoPath 정규식은 조이지 않는다(공백 경로·glob 정상 입력)
+  - AI_FEATURE_LIMITS 에 perActorDaily 열 + callsInWindow 재사용(structure/conflict 는 이미 actor 를 넘김) · CreateTeam 3/사용자 · CreateProject 5/팀 상수 · 시험 「팀 A 가 다 써도 팀 B 는 부른다」
+  - fetchItems 계열이 `limit=LIST_LIMIT_MAX(200)` 를 넘기고 응답 길이가 limit 과 같으면 「200개까지만 보입니다」 한 줄 · KNOWN_LIMITATIONS 에 「항목 500·파일 50·마일스톤 50」 한 줄 + input.ts:27 의 500 을 limits.ts 상수로
+
+
+########## BUGS ##########
+
+[G1] vercel.json health cron `0 */6 * * *` — Vercel Hobby 가 배포 자체를 거부한다(시험이 그 값을 잠가 둠) (0.5h)
+ EVIDENCE: apps/web/vercel.json:13 · test/demo-reset.test.ts:199-202 가 toBe 로 고정 · Vercel 문서(2026-07-15) 「Cron expressions that would run more frequently will fail during deployment」 · 저장소에서 Hobby 를 아는 곳은 cron/demo-reset/route.ts:23 하나라 저자가 Hobby 를 전제 · demo-reset cron 이 매일 DB 를 치므로 Supabase keep-alive 근거도 아니다
+ FIX: 하루 1회 `0 21 * * *` 또는 삭제(watch-prod 가 겸함) · 시험을 「모든 cron 이 하루 1회 이하 · regions 하나」로 · README:289·_comment·SPEC §11·health/route.ts:6 갱신
+
+[G2] Supabase GitHub provider 가 꺼져 있다(external.github=false) — 로그인 화면의 유일한 accent 버튼이 지금 죽어 있다 (1.5h)
+ EVIDENCE: 이 세션에서 GET <NEXT_PUBLIC_SUPABASE_URL>/auth/v1/settings(anon key · 읽기 전용) → external.github=false · external.email=true · login/page.tsx:75 는 config 만 있으면 authorize?provider=github 링크를 그림 · 실패 시 auth.ts:76-77 이 error_description 을 「다시 시도해주세요」로 뭉갬 · DEPLOY.md 에 provider 켜기 걸음 0줄
+ FIX: [사람] GitHub OAuth App(callback https://<ref>.supabase.co/auth/v1/callback) → Supabase Providers → GitHub 켜기 · [Claude] production.ts 에 /login authorize 링크 + /auth/v1/settings external.github===true 검사 · DEPLOY.md ①-b
+
+[G3] 세션 검증기가 HS256 만 받는데 프로젝트 JWKS 에는 ES256 키뿐 — 실제 로그인 토큰이 API 에서 401 일 가능성이 높다 (2.5h)
+ EVIDENCE: GET /auth/v1/.well-known/jwks.json → keys=[{kty:EC, alg:ES256, kid:b1bbd8ac-…}] 하나 · session.ts:53 `if (header.alg !== 'HS256') fail('UNAUTHORIZED', …)` · :12-13 「aud·iss 는 프로젝트가 생긴 뒤에 더한다」 미이행 · api.ts:127 401→clearSession→NeedsLogin→로그인→401 고리 · STATUS.md:712 「지금까지 로그인은 전부 시험용 JWT」
+ FIX: alg 표 두 갈래(HS256→secret · ES256→JWKS kid + createPublicKey(jwk)+verify ieee-p1363 · 캐시 1h) + aud/iss 검사 + 시험 3건 · 사람이 대시보드 JWT Keys 에서 CURRENT 종류를 먼저 확인(HS256 이면 코드는 보험)
+
+[G4] 매직링크 실패가 사용자 탓으로 읽힌다 — 기본 SMTP 는 팀 멤버 외 주소를 거절하는데 문구는 「주소를 다시 확인해주세요」 (1h)
+ EVIDENCE: lib/web/auth.ts:55-62 sendMagicLink 은 !res.ok 면 원인 무관하게 그 문구 · login/page.tsx:102 표시 · Supabase 문서 「Email address not authorized · 시간당 2통」 · 저장소 전체 SMTP 0건
+ FIX: 이메일 칸을 NEXT_PUBLIC_AUTH_EMAIL_LOGIN 플래그 뒤로 숨기고 「GitHub 계정이 없으신가요? → /demo」 · 문구를 「이 주소로는 보낼 수 없습니다 — 심사위원이시면 /demo 로」 · callback 오류 카드에 /demo 링크 + error_code meta
+
+[G5] SKILL.md 셋 + Pack progress 문단의 `$CLAUDE_PLUGIN_ROOT`(중괄호 없음) — 사용자 기계에서 CLI 를 부를 길이 없다 (4h)
+ EVIDENCE: skills/sync/SKILL.md:16,38,55 · init · propose 전부 bare · skills.test.ts:66-71 이 bare 를 강제 · Claude Code 2.1.260 바이너리의 치환은 `${CLAUDE_PLUGIN_ROOT}` 만 · 이 세션 Bash env 21개 중 해당 변수 없음 · progress-report.ts:13 은 사용자 repo 의 workflow.md 라 치환 자체가 없음
+ FIX: SKILL 경로를 `${…}` 로 + 시험 뒤집기 · progress 를 Skill(`/contextops:progress`)로 올리고 Pack 문단이 그것을 가르치게 · TEMPLATE_VERSION↑ 골든 재생성 · 실기 설치 캡처로 확인
+
+[G6] 웹 「기기 추가」가 복사해 주는 `contextops setup …` — PATH 에 없는 명령 (2h)
+ EVIDENCE: packages/schema/src/plugin.ts:81 SETUP_COMMAND_NAME='contextops setup' → sync.tsx:389 · plugin/contextops/package.json 에 bin 없음 · KNOWN_LIMITATIONS:32 「npx contextops 는 없다」 · main.ts:47 TTY 없으면 묻지 않고 실패
+ FIX: skills/setup/SKILL.md(disable-model-invocation · `--no-browser`) + SETUP_COMMAND_NAME='/contextops:setup' · README:216·landing:262·SUBMISSION:124·setup.ts 안내 동기화 · readme.test 로 잠금
+
+[G7] Stop 훅이 매 턴 돌아 진행 이벤트를 턴마다 새 행으로 쌓는다 · 중복 방지 표시는 env 이름이 틀려 영원히 안 생긴다 · 5.5s > timeout 5s (3h)
+ EVIDENCE: stop.mjs:16,151-168 randomUUID client_event_id 로 매 실행 POST · progress/route.ts:34-45 는 그 id 로만 멱등 · progress.ts:39 `CLAUDE_SESSION_ID`(실제는 CLAUDE_CODE_SESSION_ID) · GIT 1500×2 + NETWORK 2500 vs hooks.json:43 timeout 5
+ FIX: SessionEnd 로 이전 또는 훅이 `.contextops/cache/progress-<session>.json` 표시를 쓰고(_writes 선언) 같은 세션·마일스톤 재전송 금지 · env 이름 정정 · hooks.test 「두 번 → 1건」
+
+[G8] AI_OUTPUT_INVALID retryable:false — 화면은 「다시 시도해주세요」인데 버튼이 없고, 실측 실패율 약 1/3 은 비결정이다 (1.5h)
+ EVIDENCE: schema/api.ts:105-107 · api.ts:226 needs:'retryable_error' · job-progress.tsx:181-182 mode 없으면 null · lib/web/api.ts:47 문구 · probe.txt:190 87바퀴 run2 만 실패 · retry/route.ts:17-21 재업로드→duplicate 해악 자인 · error-codes.test 가 false 를 닻으로
+ FIX: retryable:true + 주석 근거를 152 실측으로 · 닻 시험 뒤집기 · 재시도 상한 2 를 ai_jobs 칸으로
+
+[G9] 「GEMINI_API_KEY 없으면 픽스처 결과로 떨어진다」 문서 4곳 — 실제로는 INTERNAL 로 죽고 영원히 실패하는 [다시 시도] 버튼 (2h)
+ EVIDENCE: .env.example:42,44,50 · DEPLOY.md:68 · SUBMISSION.md:130 · README.md:243 · client.ts:101-105 일반 Error · job.ts:334-339 ApiError 아니면 INTERNAL(retryable:true) · lib/ai 에 fixture 갈래 0곳 · ai-job.test.ts:423-431 이 이 동작을 잠금
+ FIX: 문서 4곳 정정 + ErrorCode AI_NOT_CONFIGURED(503 · retryable:false) 한 줄 + client.ts 가 그 ApiError · ERROR_HINT 「이 배포에는 AI 키가 없습니다」 · /health 에 ai: configured|missing
+
+[G10] AI_MODELS 정가가 실제의 1/5(입력)·1/3.6(출력) — 하루 $3 가드가 실제 ~$11~15 를 통과시킨다 (0.5h)
+ EVIDENCE: features.ts:142-143 0.3/2.5 · 주석 137-139 「임시 · 사람이 고쳐라」 · costMicros:174-178 → budget.ts:173-178 이 그 장부로 판정 · 실제 3.5-flash $1.50/$9.00 · 3.6-flash 도입가 $0.75/$3.75(2026-12-31 까지)
+ FIX: 두 줄 정정 + 출처·날짜 주석 · SPEC.md:520 「Claude Console」→Google Cloud Billing · [사람] 결제 알림 $20
+
+[G11] manifest.json 이 커밋된 저장소를 clone 한 팀원이 `manual`(「zip 으로 손으로 놓였다」)로 오판된다 (1h)
+ EVIDENCE: managed.ts:179-190 cache/<semver> 폴더 없으면 무조건 manual · paths.ts:50 cache 는 ignore · sync.ts:78 manifest 는 커밋 · upload.ts:176 REPORTABLE 에 manual 포함이라 서버까지 감 · managed.test.ts:128 은 zip 케이스만
+ FIX: 문구 「이 기기의 sync 가 놓은 것이 아니다(clone 또는 zip)」 · `git ls-files --error-unmatch` 추적 중이면 applied · cache 폴더는 sync/setup 에서만 생성 · clone 시험 1건
+
+[G12] 승인 0개로 발행하면 서버의 정답 문장이 「입력한 내용을 다시 확인해주세요」로 뭉개진다 (1h)
+ EVIDENCE: publish.ts:52-56 EMPTY_SNAPSHOT→VALIDATION_FAILED+정확한 message · :155-156 details 에 code 만 · lib/web/api.ts:85 ApiClientError 가 hintText(code) 만 쓰고 서버 message 를 안 받음 · context/page.tsx:426 messageOf(err) · [발행하기]는 항목 0개여도 활성
+ FIX: PublishModal 이 details.code==='EMPTY_SNAPSHOT' 이면 정본 문장 + [Context 에서 초안 보기] · 헤더 「승인 M개」
+
+[G13] 게스트에게 draft 제안의 [승인 요청]이 활성이고 「이 결정은 팀 owner 가 합니다」·「owner만」 두 문장이 거짓 (1h)
+ EVIDENCE: proposals.tsx:425-429 availableActions 가 status+role 만 거름(주석이 「by:'author' 는 가릴 수 없다」 자인) · conflict-card.tsx:186-189 canDecide 만 봄 · proposals.tsx:463 · 게스트는 demo/session/route.ts:64 member 등급 → 누르면 403 · 대장 121 이 잡아 고친 문장이 두 자리에 잔존
+ FIX: availableActions 에 `by==='author' && !isAuthor` 갈래(게스트면 빈 배열) · 두 문장은 writeDoor().reason 을 먼저 읽게 · web-guest-doors 게이트
+
+[G14] RepoPath·scope.value·paths 가 escape 없이 태그·frontmatter·백틱에 들어간다 — `-->`·`,` 한 글자로 P7 태그가 깨진다 (1.5h)
+ EVIDENCE: common.ts:65-66 정규식이 `src/a-->b.ts`·`src/a,b.ts`·줄바꿈 전부 통과(node 재확인) · tag.ts:38 `${safe(r.repo,60)}:${r.path}` 로 path 는 그대로 · parseTraceTag tag.ts:120 `src.split(',')` · sections.ts:62-63,135 백틱 esc 없음 · templates/index.ts:230 `"${p}"` · escape.test 는 title·statement·body 만
+ FIX: 방어선만 — tag.ts:38 path 에 safe()+`,` 치환 · 백틱 안 경로에서 백틱 제거 · index.ts:230 JSON.stringify(p) · escape.test 표본 5개(RepoPath 정규식은 조이지 않는다)
+
+[G15] KNOWN_LIMITATIONS 「브라우저 e2e 가 없다 · e2e 폴더가 없다」 — apps/web/e2e 9파일 · shots 61검사 OK 와 모순(문서 고장) (0.5h)
+ EVIDENCE: KNOWN_LIMITATIONS.md:66-67 · git ls-files apps/web/e2e 9파일 · walkthrough.ps1:104-123 shots·shotcopy 켜짐 · landing.tsx:113 「shots 단계가 매번 다시 찍습니다」 반대 말 · readme.test ④⑤ 는 부정문을 못 잡음 · SUBMISSION:143 이 이 문서를 보증
+ FIX: 두 줄을 사실(CDP 직결 · 다중 브라우저/모바일 에뮬레이션 없음)로 교체 + readme.test 「없다고 적은 경로가 실존하면 FAIL」
+
+
+########## NICE ##########
+
+[N1] POST /demo/ai-once — 게스트가 AI 를 한 번 실행(픽스처 goals.md+old-roadmap → 충돌 탐지 · 24h 캐시 · IP 축 일 5회) (9h)
+ WHY: AI 리드 심사위원이 +2 로 꼽은 항목이지만 features.ts:86 의 IP 축이 코드에 없어(x-forwarded-for 추출 0건) 7h 가 아니라 9h 이고, 제출 직전 새 LLM 표면은 429·비용 노출을 키운다 — ask 를 자른 것과 같은 논리. 9/14 저녁 판단 지점에서 블로커·bugs 가 전부 닫히고 CI GREEN 이면 9/15 에 하고, 9/16 안에 안 끝나면 버리고 본선용으로. 기록 카드 3장(블로커 5)이 최소 방어선이다.
+
+[N2] 질의창(§7.3 ask) — 승인된 항목 ≤150 만 근거로 답하고 cited_item_ids allowlist · 분당 3회 (14h)
+ WHY: 「AI 서비스」로 가장 직관적으로 읽히는 자리이고 P7 이야기를 30초에 보여 주지만, 이 저장소의 게이트 수준(스키마·principles P3 호출부 갱신·spec-drift·실측)이면 14h 다. ai-once 가 같은 「AI 체감」을 절반 비용으로 주고 그것이 제품의 진짜 AI(구조화→충돌)라 우선이다. 제출 전엔 하지 않고 본선(10/17) 전 후보로만 둔다 — 답변·질문 미저장(P1) · 표·빈도 상한·계약 자리는 이미 있다.
+
+[N3] Context 헤더 [항목 추가] 폼(ITEM_DATA 표를 읽어 칸을 그림) — roadmap 을 웹에서 만들 유일한 정직한 길 (6h)
+ WHY: 질문 카드만으로 시작한 팀장은 Roadmap 이 영원히 비지만 데모 테넌트는 Gemini 가 goals.md §4 에서 M1~M3 를 뽑아 차 있다. 씨앗 질문에 roadmap 한 장을 더하는 안은 milestone_id 를 서버가 지어내야 해 P7 정신에 어긋나므로 폼이 맞는데 10종 zod→폼 + 시험이라 6h. 심사 화면에 안 보인다.
+
+[N4] Google OAuth 한 줄(OAUTH_PROVIDERS 표) · Resend 커스텀 SMTP 로 매직링크 복구 · 기기 토큰 「끄기」 버튼 + expires_at/created_at · 초안 「모두 승인」(클라이언트 순차 PATCH) · 375px 드로어 scrollIntoView (8h)
+ WHY: 비개발자 심사위원은 GitHub 계정이 없을 수 있지만 심사 1차 경로는 /demo 이고 Google Cloud 동의 화면 구성은 사람 1h 이상 · 각각 1.5~2.5h 격차이나 심사 경로(게스트 read-only · 데모는 이미 active 항목)에서 안 밟힌다. 「유출 시 대응」 질문엔 「DELETE 라우트·시험 있음」으로 답한다.
+
+[N5] 위생 묶음 — packages/schema index 첫 줄 `z.config(z.locales.ko())` · CONTRIBUTING/SECURITY/PR 템플릿 · 서드파티 라이선스 고지 한 줄(약관 5조 3항·8조 4항) · status Skill(모델 호출 가능) · README 검사 절에 `pnpm typecheck && pnpm test` 한 줄 · nosniff/X-Frame-Options/Referrer-Policy 세 줄 (5h)
+ WHY: 전부 0.5~1.5h 이고 오픈소스 첫인상·보안 제품의 모양에 도움이 되지만 어느 심사 기준도 직접 바꾸지 않는다. 9/18 여유나 9/20 예비일, 본선 준비 중에 몰아서.
+
+[N6] 본선(10/17) 자료 — PACK_TARGETS 에 copilot 타깃 한 줄 시연 커밋 · 데모 씨앗에 둘째 레포 · 심사위원 3사(원티드랩·크래프톤·스파크랩) 매력·반문 문단 · IssuedDeviceCard 아래 「이음새」 3줄 + 빈 상태에 /demo 링크 · 6분 발표판 (8h)
+ WHY: 확장성·발표 부록용이고 예선 제출물이 아니다. 예선 통과 뒤 슬라이드 부록으로. copilot 시연 커밋은 main 에만(release 금지). 「Unity/C# scan 은 언어 무관」은 plugin scan 코드 확인 뒤에만 답으로 쓴다.
+
+
+########## DO_NOT_DO ##########
+
+[X1] 역추적 태그 형식 변경(src 를 태그에서 빼 manifest sourcemap 으로)
+ WHY: SPEC.md:169 가 「P7 정본은 본문에 박힌 태그 하나 — 오프라인에서도 되짚어진다」로 명시한 설계 결정(FINDINGS 34)을 정면으로 뒤집고 골든 3종·TEMPLATE_VERSION·packs 화면·walkthrough-publish·pack-coverage 가 함께 움직인다. 데모 Pack 은 4.2k 자로 12k 한도의 1/3 이라 심사에서 발동하지 않는다. 하려면 conf/rev 축약처럼 SPEC 과 충돌 없는 범위만, 그것도 제출 뒤.
+
+[X2] 질의창(ask) 을 제출 전에 열기 · ai-once 를 9/16 이후에 열기
+ WHY: 제출 직전 새 LLM 표면은 429·비용 노출을 키운다(ask 를 절삭 1번으로 자른 이유 그대로). ai-once 는 IP 축이 코드에 없어 9h 이고 9/14 판단 지점 뒤 9/15 하루 안에만 허용, 그 뒤엔 본선용. 「AI 체감」의 최소 방어선은 실측 기록 카드 3장이다.
+
+[X3] 브라우저 e2e GATE1(로그인→가져오기→발행 8h) · 진짜 Next 서버 위 e2e-sync(5~6h) · 관통 core 의 ubuntu 이식(4h)
+ WHY: 셋 다 옳은 방향이지만 1인 11일에서 합쳐 17h 이고 심사에 직접 보이지 않는다. 같은 위험은 발표 전 손 리허설 1회 + 9/11 에 production 에 CLI 를 30분 손으로 붙이는 것으로 대부분 덮인다. ci.yml 에 build step 한 줄만 넣는다.
+
+[X4] CSP 헤더(default-src 'self') · 프로세스 내 토큰 버킷 레이트 리밋 · Railway/Fly 대안 배포 · 저장 팽창 상한 · JWT role 검사 확장
+ WHY: CSP 는 Next 인라인 스크립트 때문에 nonce 없이는 데모를 깨뜨리고 Report-Only 하루는 11일 중 하루다. 서버리스에서 프로세스 내 버킷은 인스턴스마다 따로 세 효과가 없다. Vercel 이 막힌다는 증거가 없다. 게스트는 read-only 라 링크만으로는 한 행도 못 만든다. nosniff 등 세 줄(30분)과 Vercel Firewall 룰(사람 10분)만.
+
+[X5] 세션 refresh_token 갱신 코드(3h) · Resend SMTP 를 9/10 에 붙이기
+ WHY: 심사위원 1회 평가가 1시간을 넘길 확률이 낮고 게스트는 2h→24h 로 늘린다. Supabase 대시보드 JWT expiry 를 최대치로 올리는 5분 조치가 심사 기간 위험을 없앤다. 이메일 문은 플래그로 숨기고 /demo 안내가 9/10 의 답 — SMTP 는 도메인 DNS 인증까지 사람 1h+ 라 nice_to_have.
+
+[X6] 리셋 시각을 06:00 KST 로 옮기는 것을 실패 대응의 답으로 삼기 · watch-prod 「30분마다 초록」을 SLA 처럼 적기 · 9/18 에 알림 경로 검증
+ WHY: 시각을 옮겨도 9시 이전 심사위원에게는 그대로 404 다 — 답은 reset.ts 의 구조(새 slug 먼저 심고 성공 시 교체)다. GitHub Actions schedule 은 지연·건너뜀이 흔하고 실패 메일 수신자는 마지막 커밋 작성자라 만든 날 workflow_dispatch 로 사람이 실행해 수신자를 고정해야 한다.
+
+[X7] 9/18 저녁 release 동결 이후의 스키마 마이그레이션 · main 자동 배포 유지 · Preview 배포 켜 두기 · 루프를 STOP 없이 계속 돌리기
+ WHY: Vercel 이 push 마다 배포하고 마이그레이션은 빌드 단계가 아니라 배포 코드와 Supabase 표가 갈린다. Preview 에 DATABASE_URL 을 빼도 health 빨간 Preview URL 이 공개 커밋 상태에 붙는다. 「어제는 됐는데 오늘 안 되는」 링크가 심사 기간의 가장 흔한 사고다. release 브랜치로 핫픽스만.
+
+[X8] 씨앗 질문에 roadmap 한 장 추가 · RepoPath 정규식을 `[^\s",<>|]` 로 조이기 · README 숫자에 개수 시험 달기 · ai:smoke 를 withBudget 장부에 · GitHub Actions 에 claude plugin validate · 씨앗 AI 카드를 「방금 AI 가 찾은」 것처럼 보이게 하기
+ WHY: 각각 코드가 이미 명시한 결정과 충돌한다 — seed-questions.ts:32-35 「답변에 없는 값을 넣지 마라」(P7 정신) · 공백 경로·glob 은 정상 입력 · 「수치 하드코딩 금지」와 반대 방향의 자물쇠 · ai-smoke.ts:9-10 은 의도적으로 withBudget 밖(P3 4기능 한정) · ci.yml:42-47 「러너에 CLI 를 두지 않는다」 · 기록물을 라이브처럼 보이게 하면 제품이 파는 정직성이 무너진다.
+
+[X9] 랜딩 절 순서를 Replay 앞세우기 · 팀명 변경 · SKILL.md 영문 병기/i18n · 관통 shots 단계에 OG 컷 자동화 · STATUS.md 300줄 축약 · 태그라인 세 번째 정본 추가
+ WHY: landing.tsx:486-487 은 「히어로 바로 아래 제품 화면」을 FINDINGS 131 의 의도적 결정으로 적었다(취향 교체). 팀명은 사용자 선택이고 폼에서 어차피 보인다. i18n 은 시장 선택이지 결함이 아니다. OG 는 정적 PNG 한 장이면 된다. 문서 축약은 점수와 무관하다. 「승인·모든 팀원·같은 버전」은 이미 subtitle 에 있어 제출 폼에 그 문장을 쓰면 된다.
+
+
+########## JUDGE_QA ##########
+
+Q1. AI 는 정확히 어디서 돌아요? /demo 에는 AI 가 만든 카드가 없고 게스트는 구조화를 누를 수도 없는데 「작동하는 AI 서비스」를 어디서 보나요? README 의 「키가 없으면 픽스처 결과」는 코드 어디에 있나요?
+ A: (9/13 이후) 정리 화면의 AI 배지 카드 3장은 2026-09-07 gemini-3.5-flash 실측(docs/evidence/2026-09-07-p3-gemini/probe-87-run3.json)이고 카드 본문이 「기록물」임을 스스로 말하며 a/b 항목을 누르면 원문 offset 까지 간다(P7) · 서버 AI 는 withBudget 한 문(budget.ts:146)을 지나는 structure.ts:613·conflict.ts:294 둘이고 tools/principles.ps1 P3 가 우회를 잡는다 · 영상 0:30~1:00 이 owner 로 문서를 붙여 진행 막대→인용 후보→충돌 카드→결정을 보여 주고, 로그인하면 심사위원도 자기 문서로 같은 것을 할 수 있다(예시 문서 버튼 · Tier 1) · (ai-once 를 만들었으면) 배너 버튼으로 게스트도 하루 5회 · 「픽스처」 문장은 거짓이었고 고쳤다 — 키가 없으면 AI_NOT_CONFIGURED 503 으로 화면이 그 사실을 말한다
+
+Q2. 로그인이 되나요? GitHub 로 눌렀더니 되돌아왔다는데요. 비개발자 심사위원은 GitHub 계정이 없습니다.
+ A: 9/10 실측으로 답한다: Supabase GitHub provider 는 꺼져 있었고(/auth/v1/settings external.github=false 를 우리가 먼저 찾았다) 켰으며, 서명키가 ES256 이라 session.ts 를 alg 표(HS256 secret · ES256 JWKS)로 고쳤고, verify:prod 가 authorize 링크와 external.github 를 매번 잰다 · docs/evidence 에 로그인 → 팀 생성 201 캡처 · 이메일 매직링크는 기본 SMTP 가 팀 멤버 외 주소를 거절해 심사 기간엔 숨기고 /demo 를 안내한다(정직하게 KNOWN_LIMITATIONS) · 심사위원의 1차 경로는 로그인 없는 /demo 다
+
+Q3. 첫 사용자는 누구입니까? 「팀장은 git 을 안 쓴다」지만 팀원 전원이 Claude Code 플러그인을 깔아야 값이 나는데, 비개발자 팀장이 15분에 끝낸 실측이 있나요?
+ A: ICP 는 Claude Code 를 이미 표준으로 정한 5~30인 개발팀과 그 리드(EM/기획 리드) — 팀장이 반드시 비개발자라는 뜻이 아니라 「git 을 안 여는 사람도 승인할 수 있다」는 뜻 · 15분은 9/17 촬영 때 스톱워치로 잰 값으로 바꾼다(가져오기→정리→발행 실측) · 문서가 없어도 seed-questions.ts 의 질문 10장으로 시작한다 · 고객 인터뷰는 0건 — 정직하게
+
+Q4. Notion 에 규칙을 적고 CLAUDE.md 를 git 에 커밋하는 것과 뭐가 다른가요? Anthropic 이 managed 정책을 내거나 Cursor 가 Team Rules 를 넓히면 남는 게 뭡니까?
+ A: 그들이 하는 것은 「배포」다 — 우리도 배포는 하지만 제품은 그 앞뒤에 있다: ① 어긋남을 AI 가 찾아 사람이 정한다(conflict.ts · resolve 라우트 owner 전용) ② 모든 줄이 어디서 왔는지 남는다(P7 태그 · Pack Explorer) ③ 계획이 실제로 진행되는지 근거와 함께 보인다(P5 · progress) · 그래서 Pack 은 도구 중립 — PACK_TARGETS 3(claude·agents·cursor · manifest.ts:13)이 같은 snapshot 에서 나온다 · 발표에서 Pack Explorer 줄 → 항목 → goals.md §3.1 클릭 30초가 증거 · 랜딩 WHY_NOT_GIT 넷째 카드가 이 문장이다
+
+Q5. 공개 저장소의 설치 첫 줄이 지금 실패합니다(marketplace.json 없음 · 10커밋 뒤). 새 PC 에서 4줄 설치 → /contextops:init 을 Claude Code 가 끝까지 실행한 기록이 있나요? macOS 는요?
+ A: (9/11 이후) push 했고 docs/evidence/2026-09-11-plugin-install/ 에 marketplace add → install → 새 저장소 세션 → 훅 알림 → /contextops:setup → /contextops:sync → progress 의 transcript 가 있다 · 그 실기에서 `$CLAUDE_PLUGIN_ROOT` bare 형태와 `contextops setup` 명령을 잡아 Skill(`/contextops:setup`·`/contextops:progress`)로 고쳤다 · 검증 OS 는 Windows 1대 — 정직하게 KNOWN_LIMITATIONS 에 적었다 · CI 가 Skill 본문을 못 재는 건 사실이라 skills.test 가 명령줄·플래그·변수 형태를 표와 대조한다
+
+Q6. Vercel 서버리스 + Supabase 로 올릴 때 가정 셋 — HS256 전용 JWT, 6시간 cron, 함수 시간 안의 리셋 — 배포 첫날 뭐가 먼저 깨졌나요? 심사 기간 2주 동안 링크가 살아 있다는 보장은?
+ A: 9/10 실측으로 답한다: cron 은 Hobby 「daily only」에 걸려 일 1회로 고쳤고 시험이 「하루 1회 이하·regions 하나·maxDuration ≤300」을 잰다 · regions icn1 로 리셋 실측 N초(docs/evidence) · JWKS ES256 갈래 · verify:prod 37+검사 0 failed 의 verify.json · 리셋은 새 팀을 먼저 심고 성공했을 때만 교체하므로 실패해도 어제 데모가 열린다 · watch-prod 가 30분마다 /demo/session 을 두드리고 실패 시 메일(만든 날 일부러 깨서 확인) · 배포 판은 release 브랜치로 동결 · 런북(예산 0 · suspended · 리셋 curl)
+
+Q7. 하루 AI 예산 $3 는 전 테넌트 합산이던데, 유료 팀 100개가 같은 날 누르면? 테넌트당 원가와 가격은? 무료 티어 분당 제한은 어디 들어가나요? 그리고 내 회의록은 Google 로 가서 학습에 쓰이나요?
+ A: 실측 원가 문서당 $0.02~0.035(장부 기준 · 정가표는 실제값으로 정정) · (9/18 여유에) actor 축 일일 상한(AI_FEATURE_LIMITS perActorDaily)을 더해 팀별+전역 이중 · 가격 가설: 팀 단위 월 과금(프로젝트 수 × AI 예산) · 개인 좌석을 안 세는 이유는 P5 · 티어는 Tier 1(유료 · 학습 미사용 · 제한 기간 로깅)로 올렸고 /privacy 와 KNOWN_LIMITATIONS 에 「Gemini 로 가는 것/안 가는 것」 표가 있다 · 429 는 RATE_LIMITED 로 화면에 말하며 조각 루프에 1회 백오프
+
+Q8. 진짜 Gemini 실측 3회 중 1회는 인용 불일치 하나로 문서 전체가 실패했습니다. all-or-nothing 을 고른 이유와 실패율은? 사용자에겐 「문서 다시 올려라」로 보이지 않나요?
+ A: P7 — 글자 하나 다른 인용을 받으면 역추적이 거짓이 된다(test 148 「글자 하나 바꾼 인용은 없다」) · 실패는 비결정이라 같은 job 을 requeue 하면 성공한다 → AI_OUTPUT_INVALID 를 retryable 로 바꿔 버튼이 있고 재업로드(duplicate 해악)가 필요 없다 · 표본 n≈10 에서 약 1/3, 재시도 후 실패 0 · 힌트 문구가 원인 종류를 말한다 · 예시 문서 버튼은 20/20 실측 문서
+
+Q9. P3 는 4기능인데 ask·demo 는 표에만 있으니 실제로는 2개 아닌가요? 가장 체감이 큰 질의창을 왜 절삭 1순위로 뒀나요? 어긋남 3개에서 카드 5장이 나온 건 중복 아닌가요?
+ A: 맞다 — SPEC §14 절삭 순서대로 ask 를 먼저 잘랐고 KNOWN_LIMITATIONS 에 적었다 · 대회 관점에서 재평가했지만 제출 직전 새 LLM 표면은 429·비용 노출을 키워 제출 뒤 본선 후보로 뒀다(표·빈도 상한·계약 자리가 있어 라우트 하나 · 답변 미저장 P1 · cited allowlist P7) · 「AI 체감」은 실측 기록 카드(와 ai-once 를 했으면 그것)로 채웠다 · 카드 5장 중 재시도 규칙 3장은 같은 (a,b) 짝 중복 검사의 한계 — 알려진 한계로 두고 사람이 첫 카드에서 정하면 나머지는 note 로 접는 것이 다음 바퀴
+
+Q10. 팀원은 어떻게 초대하나요? 로그인해서 만든 팀에 두 번째 사람이 들어올 문이 없던데요.
+ A: (9/16 이후) POST /teams/{id}/members {email, role} — 이메일이 users 에 있으면 active, 없으면 invited 행이 첫 로그인 때 승격 · 팀 홈(/t)의 「팀원」 시트 · 시험이 「초대 전 404 → 후 200 · member 는 publish 403」을 잰다 — owner/member 2단계가 처음으로 두 사람 사이에서 갈린다 · (못 했으면) 정직하게: 데모 팀원은 씨앗이 넣은 것이고 초대 API 는 SPEC §5 에 없었다, 기기 토큰 경로로 sync 는 되나 화면은 못 본다
+
+Q11. 서버가 내 코드를 보나요? Supabase anon key 가 브라우저에 있는데 RLS 는요? 개인정보 처리방침은 어디 있나요?
+ A: P1 — 업로드 계약이 .strict() allowlist(upload.ts 15개)라 코드 본문 필드가 없고, 관통 scan·payload 단계가 배포 번들로 픽스처 48파일을 훑어 「코드 본문 0건 · env 값 0건」을 .ci/walkthrough-payload.json 으로 남기며 principles.ps1 이 매 커밋 P1~P7 을 센다 · RLS 는 0008 마이그레이션으로 표 18개 전부 ENABLE(정책 없음 = anon 전면 거부 · 서버는 표 소유자 postgres 직결) + migration.test 가 rowsecurity 를 재고 Data API 는 껐다(제품 코드는 Drizzle 만 · PostgREST 호출 0건) — anon key 로 rest/v1/users 가 거부되는 캡처 · /privacy 에 수집 항목·저장 위치(서울)·Gemini 전송 범위·삭제 절차가 데이터 지도로 있다
+
+Q12. 그 팀에 Cursor 쓰는 개발자가 셋 있으면 그 셋은 어떻게 sync 하고 진행 보고는 누가 하나요? Claude Code 밖으로의 확장은 무엇입니까?
+ A: 거울 문서(AGENTS.md · .cursor/rules/contextops.mdc)는 같은 snapshot 에서 나오고(templates/index.ts:246-259) CLI 번들은 런타임 의존 0 이라 Claude Code 없이 `node contextops-cli.mjs sync` 로 받는다 · 훅·Skill·progress 자동 보고는 지금 Claude Code 만 — 정직하게 · 새 타깃은 4걸음(templates/index.ts:36 주석)으로 「표에 한 줄」 · 본선에서 copilot 타깃 diff 를 시연 · 확장 축 셋: 타깃(PACK_TARGETS) · 타입(ITEM_TYPES 10) · 화면(screens.ts)
+
+
+########## CRITIC_FULL ##########
+{
+ "missing_topics": [
+  {
+   "topic": "대회 규정·제출 폼의 실제 원문 확인 — 계획이 「4칸 200자 · 9/18 참가 신청 · 9/19 제출 · 심사 2주」를 전제하지만 저장소 어디에도 규정 사본이 없다(SPEC:4 는 「제출 9/20 · 심사 9/21~10/05」만). 참가 자격(재직/구직 여부 · 원티드 계정 필수?), 팀 구성·팀명 규정, 결과물 저작권·사용권 조항, 오픈소스 공개 허용 여부, 썸네일 이미지 규격, 영상 길이·형식·업로드 방식(YouTube 링크 vs 파일), 서비스 링크에 로그인 벽 허용 여부, 온라인 투표가 플랫폼 안에서 어떤 소개글·이미지로 노출되는지 — 이 중 하나라도 계획과 다르면 9/18~19 일정이 무너진다.",
+   "why": "제출 요건은 코드로 검증할 수 없는 유일한 블로커이고, 계획의 날짜(9/18 신청 마감)와 글자 수(200자)는 출처가 없다. 썸네일 규격·소개글 필드가 있으면 OG 이미지와 별개의 자산이 필요하고, 저작권 조항에 따라 MIT 공개·팀명·라이선스 표기가 걸릴 수 있다.",
+   "how_to_check": "원티드 AI Championship 2026 공식 페이지(wanted.co.kr 이벤트 페이지)와 참가 신청 폼을 원티드 계정으로 열어 폼의 모든 필드·글자 수·파일 규격·마감 시각(KST)·규정 PDF 를 캡처하고 docs/SUBMISSION.md 맨 위에 「대회 규정 원문(날짜·URL)」 절로 붙인다. 특히 ①참가 자격 ②결과물 저작권/사용권 ③영상 제출 형식 ④온라인 투표 노출 항목 ⑤서비스 링크 요건(로그인 없이 열려야 하는지) 다섯 줄을 확인해 SUBMISSION.md 🙋 표 옆에 적는다. readme.test 의 길이 시험(제출 폼 원문 절)은 이 확인 뒤에 상수를 정한다."
+  },
+  {
+   "topic": "Supabase 기본 SMTP 제약 — 로그인 화면의 「이메일 링크 받기」(apps/web/src/app/login/page.tsx:81-101)가 심사위원에게는 절대 도착하지 않는다. Supabase 내장 메일은 프로젝트 팀 멤버 주소로만 발송되고 시간당 소수 건 제한이라, GitHub 계정이 없는 비개발자 심사위원·투표자가 고르는 두 번째 문이 「✓ 메일을 보냈습니다」라고 말하면서 아무것도 안 온다. 계획은 이것을 nice_to_have 의 한 줄(「매직링크 기본 SMTP 한도」)로만 언급하고 9/10 Supabase Auth 걸음에 SMTP 결정이 없다.",
+   "why": "블로커 2 의 성공 기준이 「GitHub 로그인 1회 캡처」뿐이라 이메일 경로가 죽어 있어도 초록이다. 심사위원이 두 문 중 하나를 눌러 실패하면 「로그인이 안 된다」로 기록되고, 화면은 성공 메시지를 보이므로 사용자는 자기 잘못으로 여긴다. 해결은 둘 중 하나(커스텀 SMTP 연결 또는 UI 에서 이메일 문 숨기기 + 문구)이고 결정에 사람 30분이면 되지만 9/10 에 같이 하지 않으면 잊힌다.",
+   "how_to_check": "Supabase 대시보드 → Authentication → Emails(SMTP Settings) 에서 「Custom SMTP」가 꺼져 있는지와 built-in 메일의 수신 제한 문구를 확인 · 시크릿 창에서 production /login 에 팀 멤버가 아닌 이메일(예: 다른 개인 메일)을 넣고 실제 도착 여부를 5분 기다려 캡처 · docs/DEPLOY.md 와 KNOWN_LIMITATIONS.md 에 「SMTP」가 0건임을 grep 으로 확인(이 세션에서 0건 확인됨). 결정: Resend 등 무료 SMTP 를 Supabase 에 연결하거나, login/page.tsx 의 이메일 블록을 authConfig 플래그로 숨기고 「GitHub 계정이 없으면 /demo 로」 한 줄을 남긴다."
+  },
+  {
+   "topic": "개인정보 처리방침·이용약관·데이터 처리 고지 부재 — 공개 서비스가 GitHub OAuth 로 이메일·아바타를 받아 저장하고(users 표), 팀장이 붙여 넣은 문서 원문을 Google Gemini API 로 국외 전송하는데, 저장소 전체에 「개인정보」·「privacy」·「이용약관」이 제품 코드·docs 에 0건이다(이 세션 grep 결과: 픽스처 Pack 안의 paylab 정책 문장뿐). 로그인 화면에도 동의·고지 한 줄이 없고, /import 화면에도 「이 문서는 Gemini 로 전송됩니다」가 없다.",
+   "why": "국내 공개 서비스로 불특정 다수의 가입을 받는 순간 개인정보 처리방침 공개는 법적 요건이고, 심사위원(특히 원티드=HR 플랫폼) 이 「내 문서는 어디로 가나」를 물을 때 P1(「서버는 받지 않는다」)만으로는 Gemini 전송을 설명하지 못한다. 신뢰 경계를 파는 제품에서 이 두 줄의 부재는 기획력·AI 활용 양쪽에서 감점 요인이며, 페이지 하나 + 링크 두 곳으로 1.5h 짜리다.",
+   "how_to_check": "`grep -rn -i \"개인정보\\|privacy\\|이용약관\" apps/web/src docs/DEPLOY.md docs/KNOWN_LIMITATIONS.md` 로 0건을 재확인 · apps/web/src/app/login/page.tsx 와 app/t/[team]/p/[project]/import/page.tsx 에 고지 문장이 없는지 확인 · Supabase 프로젝트 리전이 ap-northeast-2(서울 · .env 의 pooler 호스트로 확인됨)인지 대시보드 Settings → General 에서 확인해 「DB 는 국내 · AI 처리만 Google 로 국외 이전」을 정확히 적을 수 있게 한다 · Google AI 이용약관에서 유료/무료 티어의 데이터 학습 사용 조항을 캡처해 KNOWN_LIMITATIONS 와 /privacy 페이지에 같은 문장으로 넣는다."
+  },
+  {
+   "topic": "Vercel Hobby 요금제의 약관·한도가 이 제출물과 맞는지 — Hobby 는 비상업적 개인 용도 한정인데 제출서에 「팀 단위 월 과금」 사업 모델을 적고 배포는 Hobby 위에 두며, 계획이 기대는 설정(functions `regions: [icn1]` · Fluid compute 로 maxDuration 300 · cron 일 1회는 「해당 시각 정각」이 아니라 시간대 안 임의 분 실행 · Cron 2개 상한 · Vercel Firewall 룰)이 Hobby 에서 전부 되는지 한 번도 확인되지 않았다. 리셋 시각을 배너에 「06:00 KST」로 적으면 실제로는 최대 1시간 늦게 돌아 심사위원이 그 사이 절반 심긴 데모를 볼 수 있다.",
+   "why": "블로커 1 의 코드 수정(cron·regions·maxDuration)이 전부 Hobby 전제인데 그 전제 자체를 대시보드에서 본 적이 없다. Hobby 에서 안 되는 것이 하나라도 있으면 9/10 배포 당일 재작업이고, 약관 문제는 심사 기간 중 배포 정지라는 최악의 운영 리스크다(Pro 1개월 $20 으로 해소 가능하지만 사람의 결정이 필요하다).",
+   "how_to_check": "vercel.com/docs 의 Hobby 플랜 fair-use/commercial 조항 · Cron Jobs 「Hobby: once per day, timing not guaranteed to the minute」 · Functions region 설정 가능 여부 · Fluid compute 기본값과 Hobby 의 maxDuration 상한을 읽고 캡처 · 9/10 Vercel Import 직후 Project Settings → Functions 에서 Region 과 Fluid 토글 실측 · 첫 배포 로그에서 vercel.json 의 cron 2개가 등록됐는지 확인 · 결과를 docs/DEPLOY.md 「가장 빠른 길」 표 첫 줄(요금제 결정: Hobby 유지 vs Pro 1개월)과 tenant.ts 의 리셋 배너 문구(「06:00~07:00 사이」)에 반영한다."
+  }
+ ],
+ "flaws": [
+  "계획이 이 저장소의 작업 진입 규칙과 연결돼 있지 않다 — CLAUDE.md 는 일감을 docs/feedback/INBOX.md → FINDINGS 「고장」 → PLAN.md 맨 위 `- [ ]` 순으로만 고른다고 못 박는데, 계획의 Claude 항목 40여 개를 INBOX/PLAN 에 옮기는 걸음이 없다. loop/STOP 이 현재 존재해 루프도 AutoPush 도 멈춰 있는데 계획은 「Claude·오늘」을 누가(루프인지 대화 세션인지) 어떻게 돌리는지 정하지 않았다. STOP 을 치우면 루프가 PLAN 순서대로 다른 일을 하고, 안 치우면 계획의 Claude 시간은 전부 사람이 붙어 앉은 대화 시간이다 — 11일 × 7~8h 의 전제가 여기서 갈린다.",
+  "사람 시간 과소평가 — 9/10 「[사람 3h]」에 Vercel Import·첫 빌드 오류 대응·Supabase 서명키 확인·Data API 끄기·GitHub OAuth App·URL Configuration·JWT expiry·db:migrate·첫 리셋 curl·verify:prod·로그인 캡처·URL 기입이 다 들어 있다. 첫 배포는 env 오타·outputFileTracingIncludes·pnpm 설치 하나로도 두세 번 재배포가 나므로 실측으로는 5~8h 다. 9/10~9/18 은 평일이 7일인데 사용자의 가용 시간(재직/구직 상태)이 계획에 없고, 예비일이 9/20 하루뿐이다 — 하루라도 밀리면 팀원 초대(9/16)·영상(9/17)이 동결(9/18) 을 넘긴다.",
+  "9/12(probe 실측 충돌 카드 심기)와 9/13(goals.md M1~M3 기한 변경)의 순서가 서로를 깨뜨릴 수 있다 — 심는 카드의 인용·offset 과 「인용 20/20」 증거(docs/evidence/2026-09-07-p3-gemini)는 지금 goals.md 바이트를 가리킨다. 기한 문자열을 같은 길이(「2026-04-30」→「2026-10-31」)로만 바꾸면 offset 이 보존되지만 계획은 이 제약을 적지 않았고, 다른 길이로 바꾸면 9/12 카드의 P7 역추적이 9/13 에 조용히 끊긴다. 또 증거를 만든 픽스처를 뒤에 고치면 「실측」주장 자체가 증거 파일과 어긋나므로 evidence 폴더에 「픽스처 변경 이력」 한 줄이 필요하다.",
+  "로그인 첫 질문의 성공 기준이 반쪽이다 — 블로커 2 는 GitHub 1회 캡처만 재고, 로그인 화면의 둘째 문(이메일 링크)이 Supabase 기본 SMTP 때문에 외부인에게 안 가는 것을 고치지도 숨기지도 않는다. 「로그인 되나요」에 GitHub 는 되고 이메일은 성공 메시지 뒤에 아무것도 안 오는 상태로 제출된다.",
+  "ai-once 를 9/17(동결 하루 전)에 여는 것은 계획 스스로 ask 를 자른 이유(「제출 직전 새 LLM 표면은 429·비용 노출을 키운다」)와 정면으로 모순된다. 같은 논리면 ai-once 도 9/15 이전이거나 아예 본선용이어야 하고, 게스트 IP 축 상한(features.ts 일 5회)은 서버리스에서 IP 추출(x-forwarded-for)이 코드에 없다는 「IP 개념 0」 지적과 충돌한다 — ai-once 를 하려면 IP 축부터 만들어야 해 7h 가 아니다.",
+  "데모 리셋의 실패 모드를 감시로만 덮는다 — reset.ts 가 「심다가 던지면 지운다」라 실패 = 하루 종일 404 인데, 계획의 대응은 시각 이동 + watch-prod + 사람 손 복구다. 새 팀을 다른 slug 로 먼저 심고 성공했을 때만 옛 팀을 지우는(또는 실패 시 옛 팀을 남기는) 구조 변경이 1~2h 인데 검토조차 안 됐다. 심사 기간에 사람이 자는 06:00 KST 로 옮기면 「아침에 손으로 되돌린다」는 9시 이전 심사위원에게는 그대로 404 다.",
+  "watch-prod 를 9/14 에 만들고 「일부러 깨서 메일 확인」은 9/18 저녁에 둔다 — 알림 경로 검증은 만든 날 해야 하고, GitHub Actions 의 schedule 은 부하 시 10~30분 지연·건너뜀이 흔하므로 「30분마다 초록」을 SLA 처럼 적으면 안 된다. 실패 메일 수신자는 워크플로 마지막 커밋 작성자뿐이라 루프(Claude)가 커밋한 파일이면 메일이 안 갈 수 있다 — workflow_dispatch 로 사람이 한 번 실행해 수신자를 고정해야 한다.",
+  "Gemini 유료 티어 전환(Tier 1)이 9/12 「사람 0.5h · 결정」으로 늦다 — 결제 계정 연결·한도 반영은 즉시가 아닐 수 있고, 무료 티어면 온라인 투표 기간 동시 구조화가 429 다. 9/10 계정 작업 묶음에 같이 들어가야 하며, 결정이 「무료 유지」면 KNOWN_LIMITATIONS 와 /privacy 문장(학습 사용 가능)이 달라지므로 문서 정직성 항목(9/10)과 순서가 뒤바뀌어 있다.",
+  "「AI 제안 배지」를 붙인 씨앗 카드는 심사위원에게 「지금 AI 가 돌았다」로 읽힐 수 있다 — 계획은 배지에 날짜·모델을 적지만, 리셋마다 다시 심기는 기록물임을 카드 본문(「2026-09-07 실측 기록 · 이 데모에서 재실행되지 않음」)과 SUBMISSION 에 같은 문장으로 적지 않으면 제품이 내세운 정직성과 어긋난다. 게스트가 [다시 탐지] 같은 버튼을 기대할 자리이기도 하다.",
+  "본선(오프라인 발표) 준비가 「9/20 이후」로 통째로 미뤄져 있고 예선 계획 안에 최소한의 보험이 없다 — 발표장 네트워크가 죽었을 때의 대안(2분 영상 오프라인 파일 · demo:db 로컬 모드 · 플러그인이 미리 설치된 노트북 · production 이 아닌 로컬 Supabase 없이 도는 경로)은 9/17 녹화 때 같은 재료로 만들 수 있는데 계획에 없다. 예선 영상 파일을 로컬에 보관하는 한 줄이라도 9/17 항목에 있어야 한다.",
+  "보안 판단 중 확인된 것과 안 된 것이 섞여 있다 — Data API 끄기는 이 세션에서 제품 코드의 `.from(` 전부가 Drizzle 이고 PostgREST 호출이 0건임을 확인했으므로 안전하다(계획에 이 근거를 적어야 사람이 끄기를 주저하지 않는다). 반면 「정책 없는 RLS 는 서버에 영향 0」은 서버가 표 소유자(postgres) 로 붙는다는 가정인데 DATABASE_URL 의 역할이 실제로 postgres 인지(pooler 사용자명) 를 9/10 마이그레이션 전에 한 번 확인하는 줄이 없다.",
+  "release 브랜치 동결 뒤에도 main 에 계속 커밋한다는 전제(9/20 「copilot 타깃 시연 커밋 main 만」)와 「Vercel 이 main push 마다 배포」를 끊는 설정 사이에 Preview 배포가 남는다 — Preview 에 DATABASE_URL 을 안 넣으면 빌드는 되지만 health 가 빨간 Preview URL 이 공개 저장소의 PR/커밋 상태에 붙는다. 무해하지만 심사위원이 커밋을 눌러 「배포 실패」 배지를 볼 수 있으니 Preview 자체를 끄는 한 줄이 맞다."
+ ],
+ "verdict": "계획은 코드 현실과 심사 기준을 잘 잇고 우선순위(배포 → 로그인·RLS → 플러그인 실기 → 데모 AI → 문서·영상)도 대체로 맞다. 그러나 「코드 밖」이 비어 있다: 대회 규정·제출 폼 원문을 한 번도 본 적 없이 날짜와 글자 수를 전제했고, 로그인의 이메일 문이 Supabase 기본 SMTP 때문에 외부인에게 죽어 있으며, 개인정보 처리방침·Gemini 전송 고지가 0건이고, Vercel Hobby 의 약관·한도 위에서 계획의 설정이 되는지 확인이 없다. 실행 면에서는 이 계획을 저장소의 작업 진입 규칙(INBOX/PLAN)에 옮기는 걸음이 없고 루프가 STOP 상태라 「Claude 7~8h/일」이 누구의 시간인지 정해지지 않았으며, 9/10 사람 3h 는 실측으로 두 배다. 위 네 가지 조사(반나절)와 INBOX 반영을 오늘 안에 끝내면 나머지 일정은 그대로 살릴 수 있다."
+}
+
+########## JUDGES_DETAIL ##########
+
+## 기획력 — 문제 정의의 선명함 · 타깃 사용자 · 왜 지금 · 해결책-문제 적합성 · 스토리텔링 · 30초 이해 (원티드랩 프로덕트 매니저 출신 예선 심사위원 (비개발자에 가깝다 · 채용/HR 테크 감각)) now 5.5 → 7.5
+ RATIONALE: 【문제 정의 — 강함, 코드로 확인】 "같은 팀, 같은 질문, AI 마다 다른 답"을 결제 재시도 5회 vs 3회라는 한 장면으로 압축했고, 그 문장이 꾸민 예시가 아니라 픽스처(paylab)에서 실제로 나오는 Pack 의 줄이라는 점을 landing.tsx 의 표와 web-landing/readme 시험 파일이 잠그고 있다(존재 확인, 실행은 안 함). 이 정도로 문제를 "장면 하나"로 만든 참가작은 드물다.
+
+【해결책-문제 적합성 — 대체로 확인】 "AI 는 묻기만 하고 사람이 정한다"는 review/page.tsx 의 충돌 카드와 owner 전용 resolve 라우트로 실재한다. 승인 이후 LLM 없음(P4)은 golden 3종이 있다. 진행 보고는 Pack 템플릿(progress-report.ts)이 사용자의 Claude 에게 `progress` 를 실행하라고 적어 두고 Stop 훅은 경로만 보고하는 구조 — 문서 그대로다. 서버 AI 는 표에 4종이 있으나 withBudget 호출부는 structure·conflict 둘뿐이고 ask·demo 는 라우트가 없다(KNOWN_LIMITATIONS 와 일치).
+
+【타깃 사용자 — 흐림】 문구는 "팀장은 git 을 안 쓴다"고 팀장을 앞세우지만, 가치가 나오려면 팀원 전원이 Claude Code 플러그인을 깔고 `/contextops:sync` 를 눌러야 한다. 실사용자는 "Claude Code 를 이미 쓰는 개발팀 + 그 위의 리드"다. "팀장은 브라우저에서 15분"은 저장소 어디에도 측정치가 없다. 원티드 심사위원 관점에서 채용/HR 맥락과의 접점은 없다 — 순수 개발자 도구다.
+
+【왜 지금 — 암묵적】 CLAUDE.md·플러그인 생태계가 막 표준화되는 시점이라는 시의성이 제품의 전제인데, 랜딩·제출서 어디에도 한 문장으로 적혀 있지 않다.
+
+【30초 이해 — 비개발자에게 어렵다】 헤드라인 "팀의 지식과 Claude 의 기억을 같은 방향으로"는 추상적이고, 첫 스크롤 안에 Pack·snapshot·manifest·해시·PSP·sync 가 그대로 나온다. README 는 칸마다 쉬운 말을 붙였지만 랜딩(1440·375 캡처)에는 그 배려가 없다. 다만 Before/After 카드 자체는 비개발자도 5초면 읽힌다 — 그 카드가 이 제품의 30초다.
+
+【지금 그대로 5.5 인 이유】 제출 요건인 "정상 작동하는 서비스 링크"가 없고, 게스트 데모는 읽기 전용에 데모 씨앗에 AI job 이 0건이라 심사위원이 "AI 가 작동하는" 장면을 어디서도 못 본다. 로그인은 Supabase 미연결로 "아직 연결되지 않았습니다"가 뜬다. 그리고 README·제출서의 "키가 없으면 픽스처 결과로 떨어진다"는 코드에 없다(structure/conflict 는 throw, job 은 INTERNAL 로 끝난다) — 정직함을 내세운 문서에 있는 한 줄이라 더 아프다.
+
+【배포+영상 시 7.5 인 이유】 링크와 2분 영상이 있으면 "다른 답 → 카드 클릭 → 발행 → 터미널 sync → Roadmap 근거"라는 이야기 구조가 온전히 전달되고, 기획력 항목에서 상위권이다. 그래도 8 이상을 못 주는 것은 ① 타깃이 좁고 HR 접점이 없으며 ② 라이브 AI 장면이 데모에 없고 ③ 비개발 심사위원용 어휘 손질이 안 돼 있어서다.
+ RAISE:
+  - Vercel + Supabase 배포와 데모 씨앗 심기 (docs/DEPLOY.md 걸음 ②③④⑤⑧) → 정상 작동하는 /demo 링크 확보. 제출 요건이라 이것 없이는 예선 심사 자체가 성립하지 않는다. verify:prod 37검사로 완료를 잰다. [score_now → score_if_shipped 의 기준선 (약 +1.5). 링크 없으면 기획력 점수와 무관하게 탈락 위험 · 5h]
+  - 2분 영상: ① 개발자 둘이 같은 질문에 다른 답(10초) ② 정리 화면에서 카드 클릭으로 결정(30초) ③ 발행 → 터미널 재생의 sync(30초) ④ Roadmap 에 근거가 붙는 장면(20초) ⑤ '서버가 못 받는 것' 표(15초). 나레이션은 README 의 '쉬운 말로' 문장을 그대로 읽는다. 촬영 중 가져오기→정리→발행을 스톱워치로 재서 '15분'을 실측치로 바꾸거나 지운다. [비개발 심사위원의 30초 이해 확보 · 온라인 투표 20% 에도 직접 효과 (약 +0.8) · 4h]
+  - 랜딩 첫 스크롤을 비개발자 어휘로 손질 — landing.tsx 의 LANDING_HEAD 표만 고친다(JSX 불변, readme.test 동기화). 헤드라인을 장면형으로('같은 팀인데 AI 마다 답이 다르다면'), subtitle 에 '누구를 위한 것인가' 한 줄(Claude Code 를 쓰는 5~30명 개발팀과 그 리더), Pack·snapshot·해시는 첫 스크롤 아래로 내리고 README 처럼 각주를 단다. '왜 지금' 한 문장(CLAUDE.md·플러그인이 표준이 되는 지금, 팀 단위 정본이 없다)을 WHY_NOT_GIT 위에 둔다. [30초 이해·타깃 선명도·왜 지금 세 항목이 동시에 오른다 (약 +0.6) · 2.5h]
+  - 게스트가 'AI 가 실제로 돌았다'를 볼 수 있게 데모 씨앗에 완료된 structure job 1건과 conflict job 1건, 그리고 그 job 이 만든 AI 배지 카드 2~3장을 심는다(seed-demo.ts · 서버 AI 를 데모 중 부르지 않으므로 P3 예산·P4 결정론 모두 무관, P1 도 구조화된 항목만). 정리 화면 머리의 'AI 가 찾은 n건'이 0 이 아니게 된다. ['작동하는 AI 서비스' 강조 항목에 대한 반박 근거 제거 (약 +0.5) · 3h]
+  - 제출서·README 정직성 정비: ① '키가 없으면 픽스처 결과로 떨어진다' 문장을 코드 사실('키가 없으면 그 job 은 INTERNAL 로 실패한다')로 고치거나 KNOWN_LIMITATIONS 로 옮긴다 ② 'AI 활용 방식'을 심사 양식 어휘로 3줄 압축(어디에 AI 가 있고, 어디에 없고, 왜 없는가) ③ 확장성 한 문단 — Cursor/Codex 출력 파일이 이미 있고(PACK_TARGETS) ItemType 추가가 '표에 한 줄'이라는 점. [심사의 첫 질문이 '문서와 코드가 다르다'가 되는 것을 막는다 · 확장성 항목 가점 (약 +0.3) · 1.5h]
+ DIFF: 문제를 '같은 질문, 다른 AI 답' 한 장면으로 압축했고 그 장면이 꾸민 예시가 아니라 픽스처에서 실제로 나오는 Pack 문장이며 시험이 그것을 잠근다(landing.tsx 표 · web-landing/readme 시험 존재 확인) — 스토리와 제품이 같은 문장을 말한다 | 'AI 는 묻기만, 결정은 사람' + 모든 줄의 역추적 태그 + '서버가 받을 수 없는 것' 표 — 신뢰 경계를 기획의 중심에 둔 점. 충돌 resolve 가 owner 전용 트랜잭션이고, 훅은 파일을 안 바꾸며, 업로드는 allowlist 스키마인 것을 코드에서 확인했다. 기업 도입 담당자가 가장 먼저 묻는 질문에 먼저 답한다 | 승인 이후 파이프라인에 LLM 이 없고 같은 snapshot 이면 같은 byte(P4 · golden 3종 존재 확인) — 'LLM 이 매번 생성' 하는 대다수 AI 참가작과 정반대 설계라 '팀 정본' 이라는 말이 성립한다 | KNOWN_LIMITATIONS 를 먼저 적고 '없는 버튼은 안 만든다' 는 규칙을 실제로 지킨다(영상 버튼 없음 · zip 드롭존 없음 · 로그인 미연결 시 이유를 적음) — 심사위원의 신뢰를 산다 | 개발 과정 자체가 Claude Code 자율 루프(296 커밋 · 문서를 기억으로 쓰는 헤드리스 세션)라 'AI 활용' 이야기가 제품 밖에서도 성립한다
+ WEAK: production 배포·영상·슬라이드가 없다 — 제출 요건 '정상 작동하는 서비스 링크' 미충족 (STATUS 의 '막힌 것' 은 전부 계정 작업) | 첫 스크롤 어휘가 개발자 어휘다(Pack · snapshot · manifest · 해시 · PSP · sync). README 는 '쉬운 말로' 각주를 달았지만 랜딩 1440/375 캡처에는 없다 — 비개발 심사위원의 30초를 헤드라인이 아니라 Before/After 카드 하나에 의존한다 | 타깃이 흐리다 — '팀장' 을 앞세우지만 실사용은 Claude Code 를 쓰는 개발팀이고, '15분' 은 측정치가 없다. 원티드(채용/HR) 심사위원이 찾을 접점이 없다 | 데모에서 AI 가 도는 장면이 없다 — 게스트 읽기 전용 · 데모 씨앗 AI job 0건 · 로그인 미연결 · ask/demo 라우트 부재. 주최측의 '작동하는 AI 서비스' 강조와 어긋난다 | README·제출서의 '키가 없으면 픽스처 결과로 떨어진다' 는 코드에 없다 — structure/conflict 는 throw 하고 job 은 INTERNAL 로 끝난다. 정직함을 내세운 문서라 이 한 줄이 더 크게 보인다 | '왜 지금' 이 어디에도 명시돼 있지 않다 — CLAUDE.md·플러그인 표준화라는 시의성이 제품의 전제인데 문장으로 없다 | 확장 경로가 좁다 — Cursor/Codex 는 출력 파일만이고 훅·진행 보고·Skill 은 Claude Code 전용이다. 서버 AI 4종 표 중 2종만 존재한다 | 검증 대부분이 개발 기계의 PGlite 위에서만 돌았다 — CI/관통 초록, byte-identity, Gemini 출력 품질은 이번 심사에서 직접 확인하지 못했다
+
+## 실현가능성 — 실제 구현·배포·운영 가능성 · 데모 신뢰성 · 설치 경로 · 기술 부채 · 1인 개발 완성도 · 「작동하는 AI 서비스」인가 (크래프톤 엔지니어링 리더 — 문서가 아니라 코드와 산출물로 「실제로 도는가」를 본다) now 4 → 8
+ RATIONALE: 【코드로 확인한 것】 ① 규모·검증: 제품 코드 약 28k LOC(apps/web·packages·plugin), 테스트 파일 81개·케이스 약 1,100개, 로컬 CI 결과 파일(.ci/result)이 오늘(2026-09-09 20:08) 6층 전부 GREEN. 관통 스크립트는 fixture→compile→api→publish→scan→payload→sync→shots→shotcopy 9단계이고 실제 소켓으로 배포 번들을 돌린다. ② P3 「withBudget 한 문」: 실제 호출부는 structure.ts:613·conflict.ts:294 둘뿐이고 client.ts 가 유일한 fetch 자리다 — 문서 주장과 일치. 반면 AI_FEATURES 4종 중 ask·demo 는 라우트가 0개(문서도 인정). ③ P4: packages/compiler/src 에 Date.now·Math.random·fetch·new Date 0건, golden 3케이스 존재. ④ P1: upload.ts 에 .strict() 15개. ⑤ P6: session-start.mjs 는 읽기·stdout 뿐, stop.mjs 는 .contextops/pending-proposal.json 하나만 쓴다. 둘 다 LLM 호출 없음. ⑥ sync.ts: 받아서 sha256 검증→backup→atomic 교체→post-verify→불일치 시 전부 복원 — 실제 구현돼 있다. ⑦ 플러그인 번들 bin/contextops-cli.mjs 824KB 커밋됨, marketplace.json·plugin.json 존재. ⑧ 캡처 7장은 CDP 헤드리스 Chrome 이 찍은 진짜 화면이며 데모 데이터(항목 27·기기 14·제안 4·마일스톤 3)가 일관된다. ⑨ 진짜 Gemini 실측 근거(docs/evidence/2026-09-07-p3-gemini/probe.txt)가 있고 — 항목 16·충돌 5 는 나오지만 「인용 실패가 실행의 약 1/3」「두 번 연속 재시도 0 은 못 봤다」고 스스로 적었다. 【확인 못 했거나 위험】 ⓐ production 없음 — 제출 요건 「서비스 접속 링크(정상 작동 필수)」가 지금 비어 있다. 이것만으로 예선에서는 치명적. ⓑ 로컬 main 이 origin/main 보다 10커밋 앞서 있고(마지막 push 09-07 22:34), `.claude-plugin/marketplace.json` 이 GitHub 에 없다 → README·랜딩 설치 첫 줄 `claude plugin marketplace add rhdqngusanr/contextops` 는 **지금 공개 저장소로는 실패한다.** 미푸시 커밋에는 「플러그인이 성공한 업로드를 실패로 보고」하던 고장(FINDINGS 44) 수정도 들어 있다 — 공개 번들은 아직 그 버그를 갖고 있다. ⓒ 게스트 데모는 GET/HEAD 만 허용 → 심사위원은 /demo 에서 **AI 가 도는 장면을 한 번도 볼 수 없다**(씨앗된 충돌 카드 9장만 본다). 「작동하는 AI 서비스」의 AI 부분이 계정 없이는 시연 불가. ⓓ `/contextops:init` 를 사람이 Claude Code 안에서 끝까지 돌린 기록이 없다(Skill 은 모델이 읽는 문서라 CI 가 못 잰다 — 문서가 인정). 설치·관통 전부 Windows 단일 OS. ⓔ session.ts 가 HS256 만 받는다 — Supabase 가 프로젝트에 비대칭 서명키(ES256)를 쓰고 있으면 로그인 전원 불가. DEPLOY.md 에 GitHub OAuth provider 설정 걸음도 없다. ⓕ vercel.json 의 health cron `0 */6 * * *` 은 Vercel Hobby 플랜에서 허용되지 않는 빈도일 수 있다(Hobby 는 일 1회) — 배포가 거절되거나 cron 이 통째로 빠질 위험. demo-reset 이 함수 시간 안에 끝나는지도 미측정(문서 인정). ⓖ KNOWN_LIMITATIONS 의 「브라우저 e2e 가 없다·shots 단계는 SKIP」 줄은 낡았다(apps/web/e2e 가 있고 관통 SKIP 0) — 과소 주장이지만 문서 드리프트다. 【판정】 지금 그대로는 심사위원이 접속할 것이 없고 설치 경로마저 깨져 있어 4점. 배포·영상이 되고 verify:prod 가 0 failed 라면, 결정론 컴파일러·atomic sync·진짜 플러그인·기계 검사 게이트라는 실체가 해커톤 평균을 훌쩍 넘어 8점 — 다만 AI 가 게스트에게 안 보이는 것과 Claude Code 쪽 미검증이 9점을 막는다.
+ RAISE:
+  - push → Vercel 배포 → 검증 완주. ① `git push`(마켓플레이스 파일·FINDINGS 44 수정 포함 10커밋) ② Vercel Root Directory=apps/web · .env.vercel Import ③ 배포 전 Supabase 대시보드에서 JWT Signing Keys 가 legacy HS256 secret 인지 확인(아니면 session.ts 를 JWKS 검증으로 고치거나 legacy 유지) ④ Vercel 플랜 확인 — Hobby 면 health cron 을 일 1회로 바꾸거나 Pro 로 ⑤ curl demo-reset → `pnpm --filter web verify:prod -- --url …` 0 failed → .ci/production 을 docs/evidence 로 복사 ⑥ SUBMISSION 🙋 표·README 머리에 URL 기입 [score_now 4 → 7. 제출 필수 요건 충족 + 「설치 첫 줄이 실패한다」는 첫 질문 제거 · 5h]
+  - 심사위원이 AI 를 직접 보게 만든다. AI_FEATURES 표에 이미 있는 `demo`(IP당 일 5회 · withBudget 경유)를 `POST /demo/ai-once` 로 실제로 잇고, 고정 샘플 문서 하나를 구조화해 결과 카드를 보여 준다(키 없음·429·예산 초과 시 픽스처 결과로 낙하 — 이미 설계된 갈래). 게스트 배너에 버튼 하나. 라우트+시험+ai-budget 「죽은 기능」 시험 갱신. P2·P3 안이다 [「작동하는 AI 서비스」 항목에서 결정적 — 지금은 게스트가 AI 를 0번 본다. if_shipped 8 → 9 의 핵심 · 6h]
+  - 다른 기계(가능하면 macOS 또는 Linux)에서 README 4줄만 보고 fresh install: marketplace add → install → setup(토큰은 웹에서 발급) → Claude Code 안에서 `/contextops:init` 를 모델이 실제로 실행 → 웹 승인 → `/contextops:sync` → Roadmap 갱신. 화면 녹화하고 깨진 것을 그 자리에서 고친다(credentials 0600·훅 timeout 3초·경로 구분자) [Claude Code 측 절반이 처음으로 검증된다 · 영상의 핵심 장면 확보 · 단일 OS 약점 해소 · 4h]
+  - 2분 영상 + 슬라이드 8장. 구성: Before/After(랜딩 카드) → 정리 화면에서 충돌 카드 결정 → 발행 → 터미널 sync(실제 녹화) → Roadmap 근거 갱신 → 브라우저 네트워크 탭에서 upload payload 에 코드 본문이 없음을 보여 주는 10초(P1 근거 — 지금 문서가 「배포 뒤 찍는다」고 미뤄 둔 것). production URL 위에서 찍는다 [온라인 투표 20% 와 발표 전달력에 직결 · 신뢰 경계를 말이 아니라 화면으로 · 5h]
+  - 심사 전 문서 정합: KNOWN_LIMITATIONS 의 낡은 줄(e2e 없음·shots SKIP) 삭제, DEPLOY.md 에 Supabase Auth GitHub OAuth provider·redirect URL 걸음과 JWT 서명키 확인 걸음 추가, README 머리에 영어 3문장 요약(심사위원이 GitHub 를 열었을 때 10초 안에 이해), STATUS.md 는 history 로 내려 300줄 이하로 [저장소를 여는 심사위원의 첫인상과 재현성. 작지만 싸다 · 2h]
+ DIFF: 챗 래퍼가 아니라 실제 Claude Code 플러그인이다 — 훅 2개(파일 미변경·LLM 미호출을 코드로 확인) · Skill 3개 · 824KB 단일 번들 CLI 8명령, sync 는 sha256 검증→backup→atomic→post-verify→복원까지 구현돼 있다 | 승인 이후 파이프라인이 결정론이다 — 컴파일러에 시각·난수·네트워크 0건, golden 3종, 모든 Pack 줄에 역추적 태그. 「같은 snapshot → 같은 byte」를 해커톤에서 실제로 잠근 팀은 드물다 | 신뢰 경계를 문서가 아니라 기계가 잰다 — .strict() allowlist 15개, principles.ps1 이 P1~P7 을 커밋마다 세고, 관통이 진짜 소켓으로 나간 payload 에 코드 본문 0건을 잰다. 기업 도입 시 첫 질문(「우리 코드가 남의 서버로 가나」)에 코드로 답할 수 있다 | 정직한 KNOWN_LIMITATIONS 와 시험으로 묶인 문구 — 랜딩 Before/After 문장이 실제 Pack 의 그 줄과 글자 그대로 같은지 테스트가 잰다. 심사위원이 「이거 진짜냐」를 물을 자리를 미리 막았다 | 개발 과정 자체가 AI 활용 사례다 — 117바퀴 자율 루프(claude -p)가 296커밋을 만들었고 근거 캡처 208개가 남아 있다. 「AI 활용 방식」 항목에 제품 안팎 두 겹의 이야기가 있다
+ WEAK: production 이 없고 영상·슬라이드가 없다 — 제출 필수 요건 미충족. 지금 심사위원이 접속할 수 있는 것은 GitHub 뿐이고, 그 GitHub 는 로컬보다 10커밋 뒤라 설치 첫 줄이 실패하며 「업로드 성공을 실패로 보고」하는 플러그인 버그(FINDINGS 44)가 그대로 있다 | AI 가 게스트에게 보이지 않는다 — 서버측 AI 4종 중 2종만 존재하고, 그 2종도 쓰기 권한이 필요해 /demo 에서는 실행 불가. 심사위원이 보는 것은 씨앗된 결과뿐이라 「작동하는 AI 서비스」 주장이 데모에서 증명되지 않는다 | Claude Code 측(init Skill → 승인 → sync)을 사람이 끝까지 밟은 기록이 없고 검증은 Windows 단일 OS 다. Gemini 실측은 인용 실패 1/3·충돌 수가 실행마다 다름(4·5·3) 등 비결정성이 남아 있다 | 배포 가정이 미검증이다 — HS256 전용 JWT 검증, Hobby 플랜과 맞지 않을 수 있는 6시간 cron, 함수 시간 안의 데모 리셋, 픽스처 파일 추적. DEPLOY.md 에 GitHub OAuth provider 설정도 없다. 1인 개발이라 배포 첫날 문제를 병렬로 처리할 사람이 없다 | 기술 부채는 코드가 아니라 문서에 있다 — STATUS.md 1,078줄, 주석이 FINDINGS 번호를 인용해 외부 기여자는 대장을 같이 읽어야 한다. KNOWN_LIMITATIONS 일부 줄이 낡았다(e2e/shots). 오픈소스로 공개한다면 진입 장벽이 된다 | 제품 가치 가정이 미검증이다 — 「팀장은 브라우저에서 15분」은 실사용자 0명 기준의 주장이고, 권한 2단계·manifest 미서명·기기 토큰 붙여넣기 방식은 실제 팀 도입 시 첫 번째 반대 사유가 된다
+
+## 확장성 — 시장 크기 · 비즈니스 모델 · 팀→조직 · Claude Code 밖(Cursor/Codex)으로의 확장 · 경쟁 대비 해자 · 기술적 확장성 (스파크랩 VC 심사역 (시장·사업 모델·확장 경로를 본다)) now 4.5 → 6.5
+ RATIONALE: [코드로 확인한 것] ① 기술적 확장성은 해커톤 출품작 기준으로 상위권이다. ItemType 10종(`packages/schema/src/item.ts` ITEM_DATA) · Pack 타깃 3종(`manifest.ts` PACK_TARGETS → `templates/index.ts` DOCS 의 compose 거울 문서 → `plugin/.../managed.ts` MANAGED_PATHS) · 서버 AI 기능 4종(`lib/ai/features.ts`) · CLI 명령 8종(`commands.ts`) · 훅 2종(`hooks.json` _writes) 이 전부 「표 하나 + 옆에 더하는 절차 주석 + liveness 시험」 구조다. 새 타깃(예: .windsurf)을 더하는 절차가 4단계로 코드에 적혀 있고 partition 은 거울 문서를 모르게 타입으로 막아 뒀다 — 이건 말이 아니라 구조다. ② 멀티테넌시 뼈대는 있다: teams/team_members/projects/repos 표(`db/schema.ts`), `/t/new`·`/t/[team]/p/new` 온보딩 화면, 프로젝트 하나에 repos 여러 개(pathPrefix 포함)라 「한 Pack → 여러 레포」가 데이터 모델상 가능하고 `setup` 이 `project_id`(+선택 repo_id)만 든다. ③ 신뢰 경계(P1 allowlist `.strict()` · P4 결정론 · P7 `ManifestFile.refine` 으로 근거 없는 파일 거부)는 실제 코드에 있고, SessionStart 훅은 5분 캐시·2초 타임아웃·ETag 304 라 세션당 서버 부하가 작다 — 기기 수가 늘어도 버틸 설계다. ④ Cursor/Codex 는 `AGENTS.md`·`.cursor/rules/contextops.mdc` 거울 문서를 내는 것까지만이다. sync·훅·Skill·진행 보고 루프는 Claude Code 플러그인 전용이고 배포 채널도 `claude plugin marketplace` 하나다. CLI 번들(824KB · 런타임 의존 0)은 이론상 Claude Code 없이 돌지만 그 경로를 문서·시험이 잰 흔적은 없다. ⑤ 사업 모델·시장이 저장소 어디에도 없다 — `가격|요금|시장|B2B|과금` 이 docs 전체에서 0건이고, 경쟁 언급은 랜딩의 DeepWiki 한 줄뿐이다. ⑥ 멀티테넌트 SaaS 로 가는 데 실제 걸림돌 하나를 코드에서 찾았다: `budget.ts` 의 `spentMicrosToday(db, day)` 가 프로젝트·팀 필터 없이 `ai_usage` 전체를 합산한다 → 하루 예산 $3 가 **전 테넌트 공용**이다. 한 팀이 오전에 다 쓰면 나머지 팀 전부 `BUDGET_EXCEEDED` 다. 빈도 상한만 project 단위다. ⑦ 프롬프트(`prompt.ts` AI_SYSTEM_COMMON)와 Pack 제목(`# 아키텍처`·`## 결정 요약`·`# 도메인 — …`)이 한국어 고정이고 locale 표가 없다 — 비한국어 팀의 CLAUDE.md 에 한국어 제목이 박힌다. [못 확인한 것] production 이 없어 Vercel 서버리스에서 데모 리셋·픽스처 로딩이 실제로 도는지, `claude plugin install` 로 새 PC 에 깔리는지(기록 없음 · KNOWN_LIMITATIONS 인정), `teams.settings` 의 auto_apply/auto_submit 이 무언가를 실제로 바꾸는지, 데모가 프로젝트 하나에 레포 둘 이상을 보여 주는지(씨앗은 paylab-api 하나)는 확인하지 못했다. [점수] 지금(4.5): 기술 확장성 8 · 팀→조직 4(권한 2단계 · 조직 층 없음 · SSO/감사 없음) · 타 도구 확장 4 · 시장/BM 2 · 해자 4 를 VC 가중(시장·BM 을 무겁게)으로 합친 값이다. 배포+영상 가정(6.5): 「실제로 여러 팀이 한 서버에 산다」가 증명되고 영상이 문제 정의를 팔 수 있어 실현 신뢰가 오르지만, BM·글로벌·타 도구 경로는 배포만으로는 안 채워진다.
+ RAISE:
+  - P5 셋째 행을 닫아라 — Vercel+Supabase production 배포(`docs/DEPLOY.md` 걸음 ②③④⑤⑧) → `verify:prod` 0 failed → 두 번째 PC 에서 `claude plugin marketplace add → install → /contextops:init → sync` 까지 실제로 밟고 그 터미널 캡처를 docs/evidence 에 남긴다. 「서비스 접속 링크 정상 작동 필수」인 대회에서 이것 없이는 확장성 점수 자체가 산정되지 않는다. [score_now → score_if_shipped 구간 전부(+2). 「멀티테넌트가 실제 서버에서 돈다」는 첫 증거 · 6h]
+  - AI 예산을 테넌트 단위로 갈라라 — `apps/web/src/lib/ai/budget.ts` 의 `spentMicrosToday` 옆에 `teamId`(또는 projectId) 필터를 받는 한 줄과 `AI_FEATURE_LIMITS` 표에 `dailyBudgetUsd` 축을 더해 팀별 상한 + 전역 상한 이중으로 잰다(여전히 `withBudget()` 한 문 경유라 P3 그대로). 시험은 「팀 A 가 다 써도 팀 B 는 부른다」 하나. 발표에서 「팀 100개가 동시에 눌러도」에 답할 수 있는 근거가 된다. [+0.8 · 심사 질문 2번의 정답이 생기고 「SaaS 가 될 수 있는 구조」로 읽힌다 · 3h]
+  - 제출서·README·랜딩 푸터 위에 「누가 돈을 내나」 한 절을 써라(코드 0줄): ICP = AI 코딩 도구를 도입한 10~50인 개발조직의 팀장/EM · 가격 가설 = 기기 5대까지 무료 → 기기당 월 과금 → self-host(MIT 라 가능) · 경쟁표 4행(Cursor Team Rules · Claude Code managed policy · GitHub Copilot org instructions · DeepWiki/Context7)에 「배포는 그들도 하지만 승인 워크플로·줄 단위 역추적·마일스톤 진행 보고는 없다」를 칸으로. 확장 경로는 이미 코드에 있는 것만 적어라(PACK_TARGETS 4단계 · repos 다중). [+0.8 · 지금 0점인 시장/BM 칸을 채운다. VC 심사역이 보는 첫 페이지 · 3h]
+  - 「표에 한 줄」을 무대에서 증명하라 — `templates/index.ts` 주석의 4단계 절차 그대로 넷째 타깃 `copilot`(`.github/copilot-instructions.md` · 거울 문서 compose 재사용)을 더하고, 그 커밋 diff(스키마 1줄 · DOCS 1항목 · MANAGED_PATHS 1줄)를 영상 10초로 보여 준다. 동시에 README 에 「Cursor/Codex 팀은 Claude Code 없이 `node contextops-cli.mjs sync` 로 받는다」를 관통 한 단계(`$CLAUDE_PLUGIN_ROOT` 없이 sync)로 잠근다. [+0.6 · 「Claude Code 전용 아니냐」에 코드로 답한다 · 설치 기반이 가장 큰 Copilot 까지 도달 · 3h]
+  - 랜딩의 「컨텍스트는 레포 하나에 갇히지 않습니다」를 데모로 뒷받침하라 — `fixtures/seed/demo.json` 에 둘째 레포(paylab-webhook · pathPrefix 사용) 와 그 레포에 붙은 기기 2~3대를 심어 Sync 화면이 「같은 v1.1.0 · 레포 2」를 보여 주게 한다(repos 표·project.json 은 이미 준비돼 있다). 시험은 「데모 프로젝트의 repos ≥ 2」 한 줄. [+0.4 · 팀→조직 확장의 첫 단계(프로젝트 하나 = 레포 여럿)가 눈에 보인다 · 3h]
+ DIFF: 승인 이후 LLM 을 구조적으로 제거한 결정론 파이프라인 — 같은 snapshot 이면 byte 동일 Pack(golden 3종 · 순서 셔플 시험)이고 모든 줄이 항목 ID 로 역추적된다(`ManifestFile.refine` 이 근거 없는 파일을 계약에서 거부). LLM 을 감싸기만 한 출품작들과 정반대 방향이고, 코드로 확인됐다 | 신뢰 경계를 문서가 아니라 기계가 잰다 — 업로드는 `.strict()` allowlist, 훅은 `_writes` 선언 경로만, `tools/principles.ps1` 이 매 커밋 P1~P7 을 센다. 「회사 코드를 남의 서버에 안 올린다」를 B2B 영업 문장이 아니라 검사로 갖고 있다 | 확장이 「표에 한 줄」인 것을 코드가 증명한다 — ItemType · PackTarget · AI 기능 · CLI 명령 · 훅 다섯 표 모두 옆에 더하는 절차 주석 + 정의만 있고 안 도는 줄을 잡는 liveness 시험이 있다. 오픈소스 기여를 받을 수 있는 모양이다 | 가입 없는 게스트 데모(`/demo` · 진짜 라우트 · 매일 03:00 Cron 리셋) · 랜딩 캡처가 관통이 방금 찍은 실제 화면 · KNOWN_LIMITATIONS 가 줄마다 코드 이름을 달고 정직하다 — 심사위원의 첫 3분을 설계했다 | 1인 + 자율 루프로 6일 296 커밋 · 시험 700+ · 관통 1,233 검사 — 「팀이 작아도 산출이 조직처럼 확장된다」는 것 자체가 AI 활용 사례이자 개발 조직 확장 답변이다(단, 루프는 Windows 전용)
+ WEAK: production 이 없다 · `claude plugin install` 로 깐 기록이 없다 · 단일 OS 검증 — 「작동하는 AI 서비스로 승부」인 대회에서 확장성 이전에 접속 링크가 없다 | 비즈니스 모델·시장 규모·가격·ICP 가 저장소 어디에도 없다(docs 전체 grep 0건). 경쟁 언급은 DeepWiki 한 줄뿐이고 진짜 경쟁자(Cursor Team Rules · Claude Code managed policy · Copilot org instructions)는 이름조차 없다 | 하루 AI 예산이 전 테넌트 공용이다(`budget.ts` `spentMicrosToday` 에 팀 필터 없음) — 지금 구조로는 두 번째 유료 팀을 받는 순간 서로의 예산을 잠근다. 멀티테넌트 SaaS 로 못 간다 | Cursor/Codex 는 거울 파일 출력까지다 — sync·훅·Skill·진행 보고 루프와 배포 채널(plugin marketplace)이 전부 Claude Code 전용이라 제품의 절반(진행이 보인다)이 Claude Code 밖에서는 없다 | 프롬프트와 Pack 제목이 한국어 고정(`# 아키텍처` · `## 결정 요약`) · locale 표 없음 — 글로벌 확장을 말하려면 첫 고객이 영어 팀인 순간 CLAUDE.md 에 한국어 헤더가 박힌다 | 해자가 얇다 — 「승인된 규칙 파일을 팀에 배포」의 절반은 도구 벤더가 플랫폼 기능으로 흡수할 수 있다. 남는 것(승인 워크플로 · 역추적 · 마일스톤 보고)의 지불 의사가 검증된 적이 없다 | 팀→조직 층이 없다 — 권한 owner/member 2단계 · 팀 위 조직 없음 · SSO/SCIM/감사 로그 없음 · manifest 서명 없음(TLS 만). 엔터프라이즈 확장은 전부 앞에 남아 있다 | 공개 데모의 AI 가 Gemini 무료 티어 분당 제한 위에 있다 — 투표 기간(온라인 20%)에 여러 명이 동시에 누르면 429 를 본다(KNOWN_LIMITATIONS 인정) | 미확인: `teams.settings` 의 auto_apply/auto_submit 이 실제로 무언가를 바꾸는지 · 프로젝트 하나에 레포 여럿이 어디서든 실제로 쓰이는지(데모 씨앗은 레포 하나) — 랜딩의 「레포 하나에 갇히지 않습니다」는 데이터 모델로만 뒷받침된다
+
+## AI활용 — AI 활용의 적절성 (필요한 자리·과소/과다·환각 방지·출력 검증·데모 체감·모델 선택·Claude Code 플러그인 활용의 독창성) (라이너(AI 검색 서비스) AI 리드 — AI 를 어디에 어떻게 썼는지, 환각·안전, 사용자가 AI 가치를 체감하는지를 본다) now 4.5 → 7
+ RATIONALE: **AI 를 「사람이 결정하기 전」에만 두고 승인 이후는 결정론(P4)으로 못 박은 설계는 이 대회에서 보기 드물게 명확하다.** 코드로 확인한 것: 서버측 LLM 은 Gemini `generateContent` 를 `fetch` 로 직접 부르고, 출력 스키마는 Zod 계약(`AiStructureOutput`·`AiConflictOutput`)에서 `toJsonSchemaOf()` 로 뽑아 `responseJsonSchema` 에 싣는다(계약이 두 벌이 아니다). 모든 호출은 `withBudget()` 한 문을 지나고(`principles.ps1` P3 가 파일 단위로 센다), 실패한 호출도 장부에 남는다. 환각 방지는 문장이 아니라 구조다 — 모델은 offset 이 아니라 `quote` 를 내고 서버가 `indexOf` 로 offset 을 계산하며(0곳·2곳 이상이면 재시도 → `AI_OUTPUT_INVALID`), 충돌 탐지는 프롬프트에 없던 항목 id 를 가리키면 응답 전체를 버리고, 문서 본문은 `<untrusted>` 로만 들어간다. 이것들이 시험 85개(ai-structure 41 · ai-conflict 26 · ai-budget 18)로 잠겨 있고, **진짜 Gemini 실측 3회(`probe-87-run1~3`)를 실패까지 그대로 남겼다** — run1·run3 은 항목 16 · 충돌 카드 5 · 비용 ≈$0.02~0.035, run2 는 goals.md 가 인용 불일치로 재시도까지 죽었다(1/3). 플러그인 쪽은 사용자 본인의 Claude Code 를 로컬 추출기로 쓰되 Skill 셋이 전부 `disable-model-invocation: true` 이고 validate → `--dry-run` → 명시적 확인을 강제하며 훅 둘은 LLM 을 안 부른다(P6 · 쓰기 allowlist 를 게이트가 센다). 「챗봇 껍데기」가 아닌 **거버넌스가 걸린 플러그인 활용**이라 독창성 점수는 높다.
+
+**그런데 심사위원이 실제로 만지는 `/demo` 에는 AI 가 만든 것이 한 개도 없다.** `actor-rules.ts` 가 게스트를 `writes:false` 로 두어 문서를 올릴 수 없고, `lib/demo/` 는 job 러너를 한 번도 부르지 않으며, `conflicts` 행을 만드는 자리는 프로젝트 생성(씨앗 질문 10장 · `byAi:false`)과 AI 러너 둘뿐이다. 따라서 데모 Roadmap 의 「열린 충돌 9」는 씨앗 질문 9장이고 정리 화면 머리는 「AI가 찾은 … 0건」이 된다. 항목 27개와 랜딩 Before/After 도 픽스처 시드다. README 의 「서로 어긋난 것을 AI가 찾아 카드로 물어보는 화면 | 정리」는 게스트에게는 성립하지 않는다. 랜딩 문구 표에서 AI 가 무엇을 하는지 말하는 줄은 한 줄(「팀의 결정을 AI에게 꽂습니다」)뿐이다. AI 챔피언십에서 「사용자가 AI 를 체감하나」 축은 지금 사실상 0 이다.
+
+또 하나 — README·제출서의 「서버측 AI 는 키가 없으면 픽스처 결과로 떨어집니다」는 **코드에 없다.** `job.ts` 는 키 없음을 `INTERNAL` 로 적고 화면은 「서버에서 처리하지 못했습니다」를 본다. 픽스처 폴백 구현은 어디에도 없고 주석만 「화면의 일」이라 한다(KNOWN_LIMITATIONS 조차 그 갈래는 존재하지 않는 §7.4 에만 있다고 적었다). 4개 기능 중 `ask`·`demo` 는 표에만 있고 라우트가 없어 — 정직하게 적혀 있긴 하나 — 가장 사용자가 체감할 「승인된 항목만 근거로 답하기」가 빠져 있다. 모델 정가 표는 코드 스스로 🙋 자리표시자(2.5 Flash 값을 3.5/3.6 에 임시 적용)라 예산 산정의 근거가 약하다. 탐지는 의도된 어긋남 3개에서 카드 5장을 냈다(재시도 규칙 하나가 3장) — 중복 검사가 「같은 짝」만 잡아서다.
+
+**score_now 4.5** — 접속 링크·영상이 없고, 있다 해도 게스트는 AI 를 못 본다. AI 층의 공학 품질은 8점대인데 「작동하는 AI 서비스로 승부」라는 채점 축에서 보여 줄 게 없다. **score_if_shipped 7** — 배포 + 영상으로 owner 흐름(문서 붙여넣기 → 진행 막대 → 인용 붙은 후보 → 충돌 카드 → 결정 → 발행 → 터미널 sync)이 보이면 「어디에 AI 를 썼고 어떻게 막았나」가 전달된다. 8 이상은 데모 자체에서 AI 를 체감하게 만들어야 나온다(아래 1번).
+ RAISE:
+  - 게스트 데모에 「AI 한 번」을 넣는다 — SPEC §7.4 대로 `POST /demo/ai-once` (픽스처 goals.md + old-roadmap 을 §7.1→§7.2 에 넣어 카드 생성 · 결과 24h 캐시 · 게스트 IP 일 5회). `AI_FEATURES.demo` 와 한도 표는 이미 있고 필요한 건 라우트 + 게스트 쓰기 예외 한 줄 + 정리 화면의 버튼이다. 캐시가 있으니 두 번째 심사위원부터는 비용 0. 시간이 없으면 차선: `probe-87-run3.json` 의 실제 카드 5장을 데모 씨앗에 `contradiction` 행으로 심고 「2026-09-06 실측 결과」라고 적는다(지어낸 것이 아니다 · P7 은 a/b 항목 id 를 데모 항목에 매핑해야 지켜진다) [「데모에서 AI 체감 0」이 사라진다. 이 축에서 +2 — 가장 크다 · 8h]
+  - 2분 영상은 owner 로 로그인해 AI 가 도는 장면을 찍는다: 문서 붙여넣기 → 조각 진행 막대 → 후보 항목마다 원문 인용(quote)이 붙어 있음 → 「AI 제안」 배지가 붙은 충돌 카드에서 문서/코드 중 하나를 사람이 고름 → 발행 → 터미널에서 /contextops:sync. 마지막 10초에 「AI 는 질문만 하고 결정은 사람이 · 승인 뒤엔 LLM 없음」한 장 [데모를 안 눌러 보는 심사위원에게도 AI 자리 셋이 전달된다. +1 · 4h]
+  - README·SUBMISSION 의 「키가 없으면 픽스처 결과로 떨어진다」를 코드와 맞춘다 — 구현하거나(키 없음·BUDGET_EXCEEDED 일 때 `probe-87-run3` 기록을 결과로 보여 주고 「기록된 결과」 배지) 문장을 지운다. `readme.test.ts` 가 이런 주장을 못 잡는 것도 같이 본다 [심사 첫 질문이 될 거짓 주장을 없앤다. 신뢰도 방어 +0.5 · 1h]
+  - 랜딩 첫 스크롤에 「AI 가 하는 일 / 안 하는 일」 절을 넣는다 — 자리 셋(문서 구조화 · 충돌 질문 · 사용자의 Claude Code 로컬 추출)과 실측 카드 한 장(run3 의 「5회 백오프 vs 3회 고정」 질문 원문), 그리고 「승인 이후 LLM 없음 · 같은 snapshot → 같은 byte」. 문구는 `landing.tsx` 표에 두고 시험이 카드 문장을 probe 기록과 대조하게 한다 [AI 챔피언십 심사위원이 10초 안에 「AI 를 어디에 썼나」를 읽는다. +0.5 · 2h]
+  - 충돌 카드 과생성을 줄인다 — 같은 (a,b) 항목 쌍에서 나온 카드는 서버가 한 장으로 접고(질문은 첫 것 · 나머지는 note), SYSTEM 에 「같은 두 항목 사이의 어긋남은 한 장」 한 줄. 같은 김에 실측 실패율(3회 중 1회 문서 전체 실패)을 화면 문구에 반영해 「다시 시도」 버튼이 왜 있는지 말한다 [사람이 같은 결정을 세 번 하는 일이 없어지고 탐지 품질 질문에 답이 생긴다. +0.5 · 3h]
+ DIFF: AI 의 자리가 「사람이 결정하기 전」으로만 한정되고 승인 이후는 LLM 없이 byte-identical 로 컴파일된다(P4 · golden 3종 · 셔플 테스트). 대부분의 참가작이 「AI 가 답한다」에서 끝나는 것과 달리 「AI 는 묻기만 하고 결정은 사람이」가 코드 구조로 강제돼 있다 | 환각 방지가 프롬프트가 아니라 검증 구조다 — 모델은 quote 를 내고 서버가 offset 을 계산(0곳·2곳 이상이면 재시도), 프롬프트에 없던 id 는 응답 전체 폐기, strict Zod 재검증, `<untrusted>` 감싸기(길이 보존 이스케이프). 시험 85개와 실패까지 기록한 진짜 Gemini 실측(probe-87)이 붙어 있다 | Claude Code 플러그인을 「사용자 본인의 Claude 를 거버넌스 아래 두는 로컬 추출기」로 쓴다 — Skill 셋 전부 `disable-model-invocation:true`, validate → --dry-run → 명시적 확인 강제, 훅은 LLM 없이 알림·힌트만(P6 쓰기 allowlist 를 게이트가 센다). 서버는 사용자의 Claude 구독을 절대 대신 부르지 않는다(P2) | 서버 LLM 진입점이 `withBudget()` 하나이고 기계 게이트(`principles.ps1` P3)가 우회를 잡는다 — 입력 상한·기능별 빈도·일일 예산·실패 호출 기록까지 한 문에서. 해커톤에서 예산 장부를 DB 행으로 남기는 팀은 드물다 | KNOWN_LIMITATIONS 가 줄마다 코드 이름을 대며 「지금 안 되는 것」을 적었고 시험이 그 문서와 FINDINGS 를 대조한다 — 없는 기능(`ask`)을 제출서에 안 적는 정직함
+ WEAK: 게스트 데모에 AI 산출물이 0 — 충돌 카드는 전부 씨앗 질문(byAi:false), 항목 27개는 픽스처 시드, 게스트는 구조화를 누를 수 없다. 「사용자가 데모에서 AI 를 체감하나」 축이 비어 있다 | README·제출서의 「키가 없으면 픽스처 결과로 떨어진다」에 대응하는 코드가 없다(키 없음 → INTERNAL → 「서버에서 처리하지 못했습니다」). 문서와 코드가 어긋난 채 제출되면 첫 질문이 된다 | AI 기능 4종 중 `ask`·`demo` 라우트가 없다 — 가장 체감이 큰 「승인된 항목만 근거로 답하기」가 없어 AI 가치가 팀장의 정리 단계에만 머문다 | 강건성 — 최근 실측 3회 중 1회가 문서 전체 실패(재시도 후 AI_OUTPUT_INVALID). 항목 단위 부분 성공이 없어 사용자는 문서를 다시 올려야 하고, 그것이 시간당 5회 상한을 태운다 | 충돌 탐지 과생성 — 의도된 어긋남 3개에서 카드 5장. 중복 검사가 「같은 (a,b) 짝」만 봐서 같은 주제가 여러 장으로 갈린다 | 모델 정가 표가 코드 스스로 자리표시자(3.5/3.6 Flash 에 2.5 Flash 값)라 일일 예산 $3 의 산정 근거가 약하고, Gemini 무료 티어 분당 제한은 예산 가드 밖이라 동시 심사 시 429 가 난다 | 랜딩·README 가 「AI 를 어디에 썼나」를 거의 말하지 않는다 — 랜딩 문구 표에서 AI 역할 문장은 한 줄뿐. AI 챔피언십 심사 축과 첫 화면이 안 맞는다 | production 이 없어 AI 층이 개발 기계(PGlite · .env.local 키) 밖에서 돈 근거가 0 — Vercel 함수에서 `fixtures/` 탐색·환경변수·타임아웃(goals.md 구조화 19~35초)이 될지 미검증

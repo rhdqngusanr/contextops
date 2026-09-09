@@ -53,7 +53,9 @@ async function shapeOf(db: PGlite): Promise<string[]> {
   const enums = await db.query<{ line: string }>(`
     select 'enum ' || t.typname || '=' || e.enumlabel as line
       from pg_enum e join pg_type t on t.oid = e.enumtypid`)
-  return [...columns.rows, ...indexes.rows, ...enums.rows].map((r) => r.line).sort()
+  const rls = await db.query<{ line: string }>(`
+    select 'rls ' || tablename || '=' || rowsecurity::text as line from pg_tables where schemaname = 'public'`)
+  return [...columns.rows, ...indexes.rows, ...enums.rows, ...rls.rows].map((r) => r.line).sort()
 }
 
 describe('scripts/migrate.ts — 소켓 위의 Postgres 에 적용한다', () => {
@@ -81,6 +83,9 @@ describe('scripts/migrate.ts — 소켓 위의 Postgres 에 적용한다', () =>
     expect(r.indexes.missing).toEqual([])
     expect(r.indexes.present).toEqual([...INDEX_NAMES])
     expect(r.enums).toBeGreaterThan(0)
+    //  RLS 가 전 표에 켜졌다 — 진짜 서버에서 0008 이 빠지면 `db:migrate` 가 FAIL 로 말하는 근거다
+    expect(r.rls.total).toBe(r.tables.ts)
+    expect(r.rls.on).toBe(r.rls.total)
   })
 
   it('③ 다시 돌리면 0개를 적용한다 — 장부가 막는다 (Supabase 에 두 번 돌려도 무해하다)', async () => {
