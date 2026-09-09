@@ -65,6 +65,12 @@ Pack 의 진행 보고 문단은 `/contextops:progress …`(TEMPLATE_VERSION 1.5
 잰다. 데모 항목은 승인 27 + 초안 3 (SPEC §10.3 · KNOWN_LIMITATIONS). ⚠ 완료된 구조화 job 1건은 **안 심었다** — probe 의 후보 16개가
 이미 승인된 항목과 겹쳐 화면 3 에 「후보 수락」이 서면 혼란만 는다.
 
+🔴 **블로커 6 의 문서 쪽도 닫았다** (같은 세션). `docs/SUBMISSION.md` 에 「대회 규정 원문 — 2026-09-09 확인」(마감 둘 · 제출물 넷 · 링크 유지 · 심사 · 자격 ·
+이 제출서가 답하는 자리) · 「제출 폼 원문 (4칸)」(한 줄 60자 · 문제 400자 · AI 활용 600자 · AI 툴 200자 — 괄호의 상한을 `readme.test` 가 잰다 ·
+폼을 열어 본 뒤 실제 값으로 바꾼다) · 「production URL 이 오면 지울 문장」 · 🙋 표에 「참가 접수」 행. `readme.test` 게이트 셋: 🙋 자리는 🙋 이거나
+https 링크여야 함 · URL 이 오면 세 문서에 「production 이 아직 없」 0건(지금은 🙋 라 그 문장이 **있어야** 통과) · 규정 절의 두 마감. SPEC §13 의 9/18 행이
+「참가 접수 마감 · 동결」이 됐다.
+
 🔴 **GitHub Actions 가 `9c84aa9` 에서 빨갰다** — `deploy-doc.test` ⑤ 가 `apps/web/.env.vercel` 을 「없다」고 했다. 로컬에는 있고(gitignore) 러너에는 없는 파일을 DEPLOY.md 가
 백틱으로 가리킨 것이다. 문서를 고치고, 같은 종류가 다시 못 들어오게 그 시험이 **`git check-ignore` 로 gitignore 대상 경로도 FAIL** 로 만든다(로컬에서도 러너와 같은 판정).
 

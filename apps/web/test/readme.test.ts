@@ -261,9 +261,51 @@ describe('⑥ 제출서(docs/SUBMISSION.md) — README·코드와 같은 말을 
     return row as string
   }
 
-  it('아직 없는 값(production URL · 영상 · 슬라이드)은 🙋 자리표시자 그대로다 — 없는 것을 있는 것처럼 적지 않는다', () => {
-    for (const k of ['production URL', '2분 영상 링크', '슬라이드 링크']) {
-      expect(identityRow(k)).toContain('| 🙋')
+  it('아직 없는 값(production URL · 영상 · 슬라이드 · 참가 접수)은 🙋 자리표시자이거나 진짜 https 링크다 — 없는 것을 있는 것처럼 적지 않는다', () => {
+    for (const k of ['production URL', '2분 영상 링크', '슬라이드 링크', '참가 접수']) {
+      const row = identityRow(k)
+      //  값이 생기면 🙋 대신 https:// 가 온다 — 그 사이(자리표시자도 링크도 아닌 글)는 없다.
+      expect(row.includes('| 🙋') || /\| https:\/\/\S+/.test(row), `${k}: 🙋 도 https 링크도 아니다`).toBe(true)
+    }
+  })
+
+  it('🔴 production URL 이 오면 「production 이 아직 없」이 세 문서에 0건이다 (INBOX 블로커 6)', () => {
+    const row = identityRow('production URL')
+    const live = /\| https:\/\/\S+/.test(row)
+    const stale = [readme, submission, limits].map((t) => (t.match(/production ?이 아직 없/g) ?? []).length)
+    if (live) expect(stale, 'URL 이 있는데 「production 이 아직 없」 문장이 남았다 (README · SUBMISSION · KNOWN_LIMITATIONS 순)').toEqual([0, 0, 0])
+    //  아직 🙋 면 그 문장이 **있어야** 정직하다 — 둘 다 없는 상태(있는 척)를 막는다.
+    else expect(stale[1]! + stale[2]!, '🙋 인데 「production 이 아직 없」 문장이 어디에도 없다').toBeGreaterThan(0)
+  })
+
+  it('🔴 대회 규정 원문 절이 있고 두 마감(접수 9/18 · 제출 9/20)을 적는다', () => {
+    const start = submission.indexOf('\n## 대회 규정 원문')
+    expect(start).toBeGreaterThan(0)
+    const section = submission.slice(start + 1).split(/\n## /)[0] as string
+    expect(section).toContain('2026-09-18')
+    expect(section).toContain('2026-09-20')
+    expect(section).toContain('서비스 링크(정상 작동 필수)')
+  })
+
+  it('🔴 제출 폼 원문의 각 칸이 적어 둔 상한 안이다 — 마감일에 급히 자르다 차별점이 빠지지 않게', () => {
+    const start = submission.indexOf('\n## 제출 폼 원문')
+    expect(start).toBeGreaterThan(0)
+    const section = submission.slice(start + 1).split(/\n## /)[0] as string
+    //  `### <칸 이름> (≤ N자)` 머리 아래의 본문이 그 칸의 원문이다. 상한이 없는 머리(서비스 링크)는 길이를 안 잰다.
+    const blocks = section.split('\n### ').slice(1).map((chunk) => {
+      const nl = chunk.indexOf('\n')
+      const head = nl === -1 ? chunk : chunk.slice(0, nl)
+      const body = nl === -1 ? '' : chunk.slice(nl + 1).trim()
+      const m = /^(.+?) \(≤ (\d+)자\)$/.exec(head)
+      return m ? { label: m[1] as string, cap: Number(m[2]), body } : { label: head, cap: undefined, body }
+    })
+    const capped = blocks.filter((b) => b.cap !== undefined)
+    for (const must of ['한 줄', '해결하고자 한 문제', 'AI 활용 방식', '사용한 AI 툴']) {
+      expect(capped.map((b) => b.label), `폼 칸 「${must}」 이 없거나 상한이 없다`).toContain(must)
+    }
+    for (const b of capped) {
+      expect(b.body.length, `「${b.label}」 이 비었다`).toBeGreaterThan(0)
+      expect(b.body.length, `「${b.label}」 이 상한 ${b.cap}자를 넘는다 (${b.body.length}자)`).toBeLessThanOrEqual(b.cap as number)
     }
   })
 
