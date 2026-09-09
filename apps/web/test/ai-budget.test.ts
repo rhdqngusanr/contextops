@@ -11,12 +11,13 @@ import {
   DEFAULT_AI_MODEL,
   DEFAULT_DAILY_BUDGET_USD,
   DEFAULT_MAX_INPUT_TOKENS,
+  DEFAULT_PROJECT_DAILY_BUDGET_USD,
   GEMINI_36_INTRO_PRICE_UNTIL,
   costMicros,
   estimateTokens,
 } from '../src/lib/ai/features'
 import { currentModel } from '../src/lib/ai/model'
-import { actorHash, dailyBudgetUsd, maxInputTokens, utcDay, withBudget } from '../src/lib/ai/budget'
+import { actorHash, dailyBudgetUsd, maxInputTokens, projectDailyBudgetUsd, utcDay, withBudget } from '../src/lib/ai/budget'
 import type { Db } from '../src/db/client'
 
 // =====================================================================
@@ -32,7 +33,7 @@ import type { Db } from '../src/db/client'
 
 let pg: PGlite | undefined
 let db: Db
-const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL'] as const
+const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_PROJECT_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL'] as const
 const saved: Record<string, string | undefined> = {}
 
 const TEAM = '22222222-2222-4222-8222-222222222222'
@@ -259,5 +260,41 @@ describe('빈도 제한 — AI_FEATURE_LIMITS 의 줄마다 결과가 갈린다'
     process.env.AI_DAILY_BUDGET_USD = '0'
     await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall()))
       .rejects.toBeInstanceOf(ApiError)
+  })
+})
+
+// ---------------------------------------------------------------------
+describe('프로젝트별 하루 상한 — 전역 안의 이중 상한 (INBOX H11)', () => {
+  const OTHER = '33333333-3333-4333-8333-333333333333'
+
+  it('SPEC §7.5 의 기본값 — 프로젝트 하나는 1달러', () => {
+    expect(DEFAULT_PROJECT_DAILY_BUDGET_USD).toBe(1)
+    expect(projectDailyBudgetUsd()).toBe(DEFAULT_PROJECT_DAILY_BUDGET_USD)
+    //  전역보다 작아야 뜻이 있다 — 크면 전역이 먼저 걸려 이 상한은 죽은 줄이다.
+    expect(DEFAULT_PROJECT_DAILY_BUDGET_USD).toBeLessThan(DEFAULT_DAILY_BUDGET_USD)
+  })
+
+  it('🔴 한 프로젝트가 제 상한을 다 써도 다른 프로젝트는 그대로 돈다', async () => {
+    await pg!.query(`insert into projects (id, team_id, slug, name) values ($1, $2, 'other', 'other')`, [OTHER, TEAM])
+    process.env.AI_DAILY_BUDGET_USD = '100'
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '0'
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall()))
+      .rejects.toMatchObject({ code: 'BUDGET_EXCEEDED' })
+    //  상한을 올리면 같은 호출이 지나간다 — 전역이 아니라 프로젝트 상한이 막은 것이었다.
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '1'
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall(300_000, 30_000)))
+      .resolves.toBe('ok')
+    //  이제 이 프로젝트는 오늘치를 다 썼다($0.72 + 다음 추정) — 다른 프로젝트는 막히지 않는다.
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '0.5'
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall()))
+      .rejects.toMatchObject({ code: 'BUDGET_EXCEEDED' })
+    await expect(withBudget('conflict', { projectId: OTHER, inputChars: 10, now: NOW }, fakeCall()))
+      .resolves.toBe('ok')
+  })
+
+  it('프로젝트가 없는 호출(게스트 데모)은 전역 상한만 본다', async () => {
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '0'
+    await expect(withBudget('demo', { actor: '203.0.113.9', inputChars: 10, now: NOW }, fakeCall()))
+      .resolves.toBe('ok')
   })
 })

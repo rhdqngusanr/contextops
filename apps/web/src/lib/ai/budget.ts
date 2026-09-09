@@ -7,6 +7,7 @@ import { ApiError } from '../api/error'
 import {
   AI_FEATURE_LIMITS,
   DEFAULT_DAILY_BUDGET_USD,
+  DEFAULT_PROJECT_DAILY_BUDGET_USD,
   DEFAULT_MAX_INPUT_TOKENS,
   costMicros,
   estimateTokens,
@@ -80,16 +81,21 @@ export function dailyBudgetUsd(): number {
   return envNumber('AI_DAILY_BUDGET_USD', DEFAULT_DAILY_BUDGET_USD)
 }
 
+/** 프로젝트 하나의 하루 예산(USD) — 전역 예산 **안에서** 다시 가르는 상한 (INBOX H11). */
+export function projectDailyBudgetUsd(): number {
+  return envNumber('AI_PROJECT_DAILY_BUDGET_USD', DEFAULT_PROJECT_DAILY_BUDGET_USD)
+}
+
 /** 호출 하나의 입력 토큰 상한. */
 export function maxInputTokens(): number {
   return envNumber('AI_MAX_INPUT_TOKENS', DEFAULT_MAX_INPUT_TOKENS)
 }
 
-async function spentMicrosToday(db: Db, day: string): Promise<number> {
+async function spentMicrosToday(db: Db, day: string, projectId?: string): Promise<number> {
   const [row] = await db
     .select({ total: sql<string | null>`coalesce(sum(${aiUsage.costMicros}), 0)` })
     .from(aiUsage)
-    .where(eq(aiUsage.day, day))
+    .where(projectId === undefined ? eq(aiUsage.day, day) : and(eq(aiUsage.day, day), eq(aiUsage.projectId, projectId)))
   return Number(row?.total ?? 0)
 }
 
@@ -175,6 +181,14 @@ export async function withBudget<T>(
   const spent = await spentMicrosToday(db, utcDay(now))
   if (spent + costMicros(model, estimated, 0) > budgetMicros) {
     throw new ApiError('BUDGET_EXCEEDED', '오늘 AI 예산을 다 썼다')
+  }
+  //  🔴 이중 상한 — 프로젝트 하나가 전역 예산을 혼자 태우지 못하게 (INBOX H11). 프로젝트가 없는 호출(게스트 데모)은 전역만 본다.
+  if (ctx.projectId !== undefined) {
+    const projectMicros = Math.round(projectDailyBudgetUsd() * 1_000_000)
+    const spentHere = await spentMicrosToday(db, utcDay(now), ctx.projectId)
+    if (spentHere + costMicros(model, estimated, 0) > projectMicros) {
+      throw new ApiError('BUDGET_EXCEEDED', '이 프로젝트의 오늘 AI 예산을 다 썼다')
+    }
   }
 
   try {

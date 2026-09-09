@@ -126,7 +126,7 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
               : <span className="meta">아직 발행된 버전이 없습니다.</span>}
             {items.result.state === 'ready'
               //  🔴 잰 것만 적는다 — 「미발행 변경 N건」은 계산할 문이 없다 (위 주석).
-              ? <span className="meta">항목 {items.result.data.items.length}개</span>
+              ? <span className="meta">항목 {items.result.data.items.length}개{items.result.data.items.length >= items.result.data.limit ? ` · ${items.result.data.limit}개까지만 보여 줍니다 — 거르개로 좁혀 보세요` : ''}</span>
               : null}
           </div>
         </div>

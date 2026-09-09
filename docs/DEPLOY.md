@@ -138,6 +138,7 @@ Vercel → Project → Settings → Environment Variables → **Import `.env`** 
 |---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | 코드에 소비처가 **0곳**이다 — 안 쓰는 최고 권한 키가 배포 환경에 남는다 (`.env.vercel` 의 마지막 절) |
 | `AI_MAX_INPUT_TOKENS` | 기본값이 있다 (`src/lib/ai/features.ts` 의 `DEFAULT_MAX_INPUT_TOKENS`). 바꿀 이유가 생기면 그때 넣는다 |
+| `AI_PROJECT_DAILY_BUDGET_USD` | 기본값이 있다 (`src/lib/ai/features.ts` 의 DEFAULT_PROJECT_DAILY_BUDGET_USD = $1 · 전역 $3 안의 프로젝트별 이중 상한 · INBOX H11). 심사 기간에 한 프로젝트가 하루 열두 장 넘게 구조화하면 그때 올린다 |
 | `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` | 비우면 이메일 매직링크 문이 **숨겨진다** — 기본 SMTP 는 팀 멤버 주소로만 보내서 심사위원에게는 안 간다. 커스텀 SMTP(Resend 등)를 붙인 뒤에만 `1` 로 |
 
 ### ④ 🙋 배포한다

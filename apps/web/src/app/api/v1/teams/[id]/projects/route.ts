@@ -1,7 +1,9 @@
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { CreateProject } from '@contextops/schema'
 
 import { conflicts, projects } from '../../../../../../db/schema'
 import { conflictRow } from '../../../../../../lib/api/conflict'
+import { CREATION_LIMITS } from '../../../../../../lib/api/limits'
 import { fail } from '../../../../../../lib/api/error'
 import { requireTeam } from '../../../../../../lib/api/guard'
 import { parseBody, pathUuid, route } from '../../../../../../lib/api/route'
@@ -27,6 +29,15 @@ export const POST = route<{ id: string }>('POST /teams/{id}/projects', async (ct
   await requireTeam(ctx.db, actor, teamId, 'owner')
 
   const body = await parseBody(ctx.req, CreateProject)
+
+  //  🔴 상한 — 한 팀의 (지워지지 않은) 프로젝트 수 (`CREATION_LIMITS` · INBOX H11).
+  const existing = await ctx.db
+    .select({ n: sql<string | null>`count(*)` })
+    .from(projects)
+    .where(and(eq(projects.teamId, teamId), isNull(projects.deletedAt)))
+  if (Number(existing[0]?.n ?? 0) >= CREATION_LIMITS.PROJECT_LIMIT.max) {
+    fail('VALIDATION_FAILED', `${CREATION_LIMITS.PROJECT_LIMIT.what}는 ${CREATION_LIMITS.PROJECT_LIMIT.max}개까지다`, { code: 'PROJECT_LIMIT', limit: CREATION_LIMITS.PROJECT_LIMIT.max })
+  }
 
   const row = await ctx.db.transaction(async (tx) => {
     const [created] = await tx

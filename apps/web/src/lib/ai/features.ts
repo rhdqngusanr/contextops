@@ -161,6 +161,13 @@ export const DEFAULT_AI_MODEL = 'gemini-3.5-flash'
 
 /** `AI_DAILY_BUDGET_USD` 의 기본값 (SPEC §7.5). */
 export const DEFAULT_DAILY_BUDGET_USD = 3
+/**
+ * `AI_PROJECT_DAILY_BUDGET_USD` 의 기본값 — **프로젝트 하나**의 하루 상한 (INBOX H11 · 2026-09-10).
+ * ★ 왜 이중인가 — 전역 $3 하나뿐이면 한 프로젝트(한 사람의 스크립트)가 아침에 다 태우고 나머지 팀 전부가
+ *   「오늘 예산이 소진되었습니다」를 본다. 프로젝트별 상한이 먼저 걸리면 남은 팀은 그대로 돈다.
+ *   문서 한 장이 약 $0.08(실측 · SUBMISSION 「실측」 표)이라 $1 이면 하루 열두 장이다.
+ */
+export const DEFAULT_PROJECT_DAILY_BUDGET_USD = 1
 /** `AI_MAX_INPUT_TOKENS` 의 기본값 — 호출 하나의 입력 상한 (SPEC §7.5). */
 export const DEFAULT_MAX_INPUT_TOKENS = 60_000
 

@@ -1,7 +1,8 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { CreateTeam, type TeamRole } from '@contextops/schema'
 
 import { projects, teamMembers, teams } from '../../../../db/schema'
+import { CREATION_LIMITS } from '../../../../lib/api/limits'
 import { fail } from '../../../../lib/api/error'
 import { parseBody, route } from '../../../../lib/api/route'
 
@@ -83,6 +84,15 @@ export const POST = route('POST /teams', async (ctx) => {
   if (actor.kind === 'device') fail('FORBIDDEN', '기기 토큰으로는 팀을 만들 수 없다')
 
   const body = await parseBody(ctx.req, CreateTeam)
+
+  //  🔴 상한 — 한 계정이 owner 인 팀의 수 (`CREATION_LIMITS` · INBOX H11). 화면은 `REASON_HINT.TEAM_LIMIT` 로 같은 숫자를 말한다.
+  const owned = await ctx.db
+    .select({ n: sql<string | null>`count(*)` })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.userId, actor.userId), eq(teamMembers.role, 'owner'), eq(teamMembers.status, 'active')))
+  if (Number(owned[0]?.n ?? 0) >= CREATION_LIMITS.TEAM_LIMIT.max) {
+    fail('VALIDATION_FAILED', `${CREATION_LIMITS.TEAM_LIMIT.what}은 ${CREATION_LIMITS.TEAM_LIMIT.max}개까지다`, { code: 'TEAM_LIMIT', limit: CREATION_LIMITS.TEAM_LIMIT.max })
+  }
 
   const team = await ctx.db.transaction(async (tx) => {
     const [row] = await tx

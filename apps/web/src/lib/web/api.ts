@@ -1,6 +1,8 @@
 import { ERROR_CODES, type ErrorCode } from '@contextops/schema'
 import type { CompileErrorCode } from '@contextops/compiler'
 
+import { CREATION_LIMITS, type LimitReason } from '../api/limits'
+
 import type { ActorKind } from '../api/actor-rules'
 import { actorKindOf, clearSession, readSession } from './session'
 
@@ -90,14 +92,19 @@ export function hintText(code: ErrorCode, actor: ActorKind): string {
  *   `null` 인 줄(서버 잘못 · 500)은 여기 오지 않으므로 적지 않는다.
  * ⚠ 게스트 문구(`GUEST_HINT`)보다 **뒤**다 — 게스트는 애초에 발행 문을 못 지난다 (`writeDoor`).
  */
-export const REASON_HINT: Partial<Record<CompileErrorCode, string>> = {
+export type ReasonCode = CompileErrorCode | LimitReason
+
+export const REASON_HINT: Partial<Record<ReasonCode, string>> = {
   EMPTY_SNAPSHOT: '승인된 항목이 하나도 없습니다. Context 에서 초안을 승인한 뒤에 발행해주세요.',
+  //  상한 둘 — 숫자는 서버와 같은 표(`CREATION_LIMITS`)에서 온다 (INBOX H11). 여기 숫자를 적지 않는다.
+  TEAM_LIMIT: `팀은 계정당 ${CREATION_LIMITS.TEAM_LIMIT.max}개까지 만들 수 있습니다. 기존 팀에 프로젝트를 더해주세요.`,
+  PROJECT_LIMIT: `프로젝트는 팀당 ${CREATION_LIMITS.PROJECT_LIMIT.max}개까지 만들 수 있습니다. 새 팀을 만들거나 기존 프로젝트를 써주세요.`,
 }
 
-/** 실패 봉투의 `details.code` — 컴파일 원인이면 그 코드, 아니면 `undefined`. 지어내지 않는다. */
-export function reasonOf(details: unknown): CompileErrorCode | undefined {
+/** 실패 봉투의 `details.code` — 아는 원인이면 그 코드, 아니면 `undefined`. 지어내지 않는다. */
+export function reasonOf(details: unknown): ReasonCode | undefined {
   const code = (details as { code?: unknown } | null | undefined)?.code
-  return typeof code === 'string' && Object.hasOwn(REASON_HINT, code) ? (code as CompileErrorCode) : undefined
+  return typeof code === 'string' && Object.hasOwn(REASON_HINT, code) ? (code as ReasonCode) : undefined
 }
 
 /** 서버가 낸 실패 봉투를 그대로 들고 다닌다 — 화면이 `code` 로 갈래를 탄다. */
