@@ -1,7 +1,7 @@
 # DEPLOY — production 을 세우는 절차 (PLAN P5 첫 행)
 
 > **이 파일이 배포 절차의 정본이다.** 지금까지 이 절차는 `.env.example` 의 주석 ·
-> `apps/web/vercel.json` 의 `_comment` · `docs/PLAN.md` 의 P5 행에 **흩어져** 있었다.
+> `apps/web/src/lib/api/vercel.ts` 머리 주석 · `docs/PLAN.md` 의 P5 행에 **흩어져** 있었다 (`vercel.json` 자체에는 주석을 둘 수 없다 — Vercel 이 모르는 키를 거부한다 · 2026-09-10).
 > 흩어져 있으면 다음 사람은 반드시 하나를 빠뜨린다 (CLAUDE.md 「확장은 표에 한 줄」).
 >
 > 🙋 **표시가 있는 걸음은 계정이 필요해서 사람만 할 수 있다.** 나머지는 명령 한 줄이다.

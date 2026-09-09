@@ -180,6 +180,15 @@ describe('⑥ vercel.json 의 Cron · 리전 · 함수 상한 — 정본은 lib/
   type Cron = { path: string; schedule: string }
   const vercel = JSON.parse(readFileSync(join(webRoot, 'vercel.json'), 'utf8')) as { crons: Cron[]; regions?: string[] }
 
+  it('🔴 최상위 키가 Vercel 이 아는 것뿐이다 — `_comment` 하나로 Import 가 거부됐다 (2026-09-10)', () => {
+    //  Vercel 은 vercel.json 을 스키마로 엄격히 판다 (additionalProperties: false). 주석·메모는 `lib/api/vercel.ts` 머리로.
+    const raw = JSON.parse(readFileSync(join(webRoot, 'vercel.json'), 'utf8')) as Record<string, unknown>
+    const KNOWN = ['$schema', 'regions', 'crons', 'functions', 'headers', 'redirects', 'rewrites', 'cleanUrls', 'trailingSlash', 'framework', 'buildCommand', 'installCommand', 'outputDirectory']
+    const unknown = Object.keys(raw).filter((k) => !KNOWN.includes(k))
+    expect(unknown, 'vercel.json 에 Vercel 이 모르는 키가 있다 — Import 가 거부한다').toEqual([])
+    expect(Object.keys(raw).some((k) => k.startsWith('_'))).toBe(false)
+  })
+
   it('부르는 경로마다 라우트 파일이 실제로 있다', () => {
     expect(vercel.crons.length).toBeGreaterThan(0)
     for (const cron of vercel.crons) {

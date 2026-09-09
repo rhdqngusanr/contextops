@@ -11,6 +11,19 @@
 //
 //  2026-09-09 감사에서 생겼다: health cron 이 6시간 주기(Hobby 는 하루 1회가 상한 → 첫 배포 거부),
 //  리전 미지정(iad1 → 서울 DB 왕복), maxDuration 60(구조화 job 이 중간에 죽는 값) 셋이 한꺼번에 있었다.
+//
+//  🔴 **`vercel.json` 에는 주석을 넣을 수 없다** (2026-09-10 · Vercel Import 가 `should NOT have additional
+//     property _comment` 로 프로젝트 생성 자체를 거부했다). 그 파일이 하던 말은 전부 여기 있다 —
+//     `test/demo-reset.test.ts` ⑥ 이 그 파일의 최상위 키가 Vercel 이 아는 것뿐인지 잰다.
+//   · Root Directory 는 `apps/web` — vercel.json 은 그 자리에서만 읽힌다.
+//   · `regions`: 서울 icn1 한 곳 (아래 FUNCTION_REGION · Hobby 는 리전 하나).
+//   · `crons` 의 시각은 UTC 다. demo-reset 18:00 UTC = 03:00 KST — 그 셈의 정본은 `lib/demo/tenant.ts` 의
+//     `DEMO_TENANT.resetAt`·`resetUtcOffsetHours` 이고 시험이 두 파일이 같은 시각인지 센다. health 는 21:00 UTC
+//     (06:00 KST · SPEC §11 「Supabase pause 방지」) — 두 문이 하루 두 번 DB 를 깨운다.
+//   · 모든 cron 은 **하루 1회 이하** — Hobby 는 더 잦은 표현식을 배포 단계에서 거부한다. 정각이 아니라 그 시간 안
+//     임의 분에 돈다(최대 59분 늦음) — 배너가 「03:00」이라고 못 박지 않는 이유다.
+//   · Cron 은 `CRON_SECRET` 이 있으면 `Authorization: Bearer <값>` 을 붙여 GET 으로 부른다 (`lib/api/cron.ts`).
+//     그 변수가 없으면 demo-reset 은 401 이다 — 의도다.
 // =====================================================================
 
 /**
