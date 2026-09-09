@@ -49,6 +49,12 @@ export const ERROR_CODES = [
   //     「AI 가 계약과 다른 걸 냈다」와 「서버가 터졌다」가 화면에서 구별되지 않는다
   //     (docs/feedback/FINDINGS.md 48번).
   'AI_OUTPUT_INVALID',
+  //  ⚠ **키 없는 배포**의 자리다 (INBOX G9 · 2026-09-09). 예전엔 `client.ts` 가 일반 `Error` 를 던져
+  //     job 이 `INTERNAL`(「잠시 후 다시」)로 끝났고, 문서 넷은 「픽스처 결과로 떨어진다」고
+  //     적었는데 **그 갈래는 코드 어디에도 없었다.** 사람이 할 일이 「기다리기」가 아니라
+  //     「운영자가 키를 꽂기」라서 코드가 따로 있어야 화면이 참말을 한다. `/health` 의 `ai` 칸이
+  //     같은 사실을 배포 검증에 낸다.
+  'AI_NOT_CONFIGURED',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
@@ -102,9 +108,17 @@ export const ERROR_STATUS: Record<ErrorCode, { status: number; message: string; 
   INTERNAL: { status: 500, message: '서버에서 처리하지 못했다', retryable: true },
   //  ⚠ 502 다 — 우리가 터진 게 아니라 **상류가 계약을 어겼다.** 500 으로 내면
   //     운영자가 우리 스택을 뒤지고, 화면은 「다시 해 보세요」를 못 고른다 (SPEC §7).
-  //  ⚠ `retryable:false` 다 — §7 공통 규약이 **이미 한 번 재시도한 뒤**의 코드라
-  //     (오류 위치를 넣어 다시 물었는데 또 계약을 어겼다) 셋째 왕복은 예산만 태운다.
-  AI_OUTPUT_INVALID: { status: 502, message: 'AI 응답이 계약과 맞지 않는다', retryable: false },
+  //  🔴 `retryable:true` 다 (INBOX G8 · 2026-09-09). 예전엔 `false` 였다 — 「§7 이 이미 한 번
+  //     재시도했으니 셋째 왕복은 예산만 태운다」는 이유였는데, **실측이 그 가정을 깼다**:
+  //     같은 두 픽스처 문서로 여러 번 굴렸을 때 약 1/3 이 응답 중간에서 잘리거나 인용을
+  //     흐트러뜨려 이 코드로 끝났고, 다음 판은 멀쩡히 지났다 (`docs/evidence/2026-09-07-p3-gemini`).
+  //     즉 「무엇이 저절로 달라지나」의 답은 **모델 출력의 비결정성**이다. 화면은 이 코드에
+  //     「다시 시도해주세요」를 띄우면서 버튼은 안 그렸다 — 표가 화면의 말을 거짓으로 만들었다.
+  //     ⚠ 대신 상한이 있다 — 같은 행은 `MAX_JOB_REQUEUES` 번까지만 되돌린다 (P3).
+  AI_OUTPUT_INVALID: { status: 502, message: 'AI 응답이 계약과 맞지 않는다', retryable: true },
+  //  ⚠ 503 이다 — 이 배포는 지금 그 일을 **할 수 없다**(키가 없다). 시간이 고치지 않고 운영자가
+  //     고친다 → `false`. 화면 문구는 「운영자에게」다 (`ERROR_HINT`).
+  AI_NOT_CONFIGURED: { status: 503, message: 'AI 가 설정되지 않았다 — GEMINI_API_KEY 가 없다', retryable: false },
 }
 
 /**
@@ -226,10 +240,26 @@ export const AI_JOB_RETRY_RULES: Record<AiJobStatus, AiJobRetryRule> = {
   failed: { mode: 'requeue', needs: 'retryable_error' },
 }
 
+/**
+ * 🔴 **같은 행을 `queued` 로 되돌릴 수 있는 횟수의 상한** (INBOX G8 · P3).
+ *
+ * ★ 왜 있나 — `AI_OUTPUT_INVALID` 를 `retryable` 로 돌리는 순간 [다시 시도] 는 **예산을 태우는
+ *   버튼**이 됐다. 비결정 실패는 다음 판에 대개 지나지만, 계약을 매번 어기는 문서(모델이 감당
+ *   못 하는 길이·형식)는 열 번을 눌러도 같은 자리에서 죽는다 — 그 열 번이 전부 LLM 왕복이다.
+ * ★ 왜 2 인가 — 실측 실패율 약 1/3 이면 두 번 더 굴려 셋 다 실패할 확률은 1/27 이다. 그때는
+ *   문서 쪽 문제로 보는 것이 맞고, 화면은 「문서를 나눠 올려 보라」고 말한다.
+ * ⚠ `fresh`(멈춘 행 닫고 새로 만들기)는 세지 않는다 — 새 행은 자기 횟수를 0 부터 센다.
+ *   그 갈래는 서버가 죽은 자리라 모델의 비결정과 다른 고장이다.
+ * ⚠ 서버(재시도 라우트의 조건부 UPDATE)와 화면(버튼)이 **같은 이 숫자**를 읽는다 — `jobRetryMode`
+ *   하나가 판정하고, 남은 횟수는 job 응답의 `requeues` 로 온다.
+ */
+export const MAX_JOB_REQUEUES = 2
+
 /** 위 표의 `needs` 축을 **재는 자리**. 축을 하나 더하면 여기 한 줄이 같이 는다. */
 const RETRY_NEEDS: Record<AiJobRetryRule['needs'], (job: AiJobRetryInput) => boolean> = {
   none: () => true,
-  retryable_error: (job) => isRetryableErrorCode(job.error_code),
+  //  🔴 되는 코드라도 **상한 안**이어야 한다 — 상한을 화면이 따로 세면 서버와 갈린다.
+  retryable_error: (job) => isRetryableErrorCode(job.error_code) && job.requeues < MAX_JOB_REQUEUES,
   //  ⚠ 「멈췄나」는 **서버가 낸 값**이다 — 잣대(`stallAfterSec`)가 서버 전용 표에 있고
   //    브라우저의 시계는 서버와 어긋난다 (`toAiJob` 의 `stalled`).
   stalled: (job) => job.stalled === true,
@@ -240,6 +270,8 @@ export interface AiJobRetryInput {
   readonly status: string
   readonly error_code: string | null | undefined
   readonly stalled: boolean
+  /** 이 행이 지금까지 `queued` 로 되돌아간 횟수 (`ai_jobs.requeues`). `MAX_JOB_REQUEUES` 와 견준다. */
+  readonly requeues: number
 }
 
 /**

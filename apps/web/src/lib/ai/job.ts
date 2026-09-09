@@ -444,6 +444,9 @@ export const AI_JOB_FIELDS = {
   input: { column: aiJobs.input, heavy: false },
   result: { column: aiJobs.result, heavy: true },
   error_code: { column: aiJobs.errorCode, heavy: false },
+  //  🔴 몇 번 되돌아갔나 — 화면이 [다시 시도] 를 그릴지(`jobRetryMode` 의 `MAX_JOB_REQUEUES`)와
+  //     「남은 n번」을 이 값으로 정한다. 정수 하나라 목록에도 실린다 (INBOX G8).
+  requeues: { column: aiJobs.requeues, heavy: false },
   started_at: { column: aiJobs.startedAt, heavy: false },
   finished_at: { column: aiJobs.finishedAt, heavy: false },
   created_at: { column: aiJobs.createdAt, heavy: false },
@@ -483,6 +486,7 @@ type AiJobSummaryRow = {
   progress: unknown
   input: unknown
   error_code: string | null
+  requeues: number
   started_at: Date | null
   finished_at: Date | null
   created_at: Date
@@ -531,6 +535,8 @@ export function toAiJob(row: AiJobSummaryRow | AiJobFullRow, now: Date = new Dat
     progress: row.progress,
     input: row.input,
     error_code: row.error_code,
+    //  되돌아간 횟수 — 화면이 상한(`MAX_JOB_REQUEUES`)과 견줘 버튼을 그릴지 정한다. 서버와 같은 문이다.
+    requeues: row.requeues,
     started_at: row.started_at === null ? null : row.started_at.toISOString(),
     finished_at: row.finished_at === null ? null : row.finished_at.toISOString(),
     created_at: row.created_at.toISOString(),

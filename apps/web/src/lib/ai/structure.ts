@@ -597,11 +597,10 @@ export interface StructureResult {
 /**
  * 🔴 SPEC §7.1 `structureDocument(docVersion)` — 문서 하나를 항목 초안으로 옮긴다.
  *
- * @throws ApiError `BUDGET_EXCEEDED`·`RATE_LIMITED` — 예산 가드가 막았다 (SPEC §7.5).
- *                  화면은 이때 픽스처 결과를 보여 준다.
- * @throws ApiError `AI_OUTPUT_INVALID` — 재시도까지 계약과 다른 응답이 왔다 (SPEC §7).
- * @throws Error `GEMINI_API_KEY 가 없다` — 키 없는 배포. 고장이 아니라 §7.5 의
- *               「픽스처 결과로 떨어지는」 갈래가 받을 자리다 (화면의 일).
+ * @throws ApiError `BUDGET_EXCEEDED`·`RATE_LIMITED` — 예산 가드가 막았다 (SPEC §7.5). 화면은 그 사실만 말한다.
+ * @throws ApiError `AI_OUTPUT_INVALID` — 재시도까지 계약과 다른 응답이 왔다 (SPEC §7). `retryable` 이라
+ *                  화면 3 이 [다시 시도] 를 그린다 — 같은 행은 `MAX_JOB_REQUEUES` 번까지 (INBOX G8).
+ * @throws ApiError `AI_NOT_CONFIGURED` — 키 없는 배포 (`client.ts` · INBOX G9). 픽스처로 떨어지는 갈래는 없다.
  */
 export async function structureDocument(input: StructureInput): Promise<StructureResult> {
   const all = chunkByHeading(input.content)

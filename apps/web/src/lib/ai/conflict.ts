@@ -239,8 +239,7 @@ function bySeverity(a: AiConflict, b: AiConflict): number {
  *
  * @throws ApiError `BUDGET_EXCEEDED`·`RATE_LIMITED` — 예산 가드가 막았다 (SPEC §7.5).
  * @throws ApiError `AI_OUTPUT_INVALID` — 재시도까지 계약과 다른 응답이 왔다 (SPEC §7).
- * @throws Error `GEMINI_API_KEY 가 없다` — 키 없는 배포. 고장이 아니라 §7.5 의
- *               「픽스처 결과로 떨어지는」 갈래가 받을 자리다 (화면의 일).
+ * @throws ApiError `AI_NOT_CONFIGURED` — 키 없는 배포 (`client.ts` · INBOX G9). 픽스처로 떨어지는 갈래는 없다.
  */
 export async function detectConflicts(input: ConflictInput): Promise<ConflictResult> {
   const db = getDb()

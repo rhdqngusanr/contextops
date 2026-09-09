@@ -1,11 +1,11 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
-  AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, jobRetryMode, type AiJobStatus,
+  AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, MAX_JOB_REQUEUES, jobRetryMode, type AiJobStatus,
 } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 
-import { JobProgress, canRetryJob } from '../src/components/job-progress'
+import { JobProgress, RETRY_EXHAUSTED, canRetryJob } from '../src/components/job-progress'
 import { structureCounts, type AiJobSummary } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -40,6 +40,7 @@ function job(over: Partial<AiJobSummary> = {}): AiJobSummary {
     progress: null,
     input: { document_version_id: '33333333-3333-4333-8333-333333333333' },
     error_code: null,
+    requeues: 0,
     started_at: ago(30),
     finished_at: null,
     created_at: ago(40),
@@ -143,6 +144,22 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
     for (const code of ERROR_CODES) {
       expect(canRetryJob(job(failedWith(code))), code).toBe(ERROR_STATUS[code].retryable)
     }
+  })
+
+  it('🔴 **상한에 닿으면 버튼 대신 다음 걸음을 말한다** — 되는 코드라도 `MAX_JOB_REQUEUES` 번까지다 (INBOX G8)', () => {
+    const failed = failedWith('AI_OUTPUT_INVALID')
+    //  아직 남았다 — 버튼과 「남은 n번」.
+    const before = drawWithRetry({ ...failed, requeues: MAX_JOB_REQUEUES - 1 })
+    expect(before).toContain('<button')
+    expect(before).toContain(`남은 1번`)
+    expect(before).not.toContain(RETRY_EXHAUSTED)
+    //  닿았다 — 버튼은 없고, 빈 칸 대신 「문서를 나눠 올려보세요」.
+    const after = drawWithRetry({ ...failed, requeues: MAX_JOB_REQUEUES })
+    expect(after).not.toContain('<button')
+    expect(after).toContain(RETRY_EXHAUSTED)
+    expect(canRetryJob(job({ ...failed, requeues: MAX_JOB_REQUEUES }))).toBe(false)
+    //  안 되는 코드는 상한과 무관하게 그 문장을 안 낸다 — 「다시 굴렸지만」이 거짓이 된다.
+    expect(drawWithRetry({ ...failedWith('COMPILE_FAILED'), requeues: MAX_JOB_REQUEUES })).not.toContain(RETRY_EXHAUSTED)
   })
 
   it('🔴 **막힌 job 이 아니면 버튼이 없다** — 손잡이를 줘도 그리지 않는다', () => {

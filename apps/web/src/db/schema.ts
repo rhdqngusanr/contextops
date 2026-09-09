@@ -607,6 +607,13 @@ export const aiJobs = pgTable('ai_jobs', {
   progress: jsonb('progress'),
   /** 실패했을 때만 찬다 (CHECK). `@contextops/schema` 의 `ERROR_CODES` 중 하나다. */
   errorCode: text('error_code'),
+  /**
+   * 🔴 이 행이 `failed → queued` 로 **되돌아간 횟수** (INBOX G8 · P3). 재시도 라우트의 `requeue` 가
+   * 조건부 UPDATE(`requeues < MAX_JOB_REQUEUES`)로 올리고, 화면은 이 값으로 남은 횟수를 말한다.
+   * ⚠ `AI_JOB_STATUS_RULES` 의 축이 아니다 — 어느 상태에서도 남아 있어야 하는 누적값이라 CHECK 밖이다
+   *   (`progress` 와 같은 판단). `fresh` 가 만드는 새 행은 0 부터다.
+   */
+  requeues: integer('requeues').notNull().default(0),
   startedAt: timestamp('started_at', { withTimezone: true }),
   finishedAt: timestamp('finished_at', { withTimezone: true }),
   createdAt: createdAt(),

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  AI_JOB_RETRY_RULES, AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, jobRetryMode, type ErrorCode,
+  AI_JOB_RETRY_RULES, AI_JOB_STATUSES, ERROR_CODES, ERROR_STATUS, MAX_JOB_REQUEUES, jobRetryMode, type ErrorCode,
 } from '@contextops/schema'
 
 import { ApiError } from '../src/lib/api/error'
@@ -73,8 +73,19 @@ describe('에러 코드 표가 정본이고, 갈라질 자리가 없다', () => 
     //    그게 맞다). 그러면 표를 잘못 고쳤을 때 아무도 안 막는다 — **닻이 하나 필요하다.**
     //  ⚠ 이 목록을 고치는 것은 「예산을 태우는 버튼을 하나 늘린다」는 결정이다 (P3).
     //    한 줄 늘리기 전에 「무엇이 저절로 달라져서 이번엔 되나」에 답할 수 있어야 한다.
+    //  ⚠ `AI_OUTPUT_INVALID` 는 2026-09-09 에 `true` 로 뒤집었다 (INBOX G8) — 실측 실패율 약 1/3 이
+    //    비결정이었다. 그 대가로 같은 행은 `MAX_JOB_REQUEUES` 번까지만 되돌린다 (아래 시험).
     expect(ERROR_CODES.filter((c) => ERROR_STATUS[c].retryable))
-      .toEqual(['BUDGET_EXCEEDED', 'RATE_LIMITED', 'INTERNAL'])
+      .toEqual(['BUDGET_EXCEEDED', 'RATE_LIMITED', 'INTERNAL', 'AI_OUTPUT_INVALID'])
+  })
+
+  it('🔴 **되는 코드라도 상한이 있다** — `requeues` 가 `MAX_JOB_REQUEUES` 에 닿으면 `null` (INBOX G8 · P3)', () => {
+    const base = { status: 'failed', error_code: 'AI_OUTPUT_INVALID', stalled: false }
+    expect(MAX_JOB_REQUEUES).toBeGreaterThan(0)
+    for (let n = 0; n < MAX_JOB_REQUEUES; n++) expect(jobRetryMode({ ...base, requeues: n }), `${n}번째`).toBe('requeue')
+    expect(jobRetryMode({ ...base, requeues: MAX_JOB_REQUEUES })).toBeNull()
+    //  멈춘 행을 새로 만드는 갈래(`fresh`)는 세지 않는다 — 새 행은 0 부터다.
+    expect(jobRetryMode({ status: 'running', error_code: null, stalled: true, requeues: MAX_JOB_REQUEUES })).toBe('fresh')
   })
 
   it('🔴 **어느 수명이 어떻게 다시 굴러가는지도 여기 한 번 적혀 있다** (FINDINGS 154)', () => {
@@ -93,13 +104,13 @@ describe('에러 코드 표가 정본이고, 갈라질 자리가 없다', () => 
 
   it('표를 읽는 문은 모르는 상태·모자란 근거에 `null` 이다', () => {
     //  🔴 `running` 인데 **안 멈춘** job 은 다시 굴릴 수 없다 — 도는 일을 사람이 죽인다.
-    expect(jobRetryMode({ status: 'running', error_code: null, stalled: false })).toBeNull()
-    expect(jobRetryMode({ status: 'running', error_code: null, stalled: true })).toBe('fresh')
-    expect(jobRetryMode({ status: 'failed', error_code: 'BUDGET_EXCEEDED', stalled: false })).toBe('requeue')
-    expect(jobRetryMode({ status: 'failed', error_code: 'COMPILE_FAILED', stalled: false })).toBeNull()
-    expect(jobRetryMode({ status: 'nope', error_code: null, stalled: true })).toBeNull()
+    expect(jobRetryMode({ status: 'running', error_code: null, stalled: false, requeues: 0 })).toBeNull()
+    expect(jobRetryMode({ status: 'running', error_code: null, stalled: true, requeues: 0 })).toBe('fresh')
+    expect(jobRetryMode({ status: 'failed', error_code: 'BUDGET_EXCEEDED', stalled: false, requeues: 0 })).toBe('requeue')
+    expect(jobRetryMode({ status: 'failed', error_code: 'COMPILE_FAILED', stalled: false, requeues: 0 })).toBeNull()
+    expect(jobRetryMode({ status: 'nope', error_code: null, stalled: true, requeues: 0 })).toBeNull()
     //  ⚠ `Object.hasOwn` 이라 프로토타입의 이름이 새어 들어오지 않는다.
-    expect(jobRetryMode({ status: 'toString', error_code: null, stalled: true })).toBeNull()
+    expect(jobRetryMode({ status: 'toString', error_code: null, stalled: true, requeues: 0 })).toBeNull()
   })
 
   it('코드를 바꾸면 응답이 갈린다 — 상태와 code 가 표를 따라간다', async () => {

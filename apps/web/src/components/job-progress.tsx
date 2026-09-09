@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { jobRetryMode, type AiJobRetryMode } from '@contextops/schema'
+import { ERROR_STATUS, MAX_JOB_REQUEUES, jobRetryMode, type AiJobRetryMode } from '@contextops/schema'
 
-import { hintFor } from '../lib/web/api'
+import { hintFor, isErrorCode } from '../lib/web/api'
 import type { AiJobSummary } from '../lib/web/queries'
 import { sinceText } from '../lib/web/time'
 import { AiJobStatusChip } from './chips'
@@ -146,9 +146,18 @@ export function JobFailed({
       {job.progress ? (
         <span className="meta">{job.progress.total}{job.progress.unit} 중 {job.progress.done}에서 멈췄습니다.</span>
       ) : null}
+      {/* 되는 코드였는데 상한에 닿아 버튼이 사라진 자리 — 빈 칸으로 두면 「고장」으로 읽힌다 (INBOX G8). */}
+      {retryExhausted(job) ? <span className="meta">{RETRY_EXHAUSTED}</span> : null}
       <JobRetry job={job} retry={retry} />
     </div>
   )
+}
+
+/** 「되는 코드로 죽었는데 되돌릴 횟수를 다 썼다」 — 서버와 같은 두 표(`ERROR_STATUS` · `MAX_JOB_REQUEUES`)를 읽는다. */
+export function retryExhausted(job: Pick<AiJobSummary, 'status' | 'error_code' | 'requeues'>): boolean {
+  return job.status === 'failed'
+    && isErrorCode(job.error_code) && ERROR_STATUS[job.error_code].retryable
+    && job.requeues >= MAX_JOB_REQUEUES
 }
 
 /**
@@ -185,10 +194,27 @@ export function JobRetry({
       <button type="button" className="btn" onClick={retry.run} disabled={retry.busy}>
         {retry.busy ? '다시 굴리는 중…' : '다시 시도'}
       </button>
-      <span className="meta">{RETRY_NOTE[mode]}</span>
+      <span className="meta">{RETRY_NOTE[mode]}{mode === 'requeue' ? ` ${requeuesLeftText(job)}` : ''}</span>
     </div>
   )
 }
+
+/**
+ * 「같은 일을 몇 번 더 되돌릴 수 있나」 — 숫자의 정본은 `MAX_JOB_REQUEUES`(서버와 같은 표)다.
+ * ★ 왜 말하나 — 이 버튼은 LLM 을 한 번 더 부른다 (P3). 마지막 한 번임을 모르고 누른 사람은
+ *   다음에 버튼이 사라진 것을 「고장」으로 읽는다. 상한에 닿은 뒤의 말은 `RETRY_EXHAUSTED` 다.
+ */
+export function requeuesLeftText(job: Pick<AiJobSummary, 'requeues'>): string {
+  const left = MAX_JOB_REQUEUES - job.requeues
+  return `같은 일은 ${MAX_JOB_REQUEUES}번까지 다시 굴릴 수 있습니다 (남은 ${left}번).`
+}
+
+/**
+ * 🔴 상한에 닿은 실패 — 버튼 대신 **다음 걸음**을 말한다 (INBOX G8).
+ * 비결정 실패(`AI_OUTPUT_INVALID`)가 `MAX_JOB_REQUEUES` 번 연속이면 모델이 아니라 문서 쪽이다 —
+ * 길이를 줄이거나 나눠 올리는 것이 사람이 할 수 있는 유일한 일이다.
+ */
+export const RETRY_EXHAUSTED = `같은 일을 ${MAX_JOB_REQUEUES}번 다시 굴렸지만 또 실패했습니다. 문서를 더 짧게 나눠 새로 올려보세요.`
 
 /**
  * 🔴 **[다시 시도] 를 그릴 수 있나** — 서버의 재시도 라우트와 **같은 표**를 읽는다

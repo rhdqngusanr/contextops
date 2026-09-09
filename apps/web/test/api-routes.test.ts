@@ -76,7 +76,25 @@ describe('health — 공개 · DB 를 실제로 두드린다', () => {
   it('DB 가 붙어 있으면 200 · ok 와 db 가 참이다', async () => {
     const res = await health(req('GET', '/api/v1/health'), params({}))
     expect(res.status).toBe(200)
-    expect(await dataOf(res)).toEqual({ ok: true, db: true, version: 'v1' })
+    const data = await dataOf(res)
+    //  `ai` 는 이 프로세스에 키가 있는지를 그대로 말한다 (INBOX G9) — 값도 길이도 아닌 boolean 하나다.
+    expect(data).toEqual({ ok: true, db: true, ai: Boolean(process.env.GEMINI_API_KEY), version: 'v1' })
+  })
+
+  it('AI 키가 없으면 `ai:false` 다 — 그래도 200 이다 (읽기·발행·sync 는 다 된다 · INBOX G9)', async () => {
+    const had = process.env.GEMINI_API_KEY
+    delete process.env.GEMINI_API_KEY
+    try {
+      const res = await health(req('GET', '/api/v1/health'), params({}))
+      expect(res.status).toBe(200)
+      const data = await dataOf(res)
+      expect(data.ai).toBe(false)
+      expect(data.ok).toBe(true)
+      //  키의 흔적이 응답 어디에도 없다.
+      expect(JSON.stringify(data)).not.toMatch(/GEMINI|key/i)
+    } finally {
+      if (had !== undefined) process.env.GEMINI_API_KEY = had
+    }
   })
 
   it('DB 가 없으면 503 이다 — 200 으로 덮지 않는다', async () => {

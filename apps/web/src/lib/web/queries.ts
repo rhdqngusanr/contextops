@@ -200,6 +200,8 @@ export type AiJobSummary = {
   progress: { done: number; total: number; unit: string } | null
   input: unknown
   error_code: string | null
+  /** 이 행이 `queued` 로 되돌아간 횟수 — [다시 시도] 의 상한(`MAX_JOB_REQUEUES`)을 서버와 같은 문이 잰다. */
+  requeues: number
   started_at: string | null
   finished_at: string | null
   created_at: string

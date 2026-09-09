@@ -11,6 +11,7 @@ import {
   DEFAULT_AI_MODEL,
   DEFAULT_DAILY_BUDGET_USD,
   DEFAULT_MAX_INPUT_TOKENS,
+  GEMINI_36_INTRO_PRICE_UNTIL,
   costMicros,
   estimateTokens,
 } from '../src/lib/ai/features'
@@ -111,9 +112,18 @@ describe('표가 실제로 무언가를 정한다', () => {
     expect(estimateTokens(100)).toBeGreaterThan(estimateTokens(50))
   })
 
+  it('🔴 정가가 공개 정가와 같다 — 2026-09-10 ai.google.dev/gemini-api/docs/pricing 에서 읽은 값 (INBOX G10)', () => {
+    //  ★ 왜 숫자를 여기 한 번 더 적나 — 표 자신을 기대값으로 쓰면 표를 잘못 고쳐도 아무도 안 막는다
+    //    (닻 하나). 예전 값(0.30 · 2.50)은 2.5 Flash 의 것이라 $3 가드가 $11~15 를 통과시켰다.
+    expect(AI_MODELS['gemini-3.5-flash']).toEqual({ inputPerMTokUsd: 1.5, outputPerMTokUsd: 9 })
+    expect(AI_MODELS['gemini-3.6-flash']).toEqual({ inputPerMTokUsd: 0.75, outputPerMTokUsd: 3.75 })
+    //  3.6 의 값은 **도입가**다 — 그 날이 지나면 이 시험이 빨개져 표를 올리게 한다 (2027-01-01 부터 1.50 · 7.50).
+    expect(new Date().toISOString().slice(0, 10) <= GEMINI_36_INTRO_PRICE_UNTIL,
+      `gemini-3.6-flash 도입가(${GEMINI_36_INTRO_PRICE_UNTIL} 까지)가 끝났다 — features.ts 의 정가를 1.50 · 7.50 으로 올려라`).toBe(true)
+  })
+
   it('값은 정가 표에서 온다 — 표의 모든 줄이 입력·출력을 따로 세고, 0 인 줄은 없다', () => {
-    //  ⚠ 2026-09-06 Gemini 로 바꾸며 표의 두 줄이 같은 정가가 됐다(🙋 확인 전) — 그래서
-    //    「모델을 바꾸면 갈린다」 대신 「표의 값이 그대로 셈에 들어간다」를 잰다.
+    //  ⚠ 「표의 값이 그대로 셈에 들어간다」를 잰다 — 어느 값이 맞는지의 닻은 위 시험 하나다.
     //    0 을 막는 이유: 정가 0 은 하루 예산을 조용히 무한으로 만든다 (P3).
     for (const [model, price] of Object.entries(AI_MODELS)) {
       expect(price.inputPerMTokUsd, model).toBeGreaterThan(0)

@@ -140,7 +140,7 @@ async function record(
  * @param fn      실제 호출. `client.ts` 의 `callModel()` 가 이 모양을 낸다.
  *
  * @throws ApiError `BUDGET_EXCEEDED` — 입력 상한 초과 또는 하루 예산 소진.
- *                  화면은 이걸 받으면 픽스처 결과를 보여 준다 (SPEC §7.5).
+ *                  화면은 그 사실만 말한다 (SPEC §7.5 · 픽스처로 떨어지는 갈래는 없다 — FINDINGS 66).
  * @throws ApiError `RATE_LIMITED` — 그 기능의 빈도 상한 초과.
  */
 export async function withBudget<T>(

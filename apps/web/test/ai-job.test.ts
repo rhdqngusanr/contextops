@@ -4,7 +4,7 @@ import type { PGlite } from '@electric-sql/pglite'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, ERROR_CODES, ERROR_STATUS,
+  AI_JOB_STATUSES, CONFLICT_KIND_RULES, DETECTED_CONFLICT_KINDS, ERROR_CODES, ERROR_STATUS, MAX_JOB_REQUEUES,
   isRetryableErrorCode, type AiJobStatus, type ErrorCode, type SourceDocumentKind,
 } from '@contextops/schema'
 
@@ -420,14 +420,17 @@ describe('🔴 실패는 코드 하나로 남는다 (P1 · SPEC §7)', () => {
     expect(row.finishedAt).not.toBeNull()
   })
 
-  it('키가 없으면 `INTERNAL` 로 끝난다 — 고장이 아니라 화면이 받을 갈래다 (SPEC §7.5)', async () => {
+  it('🔴 키가 없으면 `AI_NOT_CONFIGURED` 로 끝난다 — 「서버 오류」가 아니라 「설정 안 됨」이다 (INBOX G9)', async () => {
     const { owner, projectId } = await seed()
     const job = { id: (await uploadDoc(owner, projectId)).job_id }
     //  스텁을 꽂지 않는다 — `client.ts` 가 「키가 없다」로 던진다.
     delete process.env.GEMINI_API_KEY
 
     expect(await runJob(job.id)).toBe('failed')
-    expect((await jobRow(job.id)).errorCode).toBe('INTERNAL')
+    //  예전엔 `INTERNAL` 이었다 — 화면이 「잠시 후 다시」를 띄웠고, 기다려도 달라질 것이 없었다.
+    //  문서 넷은 「픽스처 결과로 떨어진다」고 적었는데 그 갈래는 코드에 없었다.
+    expect((await jobRow(job.id)).errorCode).toBe('AI_NOT_CONFIGURED')
+    expect(ERROR_STATUS.AI_NOT_CONFIGURED.retryable).toBe(false)
   })
 
   it('🔴 사람이 올릴 때 고른 **문서 종류**가 §7.1 프롬프트까지 간다 (FINDINGS 82)', async () => {
@@ -730,8 +733,9 @@ describe('🔴 목록은 무거운 칸을 안 나른다 (FINDINGS 60 · SPEC §5
     expect(listed.includes(DRAFT_BODY)).toBe(false)
     expect(detail.includes(DRAFT_TITLE)).toBe(true)
     expect(detail.includes(DRAFT_BODY)).toBe(true)
-    //  가벼워진 것을 자릿수로도 잰다 (같은 job 한 장인데 목록이 훨씬 짧다).
-    expect(listed.length * 2).toBeLessThan(detail.length)
+    //  가벼워진 것을 자릿수로도 잰다 — 목록이 안 나르는 것이 **초안 본문**이므로 그만큼은 반드시 짧다.
+    //  ⚠ 「절반보다 짧다」로 재지 않는다 — 가벼운 칸(`requeues` 같은 정수 하나)이 늘 때마다 경계에서 흔들렸다.
+    expect(detail.length - listed.length).toBeGreaterThan(DRAFT_TITLE.length + DRAFT_BODY.length)
   })
 
   it('찾는 데 필요한 칸은 목록에 그대로 있다 — `input` 은 「내 문서의 job 인가」를 가른다', async () => {
@@ -930,6 +934,7 @@ describe('🔴 멈춘 job 을 알아본다 (FINDINGS 64 · SPEC §5 · §9 화�
       progress: null,
       input: {},
       error_code: null,
+      requeues: 0,
       started_at: null,
       finished_at: null,
       created_at: updatedAt,
@@ -1269,6 +1274,32 @@ describe('🔴 실패한 job 을 다시 굴리는 문 (FINDINGS 59 · SPEC §5 �
     const yes = ERROR_CODES.filter((c) => ERROR_STATUS[c].retryable)
     expect(yes.length).toBeGreaterThan(0)
     expect(yes.length).toBeLessThan(ERROR_CODES.length)
+  })
+
+  it('🔴 **같은 행은 `MAX_JOB_REQUEUES` 번까지만 되돌아간다** — 그 다음은 400 이고 행은 그대로다 (INBOX G8 · P3)', async () => {
+    const { owner, projectId } = await seed()
+    const doc = await uploadDoc(owner, projectId)
+    const job = await failedJob(projectId, 'AI_OUTPUT_INVALID', doc.current_version_id)
+
+    for (let n = 1; n <= MAX_JOB_REQUEUES; n++) {
+      const data = await dataOf(await retry(owner, projectId, job.id))
+      //  응답이 횟수를 나른다 — 화면이 「남은 n번」을 이 값으로 말한다.
+      expect(data.requeues, `${n}번째`).toBe(n)
+      expect((await jobRow(job.id)).status).toBe('queued')
+      //  러너 대신 다시 실패시킨다 — 상한을 재는 것이지 러너를 재는 것이 아니다.
+      await db.update(aiJobs)
+        .set({ status: 'failed', errorCode: 'AI_OUTPUT_INVALID', startedAt: new Date(), finishedAt: new Date() })
+        .where(eq(aiJobs.id, job.id))
+    }
+
+    //  상한에 닿았다 — 되는 코드인데도 막힌다. 행은 `failed` 그대로, 횟수도 그대로다.
+    const refused = await retry(owner, projectId, job.id)
+    expect((await errorOf(refused)).code).toBe('VALIDATION_FAILED')
+    const row = await jobRow(job.id)
+    expect(row.status).toBe('failed')
+    expect(row.requeues).toBe(MAX_JOB_REQUEUES)
+    //  굴린 것은 상한만큼이다 — 마지막 400 은 `startJob()` 을 부르지 않았다.
+    expect(startedJobIds()).toHaveLength(1 + MAX_JOB_REQUEUES)
   })
 
   it('되돌린 행은 **처음 만든 것과 같은 모양**이다 — 지난 판의 수가 남지 않는다', async () => {

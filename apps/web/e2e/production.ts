@@ -239,6 +239,9 @@ async function main(origin: string): Promise<void> {
   check('health 가 200 이다', health.status === 200, `${health.status}`)
   check('health 가 DB 에 닿았다 (db:true)', healthData?.db === true, JSON.stringify(healthData))
   check('health 의 계약 버전이 v1 이다', healthData?.version === 'v1', String(healthData?.version))
+  //  🔴 AI 키가 꽂힌 배포인가 (INBOX G9). 없으면 200 을 내고 멀쩡히 돌다가 심사위원이 [구조화하기] 를
+  //     누른 순간 `AI_NOT_CONFIGURED` 다 — 그걸 배포 직후에 잡는 자리가 여기다.
+  check('health 가 AI 를 부를 수 있다 (ai:true — GEMINI_API_KEY 가 Vercel env 에 있다)', healthData?.ai === true, JSON.stringify(healthData))
 
   // ④⑤ Cron 자물쇠 — **변수를 안 넣은 배포는 여기서 빨개진다** (500 이거나 200 이다)
   const noAuth = await probe(origin, '/api/v1/cron/demo-reset')

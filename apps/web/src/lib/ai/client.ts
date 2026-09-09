@@ -92,6 +92,24 @@ export interface AiTransport {
 let cached: AiTransport | undefined
 
 /**
+ * 🔴 **이 배포가 서버측 AI 를 부를 수 있나** — `/api/v1/health` 의 `ai` 칸이 이 답이다 (INBOX G9).
+ *
+ * ★ 왜 health 에 내나 — 키가 없는 배포는 200 을 내고 멀쩡히 돌다가 **구조화를 누른 순간** 실패한다.
+ *   심사 기간에 그것을 처음 보는 사람이 심사위원이면 늦다. `verify:prod` 가 이 칸을 읽어 배포 직후에 잡는다.
+ * ⚠ 키의 **값**은 물론 길이도 내지 않는다 — boolean 하나다. 모델 이름이 표 밖이면 `currentModel()` 이
+ *   던지므로 그것도 「설정 안 됨」이다 (부르면 어차피 거기서 죽는다).
+ */
+export function aiConfigured(): boolean {
+  if (!process.env.GEMINI_API_KEY) return false
+  try {
+    currentModel()
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * 진짜 Gemini 로 가는 transport. `callModel()` 은 이것을 한 번 만들어 붙들고 쓴다.
  * ⚠ 제품 코드는 이것을 직접 부르지 않는다 — 부르면 예산 가드를 우회한다 (P3).
  *   밖에서 쓰는 곳은 `scripts/p3-measure.ts` 하나다: 진짜 응답을 **기록만** 하는 껍데기로
@@ -100,9 +118,10 @@ let cached: AiTransport | undefined
 export function geminiTransport(): AiTransport {
   const apiKey = process.env.GEMINI_API_KEY
   //  🔴 조용히 undefined 로 돌지 않게 여기서 죽인다 (.env.example ③).
-  //     ⚠ 키가 없는 배포는 **고장이 아니다** — SPEC §7.5 의 「픽스처 결과로 떨어지는」
-  //        갈래가 그 경우를 받는다. 부르는 쪽이 이 오류를 잡아 픽스처로 내려간다.
-  if (!apiKey) throw new Error('GEMINI_API_KEY 가 없다 — apps/web/.env.example 을 보고 .env.local 을 만들어라')
+  //     ⚠ 키가 없는 배포는 **고장이 아니라 설정이 안 된 것**이다 — 그래서 `INTERNAL` 이 아니라
+  //        `AI_NOT_CONFIGURED`(503) 다 (INBOX G9). job 은 그 코드로 끝나고 화면은 「운영자에게」를
+  //        말한다. 예전 주석·문서가 말하던 「픽스처 결과로 떨어지는」 갈래는 **코드에 없었다.**
+  if (!apiKey) throw new ApiError('AI_NOT_CONFIGURED', 'GEMINI_API_KEY 가 없다 — apps/web/.env.example 을 보고 .env.local 을 만들어라')
   return {
     async generate(model, body) {
       const res = await fetch(`${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {

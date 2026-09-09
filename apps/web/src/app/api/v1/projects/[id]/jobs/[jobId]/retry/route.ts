@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm'
-import { jobRetryMode, type AiJobRetryMode } from '@contextops/schema'
+import { and, eq, lt, sql } from 'drizzle-orm'
+import { MAX_JOB_REQUEUES, jobRetryMode, type AiJobRetryMode } from '@contextops/schema'
 
 import { aiJobs } from '../../../../../../../../db/schema'
 import {
@@ -72,6 +72,9 @@ const RETRY_ACTIONS: Record<AiJobRetryMode, (t: RetryTarget) => Promise<string>>
   //    「`queued` 면 넷 다 비어 있다」를 강제한다. 하나라도 남기면 DB 가 거부한다.
   //  ⚠ `progress` 는 CHECK 밖이지만 같이 비운다. 남기면 화면이 아직 아무것도 안 한
   //    job 에 「12조각 중 4」 막대를 그린다 — 그 수는 **지난 판**의 수다.
+  //  🔴 **상한도 이 UPDATE 의 조건이다** (`requeues < MAX_JOB_REQUEUES` · INBOX G8 · P3). 위에서
+  //    `jobRetryMode` 가 같은 값을 봤지만, 둘이 동시에 누르면 둘 다 그 판정을 지난다 — 마지막
+  //    한 번을 두 번 굴리지 않게 DB 가 세는 것이 정본이다. 횟수는 여기서만 오른다.
   requeue: async ({ db, projectId, jobId, now }) => {
     const [row] = await db
       .update(aiJobs)
@@ -82,11 +85,15 @@ const RETRY_ACTIONS: Record<AiJobRetryMode, (t: RetryTarget) => Promise<string>>
         errorCode: null,
         result: null,
         progress: null,
+        requeues: sql`${aiJobs.requeues} + 1`,
         updatedAt: now,
       })
-      .where(and(eq(aiJobs.id, jobId), eq(aiJobs.projectId, projectId), eq(aiJobs.status, 'failed')))
+      .where(and(
+        eq(aiJobs.id, jobId), eq(aiJobs.projectId, projectId), eq(aiJobs.status, 'failed'),
+        lt(aiJobs.requeues, MAX_JOB_REQUEUES),
+      ))
       .returning({ id: aiJobs.id })
-    if (!row) fail('VALIDATION_FAILED', '그 사이 누가 먼저 다시 굴렸다')
+    if (!row) fail('VALIDATION_FAILED', `그 사이 누가 먼저 다시 굴렸거나 상한(${MAX_JOB_REQUEUES}번)에 닿았다`)
     return row.id
   },
 
@@ -130,6 +137,7 @@ export const POST = route<{ id: string; jobId: string }>(
         errorCode: aiJobs.errorCode,
         feature: aiJobs.feature,
         input: aiJobs.input,
+        requeues: aiJobs.requeues,
         updatedAt: aiJobs.updatedAt,
       })
       .from(aiJobs)
@@ -140,17 +148,18 @@ export const POST = route<{ id: string; jobId: string }>(
     const now = new Date()
     //  🔴 「멈췄나」를 여기서 다시 재지 않는다 — 응답의 `stalled` 를 만드는 함수와
     //     **같은 함수**다 (`isJobStalled`). 둘로 나뉘면 화면이 본 판정과 서버가 쓰는
-    //     판정이 갈리고, 사람이 본 버튼이 400 을 받는다.
+    //     판정이 갈리고, 사람이 본 버튼이 400 을 받는다. 상한(`requeues`)도 같은 문이 본다.
     const mode = jobRetryMode({
       status: job.status,
       error_code: job.errorCode,
       stalled: isJobStalled({ feature: job.feature, status: job.status, updated_at: job.updatedAt }, now),
+      requeues: job.requeues,
     })
     if (!mode) {
       //  코드를 그대로 싣는다 — 이 문구는 사람이 아니라 **화면을 만든 사람**이 읽는다
       //  (사람이 읽는 문구는 `ERROR_HINT` 하나다). 화면이 표를 제대로 읽었으면
       //  이 400 은 애초에 안 온다.
-      fail('VALIDATION_FAILED', `다시 굴릴 수 있는 job 이 아니다 (${job.status}/${job.errorCode ?? 'null'})`)
+      fail('VALIDATION_FAILED', `다시 굴릴 수 있는 job 이 아니다 (${job.status}/${job.errorCode ?? 'null'}/requeues ${job.requeues})`)
     }
 
     const targetId = await RETRY_ACTIONS[mode]({

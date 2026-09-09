@@ -134,14 +134,23 @@ export interface AiModelPrice {
  *
  * 2026-09-06 Anthropic → Gemini (INBOX). claude-* 줄은 지웠다 — `client.ts` 가 더는 그 문을
  * 못 부르는데 표에 남기면 「쓸 수 있는 이름」이 거짓말을 한다.
- * 🙋 정가는 **Gemini 2.5 Flash 의 공개 정가**(입력 0.30 · 출력 2.50 USD/M) 를 3.5·3.6 에도
- *    임시로 적었다 — 3.5/3.6 의 정가를 사람이 확인해 고쳐라 (`docs/STATUS.md` 「막힌 것」).
- *    0 으로 두면 하루 예산이 조용히 무한이 되므로 모르는 값이라도 0 은 안 된다.
+ *
+ * 🔴 **정가의 출처 — https://ai.google.dev/gemini-api/docs/pricing · 2026-09-10 읽음** (유료 티어 ·
+ *    표준 컨텍스트 · USD / 100만 토큰). 예전엔 2.5 Flash 의 값(0.30 · 2.50)을 임시로 적어 두었고,
+ *    그 값은 실제의 **1/5(입력) · 1/3.6(출력)** 이라 「$3 가드」가 실제로는 $11~15 를 통과시켰다
+ *    (INBOX G10). 예산 가드는 **비싼 쪽으로 틀리는 것이 안전**하다 (P3).
+ *    - gemini-3.5-flash: 입력 1.50 · 출력 9.00
+ *    - gemini-3.6-flash: 입력 0.75 · 출력 3.75 — **2026-12-31 까지의 도입가**이고 2027-01-01 부터
+ *      1.50 · 7.50 이다. 해가 바뀌면 이 두 줄을 올려라 (`test/ai-budget.test.ts` 가 날짜를 본다).
+ *    ⚠ 0 으로 두면 하루 예산이 조용히 무한이 되므로 모르는 값이라도 0 은 안 된다.
  */
 export const AI_MODELS: Record<string, AiModelPrice> = {
-  'gemini-3.5-flash': { inputPerMTokUsd: 0.3, outputPerMTokUsd: 2.5 },
-  'gemini-3.6-flash': { inputPerMTokUsd: 0.3, outputPerMTokUsd: 2.5 },
+  'gemini-3.5-flash': { inputPerMTokUsd: 1.5, outputPerMTokUsd: 9 },
+  'gemini-3.6-flash': { inputPerMTokUsd: 0.75, outputPerMTokUsd: 3.75 },
 }
+
+/** `gemini-3.6-flash` 도입가가 끝나는 날 — 이 날이 지나면 위 줄이 낡은 값이다 (시험이 막는다). */
+export const GEMINI_36_INTRO_PRICE_UNTIL = '2026-12-31'
 
 /** 환경변수가 없을 때 쓰는 모델 (SPEC §1.2). */
 export const DEFAULT_AI_MODEL = 'gemini-3.5-flash'
