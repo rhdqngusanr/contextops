@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { AI_JOB_STATUSES, type SourceRef } from '@contextops/schema'
 
-import { AI_JOB_STATUS_RULES, aiJobs, contextItemRevisions, contextItems, users } from '../../db/schema'
+import { AI_JOB_STATUS_RULES, aiJobs, conflicts, contextItemRevisions, contextItems, users } from '../../db/schema'
 import { POST as createTeam } from '../../app/api/v1/teams/route'
 import { POST as createProject } from '../../app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../../app/api/v1/projects/[id]/repos/route'
@@ -424,19 +424,19 @@ const ARCHITECTURE_TOP_PRIORITY = 70
  */
 export const GOALS = [
   ['item_goal_success_rate', '장애 구간에도 승인이 선다', 'G2 와 서로 당긴다 — 재시도를 늘리면 승인률은 오르지만 환불이 늦어지고, 둘이 부딪히면 G2 가 우선이다.',
-    '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-06-30 |',
-    '결제 승인 성공률 99.5%', 'PSP 장애 구간을 포함한 주간 성공률', '2026-06-30'],
+    '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-12-31 |',
+    '결제 승인 성공률 99.5%', 'PSP 장애 구간을 포함한 주간 성공률', '2026-12-31'],
   ['item_goal_refund_sla', '환불이 하루 안에 끝난다', '접수에서 종결까지의 시각 차이 p95 로 잰다.',
-    '| G2 | 환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95 | 2026-06-30 |',
-    '환불 접수→종결 24시간 이내 95%', '`refund.closed_at - refund.created_at` p95', '2026-06-30'],
+    '| G2 | 환불 접수→종결 24시간 이내 95% | `refund.closed_at - refund.created_at` p95 | 2026-12-31 |',
+    '환불 접수→종결 24시간 이내 95%', '`refund.closed_at - refund.created_at` p95', '2026-12-31'],
   //  🔴 `body` 가 **비어 있다 — 일부러다** (FINDINGS 170). 원문(`fixtures/paylab-docs/goals.md`)이
   //     G3 에 대해 세 칸(목표·지표·기한) 밖의 말을 하지 않는다. G1·G2 의 당김은 G1 의 body 가
   //     이미 나르고, G2 의 body 는 식(`refund.closed_at - …`)을 사람 말로 푼 것이다.
   //     ⚠ **여기를 지어내서 채우지 마라.** 지표를 말만 바꿔 되풀이하는 줄이 되고, 그것이
   //       169·170 이 지운 바로 그 모양이다. roadmap 셋이 이미 빈 `body` 다.
   ['item_goal_settlement_zero', '정산이 원장과 맞는다', '',
-    '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-06-30 |',
-    '정산 오차 0원', '일 배치 후 원장 대사 차액', '2026-06-30'],
+    '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-12-31 |',
+    '정산 오차 0원', '일 배치 후 원장 대사 차액', '2026-12-31'],
 ] as const satisfies readonly (readonly [
   id: string, title: string, body: string, quote: string, outcome: string, metric: string, deadline: string,
 ])[]
@@ -462,8 +462,8 @@ const GOAL_TOP_PRIORITY = 70
  * 🔴 줄 순서가 곧 종이의 순서다 (M1 → M2 → M3) — `priority` 를 줄 번호에서 뽑는다.
  */
 export const MILESTONES = [
-  ['item_road_m1', 'PL-M1', '재시도·타임아웃 정리', '2026-04-30', ['src/payment', 'src/psp'], [],
-    '### M1 — 재시도·타임아웃 정리 (2026-04-30)\n\n'
+  ['item_road_m1', 'PL-M1', '재시도·타임아웃 정리', '2026-10-31', ['src/payment', 'src/psp'], [],
+    '### M1 — 재시도·타임아웃 정리 (2026-10-31)\n\n'
     + '- 경로: `src/payment/`, `src/psp/`\n'
     + '- 완료 기준:\n'
     + '  - PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\n'
@@ -474,8 +474,8 @@ export const MILESTONES = [
       '모든 외부 호출에 타임아웃이 걸려 있다',
       '재시도 횟수와 간격이 설정값으로 빠져 있다',
     ]],
-  ['item_road_m2', 'PL-M2', '환불 SLA 계측', '2026-05-29', ['src/refund', 'src/ledger'], ['PL-M1'],
-    '### M2 — 환불 SLA 계측 (2026-05-29)\n\n'
+  ['item_road_m2', 'PL-M2', '환불 SLA 계측', '2026-11-30', ['src/refund', 'src/ledger'], ['PL-M1'],
+    '### M2 — 환불 SLA 계측 (2026-11-30)\n\n'
     + '- 경로: `src/refund/`, `src/ledger/`\n'
     + '- 의존: M1\n'
     + '- 완료 기준:\n'
@@ -487,8 +487,8 @@ export const MILESTONES = [
       '24시간을 넘긴 건이 대시보드에 뜬다',
       '넘긴 건이 자동으로 에스컬레이션된다',
     ]],
-  ['item_road_m3', 'PL-M3', 'PII 마스킹과 감사 로그', '2026-06-30', ['src/common', 'src/webhook'], ['PL-M1'],
-    '### M3 — PII 마스킹과 감사 로그 (2026-06-30)\n\n'
+  ['item_road_m3', 'PL-M3', 'PII 마스킹과 감사 로그', '2026-12-31', ['src/common', 'src/webhook'], ['PL-M1'],
+    '### M3 — PII 마스킹과 감사 로그 (2026-12-31)\n\n'
     + '- 경로: `src/common/`, `src/webhook/`\n'
     + '- 의존: M1\n'
     + '- 완료 기준:\n'
@@ -538,8 +538,82 @@ export const OPEN_QUESTIONS = [
     '정산 화폐가 KRW 외로 늘어날 때 반올림 규칙은 무엇인가?'],
 ] as const satisfies readonly (readonly [id: string, title: string, quote: string, question: string])[]
 
-export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode): PaylabDraft[] {
+/**
+ * 🔴 **폐기 문서(`old-roadmap.md`) 「운영 규칙」 셋** — 실측 충돌 카드의 **상대편(b)** 이 되는 항목들 (INBOX 블로커 5 · 2026-09-09).
+ *
+ * ★ 왜 심나 — 게스트가 보는 데모에 AI 가 만든 것이 0 이었다. 진짜 Gemini 실측(`docs/evidence/2026-09-07-p3-gemini/probe-87-run3.json`)이
+ *   낸 충돌 카드는 goals.md 의 새 규칙과 **old-roadmap.md 의 옛 규칙** 사이의 모순이라, 그 옛 규칙이 항목으로 있어야 카드의
+ *   a/b 가 실재하고 역추적(P7)이 끊기지 않는다. SPEC §10.1 이 이 문서를 「stale 탐지용」이라 적어 둔 그대로다.
+ * 🔴 **`draft` 로 남긴다 — active 로 올리지 마라.** active 면 Pack 에 실려 CLAUDE.md 가 「3회 고정 재시도」와 「5회 백오프」를
+ *   동시에 말한다. 충돌이 열려 있는 동안 옛 규칙은 승인되지 않은 초안이 맞다 (`seedPaylab` 의 활성화 고리가 이 표를 건너뛴다).
+ * ⚠ `quote` 는 old-roadmap.md 에 **한 번만** 있는 문장이어야 한다 (`locate()` 가 던진다). `rule` 은 그 문장을 규칙으로 다시 적은
+ *   진술이라 인용 칸이 아니다 (`QUOTED_DATA.policy = []`).
+ */
+export const STALE_RULES = [
+  ['item_stale_retry_fixed', '(폐기 문서) PSP 재시도는 3회 · 0.5초 고정',
+    'PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정.',
+    'PSP 호출은 3회까지 재시도한다 — 간격은 0.5초 고정',
+    '2025 하반기 로드맵의 운영 규칙이다 — 「트래픽이 아직 작아서 고정 간격으로 충분하다」고 적혀 있다.'],
+  ['item_stale_refund_no_deadline', '(폐기 문서) 환불 기한을 따로 두지 않는다',
+    '환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다.',
+    '환불은 담당자가 확인하는 대로 처리한다 — 기한은 따로 두지 않는다',
+    '2025 하반기 로드맵의 운영 규칙이다.'],
+  ['item_stale_webhook_payload_log', '(폐기 문서) 웹훅 원본 payload 를 로그에 7일 보관',
+    '장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일.',
+    '웹훅 원본 payload 를 로그에 남긴다 — 보관 7일',
+    '2025 하반기 로드맵의 운영 규칙이다.'],
+] as const satisfies readonly (readonly [id: string, title: string, quote: string, rule: string, body: string])[]
+
+/** `draft` 로 남는 항목 id — 활성화 고리와 검사가 같은 표를 읽는다. */
+export const STALE_RULE_IDS: ReadonlySet<string> = new Set(STALE_RULES.map((r) => r[0]))
+
+/**
+ * 🔴 **실측 충돌 카드 3장 — 기록물이다.** 2026-09-07 gemini-3.5-flash 가 goals.md + old-roadmap.md 에서 실제로 찾은 모순
+ * (`probe-87-run3.json` 의 `conflict.conflicts` 5장 중 SPEC §10.1 「의도된 어긋남 3곳」에 하나씩 닿는 셋). `question` 은 모델이
+ * 낸 문장 **그대로**다 — 다듬지 않는다(기록이다). 항목 id 만 이 씨앗의 id 로 잇는다 (probe 는 자기 실행의 id 를 썼다).
+ *
+ * ⚠ **이 카드는 이 데모에서 다시 탐지되지 않는다** — 리셋마다 같은 기록을 다시 심을 뿐이다. 그 사실을 `RECORDED_CONFLICT_NOTE` 가
+ *   카드 본문에 그대로 말한다. 「방금 AI 가 찾은 것」처럼 보이게 하면 이 제품이 파는 정직성이 무너진다 (INBOX 「하지 말 것」).
+ * ⚠ 심는 종류는 `contradiction` 뿐이다 — `CONFLICT_KIND_RULES` 가 `byAi` 라 화면 4 가 「AI 제안」 배지를 붙이고,
+ *   머리글이 「AI가 찾은 결정이 필요한 것 3건」이 된다 (`review/page.tsx`).
+ */
+export const RECORDED_CONFLICTS = [
+  {
+    a: 'item_policy_retry', b: 'item_stale_retry_fixed', severity: 'high',
+    question: "새 항목 '외부 PSP 호출 최대 5회 재시도'(지수 백오프)와 기존 항목 'PSP 호출 재시도 규칙'(3회, 0.5초 고정)이 서로 상충됩니다. 재시도 횟수 및 간격 정책을 어떻게 조정해야 합니까?",
+  },
+  {
+    a: 'item_policy_refund', b: 'item_stale_refund_no_deadline', severity: 'high',
+    question: "새 항목 '환불 24시간 이내 종결'에서는 환불 요청을 접수 후 24시간 안에 종결하도록 규정하고 있으나, 기존 항목에서는 환불 기한을 따로 두지 않는다고 되어 있습니다. 어느 쪽이 맞습니까?",
+  },
+  {
+    a: 'item_policy_pii_log', b: 'item_stale_webhook_payload_log', severity: 'high',
+    question: "새 항목 '로그에 개인정보(PII) 기록 금지'에서는 PSP 원본 payload 등 개인정보를 로그에 남기지 않도록 하는 반면, 기존 항목 '웹훅 원본 payload 로그 보관 규칙'에서는 장애 조사를 위해 웹훅 원본 payload를 로그에 남긴다고 되어 있습니다. 어느 정책을 따라야 합니까?",
+  },
+] as const satisfies readonly { a: string; b: string; severity: 'high' | 'medium' | 'low'; question: string }[]
+
+/** 카드 본문 끝에 붙는 한 줄 — 기록물임을 카드 스스로 말한다. `docs/SUBMISSION.md` 「어떻게 보나」가 같은 문장을 쓴다. */
+export const RECORDED_CONFLICT_NOTE =
+  '(2026-09-07 gemini-3.5-flash 실측 기록 — 이 데모에서는 다시 탐지하지 않습니다 · docs/evidence/2026-09-07-p3-gemini/probe-87-run3.json)'
+
+/** 폐기 문서의 규칙 셋을 초안으로. 문서가 없으면(시험의 가짜 픽스처) 빈 목록이다. */
+function staleDrafts(roadmap: FixtureDoc | undefined): PaylabDraft[] {
+  if (roadmap === undefined) return []
+  return STALE_RULES.map(([id, title, quote, rule, body]) => fromDoc(id, 'policy', roadmap, quote, {
+    title,
+    body,
+    tags: ['paylab', 'stale'],
+    data: { rule, severity: 'should', enforcement: 'review' },
+  }))
+}
+
+/**
+ * @param roadmap 폐기 문서(`old-roadmap.md`). 주면 `STALE_RULES` 셋이 초안으로 같이 나온다 — 시험의 가짜 픽스처는
+ *   goals 하나만 들고 있어서 선택이다. 관통·데모(`seedPaylab`)는 늘 준다.
+ */
+export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: FixtureDoc): PaylabDraft[] {
   return [
+    ...staleDrafts(roadmap),
     fromDoc('item_mission_paylab', 'mission', goals,
       '가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**', {
         title: 'PSP 가 흔들려도 결제는 흔들리지 않는다',
@@ -779,6 +853,15 @@ export type SeedResult = {
    */
   answered: string[]
   /**
+   * 🔴 **`draft` 로 남긴 항목 id** — 폐기 문서의 규칙 셋 (`STALE_RULES`). Pack 에 안 서고, 실측 충돌 카드의 상대편으로만 산다.
+   * 관통은 「이것들이 Pack 에 한 줄도 없나」를 이 목록으로 잰다.
+   */
+  staleDrafts: string[]
+  /** active 로 올린 항목 수 = 전체 행 − `staleDrafts`. 관통은 `drafted + answered − staleDrafts` 와 견준다. */
+  activated: number
+  /** 심은 실측 충돌 카드 수 (`RECORDED_CONFLICTS`). 관통은 정리 화면의 「AI가 찾은 N건」이 이 수인지 잰다. */
+  recordedConflicts: number
+  /**
    * 초안마다 「근거를 따라가면 원문의 이 문장이 나와야 한다」.
    * **부르는 쪽은 기대 문장을 자기가 적지 말고 이걸 읽어라** — 두 곳에 적으면 갈라지고,
    * 갈라지면 검사가 픽스처가 아니라 자기 자신을 재게 된다.
@@ -884,7 +967,7 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
   }
 
   //  ⚠ repo 이름은 위 `createRepo` 에 준 것과 **같아야** 한다 — 태그에 그대로 실린다.
-  const drafts = paylabDrafts(goals, fixtureCode('paylab-api', 'src/payment/retry.ts'))
+  const drafts = paylabDrafts(goals, fixtureCode('paylab-api', 'src/payment/retry.ts'), roadmap)
   const batch = await dataOf(await batchDraft(req('POST', `/api/v1/projects/${projectId}/context-items/batch-draft`, {
     auth: owner,
     body: { items: drafts.map((d) => d.draft), repo: 'paylab-api', scan_summary: { file_count: 42, languages: ['ts'] } },
@@ -924,6 +1007,8 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
     .select({ id: users.id }).from(users).where(eq(users.authSubject, ownerSub)).limit(1)
 
   for (const row of itemRows) {
+    //  🔴 폐기 문서의 규칙은 `draft` 로 남는다 — active 면 Pack 이 옛 규칙과 새 규칙을 동시에 말한다 (`STALE_RULES` 주석).
+    if (STALE_RULE_IDS.has(row.publicId)) continue
     const fromDocument = (row.sourceRefs as SourceRef[]).some((r) => r.kind === 'source_document')
     const changes = fromDocument && ownerRow !== undefined
       ? { status: 'active' as const, owner_id: ownerRow.id }
@@ -947,6 +1032,20 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
     .delete(aiJobs)
     .where(and(eq(aiJobs.projectId, projectId), inArray(aiJobs.status, UNFINISHED_JOB_STATUSES)))
 
+  //  🔴 **실측 충돌 카드 3장을 심는다** (`RECORDED_CONFLICTS` 주석). 라우트가 없다 — `contradiction` 을 만드는 자리는 §7.2 러너뿐이고
+  //     그 러너는 여기서 안 돈다(키 없음 · 그리고 이건 기록물이다). 표 18개 중 이 씨앗이 직접 쓰는 유일한 행이라 여기 한 곳이다.
+  //     a/b 가 방금 들어간 항목이어야 FK 가 지난다 — 위 `batch-draft` 뒤다.
+  await getDb().insert(conflicts).values(RECORDED_CONFLICTS.map((c) => ({
+    projectId,
+    kind: 'contradiction' as const,
+    aItemId: c.a,
+    bItemId: c.b,
+    severity: c.severity,
+    question: `${c.question}\n\n${RECORDED_CONFLICT_NOTE}`,
+    status: 'open' as const,
+  })))
+
+  const staleDraftIds = itemRows.map((r) => r.publicId).filter((id) => STALE_RULE_IDS.has(id))
   return {
     owner,
     teamId,
@@ -959,7 +1058,11 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
     accepted: (batch.accepted as unknown[]).length,
     drafted: drafts.length,
     answered,
-    evidence: drafts.flatMap((d) => d.evidence),
+    staleDrafts: staleDraftIds,
+    activated: itemRows.length - staleDraftIds.length,
+    recordedConflicts: RECORDED_CONFLICTS.length,
+    //  ⚠ 폐기 규칙의 근거는 뺀다 — draft 라 Pack 에 안 서므로 따라갈 태그가 없다. 화면 5 의 드로어가 그 근거를 보인다.
+    evidence: drafts.filter((d) => !STALE_RULE_IDS.has(String(d.draft.id))).flatMap((d) => d.evidence),
     itemUuids: itemRows.map((r) => r.id),
     typeOf: new Map(itemRows.map((r) => [r.publicId, r.type])),
   }

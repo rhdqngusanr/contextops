@@ -56,6 +56,15 @@ Pack 의 진행 보고 문단은 `/contextops:progress …`(TEMPLATE_VERSION 1.5
 🙋 **실기 설치는 사람 몫이다** — `claude plugin marketplace add ./` → install → 새 저장소 세션 → 훅 → `/contextops:setup` → `/contextops:sync` → `/contextops:progress` 가 Roadmap 을
 움직이는지. Skill 본문 치환은 문서로만 확인했다 — 이 실기 없이는 어떤 수정도 확인된 것이 아니다.
 
+🔴 **블로커 5 의 ①② 도 닫았다** (같은 세션). ① `goals.md` 의 기한을 **같은 10자**로 옮겼다(M1 10-31 · M2 11-30 · M3·G1~G3 12-31 —
+심사일 기준 전부 지난 기한이었다). offset 은 그대로다 — `docs/evidence/2026-09-07-p3-gemini/FIXTURE-CHANGES.md` 에 적었다.
+② 게스트가 보는 데모에 AI 가 만든 것이 0 이었다 → `seed.ts` 에 두 표를 더했다: `STALE_RULES`(폐기 문서 `old-roadmap.md` 「운영 규칙」 셋 ·
+**draft 로 남긴다** — active 면 Pack 이 옛 규칙과 새 규칙을 동시에 말한다)와 `RECORDED_CONFLICTS`(probe-87-run3 의 실측 `contradiction` 3장 ·
+질문은 모델 문장 그대로 · 본문 끝에 「이 데모에서는 다시 탐지하지 않습니다」). 정리 화면 머리글이 「AI가 찾은 결정이 필요한 것 3건」이 되고
+카드에 「AI 제안」 배지가 선다(`CONFLICT_KIND_RULES.contradiction.byAi`). 관통 publish 단계가 「폐기 규칙이 Pack 에 0줄」·「카드가 심겼다」를
+잰다. 데모 항목은 승인 27 + 초안 3 (SPEC §10.3 · KNOWN_LIMITATIONS). ⚠ 완료된 구조화 job 1건은 **안 심었다** — probe 의 후보 16개가
+이미 승인된 항목과 겹쳐 화면 3 에 「후보 수락」이 서면 혼란만 는다.
+
 🔴 **GitHub Actions 가 `9c84aa9` 에서 빨갰다** — `deploy-doc.test` ⑤ 가 `apps/web/.env.vercel` 을 「없다」고 했다. 로컬에는 있고(gitignore) 러너에는 없는 파일을 DEPLOY.md 가
 백틱으로 가리킨 것이다. 문서를 고치고, 같은 종류가 다시 못 들어오게 그 시험이 **`git check-ignore` 로 gitignore 대상 경로도 FAIL** 로 만든다(로컬에서도 러너와 같은 판정).
 

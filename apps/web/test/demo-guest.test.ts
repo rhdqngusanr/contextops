@@ -175,7 +175,7 @@ describe('데모 테넌트를 심으면', () => {
     }[]
     expect(rows.length).toBeGreaterThan(0)
     //  🔴 데모의 PL-M1 은 기한을 갖는다 — goals.md §4 제목 괄호의 날짜다 (FINDINGS 111). 없으면 화면 8 이 그 칸을 비운다.
-    expect(rows.find((m) => m.milestone === 'PL-M1')?.due).toBe('2026-04-30')
+    expect(rows.find((m) => m.milestone === 'PL-M1')?.due).toBe('2026-10-31')
     const evidence = rows.flatMap((m) => m.done_when).reduce((sum, c) => sum + c.evidence_count, 0)
     expect(evidence).toBeGreaterThan(0)
     //  🔴 `done_candidate` 보고가 하나 있으니 「완료 확인」 버튼의 재료가 화면에 온다.

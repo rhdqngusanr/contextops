@@ -196,8 +196,15 @@ async function main(): Promise<void> {
     //  🔴 씨앗 질문 하나에 답한 항목까지 포함이다 (`manual` 근거의 유일한 산지 · FINDINGS 93).
     //  ⚠ 개수를 여기 적지 마라 — `drafted + answered` 로 견준다.
     const seeded = seed.drafted + seed.answered.length
-    check(`씨앗 항목 ${seeded}개가 전부 active 가 됐다 — 아니면 Pack 에 한 줄도 안 나온다`,
-      seed.itemUuids.length === seeded, `초안 ${seed.drafted} + 질문 답변 ${seed.answered.length}`)
+    check(`씨앗 항목 ${seeded}개가 전부 들어갔다`, seed.itemUuids.length === seeded,
+      `초안 ${seed.drafted} + 질문 답변 ${seed.answered.length}`)
+    //  🔴 폐기 문서의 규칙(`STALE_RULES`)만 draft 로 남고 나머지는 전부 active 다 — 아니면 Pack 에 한 줄도 안 나온다.
+    //  ⚠ 개수를 여기 적지 마라 — 씨앗이 낸 `staleDrafts` 로 견준다.
+    check(`폐기 규칙 ${seed.staleDrafts.length}개만 draft 로 남고 나머지 ${seeded - seed.staleDrafts.length}개는 active 가 됐다`,
+      seed.activated === seeded - seed.staleDrafts.length && seed.staleDrafts.length > 0,
+      `active ${seed.activated} · draft ${seed.staleDrafts.join(' · ')}`)
+    check('🔴 실측 충돌 카드가 심겼다 — 게스트가 AI 가 만든 것을 한 장이라도 본다 (INBOX 블로커 5)',
+      seed.recordedConflicts > 0, `${seed.recordedConflicts}장`)
     check('🔴 씨앗 질문에 답한 것이 항목이 됐다 (화면 3 ③ — 문서가 없어도 시작할 수 있다)',
       seed.answered.length > 0, seed.answered.join(' · '))
 
@@ -248,6 +255,11 @@ async function main(): Promise<void> {
       writeFileSync(target, text, 'utf8')
     }
     check('받은 본문의 sha256 이 Manifest 와 전부 같다', hashMismatch === 0, `파일 ${manifest.files.length}개`)
+    //  🔴 폐기 문서의 규칙은 draft 라 Pack 에 한 줄도 없어야 한다 — 있으면 CLAUDE.md 가 옛 규칙과 새 규칙을 동시에 말한다
+    //     (`STALE_RULES` 주석 · INBOX 블로커 5). 개수를 적지 않는다 — 씨앗의 `staleDrafts` 를 돈다.
+    const leaked = seed.staleDrafts.filter((id) => packTexts.some((t) => t.includes(`ctx:${id}`)))
+    check('폐기 규칙(draft)이 Pack 에 한 줄도 없다', leaked.length === 0,
+      leaked.length > 0 ? `새어 나온 것: ${leaked.join(' · ')}` : `${seed.staleDrafts.length}개 확인`)
 
     //  🔴 **다음 단계(sync)가 이 Manifest 를 그대로 쓴다.** 여기서 남기지 않으면
     //     sync 단계는 자기가 Manifest 를 지어내야 하고, 그러면 「서버가 준 것을
