@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -109,5 +110,18 @@ describe('⑤ DEPLOY.md 가 가리키는 경로가 전부 실제로 있다', () 
       return !existsSync(join(repoRoot, p)) && !existsSync(join(webRoot, p))
     })
     expect(missing, '이 경로가 저장소에 없다').toEqual([])
+
+    //  🔴 있어도 **gitignore 대상이면 GitHub 러너에는 없다** — 2026-09-09 에 `.env.vercel` 을 백틱으로
+    //     적었더니 로컬 CI 는 초록이고 GitHub Actions 만 빨갰다. 로컬에서도 같은 판정이 나게 여기서 잰다.
+    const ignored = [...new Set(paths)].filter((p) => {
+      const rel = existsSync(join(repoRoot, p)) ? p : join('apps', 'web', p)
+      try {
+        execFileSync('git', ['check-ignore', '-q', rel], { cwd: repoRoot, stdio: 'ignore' })
+        return true // exit 0 = ignored
+      } catch {
+        return false // exit 1 = 추적 대상 (128 = git 없음 → 여기서는 못 재고, 러너의 존재 검사가 잰다)
+      }
+    })
+    expect(ignored, 'gitignore 대상 경로를 백틱으로 가리켰다 — GitHub 러너에는 그 파일이 없다').toEqual([])
   })
 })

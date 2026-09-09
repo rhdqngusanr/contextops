@@ -117,7 +117,7 @@ select tablename, tableowner from pg_tables where schemaname = 'public';
 ### ③ 🙋 환경변수를 넣는다
 
 Vercel → Project → Settings → Environment Variables → **Import `.env`** 로
-`apps/web/.env.vercel` 을 통째로 넣는다. 그 파일이 「배포에 무엇을 넣고 무엇을 안 넣는지」의
+`.env.vercel`(apps/web 아래 · gitignore 대상이라 GitHub 에는 없다) 을 통째로 넣는다. 그 파일이 「배포에 무엇을 넣고 무엇을 안 넣는지」의
 정본이다 — 줄마다 왜인지가 적혀 있다.
 
 키의 정본 목록은 `apps/web/.env.example` 이고, 배포에 필요한 것은 이 여덟이다:
@@ -126,7 +126,7 @@ Vercel → Project → Settings → Environment Variables → **Import `.env`** 
 |---|---|
 | `DATABASE_URL` | 켜질 때 죽는다 (`src/db/client.ts`) — 배포용은 Transaction pooler(6543) |
 | `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 로그인 화면이 못 선다 |
-| `SUPABASE_JWT_SECRET` | **아무도 로그인하지 못한다** — 조용히 통과시키지 않는 것이 의도다 (서명키가 ES256 이면 이 값 대신 JWKS 를 쓰는 갈래가 필요하다 · ①-b) |
+| `SUPABASE_JWT_SECRET` | 게스트·시드 세션(우리가 HS256 으로 서명)이 **하나도 통과하지 못한다** — `/demo` 가 죽는다. 조용히 통과시키지 않는 것이 의도다. 사람의 로그인 토큰이 ES256 이면 그쪽은 JWKS 로 확인한다(①-b) |
 | `CRON_SECRET` | 데모 리셋 문이 **401** 이다 (의도) — 넣어야 ⑤ 를 부를 수 있다 |
 | `GEMINI_API_KEY` · `GEMINI_MODEL` · `AI_DAILY_BUDGET_USD` | 서버측 AI job 이 실패로 끝난다 (P3 · 키 없음을 화면이 말하게 하는 것은 INBOX 고장 9) |
 
@@ -200,8 +200,9 @@ cp -r .ci/production docs/evidence/$(date +%Y-%m-%d)-production
 
 다른 기계에서 README 의 설치 4줄만 보고 플러그인이 서는지 밟는다.
 그 4줄의 정본은 `apps/web/src/components/landing.tsx` 의 `INSTALL_STEPS` 이고
-README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). ⚠ 2026-09-09 감사 기준 그 4줄 중 셋째 줄의 변수는
-사용자 터미널에 없다 — 먼저 INBOX 블로커 4 를 닫고 밟는다.
+README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 줄은 터미널 명령이 아니라 **Claude Code 안의
+`/contextops:setup`** 이다 — 웹 Sync 화면 [기기 추가] 가 준 한 줄을 그대로 붙여 넣는다. 밟은 결과(transcript)는
+`docs/evidence/` 에 남긴다 — 이 저장소가 「플러그인」을 주장하는 근거가 된다.
 
 ---
 
