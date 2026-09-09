@@ -5,7 +5,10 @@ import {
   SOURCE_DOCUMENT_KINDS, type AnswerSlotKey, type SourceDocumentKind,
 } from '@contextops/schema'
 
+import { writeDoor, type WriteDoor } from '../../../../../../lib/web/actor'
 import { hintFor, messageOf } from '../../../../../../lib/web/api'
+import { AI_TRANSFER_NOTICE_NOW, PRIVACY_LABEL, PRIVACY_PATH } from '../../../../../../lib/web/privacy'
+import { SAMPLE_DOCUMENT } from '../../../../../../lib/web/sample-document'
 import {
   JOB_POLL_MS, acceptJobItems, answerQuestions, createDocument, fetchJob, fetchJobs, fetchQuestions,
   retryJob, structureCandidates, structureCounts,
@@ -19,7 +22,7 @@ import { QuestionStack, type QuestionStackState } from '../../../../../../compon
 import {
   StructureCandidates, type StructureCandidate,
 } from '../../../../../../components/structure-candidates'
-import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
+import { ErrorState, ReadOnlyNotice, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
 //  화면 3 — 가져오기 (SPEC §9 화면 3 · DESIGN_BRIEF §4 「화면 3」)
@@ -62,6 +65,7 @@ export default function ImportPage({ params }: { params: Promise<{ team: string;
 }
 
 function ImportView({ base, project }: { base: string; project: ProjectRef }) {
+  const door = writeDoor()
   const jobs = usePolling(
     () => fetchJobs(project.id, { feature: STRUCTURE, limit: 1 }),
     [project.id],
@@ -82,10 +86,12 @@ function ImportView({ base, project }: { base: string; project: ProjectRef }) {
         </p>
       </header>
 
+      {/* 🔴 쓰기 문은 **누르기 전에** 서버와 같은 표(`ACTOR_RULES.writes`)를 읽는다 (INBOX H7 · FINDINGS 135).
+          세 카드가 같은 문을 받는다 — 게스트가 [구조화하기]·[저장하기]·[항목으로 만들기] 를 누르면 403 대신 그 자리에 이유가 뜬다. */}
       <div className="row items-start wrap">
-        <PasteCard projectId={project.id} onCreated={jobs.reload} />
-        <QuestionsCard base={base} projectId={project.id} />
-        <StructureCard base={base} projectId={project.id} jobs={jobs} />
+        <PasteCard projectId={project.id} onCreated={jobs.reload} door={door} />
+        <QuestionsCard base={base} projectId={project.id} door={door} />
+        <StructureCard base={base} projectId={project.id} jobs={jobs} door={door} />
       </div>
     </>
   )
@@ -95,12 +101,21 @@ function ImportView({ base, project }: { base: string; project: ProjectRef }) {
 //  ① 문서 붙여넣기
 // ---------------------------------------------------------------------
 
-function PasteCard({ projectId, onCreated }: { projectId: string; onCreated: () => void }) {
+function PasteCard({ projectId, onCreated, door }: { projectId: string; onCreated: () => void; door: WriteDoor }) {
   const [title, setTitle] = useState('')
   const [kind, setKind] = useState<SourceDocumentKind>('goal')
   const [content, setContent] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
+  //  읽기 전용 주체가 눌렀을 때 그 자리에 뜨는 이유 (FINDINGS 135 와 같은 모양).
+  const [refused, setRefused] = useState<string | null>(null)
+
+  /** [예시 문서 붙여넣기] — 정본 픽스처를 한 번에 채운다 (INBOX H5). 서버를 부르지 않는다 — 게스트도 눌러 볼 수 있다. */
+  function fillSample(): void {
+    setTitle(SAMPLE_DOCUMENT.title)
+    setKind(SAMPLE_DOCUMENT.kind)
+    setContent(SAMPLE_DOCUMENT.content)
+  }
 
   //  ⚠ 서버 계약(`CreateDocument`)이 `min(1)` 이다. 여기서 먼저 막는 이유는 검증이
   //    아니라 **버튼을 누를 수 있는지**를 사람에게 보여 주기 위해서다 — 서버 계약을
@@ -109,6 +124,7 @@ function PasteCard({ projectId, onCreated }: { projectId: string; onCreated: () 
 
   async function submit(event: FormEvent): Promise<void> {
     event.preventDefault()
+    if (!door.open) { setRefused(door.reason); return }
     setBusy(true)
     setError(null)
     try {
@@ -130,7 +146,11 @@ function PasteCard({ projectId, onCreated }: { projectId: string; onCreated: () 
       <div className="col-tight">
         <h2 className="text-section">문서 붙여넣기</h2>
         <p className="meta">목표 문서·정책·회의록 무엇이든 됩니다. 서버가 받는 것은 여기 붙여넣은 글자뿐입니다.</p>
+        {/* 손에 든 문서가 없는 사람(심사위원)을 위한 문 — 정본 픽스처 goals.md 를 채운다. 실측 표가 이 문서로 잰 것이다. */}
+        <span className="row"><button type="button" className="btn btn-sm" onClick={fillSample}>예시 문서 붙여넣기</button><span className="meta">샘플 팀의 목표 문서 · {SAMPLE_DOCUMENT.content.length.toLocaleString()}자</span></span>
       </div>
+
+      {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
 
       <label className="field">
         <span className="label">제목</span>
@@ -165,6 +185,9 @@ function PasteCard({ projectId, onCreated }: { projectId: string; onCreated: () 
         <span className="meta mono">{content.length.toLocaleString()}자</span>
       </label>
 
+      {/* 🔴 문서를 넣기 **전**에 읽는 문장 — 어디로 가고 누가 볼 수 있나 (INBOX H4). 정본은 `lib/web/privacy.ts`. */}
+      <p className="meta">{AI_TRANSFER_NOTICE_NOW} <a href={PRIVACY_PATH}>{PRIVACY_LABEL}</a></p>
+
       {error ? <ErrorState error={error} /> : null}
 
       <div className="row">
@@ -184,7 +207,8 @@ function PasteCard({ projectId, onCreated }: { projectId: string; onCreated: () 
 //    여섯 모양을 브라우저 없이 다 그려 볼 수 있다 (`job-progress.tsx` 와 같은 배치).
 // ---------------------------------------------------------------------
 
-function QuestionsCard({ base, projectId }: { base: string; projectId: string }) {
+function QuestionsCard({ base, projectId, door }: { base: string; projectId: string; door: WriteDoor }) {
+  const [refused, setRefused] = useState<string | null>(null)
   const { result, reload } = useAsync(() => fetchQuestions(projectId, { status: 'open' }), [projectId])
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -212,6 +236,7 @@ function QuestionsCard({ base, projectId }: { base: string; projectId: string })
   const state: QuestionStackState = { questions, index, answers, saveAs, draft, saving, error, saved }
 
   async function save(): Promise<void> {
+    if (!door.open) { setRefused(door.reason); return }
     setSaving(true)
     setError(null)
     try {
@@ -239,6 +264,8 @@ function QuestionsCard({ base, projectId }: { base: string; projectId: string })
         <h2 className="text-section">질문에 답하기</h2>
         <p className="meta">문서가 없어도 됩니다. 답한 것이 초안 항목이 되고, 발행하면 첫 버전이 됩니다.</p>
       </div>
+
+      {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
 
       {result.state === 'loading' ? <Skeleton rows={3} /> : null}
       {result.state === 'error' ? <ErrorState error={result.error} retry={reload} /> : null}
@@ -274,9 +301,11 @@ function StructureCard({
   base,
   projectId,
   jobs,
+  door,
 }: {
   base: string
   projectId: string
+  door: WriteDoor
   jobs: { result: Async<{ jobs: AiJobSummary[] }>; reload: () => void }
 }) {
   const { result } = jobs
@@ -317,7 +346,7 @@ function StructureCard({
       {job ? (
         <JobProgress
           job={job}
-          done={<Succeeded base={base} projectId={projectId} jobId={job.id} />}
+          done={<Succeeded base={base} projectId={projectId} jobId={job.id} door={door} />}
           retry={{ run: () => { void retry(job.id) }, busy: retrying }}
         />
       ) : null}
@@ -338,7 +367,7 @@ function StructureCard({
  *   찾았다고 말한 자리가 곧 받아들이는 자리여야 그 말이 사실이 된다.
  * ⚠ 전문(`shape:'full'`)은 목록에 없다 (FINDINGS 60) — 그래서 여기서 한 번 더 읽는다.
  */
-function Succeeded({ base, projectId, jobId }: { base: string; projectId: string; jobId: string }) {
+function Succeeded({ base, projectId, jobId, door }: { base: string; projectId: string; jobId: string; door: WriteDoor }) {
   const { result, reload } = useAsync(() => fetchJob(projectId, jobId), [projectId, jobId])
 
   if (result.state === 'loading') return <Skeleton rows={2} />
@@ -360,6 +389,7 @@ function Succeeded({ base, projectId, jobId }: { base: string; projectId: string
         base={base}
         projectId={projectId}
         jobId={jobId}
+        door={door}
         candidates={structureCandidates(result.data.result)}
       />
     </div>
@@ -374,11 +404,13 @@ function Candidates({
   base,
   projectId,
   jobId,
+  door,
   candidates,
 }: {
   base: string
   projectId: string
   jobId: string
+  door: WriteDoor
   candidates: StructureCandidate[]
 }) {
   //  ★ 기본은 **전부 선택**이다 — 왜인지는 카드 쪽 주석에 있다.
@@ -397,6 +429,8 @@ function Candidates({
   }
 
   const accept = async () => {
+    //  읽기 전용 주체 — 403 을 받으러 가지 않고 그 자리에서 이유를 말한다 (INBOX H7). 문구는 서버와 같은 표에서 온다.
+    if (!door.open) { setError(door.reason); return }
     setSaving(true)
     setError(null)
     try {

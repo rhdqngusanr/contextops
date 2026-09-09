@@ -2,11 +2,12 @@
 
 import { use, useState } from 'react'
 
+import { writeDoor } from '../../../../../lib/web/actor'
 import { messageOf } from '../../../../../lib/web/api'
 import { createProject, createRepo, fetchTeams } from '../../../../../lib/web/queries'
 import { toSlug } from '../../../../../lib/web/slug'
 import { useAsync } from '../../../../../lib/web/use-async'
-import { ErrorState, NeedsLogin, Skeleton } from '../../../../../components/states'
+import { ErrorState, NeedsLogin, ReadOnlyNotice, Skeleton } from '../../../../../components/states'
 
 // =====================================================================
 //  화면 2 — 프로젝트 만들기 (DESIGN_BRIEF §4 「화면 2」 · SPEC §5)
@@ -42,7 +43,12 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
     setRepoDraft('')
   }
 
+  //  게스트도 세션이 있어 이 화면이 열린다 — 누르기 전에 서버와 같은 표를 읽는다 (INBOX H7).
+  const [refused, setRefused] = useState<string | null>(null)
+
   async function submit(teamId: string) {
+    const door = writeDoor()
+    if (!door.open) { setRefused(door.reason); return }
     setBusy(true)
     setError(null)
     try {
@@ -141,6 +147,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
           ) : <span className="meta">나중에 추가해도 됩니다.</span>}
         </div>
 
+        {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
         {error ? <p className="meta ink-bad">✕ {error}</p> : null}
 
         <button type="submit" className="btn btn-primary" disabled={busy || name.trim().length === 0 || candidate.length < 2}>

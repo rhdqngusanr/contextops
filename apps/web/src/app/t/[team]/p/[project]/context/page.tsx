@@ -15,7 +15,7 @@ import { OWNER_LABEL } from '../../../../../../lib/web/screens'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver, type SemverBump } from '../../../../../../lib/web/semver'
 import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
-import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
+import { ConfidenceChip, CtxTag, ITEM_TYPE_LABEL, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
 import { EvidenceList } from '../../../../../../components/evidence'
 import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
@@ -281,7 +281,7 @@ function ItemTable({
             aria-selected={selected?.id === item.id}
             onClick={() => onSelect(item)}
           >
-            <td className="row"><TypeIcon type={item.type} /><span className="meta">{item.type}</span></td>
+            <td className="row"><TypeIcon type={item.type} /><span className="meta">{ITEM_TYPE_LABEL[item.type]}</span></td>
             <td>
               <div className="col-tight">
                 <span className="ink">{item.title}</span>
@@ -333,7 +333,7 @@ function ItemDrawer({
       <div className="row wrap">
         <ItemStatusChip status={item.status} />
         <ConfidenceChip confidence={item.confidence} />
-        <span className="meta mono">{item.type}</span>
+        <span className="meta">{ITEM_TYPE_LABEL[item.type]}</span>
         {/* 🔴 **담당자를 이름으로 그린다** (FINDINGS 168) — `owner_id`(uuid)만 있을 때는
             화면이 그릴 것이 없어서 그 칸이 「저장은 되는데 아무도 안 읽는」 상태였다.
             ⚠ 없으면 **자리 자체를 안 그린다** — 「담당 —」 은 없는 것을 있는 척한다. */}

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -136,4 +136,41 @@ describe('🔴 FINDINGS 135 — 쓰기 문은 누르기 전에 표를 읽는다'
     //  드로어의 「owner 만」 캡션도 같은 문을 읽는다 — 게스트에게 그 문장을 그대로 내지 않는다.
     expect(page).not.toMatch(/<span className="meta">상태를 바꾸는 것은 팀 owner 만/)
   })
+})
+
+describe('🔴 INBOX H7 — 쓰기 버튼이 있는 화면은 전부 같은 문을 지난다', () => {
+  const webSrc = fileURLToPath(new URL('../src', import.meta.url))
+  const queries = readFileSync(`${webSrc}/lib/web/queries.ts`, 'utf8')
+
+  /** `queries.ts` 에서 `post(`·`patch(` 로 서버에 **쓰는** 함수 이름을 뽑는다 — 목록을 손으로 적지 않는다. */
+  //  ⚠ 함수의 끝은 줄 머리의 `}` 다음 줄바꿈이다 — 반환 타입의 `}> {` 에서 끊기지 않게 `\n}\n` 까지 읽는다.
+  const WRITE_QUERIES = [...queries.matchAll(/export (?:async )?function (\w+)\([\s\S]*?\n\}\n/g)]
+    .filter((m) => /\b(?:post|patch|del)\(/.test(m[0]))
+    .map((m) => m[1] as string)
+
+  function pages(dir: string, found: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      const full = `${dir}/${name}`
+      if (statSync(full).isDirectory()) pages(full, found)
+      else if (name === 'page.tsx') found.push(full)
+    }
+    return found
+  }
+
+  it('쓰는 함수 목록이 비어 있지 않다 — 비면 아래 시험은 공짜 통과다', () => {
+    expect(WRITE_QUERIES).toContain('createDocument')
+    expect(WRITE_QUERIES).toContain('publishVersion')
+    expect(WRITE_QUERIES.length).toBeGreaterThan(5)
+  })
+
+  it.each(pages(`${webSrc}/app/t`).map((f) => [f.slice(webSrc.length + 1), f] as const))(
+    '%s — 쓰는 함수를 부르면 `writeDoor()` 를 읽는다',
+    (_name, file) => {
+      const source = readFileSync(file, 'utf8')
+      const writes = WRITE_QUERIES.filter((fn) => new RegExp(`\\b${fn}\\(`).test(source))
+      if (writes.length === 0) return
+      //  ⚠ 어떻게 읽든(직접 · `door` prop 으로 내려보내든) 이 파일 어딘가에서 `writeDoor()` 가 불려야 한다.
+      expect(source, `${writes.join('·')} 를 부르는데 writeDoor() 를 안 읽는다`).toContain('writeDoor()')
+    },
+  )
 })

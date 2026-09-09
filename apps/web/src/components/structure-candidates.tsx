@@ -1,7 +1,7 @@
 'use client'
 
 import type { StructureCandidate } from '../lib/web/queries'
-import { TypeIcon } from './chips'
+import { TypeIcon, ITEM_TYPE_LABEL } from './chips'
 import { EvidenceList } from './evidence'
 
 // =====================================================================
@@ -112,7 +112,7 @@ export function StructureCandidates({
               <div className="grow col-tight">
                 <span className="row items-start">
                   <span className="grow">{c.title}</span>
-                  <span className="meta mono">{c.type}</span>
+                  <span className="meta">{ITEM_TYPE_LABEL[c.type]}</span>
                 </span>
                 {/* 🔴 무엇이 될 문장인지 · 어디서 온 문장인지 (DESIGN_BRIEF §2-1 · FINDINGS 86). */}
                 {/* ⚠ `ink-4` 를 쓰지 마라 — 토큰 표(DESIGN_BRIEF §3)에서 그 값의 용도는

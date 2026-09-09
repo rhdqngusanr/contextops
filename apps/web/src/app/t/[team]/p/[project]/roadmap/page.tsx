@@ -6,6 +6,7 @@ import {
   REALTIME_POLL_MS, confirmProgress, fetchRoadmap,
   type ProgressEventView, type ProjectRef,
 } from '../../../../../../lib/web/queries'
+import { writeDoor } from '../../../../../../lib/web/actor'
 import { usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { MilestoneRow, OffRoadmap, ProgressDrawer, RoadmapSummary } from '../../../../../../components/roadmap'
@@ -34,12 +35,15 @@ import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/
 
 export default function RoadmapPage({ params }: { params: Promise<{ team: string; project: string }> }) {
   const { team, project } = use(params)
+  //  쓰기 문 — 등급(owner)과 별개로 주체 종류(게스트)를 표에서 읽는다 (INBOX H7). 게스트는 등급이 member 라 여기서는
+  //  이미 버튼이 없지만, 쓰기 화면은 전부 같은 문을 지난다 — `test/web-write-door.test.ts` 가 그것을 센다.
+  const door = writeDoor()
   return (
     <ProjectGate team={team} project={project}>
       {({ team: t, project: p }) => (
         //  🔴 확정은 owner 만이다 (`POST /progress/{id}/confirm`). 화면이 그것을 알아야
         //     member 에게 누를 때마다 403 을 내는 버튼을 그리지 않는다.
-        <RoadmapView base={`/t/${team}/p/${project}`} project={p} canConfirm={t.role === 'owner'} />
+        <RoadmapView base={`/t/${team}/p/${project}`} project={p} canConfirm={t.role === 'owner' && door.open} />
       )}
     </ProjectGate>
   )

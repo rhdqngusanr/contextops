@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { ITEM_TYPES, type SourceRef } from '@contextops/schema'
 
-import { ITEM_TYPE_ICON } from '../src/components/chips'
+import { ITEM_TYPE_ICON, ITEM_TYPE_LABEL } from '../src/components/chips'
 import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
 import {
   bodyPreview, CANDIDATE_BODY_CHARS, StructureCandidates, type StructureCandidatesState,
@@ -189,7 +189,9 @@ describe('🔴 고른 수가 버튼에 따라온다', () => {
     for (const c of CANDIDATES) {
       expect(html).toContain(ITEM_TYPE_ICON[c.type])
       expect(html).toContain(c.title)
-      expect(html).toContain(`>${c.type}<`)
+      //  타입은 사람 말로 나간다 (`ITEM_TYPE_LABEL` · INBOX H7) — enum 값이 화면에 그대로 뜨지 않는다.
+      expect(html).toContain(`>${ITEM_TYPE_LABEL[c.type]}<`)
+      expect(html).not.toContain(`>${c.type}<`)
     }
   })
 })

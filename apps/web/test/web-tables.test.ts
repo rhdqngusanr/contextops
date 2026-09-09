@@ -15,7 +15,7 @@ import { toSlug } from '../src/lib/web/slug'
 import { readCallbackHash } from '../src/lib/web/auth'
 import {
   AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
-  ITEM_STATUS_CHIP, ITEM_TYPE_ICON, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
+  ITEM_STATUS_CHIP, ITEM_TYPE_ICON, ITEM_TYPE_LABEL, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
   PROPOSAL_OPERATION_CHIP, PROPOSAL_STATUS_CHIP, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP, SYNC_MEANING,
 } from '../src/components/chips'
 import { SYNC_APPLY, SYNC_ORDER } from '../src/components/sync'
@@ -143,6 +143,9 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('항목 타입 10종의 아이콘이 서로 다르다 (SPEC §3)', () => {
     assertLiveTable('ITEM_TYPE_ICON', ITEM_TYPES, ITEM_TYPE_ICON, (k) => ITEM_TYPE_ICON[k])
+    assertLiveTable('ITEM_TYPE_LABEL', ITEM_TYPES, ITEM_TYPE_LABEL, (k) => ITEM_TYPE_LABEL[k])
+    //  사람 말이다 — 영어 enum 값이 그대로 라벨인 줄이 없다.
+    for (const t of ITEM_TYPES) expect(ITEM_TYPE_LABEL[t], t).toMatch(/[가-힣]/)
   })
 })
 

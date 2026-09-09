@@ -295,9 +295,27 @@ export function ProposalOperationChip({ operation }: { operation: ProposalOperat
   return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={operation} />
 }
 
+/**
+ * 항목 타입 10종의 **사람 말** (INBOX H7 · 2026-09-10). 화면 5 의 표·드로어와 화면 3 의 후보 목록이 이 표를 읽는다 —
+ * 예전엔 `policy`·`open_question` 같은 enum 값이 그대로 그려졌다. 화면 어디에도 영어 상태 값을 노출하지 않는 것이
+ * 이 저장소의 규칙이다 (`DECIDED_TEXT` 와 같은 판단). enum 이 늘면 여기 한 줄이고, 안 더하면 타입이 막는다.
+ */
+export const ITEM_TYPE_LABEL: Record<ItemType, string> = {
+  mission: '미션',
+  goal: '목표',
+  roadmap: '로드맵',
+  architecture: '아키텍처',
+  domain: '도메인',
+  policy: '정책',
+  adr: '결정(ADR)',
+  workflow: '작업 절차',
+  constraint: '제약',
+  open_question: '열린 질문',
+}
+
 export function TypeIcon({ type }: { type: ItemType }) {
-  //  아이콘만으로 타입을 말하지 않는다 — 옆 칸에 타입 이름이 같이 나간다.
-  return <span className="mono" title={type} aria-label={type}>{ITEM_TYPE_ICON[type]}</span>
+  //  아이콘만으로 타입을 말하지 않는다 — 옆 칸에 타입 이름이 같이 나간다. 툴팁·보조기기용 이름도 사람 말이다.
+  return <span className="mono" title={ITEM_TYPE_LABEL[type]} aria-label={ITEM_TYPE_LABEL[type]}>{ITEM_TYPE_ICON[type]}</span>
 }
 
 /** `v1.2.0` 모노 + 해시 앞 8자 (DESIGN_BRIEF §3 「VersionPill」). */
