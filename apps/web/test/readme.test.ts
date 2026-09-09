@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, SUBMISSION_IDENTITY, TRUST_BOUNDARY,
 } from '../src/components/landing'
+import { AI_MODELS } from '../src/lib/ai/features'
 import { ERROR_HINT } from '../src/lib/web/api'
 
 // =====================================================================
@@ -462,5 +463,58 @@ describe('⑨ 문서의 숫자·「없다」가 코드와 같다 (INBOX G15 · H
     expect(existsSync(join(webRoot, 'e2e'))).toBe(true)
     expect(limits).not.toContain('e2e 폴더가 없다')
     expect(limits).not.toContain('브라우저 e2e 가 없다')
+  })
+})
+
+// =====================================================================
+//  ⑩ 「AI 활용」의 숫자는 근거 JSON 에서 다시 계산한 값과 같다 (INBOX H3 · 2026-09-10)
+//
+//  ★ 왜 시험인가 — 제출서의 「실측: 3,900자 · 항목 16 · 약 20초 · 약 $0.02」는 어느 파일에서도 다시 셀 수
+//    없는 숫자였고, 정가를 고치자(G10) 비용은 네 배가 됐다. 숫자는 사람이 옮겨 적는 순간 낡는다 — 근거
+//    JSON(`docs/evidence/…/probe-87-run3.json`)과 정가 표(`AI_MODELS`)에서 표의 줄을 **만들어** 문서에 그 줄이 있는지 본다.
+// =====================================================================
+describe('⑩ 「AI 활용」 실측 표가 근거 JSON 과 같다 (INBOX H3)', () => {
+  type Probe = {
+    model: string
+    goals: { chars: number; items: unknown[]; open_questions: unknown[]; latencyMs: number; refsTotal: number; refsInRange: number }
+    roadmap: { chars: number; items: unknown[]; latencyMs: number; refsTotal: number; refsInRange: number }
+    conflict: { count: number; latencyMs: number }
+    usage: { inputTokens: number; outputTokens: number }[]
+  }
+  const probe = JSON.parse(readFileSync(join(docsRoot, 'evidence', '2026-09-07-p3-gemini', 'probe-87-run3.json'), 'utf8')) as Probe
+  const fmt = (n: number): string => n.toLocaleString('en-US')
+  const price = AI_MODELS[probe.model]!
+  const tokensIn = probe.usage.reduce((a, u) => a + u.inputTokens, 0)
+  const tokensOut = probe.usage.reduce((a, u) => a + u.outputTokens, 0)
+  const costUsd = (tokensIn * price.inputPerMTokUsd + tokensOut * price.outputPerMTokUsd) / 1_000_000
+  const seconds = Math.round((probe.goals.latencyMs + probe.roadmap.latencyMs + probe.conflict.latencyMs) / 1000)
+  const items = probe.goals.items.length + probe.roadmap.items.length
+  const rows = [
+    `| 입력 | goals.md ${fmt(probe.goals.chars)}자 + old-roadmap.md ${fmt(probe.roadmap.chars)}자 (문서 둘) |`,
+    `| 항목 후보 | ${items} (goals ${probe.goals.items.length} · roadmap ${probe.roadmap.items.length}) · 열린 질문 ${probe.goals.open_questions.length} |`,
+    `| 충돌 카드 | ${probe.conflict.count} (전부 contradiction · 판정 없이 질문으로) |`,
+    `| 인용 일치 | ${probe.goals.refsInRange + probe.roadmap.refsInRange}/${probe.goals.refsTotal + probe.roadmap.refsTotal} (모델이 낸 인용을 서버가 원문에서 찾았다) |`,
+    `| 시간 | 약 ${seconds}초 (구조화 둘 + 충돌 탐지) |`,
+    `| 토큰 | 입력 ${fmt(tokensIn)} · 출력 ${fmt(tokensOut)} |`,
+    `| 비용(정가) | 약 $${costUsd.toFixed(2)} (${probe.model} · 입력 ${price.inputPerMTokUsd.toFixed(2)} · 출력 ${price.outputPerMTokUsd.toFixed(2)} USD/M) |`,
+  ]
+
+  it.each(DOCS.map((d) => [d.name, d.text] as const))('%s 의 표가 JSON 에서 만든 줄과 같다', (_name, text) => {
+    for (const row of rows) expect(text, row).toContain(row)
+  })
+
+  it('제출 폼 600자 칸의 「실측:」 문장도 같은 숫자다', () => {
+    const line = /실측: [^\n]+/.exec(submission)?.[0] ?? ''
+    expect(line).toContain(`${fmt(probe.goals.chars + probe.roadmap.chars)}자`)
+    expect(line).toContain(`항목 후보 ${items}`)
+    expect(line).toContain(`충돌 ${probe.conflict.count}`)
+    expect(line).toContain(`약 ${seconds}초`)
+    expect(line).toContain(`약 $${costUsd.toFixed(2)}`)
+  })
+
+  it('비용은 이 저장소의 정가 표로 센 값이다 — 정가가 바뀌면 문서의 비용도 따라 바뀌어야 한다', () => {
+    expect(price.inputPerMTokUsd).toBeGreaterThan(0)
+    //  🔴 실측 셋(1,126+2,686+2,109 · 1,840+5,783+663) — 예전 문서의 「약 $0.02」는 2.5 Flash 의 정가로 센 값이었다.
+    expect(costUsd).toBeGreaterThan(0.05)
   })
 })

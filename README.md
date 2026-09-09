@@ -328,6 +328,25 @@ PGlite (시험·로컬) · Zod · vitest · Vercel (Cron 포함)
 서버측 AI: Gemini `generateContent` — SDK 없이 `fetch` (`responseJsonSchema` 구조화 출력 · `withBudget()` 필수)
 플러그인: Claude Code 공식 plugin 레이아웃 · esbuild 단일 ESM 번들 (런타임 의존 0)
 
+### AI 는 어디에 · 얼마나
+
+AI 는 **사람이 결정하기 전** 단계에만 있습니다 — 서버쪽 둘(문서 구조화 · 충돌 탐지 · 우리 Gemini 키)과 팀원 본인의 Claude Code(플러그인).
+승인 이후의 컴파일·배포에는 모델이 없습니다 (P4). 같은 두 픽스처 문서를 제품 그대로의 길로 굴린 실측입니다 —
+숫자는 근거 JSON 에서 다시 계산해 시험이 대조합니다 (`apps/web/test/readme.test.ts`).
+
+| 잰 것 | 값 |
+|---|---|
+| 입력 | goals.md 3,513자 + old-roadmap.md 707자 (문서 둘) |
+| 항목 후보 | 22 (goals 16 · roadmap 6) · 열린 질문 4 |
+| 충돌 카드 | 5 (전부 contradiction · 판정 없이 질문으로) |
+| 인용 일치 | 26/26 (모델이 낸 인용을 서버가 원문에서 찾았다) |
+| 시간 | 약 29초 (구조화 둘 + 충돌 탐지) |
+| 토큰 | 입력 5,921 · 출력 8,286 |
+| 비용(정가) | 약 $0.08 (gemini-3.5-flash · 입력 1.50 · 출력 9.00 USD/M) |
+| 출처 | `docs/evidence/2026-09-07-p3-gemini/probe-87-run3.json` (2026-09-07 · 진짜 API · 같은 코드로 세 번 중 셋째) |
+
+왜 서버쪽이 Gemini 인지, 도구 세 층, 지속 계획은 [`docs/SUBMISSION.md`](docs/SUBMISSION.md) 「AI 활용」에 있습니다.
+
 ---
 
 ## 🔁 이 저장소는 자율 루프가 만듭니다
