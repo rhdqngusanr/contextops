@@ -223,13 +223,22 @@ describe('⑦ 설치 줄은 지금 실제로 도는 명령만 적는다 (SPEC §
     }
   })
 
-  it('부르는 CLI 파일이 실제로 있고 그 명령을 안다', () => {
+  it('설치 줄은 CLI 경로를 직접 적지 않고, 그 줄의 Skill 이 부르는 CLI 파일과 명령이 실제로 있다', () => {
+    //  🔴 설치 줄에 `node "$CLAUDE_PLUGIN_ROOT/bin/…"` 를 적으면 안 된다 — 그 변수는 사용자 터미널에 없다
+    //    (2026-09-09 감사). 경로를 아는 자리는 Skill 본문뿐이고, 설치 줄은 Skill 이름만 적는다.
+    expect(INSTALL_STEPS.lines.some((l) => l.cmd.includes('contextops-cli.mjs') || l.cmd.includes('CLAUDE_PLUGIN_ROOT'))).toBe(false)
     const bin = join(plugin, 'bin', 'contextops-cli.mjs')
     expect(existsSync(bin)).toBe(true)
-    const line = INSTALL_STEPS.lines.find((l) => l.cmd.includes('contextops-cli.mjs'))
-    expect(line).toBeDefined()
-    const sub = (line as { cmd: string }).cmd.split(' ').at(-1) as string
-    expect(readFileSync(bin, 'utf8')).toContain(sub)
+    const bundle = readFileSync(bin, 'utf8')
+    let invocations = 0
+    for (const n of INSTALL_STEPS.lines.flatMap((l) => skillNamesIn(l.cmd))) {
+      const skill = readFileSync(join(plugin, 'skills', n, 'SKILL.md'), 'utf8')
+      for (const m of skill.matchAll(/contextops-cli\.mjs" (\S+)/g)) {
+        expect(bundle, `skills/${n} 이 부르는 명령 ${m[1]}`).toContain(m[1] as string)
+        invocations++
+      }
+    }
+    expect(invocations, '설치 줄의 Skill 이 CLI 를 한 번도 안 부른다').toBeGreaterThan(0)
   })
 
   it('없는 명령(npx contextops)을 적지 않는다', () => {

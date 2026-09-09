@@ -383,11 +383,16 @@ export function compile(input: { snapshot: Snapshot; project: { slug, name }; te
 
 ```md
 ## ContextOps 진행 보고 (필수)
-작업을 마칠 때 이번 변경이 Roadmap의 어느 마일스톤 done_when에 해당하는지 판단하고 아래를 실행한다. 코드 본문은 전송되지 않는다.
-- 해당 있음: `node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" progress --milestone <ID> --criterion "<done_when 문장>" --evidence <path:start-end> [--evidence ...] --summary "<한 줄>"`
-- 해당 없음: `... progress --milestone none --summary "<한 줄>"`
+작업을 마칠 때 이번 변경이 Roadmap 의 어느 마일스톤 done_when 에 해당하는지 판단하고 아래 Skill 을 실행한다. 코드 본문은 전송되지 않는다.
+- 해당 있음: `/contextops:progress --milestone <ID> --criterion "<done_when 문장>" --evidence <path:start-end> [--evidence ...] --summary "<한 줄>"`
+- 해당 없음: `/contextops:progress --milestone none --summary "<한 줄>"`
 - 팀 정책·아키텍처·용어에 영향을 주는 변경이면 사용자에게 `/contextops:propose` 실행을 권한다. 직접 실행하지 않는다.
 ```
+
+🔴 **왜 CLI 경로가 아니라 Skill 인가** (2026-09-09 · TEMPLATE_VERSION 1.6). 예전 문단은 `node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" progress …` 였는데,
+Claude Code 는 `${CLAUDE_PLUGIN_ROOT}` 를 **플러그인 Skill 본문 안에서만** 치환하고 사용자 저장소의 Bash 환경에는 그 변수가 없다 — 팀원의 Claude 가
+그 줄을 그대로 치면 「파일이 없다」로 끝나고 진행 보고가 조용히 멈춘다. 그래서 경로를 아는 자리는 `skills/progress/SKILL.md`(모델이 스스로 부를 수 있는
+유일한 Skill) 하나이고 Pack 은 그 Skill 의 이름과 인자만 가르친다. 정본 문단은 `packages/compiler/templates/progress-report.ts` 이고 `plugin/contextops/test/progress.test.ts` 가 CLI 플래그 표와 대조한다.
 
 ### 4.4 테스트
 
@@ -549,7 +554,7 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 ### 8.3 CLI 명령 (`bin/contextops-cli.mjs`)
 | 명령 | 동작 | exit |
 |---|---|---|
-| `setup` (npx contextops) | 브라우저 열어 로그인 → 프로젝트 선택 → 토큰 발급·저장 → `claude plugin marketplace add`/`install` 안내 출력(자동 실행은 사용자 확인 후) → `project.json` 작성 → "Claude Code를 열고 /contextops:init 을 실행하세요" | 0/10 로그인 실패/30 config |
+| `setup` (Claude Code 의 `/contextops:setup` Skill 이 부른다 — `npx contextops` 는 없다) | 웹 Sync 화면 [기기 추가] 가 준 한 줄의 플래그(`--api-origin --project --token --device-id`)를 받아 → 토큰이 그 프로젝트의 것인지 서버에 확인 → `project.json` 작성 · `~/.contextops/credentials.json` 저장 → `claude plugin marketplace add`/`install` 안내 출력 → "Claude Code를 열고 /contextops:init 을 실행하세요" | 0/10 로그인 실패/30 config |
 | `scan` | 결정론 스캔 → `.contextops/cache/scan.json` (파일 목록·언어·엔트리·인프라 파일·env 키 이름·의존성·제외 목록). 본문 없음 | 0 |
 | `validate <json>` | **같은 Zod 계약**으로 로컬 검증(번들에 포함), 오류 위치 출력. `--schema <이름>` | 0/2 |
 | `upload-draft <json>` | batch-draft POST, 결과 요약 출력 | 0/20 network |
@@ -591,6 +596,12 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 `skills/sync/SKILL.md`: `sync --check`로 상태 출력 → 변경 파일 diff 요약 → 사용자 확인 → `sync`. modified면 backup 안내 후 `--force` 여부 질문.
 
 `skills/propose/SKILL.md`: `pending-proposal.json`이 있으면 그걸, 없으면 `git diff`(working tree 기본, 사용자가 범위 지정 가능)와 관련 파일을 읽어 Proposal JSON 작성(operation·target_item_id·evidence path:line·relates_to milestone). validate → 사용자 미리보기 → `propose` 실행.
+
+`skills/setup/SKILL.md` (2026-09-09): 웹 Sync 화면 [기기 추가] 가 준 한 줄(`/contextops:setup --api-origin … --project … --token … --device-id …`)을 사람이 Claude Code 에 붙여 넣으면, `node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" setup $ARGUMENTS --no-browser` 로 CLI 를 대신 부른다. 토큰은 되풀이해 말하지 않는다. `disable-model-invocation: true`.
+
+`skills/progress/SKILL.md` (2026-09-09): **모델이 스스로 부를 수 있는 유일한 Skill**(`disable-model-invocation: false`). §4.3 의 문단이 가르치는 인자를 그대로 `progress` 에 넘긴다. `done_candidate` 를 스스로 붙이지 않는다.
+
+🔴 **Skill 본문의 경로는 `${CLAUDE_PLUGIN_ROOT}`(중괄호)다** — Claude Code 가 치환하는 유일한 형태다. 중괄호 없는 `$CLAUDE_PLUGIN_ROOT` 는 치환도 안 되고 Bash 환경변수로도 없다 (`plugin/contextops/test/skills.test.ts` 가 잰다).
 
 ### 8.5 sync 절차 (결정론)
 1. preflight: project.json·토큰·디스크 쓰기 가능·로컬 `manifest.json` 이 계약과 맞는지 확인
@@ -694,7 +705,7 @@ temp git repo 픽스처로: 정상 sync, modified 감지, hash 불일치 중단,
 | cli | §8.7 | PR |
 | e2e | import(paylab) → review → publish → pack explorer → roadmap 확인 (Playwright) | main |
 | security | 업로드 payload 캡처에 code/secret 0건 (proxy 로그 검사 스크립트) | 릴리즈 전 |
-| manual | 새 PC: `npx contextops setup` → `/contextops:init` → 웹 승인 → `/contextops:sync` → 훅 알림 | 릴리즈 전 |
+| manual | 새 PC: `claude plugin marketplace add` → `install` → `/contextops:setup <웹이 준 한 줄>` → `/contextops:init` → 웹 승인 → `/contextops:sync` → 훅 알림 → 작업 뒤 `/contextops:progress` 가 Roadmap 을 움직인다 | 릴리즈 전 |
 
 ---
 

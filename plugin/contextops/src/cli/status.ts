@@ -36,7 +36,7 @@ export async function runStatus(cli: Cli, flags: Flags): Promise<number> {
   const config = readProjectConfig(root)
   if (config.state === 'missing') {
     //  ⚠ 이건 고장이 아니다 — 아직 잇지 않은 저장소다. 0 으로 끝내되 길을 알려 준다.
-    cli.io.out('이 저장소는 ContextOps 에 연결돼 있지 않다 — contextops setup 을 실행해라.')
+    cli.io.out('이 저장소는 ContextOps 에 연결돼 있지 않다 — /contextops:setup 을 실행해라.')
     return EXIT.OK
   }
   if (config.state === 'invalid') {

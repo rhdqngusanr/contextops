@@ -14,13 +14,13 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 ## 1. 저장소를 훑는다
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" scan
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" scan
 ```
 
 `.contextops/cache/scan.json` 이 생긴다. 그 파일을 읽어라 — 파일 목록·언어·엔트리·
 인프라 파일·**env 키 이름**(값이 아니다)·의존성·제외 목록이 있다.
 
-- exit 30 이면 이 저장소는 아직 이어지지 않았다 → `contextops setup` 을 안내하고 멈춘다.
+- exit 30 이면 이 저장소는 아직 이어지지 않았다 → `/contextops:setup` 을 안내하고 멈춘다.
 
 ## 2. 읽을 파일을 고른다 — **최대 15개**
 
@@ -32,7 +32,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" scan
 
 ## 3. 초안을 쓴다
 
-`$CLAUDE_PLUGIN_ROOT/schemas/context-item-draft.json` 이 **작성 안내서**다
+`${CLAUDE_PLUGIN_ROOT}/schemas/context-item-draft.json` 이 **작성 안내서**다
 (판정은 4단계의 `validate` 가 한다). `architecture` · `domain` · `constraint` ·
 `open_question` 항목을 만들어 `.contextops/cache/draft.json` 에 저장한다:
 
@@ -51,7 +51,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" scan
 ## 4. 계약과 맞는지 판다
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" validate .contextops/cache/draft.json
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" validate .contextops/cache/draft.json
 ```
 
 - exit 0 → 5단계로
@@ -61,7 +61,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" validate .contextops/cache/dra
 ## 5. 무엇이 나가는지 보여 주고 **명시적 확인**을 받는다
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" upload-draft --dry-run
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" upload-draft --dry-run
 ```
 
 이 출력이 **실제로 보낼 payload 에서 뽑은 것**이다 — 항목 수·항목 id·근거 경로 수·
@@ -72,13 +72,13 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" upload-draft --dry-run
 ## 6. 올린다
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" upload-draft
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" upload-draft
 ```
 
 - exit 0 → 받아들여진 항목 수와 「웹의 어디서 보나」 줄(주소 · 「Context」 탭)을 그대로 보여 준다.
   ⚠ 화면 주소를 지어서 붙이지 마라 — CLI 는 uuid 만 알고 웹 주소는 slug 라, 지은 주소는 404 다.
 - exit 2 → 항목별 거절 사유가 나온다. 고쳐서 4단계부터 다시.
 - exit 20 → 네트워크다. 잠시 뒤 6단계만 다시 하면 된다 (초안은 그대로 있다).
-- exit 30 → 토큰·설정 문제다. `contextops setup` 을 안내한다.
+- exit 30 → 토큰·설정 문제다. `/contextops:setup` 을 안내한다.
 
 마지막으로 **웹에서 검토·발행이 필요하다**는 것을 알린다 — 초안은 아직 팀 규칙이 아니다.

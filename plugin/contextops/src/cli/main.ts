@@ -5,6 +5,7 @@ import { homedir } from 'node:os'
 import type { Cli } from './cli'
 import { runCommand } from './commands'
 import { EXIT } from './exit'
+import { nodeVersionWarning } from './node'
 
 // =====================================================================
 //  진짜 세상을 `Cli` 에 붙이는 자리 — **여기 말고 어디에도 `process` 가 없다**
@@ -56,6 +57,10 @@ const cli: Cli = {
   fetch: globalThis.fetch,
   openUrl,
 }
+
+//  낮은 Node 는 문법 오류로 여기까지 못 올 수도 있다 — 왔다면 한 줄로 말하고 진행한다 (`node.ts`).
+const nodeWarning = nodeVersionWarning(process.versions.node)
+if (nodeWarning !== undefined) process.stderr.write(`${nodeWarning}\n`)
 
 runCommand(cli, process.argv.slice(2))
   .then((code) => { process.exitCode = code })

@@ -48,6 +48,17 @@ _마지막 갱신: 2026-09-09 · 사람 세션(루프 밖 · `loop/STOP` 그대�
 이메일 매직링크 문은 `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` 뒤로 숨겼고(기본 SMTP 는 팀 멤버 주소만) 콜백 오류 카드가 원인 코드와 `/demo` 문을 보인다.
 `verify:prod` 가 Supabase 프로젝트 쪽 넷(공급자 ON · JWKS alg ⊂ 표 · anon REST ≠ 200 · 로그인 버튼이 실제로 그려짐)을 잰다 — 셋 다 실측에서 어긋나 있던 것이다.
 
+🔴 **블로커 4 의 코드 쪽도 닫았다** (같은 세션). 근거는 Claude Code 문서다 — `${CLAUDE_PLUGIN_ROOT}`(중괄호)만 **플러그인 Skill 본문 안에서** 치환되고
+Bash 환경변수로는 안 주어진다. 그래서 ① SKILL.md 셋을 그 형태로(`skills.test` 가 bare 형태를 금지) ② `setup`·`progress` Skill 을 신설 — 사람이 웹 「기기 추가」가 준
+`/contextops:setup --api-origin … --token …` 한 줄을 Claude Code 에 붙여 넣으면 Skill 이 경로를 채워 CLI 를 부른다(`SETUP_COMMAND_NAME` 이 그 머리) ·
+Pack 의 진행 보고 문단은 `/contextops:progress …`(TEMPLATE_VERSION 1.5 → **1.6** · golden 3종 재생성 · 관통 재생 픽스처의 그 줄도 `> /contextops:progress …`) ③ 설치 안내
+첫머리에 「Node 22 이상」(`INSTALL_STEPS.requires` · `.nvmrc` 와 같은지 시험) + CLI 가 낮은 Node 에 한 줄 경고(`src/cli/node.ts`) ④ plugin.json 에 repository·license·keywords.
+🙋 **실기 설치는 사람 몫이다** — `claude plugin marketplace add ./` → install → 새 저장소 세션 → 훅 → `/contextops:setup` → `/contextops:sync` → `/contextops:progress` 가 Roadmap 을
+움직이는지. Skill 본문 치환은 문서로만 확인했다 — 이 실기 없이는 어떤 수정도 확인된 것이 아니다.
+
+🔴 **GitHub Actions 가 `9c84aa9` 에서 빨갰다** — `deploy-doc.test` ⑤ 가 `apps/web/.env.vercel` 을 「없다」고 했다. 로컬에는 있고(gitignore) 러너에는 없는 파일을 DEPLOY.md 가
+백틱으로 가리킨 것이다. 문서를 고치고, 같은 종류가 다시 못 들어오게 그 시험이 **`git check-ignore` 로 gitignore 대상 경로도 FAIL** 로 만든다(로컬에서도 러너와 같은 판정).
+
 🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15 · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
 루프는 `loop/STOP` 그대로 멈춰 있다 — 9/9~9/11 은 계정 작업과 섞여 사람이 붙은 세션이 맞고, 그 뒤 켤지는 사람이 정한다(INBOX B1).
 

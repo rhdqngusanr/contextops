@@ -77,8 +77,16 @@ export type DeviceCredential = z.infer<typeof DeviceCredential>
 export const SETUP_COMMAND_FLAGS = ['api-origin', 'project', 'token', 'device-id'] as const
 export type SetupCommandFlag = (typeof SETUP_COMMAND_FLAGS)[number]
 
-/** 명령 이름 — `COMMANDS` 표의 `usage` 와 같은 말이다 (`contextops setup [옵션]`). */
-export const SETUP_COMMAND_NAME = 'contextops setup'
+/**
+ * 한 줄의 머리 — **Claude Code 의 Skill 이름**이다 (`plugin/contextops/skills/setup/SKILL.md`).
+ *
+ * ★ 왜 CLI 이름(`contextops setup`)이 아닌가 (2026-09-09 · INBOX 블로커 4) — `contextops` 는 사용자
+ *   PATH 에 없고, 번들의 경로(`${CLAUDE_PLUGIN_ROOT}/bin/…`)는 사용자 터미널에 없는 변수다. 사람이
+ *   그 줄을 붙여 넣을 수 있는 유일한 자리는 **Claude Code** 이고, 거기서는 Skill 이 경로를 채워
+ *   CLI 의 `setup` 을 부른다. 그래서 줄의 머리는 Skill 이름이고 나머지 플래그는 CLI 가 그대로 받는다
+ *   (`plugin/contextops/test/setup-command.test.ts` 가 「머리를 떼고 넘기면 setup 이 먹는가」를 잰다).
+ */
+export const SETUP_COMMAND_NAME = '/contextops:setup'
 
 export type SetupCommandArgs = {
   api_origin: string
@@ -88,7 +96,7 @@ export type SetupCommandArgs = {
   device_id: string
 }
 
-/** `contextops setup --api-origin … --project … --token … --device-id …` 한 줄. */
+/** `/contextops:setup --api-origin … --project … --token … --device-id …` 한 줄 — Claude Code 에 붙여 넣는다. */
 export function setupCommandLine(args: SetupCommandArgs): string {
   const values: Record<SetupCommandFlag, string> = {
     'api-origin': args.api_origin,

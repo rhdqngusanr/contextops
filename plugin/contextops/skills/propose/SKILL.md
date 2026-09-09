@@ -28,7 +28,7 @@ git diff
 ## 2. 제안 초안을 쓴다
 
 `.contextops/cache/proposal.json` 에 저장한다. 모양은
-`$CLAUDE_PLUGIN_ROOT/schemas/proposal-draft.json` 이 안내한다:
+`${CLAUDE_PLUGIN_ROOT}/schemas/proposal-draft.json` 이 안내한다:
 
 ```json
 {
@@ -56,7 +56,7 @@ git diff
 ## 3. 계약과 맞는지 판다
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" validate .contextops/cache/proposal.json --schema proposal-draft
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" validate .contextops/cache/proposal.json --schema proposal-draft
 ```
 
 exit 2 면 오류 위치를 고쳐 **한 번만** 다시 시도한다.
@@ -64,7 +64,7 @@ exit 2 면 오류 위치를 고쳐 **한 번만** 다시 시도한다.
 ## 4. 보여 주고 확인을 받는다
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" propose --dry-run
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" propose --dry-run
 ```
 
 제목·연산별 대상·근거 수가 나온다. 그대로 보여 주고 물어라.
@@ -74,7 +74,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" propose --dry-run
 
 ```bash
 # pending-proposal.json 에서 시작했으면 --from-pending 을 붙인다 (보낸 뒤 힌트를 치운다)
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" propose --from-pending
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" propose --from-pending
 ```
 
 - exit 0 → 「웹의 어디서 보나」 줄(주소 · 「제안」 탭 · 제목 · id)을 그대로 보여 주고, **승인은 owner 가 웹에서 한다**고 알린다.

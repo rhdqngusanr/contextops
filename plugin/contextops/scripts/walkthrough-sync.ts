@@ -330,7 +330,7 @@ async function main(): Promise<void> {
       'progress', '--milestone', 'PL-M1', '--criterion', criterion,
       '--evidence', `${evidencePath}:18-46`, '--summary', '재시도 로직을 psp.client 한 곳으로 모았다',
     ]
-    record(`$ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" ${shellLine(progressArgs)}`)
+    record(`> /contextops:progress ${shellLine(progressArgs.slice(1))}`)
     const recProgress = await runCli(recHome, [...progressArgs, '--dir', recRepo])
     recordOut(recProgress.stdout)
 

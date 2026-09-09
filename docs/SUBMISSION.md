@@ -102,8 +102,9 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 
 ## 도구와 기술
 
-- **Claude Code Plugin** — Skill 3(`/contextops:init` · `sync` · `propose`) · 훅 2(`SessionStart` · `Stop`) · CLI 단일 번들
-  (`plugin/contextops/bin/contextops-cli.mjs`). 훅은 알리기만 하고 LLM 을 부르지 않습니다.
+- **Claude Code Plugin** — Skill 5(`/contextops:init` · `sync` · `propose` · `setup` · `progress`) · 훅 2(`SessionStart` · `Stop`) · CLI 단일 번들
+  (`plugin/contextops/bin/contextops-cli.mjs`). 훅은 알리기만 하고 LLM 을 부르지 않습니다. `setup`·`progress` 는 CLI 경로를
+  사용자 대신 채우는 Skill 입니다 — 진행 보고는 팀원의 Claude 가 작업 끝에 `/contextops:progress` 를 스스로 실행합니다.
 - **Gemini API** — SDK 없이 `fetch` · `responseJsonSchema` 구조화 출력 · `withBudget()` 필수 · 우리 API 키(사용자의 Claude 구독이 아닙니다).
 - **웹·서버** — TypeScript 5 / Node 22 · Next.js 15 (App Router · Route Handlers) · Postgres (Supabase) + Drizzle ORM ·
   PGlite (시험·로컬) · Zod · vitest · Vercel (Cron 포함).
@@ -118,10 +119,12 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 
 **개발자 설치**
 
+Node 22 이상이 필요하다 (node -v) — 훅과 CLI 가 Node 로 돈다.
+
 ```
 claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록한다
 claude plugin install contextops                                 # 플러그인을 깐다 (훅 · Skill · CLI)
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup          # 이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에
+/contextops:setup <Sync 화면이 준 인자>                           # Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 준다 — 토큰은 저장소 밖에
 /contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다
 ```
 

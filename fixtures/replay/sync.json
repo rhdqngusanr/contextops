@@ -61,7 +61,7 @@
   },
   {
     "t_ms": 218,
-    "text": "$ node \"$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs\" progress --milestone PL-M1 --criterion \"PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\" --evidence src/psp/psp.client.ts:18-46 --summary \"재시도 로직을 psp.client 한 곳으로 모았다\""
+    "text": "> /contextops:progress --milestone PL-M1 --criterion \"PSP 호출 재시도 정책이 공용 모듈 한 곳에만 있다\" --evidence src/psp/psp.client.ts:18-46 --summary \"재시도 로직을 psp.client 한 곳으로 모았다\""
   },
   {
     "t_ms": 329,

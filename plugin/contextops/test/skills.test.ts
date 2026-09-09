@@ -48,9 +48,17 @@ function invocations(): Invocation[] {
   return found
 }
 
+/**
+ * 🔴 **모델이 스스로 부를 수 있는 Skill** — 표 하나. 나머지는 전부 사람이 부를 때만 돈다
+ * (모델이 저 혼자 업로드·발행·설정을 시작하지 않는다).
+ * ★ `progress` 만 예외인 이유 — Pack 의 workflow.md 가 「작업을 마칠 때 실행한다」고 **agent 에게**
+ *   가르치는 것이 이 Skill 이다 (SPEC §4.3). 사람만 부를 수 있으면 진행 보고가 영원히 안 온다.
+ */
+const MODEL_INVOCABLE = new Set(['progress'])
+
 describe('Skill 레이아웃 (SPEC §8.4)', () => {
-  it('SPEC §8.4 의 셋이 다 있다', () => {
-    expect(skillNames).toEqual(['init', 'propose', 'sync'])
+  it('SPEC §8.4 의 다섯이 다 있다 — setup·progress 는 CLI 경로를 사용자 대신 채우는 문이다', () => {
+    expect(skillNames).toEqual(['init', 'progress', 'propose', 'setup', 'sync'])
   })
 
   it.each(skillNames)('%s — frontmatter 의 name 이 폴더 이름과 같다', (name) => {
@@ -59,15 +67,18 @@ describe('Skill 레이아웃 (SPEC §8.4)', () => {
     const front = /^---\n([\s\S]*?)\n---/.exec(read(name))?.[1] ?? ''
     expect(front).toContain(`name: ${name}`)
     expect(front).toMatch(/description: \S/)
-    //  🔴 사람이 부를 때만 돈다 — 모델이 저 혼자 업로드·발행을 시작하지 않는다.
-    expect(front).toContain('disable-model-invocation: true')
+    expect(front).toContain(`disable-model-invocation: ${MODEL_INVOCABLE.has(name) ? 'false' : 'true'}`)
   })
 
-  it.each(skillNames)('%s — 번들을 $CLAUDE_PLUGIN_ROOT 로 부른다', (name) => {
-    //  상대 경로로 부르면 사용자의 cwd 에 따라 「파일이 없다」가 된다.
+  it.each(skillNames)('%s — 번들을 ${CLAUDE_PLUGIN_ROOT}(중괄호) 로 부른다', (name) => {
+    //  🔴 Claude Code 는 **`${CLAUDE_PLUGIN_ROOT}` 만** Skill 본문에서 치환한다 — 중괄호 없는
+    //    `$CLAUDE_PLUGIN_ROOT` 는 치환도 안 되고 Bash 환경변수로도 없어서, 그대로 두면 사용자 기계에서
+    //    「파일이 없다」가 된다 (2026-09-09 감사 · 이 시험이 예전엔 정확히 그 잘못된 형태를 강제했다).
+    //    상대 경로로 부르면 사용자의 cwd 에 따라 같은 고장이 난다.
     for (const line of read(name).split('\n')) {
-      if (line.includes('contextops-cli.mjs')) expect(line).toContain('$CLAUDE_PLUGIN_ROOT')
+      if (line.includes('contextops-cli.mjs')) expect(line).toContain('${CLAUDE_PLUGIN_ROOT}')
     }
+    expect(read(name), '중괄호 없는 $CLAUDE_PLUGIN_ROOT 가 남아 있다').not.toMatch(/\$CLAUDE_PLUGIN_ROOT/)
   })
 })
 

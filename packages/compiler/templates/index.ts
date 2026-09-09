@@ -27,7 +27,9 @@ import { PROGRESS_REPORT } from './progress-report'
 //      왜 우리 도구 사용법만 있나」로 읽힌다 — 팀 규칙으로 배포할 만한 파일인가에서 걸린다.
 //      ⚠ 제목을 항목 유무로 갈라 쓰지 않았다. 갈라 쓰면 같은 파일이 저장소마다 다른 제목을
 //      갖게 되고, `always` 를 표 한 칸으로 만든 뜻이 없어진다.
-export const TEMPLATE_VERSION = '1.5'
+//  1.5 → 1.6 (2026-09-09): 진행 보고 문단이 `/contextops:progress` Skill 을 가르친다 — `$CLAUDE_PLUGIN_ROOT` 는
+//  사용자 Bash 환경에 없는 변수라 예전 문단대로 치면 팀 전체의 진행 보고가 조용히 실패했다 (INBOX 블로커 4).
+export const TEMPLATE_VERSION = '1.6'
 
 /**
  * 🔴 **거울 문서** — 제 항목은 없고 다른 문서의 절을 **그대로** 모아 한 장으로 내는 문서

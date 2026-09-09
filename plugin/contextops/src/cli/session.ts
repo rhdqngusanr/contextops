@@ -33,7 +33,7 @@ export function readyOrExplain(cli: Cli, flags: Flags): Session {
 
   const config = readProjectConfig(root)
   if (config.state === 'missing') {
-    cli.io.err(`${LOCAL_FILES.project} 이 없다 — 먼저 contextops setup 을 실행해라.`)
+    cli.io.err(`${LOCAL_FILES.project} 이 없다 — 먼저 /contextops:setup 을 실행해라 (Claude Code 안에서 · 웹 Sync 화면이 준 한 줄).`)
     return { ok: false, code: EXIT.CONFIG }
   }
   if (config.state === 'invalid') {
@@ -51,7 +51,7 @@ export function readyOrExplain(cli: Cli, flags: Flags): Session {
     ? findCredential(credentials.value, config.value.api_origin, config.value.project_id)
     : undefined
   if (credential === undefined) {
-    cli.io.err(`이 프로젝트의 기기 토큰이 없다 (${config.value.api_origin}) — contextops setup 을 다시 실행해라.`)
+    cli.io.err(`이 프로젝트의 기기 토큰이 없다 (${config.value.api_origin}) — /contextops:setup 을 다시 실행해라 (웹에서 새 한 줄을 받아).`)
     return { ok: false, code: EXIT.CONFIG }
   }
 
@@ -67,7 +67,7 @@ export function readyOrExplain(cli: Cli, flags: Flags): Session {
  */
 export function reportFailure(cli: Cli, code: string, message: string): number {
   if (code === 'UNAUTHORIZED') {
-    cli.io.err('토큰이 유효하지 않다 (만료·취소됐을 수 있다) — contextops setup 을 다시 실행해라.')
+    cli.io.err('토큰이 유효하지 않다 (만료·취소됐을 수 있다) — /contextops:setup 을 다시 실행해라 (웹에서 새 한 줄을 받아).')
     return EXIT.CONFIG
   }
   if (code === 'FORBIDDEN') {

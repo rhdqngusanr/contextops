@@ -262,7 +262,9 @@ export const ADD_DEVICE = {
   tokenLabel: '기기 토큰',
   //  🔴 이 문장이 이 칸의 전부다 — 「한 번뿐」을 말 안 하면 사람은 나중에 다시 찾으러 온다.
   once: '이 토큰은 지금 한 번만 보입니다. 서버에는 해시만 남아서 다시 볼 수 없습니다 — 잃어버리면 새로 발급받으세요.',
-  commandLead: '그 저장소에서 이 한 줄을 그대로 붙여넣으세요.',
+  //  🔴 붙여 넣는 자리는 터미널이 아니라 **Claude Code** 다 — 머리가 `/contextops:setup` Skill 이고, 그 Skill 이
+  //     플러그인 CLI 의 경로를 채워 `setup` 을 부른다 (사용자 터미널에는 그 경로가 없다 · 2026-09-09).
+  commandLead: '그 저장소에서 Claude Code 를 열고 이 한 줄을 그대로 붙여넣으세요.',
   copyToken: '토큰 복사',
   copyCommand: '명령 한 줄 복사',
   copied: '복사했습니다',

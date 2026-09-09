@@ -29,6 +29,10 @@
   모든 관통·데모·캡처는 개발 기계의 PGlite 위에서 돌았다. 배포에서만 볼 수 있는 셋 — 함수 안에서 `fixtures/` 를
   찾는가 · Supabase 에서 데모 리셋이 60초 안에 끝나는가 · Root Directory 설정이 `vercel.json` 을 읽게 하는가 — 은
   아직 못 쟀다.
+- **기기 토큰이 `/contextops:setup` 의 인자로 Claude Code 를 지난다.** 웹이 준 한 줄을 사람이 Claude Code 에 붙여 넣고 Skill 이
+  CLI 를 부르므로, 그 토큰 문자열은 사용자 자신의 모델 컨텍스트(그 세션의 대화)에 한 번 실린다. 서버에는 해시만 남고 저장은
+  `~/.contextops/credentials.json`(저장소 밖)뿐이다. 터미널에 직접 치는 길(`node <플러그인 경로>/bin/contextops-cli.mjs setup …`)은
+  플러그인 설치 폴더를 사람이 찾아야 해서 안내하지 않는다.
 - **`npx contextops` 는 없다.** npm 에 올린 적이 없다. 설치는 `claude plugin marketplace add rhdqngusanr/contextops`
   부터이고, 그 이름과 목록 파일(`.claude-plugin/marketplace.json`)은 이제 저장소에 있다 (`5d024ed`).
   ⚠ 다만 **`claude plugin install` 로 깐 기록이 아직 없다** — 새 PC 에서 add → install → `/contextops:init` 까지

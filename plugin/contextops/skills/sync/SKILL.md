@@ -13,7 +13,7 @@ allowed-tools: Bash(node:*), Read
 ## 1. 상태부터 본다 — **파일을 하나도 바꾸지 않는다**
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" sync --check
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" sync --check
 ```
 
 출력의 첫 낱말이 상태다:
@@ -25,7 +25,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" sync --check
 | `modified` | **관리 파일이 손으로 바뀌어 있다** | 3단계로 (`✎` 로 표시된 경로를 그대로 보여 준다) |
 | `unknown` | 아직 한 번도 받지 않았다 | 2단계로 |
 
-- exit 30 이면 설정·토큰 문제다. `contextops setup` 을 안내하고 멈춘다.
+- exit 30 이면 설정·토큰 문제다. `/contextops:setup` 을 안내하고 멈춘다.
 - exit 20 이면 서버에 못 닿았다. 오프라인이라고 말하고 멈춘다 — 재시도를 반복하지 마라.
 
 ## 2. 무엇이 바뀌는지 보여 주고 확인을 받는다
@@ -35,7 +35,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" sync --check
 알아야 한다. 확인을 받은 뒤:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" sync
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" sync
 ```
 
 - exit 0 → 적용됐다. 백업 위치(`.contextops/backups/<시각>-…`)를 알려 준다.
@@ -52,7 +52,7 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" sync
 - 사용자가 덮어쓰기로 결정했을 때만:
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" sync --force
+node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" sync --force
 ```
 
 ⚠ `--force` 도 백업은 남긴다 (`.contextops/backups/`). 그 경로를 반드시 알려 줘라.

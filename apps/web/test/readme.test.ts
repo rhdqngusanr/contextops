@@ -96,6 +96,10 @@ describe.each(DOCS)('① $name 은 랜딩과 같은 문장을 말한다', ({ nam
   })
 
   it('설치 4줄이 같은 명령 · 같은 순서이고 마무리 문장도 같다', () => {
+    //  Node 요구 문장도 같아야 하고, 그 숫자는 `.nvmrc` 와 같아야 한다 (숫자가 두 곳이면 갈린다).
+    expect(text).toContain(INSTALL_STEPS.requires)
+    const nvmrc = readFileSync(join(repoRoot, '.nvmrc'), 'utf8').trim()
+    expect(/Node (\d+)/.exec(INSTALL_STEPS.requires)?.[1], 'INSTALL_STEPS.requires 의 Node 숫자').toBe(nvmrc)
     let cursor = 0
     for (const l of INSTALL_STEPS.lines) {
       const at = text.indexOf(l.cmd, cursor)

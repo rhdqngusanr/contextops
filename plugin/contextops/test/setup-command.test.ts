@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   CredentialsFile, ProjectConfig,
@@ -25,6 +26,7 @@ import { fakeCli, okEnvelope, tempDir } from './helpers/cli'
 //      `project.json` 은 그 프로젝트를, `credentials.json` 은 그 토큰과 `device_id` 를 담는다
 // =====================================================================
 
+const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ORIGIN = 'https://contextops.example.com'
 const PROJECT = '11111111-2222-4333-8444-555555555555'
 const DEVICE = '66666666-7777-4888-8999-aaaaaaaaaaaa'
@@ -35,8 +37,15 @@ const LINE = setupCommandLine({
 })
 
 describe('① 그 줄의 플래그를 setup 이 전부 받는다', () => {
-  it('명령 이름이 `COMMANDS` 표의 usage 와 같은 말이다', () => {
-    expect(COMMANDS.setup?.usage).toContain(SETUP_COMMAND_NAME)
+  it('줄의 머리는 Claude Code 의 Skill 이름이고, 그 Skill 이 실재하며 CLI 의 setup 을 부른다', () => {
+    //  ★ 왜 Skill 인가 (2026-09-09) — `contextops` 는 사용자 PATH 에 없고 번들 경로의 변수는
+    //    사용자 터미널에 없다. 사람이 이 줄을 붙여 넣을 수 있는 자리는 Claude Code 뿐이다.
+    expect(SETUP_COMMAND_NAME).toBe('/contextops:setup')
+    const skill = readFileSync(join(packageRoot, 'skills', 'setup', 'SKILL.md'), 'utf8')
+    expect(skill).toContain('name: setup')
+    expect(skill).toContain('contextops-cli.mjs" setup $ARGUMENTS')
+    //  CLI 쪽 이름은 그대로 `setup` 이다 — Skill 이 떼어 넘기는 낱말과 같아야 한다.
+    expect(COMMANDS.setup?.usage).toContain('setup')
   })
 
   it('🔴 `SETUP_COMMAND_FLAGS` 의 이름이 전부 `SETUP_FLAGS` 의 키다 — 하나만 갈려도 그 줄이 죽는다', () => {
@@ -59,9 +68,11 @@ describe('② 그 줄을 그대로 돌리면 저장소가 이어진다', () => {
     const repo = tempDir('contextops-repo-')
     const home = tempDir('contextops-home-')
     try {
-      //  사람이 터미널에 붙여넣는 것과 같게 자른다 — 명령 이름 두 낱말은 셸이 먹는다.
-      const argv = LINE.split(' ').slice(1)
-      expect(argv[0]).toBe('setup')
+      //  사람이 Claude Code 에 붙여넣는 것과 같게 자른다 — Skill 이름(머리 한 낱말)은 Claude Code 가 먹고,
+      //  Skill 본문이 `setup $ARGUMENTS` 로 나머지를 CLI 에 넘긴다 (`skills/setup/SKILL.md`).
+      const [head, ...rest] = LINE.split(' ')
+      expect(head).toBe(SETUP_COMMAND_NAME)
+      const argv = ['setup', ...rest]
 
       const cli = fakeCli({ cwd: repo.path, home: home.path, responses: [okEnvelope([])] })
       const code = await runCommand(cli, [...argv, '--no-browser'])

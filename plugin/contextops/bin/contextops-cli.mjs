@@ -19930,7 +19930,7 @@ function readyOrExplain(cli2, flags) {
   const root = resolveRoot(cli2.cwd, flags.value("dir"));
   const config2 = readProjectConfig(root);
   if (config2.state === "missing") {
-    cli2.io.err(`${LOCAL_FILES.project} \uC774 \uC5C6\uB2E4 \u2014 \uBA3C\uC800 contextops setup \uC744 \uC2E4\uD589\uD574\uB77C.`);
+    cli2.io.err(`${LOCAL_FILES.project} \uC774 \uC5C6\uB2E4 \u2014 \uBA3C\uC800 /contextops:setup \uC744 \uC2E4\uD589\uD574\uB77C (Claude Code \uC548\uC5D0\uC11C \xB7 \uC6F9 Sync \uD654\uBA74\uC774 \uC900 \uD55C \uC904).`);
     return { ok: false, code: EXIT.CONFIG };
   }
   if (config2.state === "invalid") {
@@ -19945,14 +19945,14 @@ function readyOrExplain(cli2, flags) {
   }
   const credential = credentials.state === "ok" ? findCredential(credentials.value, config2.value.api_origin, config2.value.project_id) : void 0;
   if (credential === void 0) {
-    cli2.io.err(`\uC774 \uD504\uB85C\uC81D\uD2B8\uC758 \uAE30\uAE30 \uD1A0\uD070\uC774 \uC5C6\uB2E4 (${config2.value.api_origin}) \u2014 contextops setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C.`);
+    cli2.io.err(`\uC774 \uD504\uB85C\uC81D\uD2B8\uC758 \uAE30\uAE30 \uD1A0\uD070\uC774 \uC5C6\uB2E4 (${config2.value.api_origin}) \u2014 /contextops:setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C (\uC6F9\uC5D0\uC11C \uC0C8 \uD55C \uC904\uC744 \uBC1B\uC544).`);
     return { ok: false, code: EXIT.CONFIG };
   }
   return { ok: true, ready: { root, config: config2.value, token: credential.token } };
 }
 function reportFailure(cli2, code, message) {
   if (code === "UNAUTHORIZED") {
-    cli2.io.err("\uD1A0\uD070\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uB2E4 (\uB9CC\uB8CC\xB7\uCDE8\uC18C\uB410\uC744 \uC218 \uC788\uB2E4) \u2014 contextops setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C.");
+    cli2.io.err("\uD1A0\uD070\uC774 \uC720\uD6A8\uD558\uC9C0 \uC54A\uB2E4 (\uB9CC\uB8CC\xB7\uCDE8\uC18C\uB410\uC744 \uC218 \uC788\uB2E4) \u2014 /contextops:setup \uC744 \uB2E4\uC2DC \uC2E4\uD589\uD574\uB77C (\uC6F9\uC5D0\uC11C \uC0C8 \uD55C \uC904\uC744 \uBC1B\uC544).");
     return EXIT.CONFIG;
   }
   if (code === "FORBIDDEN") {
@@ -20776,7 +20776,7 @@ async function runStatus(cli2, flags) {
   const root = resolveRoot(cli2.cwd, flags.value("dir"));
   const config2 = readProjectConfig(root);
   if (config2.state === "missing") {
-    cli2.io.out("\uC774 \uC800\uC7A5\uC18C\uB294 ContextOps \uC5D0 \uC5F0\uACB0\uB3FC \uC788\uC9C0 \uC54A\uB2E4 \u2014 contextops setup \uC744 \uC2E4\uD589\uD574\uB77C.");
+    cli2.io.out("\uC774 \uC800\uC7A5\uC18C\uB294 ContextOps \uC5D0 \uC5F0\uACB0\uB3FC \uC788\uC9C0 \uC54A\uB2E4 \u2014 /contextops:setup \uC744 \uC2E4\uD589\uD574\uB77C.");
     return EXIT.OK;
   }
   if (config2.state === "invalid") {
@@ -21059,6 +21059,14 @@ async function runCommand(cli2, argv) {
   return command.run(cli2, parsed.flags);
 }
 
+// src/cli/node.ts
+var MIN_NODE_MAJOR = 22;
+function nodeVersionWarning(version2) {
+  const major = Number(/^(\d+)/.exec(version2)?.[1] ?? Number.NaN);
+  if (!Number.isFinite(major) || major >= MIN_NODE_MAJOR) return void 0;
+  return `\u26A0 Node ${version2} \uC5D0\uC11C \uB3CC\uACE0 \uC788\uB2E4 \u2014 ContextOps \uC758 \uD6C5\uACFC CLI \uB294 Node ${MIN_NODE_MAJOR} \uC774\uC0C1\uC774 \uD544\uC694\uD558\uB2E4 (node -v).`;
+}
+
 // src/cli/main.ts
 function openUrl(url2) {
   const [command, args] = process.platform === "win32" ? ["cmd", ["/c", "start", "", url2]] : process.platform === "darwin" ? ["open", [url2]] : ["xdg-open", [url2]];
@@ -21092,6 +21100,9 @@ var cli = {
   fetch: globalThis.fetch,
   openUrl
 };
+var nodeWarning = nodeVersionWarning(process.versions.node);
+if (nodeWarning !== void 0) process.stderr.write(`${nodeWarning}
+`);
 runCommand(cli, process.argv.slice(2)).then((code) => {
   process.exitCode = code;
 }).catch((err) => {

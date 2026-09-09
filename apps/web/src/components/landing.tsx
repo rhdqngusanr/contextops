@@ -256,10 +256,18 @@ export const SUBMISSION_IDENTITY = {
  */
 export const INSTALL_STEPS = {
   title: '개발자 설치',
+  /**
+   * 🔴 Node 가 있어야 한다 — 훅(`scripts/*.mjs`)과 CLI 번들이 `node` 로 돈다. 네이티브 Claude Code 만 깐 사람은
+   *   이 줄이 없으면 **매 세션 훅 오류 줄**을 본다 (2026-09-09 감사). 숫자의 정본은 `.nvmrc` 이고
+   *   `test/readme.test.ts` 가 같은 값인지 잰다 (번들 target 도 그 값이다 · `plugin/contextops/scripts/build.ts`).
+   */
+  requires: 'Node 22 이상이 필요하다 (node -v) — 훅과 CLI 가 Node 로 돈다.',
   lines: [
     { cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록한다' },
     { cmd: 'claude plugin install contextops', note: '플러그인을 깐다 (훅 · Skill · CLI)' },
-    { cmd: 'node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup', note: '이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에' },
+    //  ⚠ 셋째 줄은 Claude Code 안의 Skill 이다 — 터미널 명령이 아니다. 예전의 `node "$CLAUDE_PLUGIN_ROOT/…"` 는
+    //    사용자 터미널에 없는 변수라 그대로 치면 「파일이 없다」였다. Skill 이 그 경로를 채운다.
+    { cmd: '/contextops:setup <Sync 화면이 준 인자>', note: 'Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 준다 — 토큰은 저장소 밖에' },
     { cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다' },
   ],
   foot: '그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.',
@@ -444,6 +452,7 @@ function Install() {
   return (
     <section className={styles.section} aria-labelledby="landing-install">
       <h2 id="landing-install">{INSTALL_STEPS.title}</h2>
+      <p className="meta">{INSTALL_STEPS.requires}</p>
       <div className={`card scroll-x ${styles.codeBlock}`}>
         {/* 줄 사이는 진짜 개행이다 — `<pre>` 라서 그대로 서고, 글자로 뽑아 읽어도 네 줄이다. */}
         <pre className={styles.pre}>

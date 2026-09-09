@@ -54,7 +54,8 @@ describe('🔴 ① 녹화는 관통이 남긴 실제 출력이다 (fixtures/repl
     const hookAt = texts.findIndex((t) => t.startsWith('ContextOps: '))
     const syncAt = texts.findIndex((t) => t === '> /contextops:sync')
     const appliedAt = texts.findIndex((t) => /^v\S+ → v\S+ · 파일 \d+개를 적용했다$/.test(t))
-    const progressAt = texts.findIndex((t) => t.startsWith('$ ') && t.includes(' progress --milestone '))
+    //  agent 의 진행 보고는 Skill 호출이다 (`/contextops:progress` · SPEC §4.3 · 2026-09-09) — 터미널 명령이 아니다.
+    const progressAt = texts.findIndex((t) => t.startsWith('> /contextops:progress --milestone '))
     const reportAt = texts.findIndex((t) => t.startsWith(`보고했다 — ${TERMINAL_REPLAY.milestone.id} · criterion_done`))
     expect(hookAt).toBeGreaterThanOrEqual(0)
     expect(syncAt).toBeGreaterThan(hookAt)
@@ -65,12 +66,13 @@ describe('🔴 ① 녹화는 관통이 남긴 실제 출력이다 (fixtures/repl
     expect(texts.some((t) => t.includes('Hook은 파일을 변경하지 않습니다'))).toBe(true)
   })
 
-  it('명령 줄은 둘뿐이고 (사용자의 슬래시 명령 · agent 의 progress) 나머지는 stdout 이다', () => {
+  it('명령 줄은 둘뿐이고 (사용자의 슬래시 명령 · agent 의 progress Skill) 나머지는 stdout 이다', () => {
     const commands = REPLAY_FRAMES.filter((f) => isReplayCommand(f.text))
     expect(commands).toHaveLength(2)
-    //  progress 명령은 Pack 의 고정 문단(SPEC §4.3)이 가르치는 모양 그대로다.
+    //  progress 는 Pack 의 고정 문단(SPEC §4.3)이 가르치는 모양 그대로다 — `/contextops:progress` Skill 과 그 인자.
     const progress = commands[1]?.text ?? ''
-    expect(progress).toContain('node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" progress --milestone ')
+    expect(progress).toContain('/contextops:progress --milestone ')
+    expect(progress).not.toContain('CLAUDE_PLUGIN_ROOT')
     expect(progress).toMatch(/--criterion "[^"]+"/)
     expect(progress).toMatch(/--evidence \S+:\d+-\d+/)
     expect(progress).toMatch(/--summary "[^"]+"/)
@@ -94,7 +96,7 @@ describe('🔴 ② P7 — 패널의 마일스톤은 씨앗의 PL-M1 이다', () 
   })
 
   it('보고 줄이 가리키는 완료 기준이 done_when 안의 문장이고, 근거는 픽스처 저장소의 경로다', () => {
-    const progress = REPLAY_FRAMES.find((f) => f.text.startsWith('$ ') && f.text.includes(' progress '))?.text ?? ''
+    const progress = REPLAY_FRAMES.find((f) => f.text.startsWith('> /contextops:progress '))?.text ?? ''
     const criterion = /--criterion "([^"]+)"/.exec(progress)?.[1]
     expect(criterion).toBeDefined()
     expect(TERMINAL_REPLAY.milestone.done_when).toContain(criterion)

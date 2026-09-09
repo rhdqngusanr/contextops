@@ -210,10 +210,12 @@ AI 코딩 도구는 **팀 규칙이 적힌 파일**을 읽고 답합니다. 문�
 
 ## 설치
 
+Node 22 이상이 필요하다 (node -v) — 훅과 CLI 가 Node 로 돈다.
+
 ```
 claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록한다
 claude plugin install contextops                                 # 플러그인을 깐다 (훅 · Skill · CLI)
-node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup          # 이 저장소를 프로젝트에 잇는다 — 토큰은 저장소 밖에
+/contextops:setup <Sync 화면이 준 인자>                           # Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 준다 — 토큰은 저장소 밖에
 /contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다
 ```
 
@@ -232,8 +234,9 @@ node "$CLAUDE_PLUGIN_ROOT/bin/contextops-cli.mjs" setup          # 이 저장소
 | `propose` | 변경 제안을 공식 버전 기준으로 올린다 (근거는 `path:line`) |
 | `progress` | 마일스톤 진행을 보고한다 — 근거는 경로와 줄 번호뿐 |
 
-Skill 셋(`/contextops:init` · `sync` · `propose`)과 훅 둘(`SessionStart` · `Stop`)은
-[`plugin/contextops`](plugin/contextops) 에 있습니다. `SessionStart` 훅은 새 버전이 있으면 **알리기만** 하고,
+Skill 다섯(`/contextops:init` · `sync` · `propose` · `setup` · `progress`)과 훅 둘(`SessionStart` · `Stop`)은
+[`plugin/contextops`](plugin/contextops) 에 있습니다. `setup`·`progress` 는 CLI 의 경로를 사용자 대신 채워 주는 문입니다
+(플러그인 번들의 경로는 사용자 터미널에 없습니다). `SessionStart` 훅은 새 버전이 있으면 **알리기만** 하고,
 `Stop` 훅은 바뀐 경로만으로 진행 이벤트를 보고합니다 — 둘 다 LLM 을 부르지 않습니다.
 
 ---
@@ -287,7 +290,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `apps/web/src/components/` | 화면 컴포넌트 — 문구는 표에, JSX 는 표를 읽기만 |
 | `apps/web/scripts/` | 개발용 씨앗 서버 · 화면 덤프 · 관통 단계 스크립트 (제품에 안 들어간다) |
 | `apps/web/vercel.json` | Cron 둘 — health 하루 1회 · 데모 리셋 매일 · 함수 리전 서울 (한도의 정본은 `apps/web/src/lib/api/vercel.ts`) |
-| `plugin/contextops/` | Claude Code 플러그인 — `skills/` 3 · `hooks/hooks.json` · `scripts/` 훅 2 · `bin/contextops-cli.mjs` 단일 번들 |
+| `plugin/contextops/` | Claude Code 플러그인 — `skills/` 5 · `hooks/hooks.json` · `scripts/` 훅 2 · `bin/contextops-cli.mjs` 단일 번들 |
 | `plugin/contextops/src/cli/` | CLI 소스 — 명령 표 하나(`commands.ts`) · exit 코드 표 하나 |
 | `plugin/contextops/schemas/` | `packages/schema` 에서 낸 JSON Schema (로컬 검증용) |
 | `fixtures/paylab-api/` | 샘플 저장소 (TS 48파일 · 의도된 어긋남 3곳) — 값이 든 secret 은 0건 |
