@@ -29,7 +29,10 @@ import { PROGRESS_REPORT } from './progress-report'
 //      갖게 되고, `always` 를 표 한 칸으로 만든 뜻이 없어진다.
 //  1.5 → 1.6 (2026-09-09): 진행 보고 문단이 `/contextops:progress` Skill 을 가르친다 — `$CLAUDE_PLUGIN_ROOT` 는
 //  사용자 Bash 환경에 없는 변수라 예전 문단대로 치면 팀 전체의 진행 보고가 조용히 실패했다 (INBOX 블로커 4).
-export const TEMPLATE_VERSION = '1.6'
+//  1.6 → 1.7 (2026-09-10): 역추적 태그와 scoped frontmatter 의 **escape** (INBOX G14) — 근거의 경로도 `safe()` 를
+//  지나고(`-->`·`<!--` 제거 · `,` → `%2C`), `paths:` 는 `JSON.stringify` 로 감싼다. 보통 입력에서는 byte 가 같지만,
+//  쉼표·따옴표가 든 경로는 1.6 과 다른 Pack 이 되므로 버전을 올린다 (P4 — 같은 버전 · 같은 입력 · 같은 byte).
+export const TEMPLATE_VERSION = '1.7'
 
 /**
  * 🔴 **거울 문서** — 제 항목은 없고 다른 문서의 절을 **그대로** 모아 한 장으로 내는 문서
@@ -229,7 +232,9 @@ export const DOCS: Record<DocId, DocSpec> = {
     path: (slug) => `.claude/rules/scoped-${slug}.md`,
     target: 'claude',
     // frontmatter `paths:` — Claude Code 가 이 경로를 만질 때만 이 규칙을 읽는다.
-    head: (v) => ['---', 'paths:', ...v.paths.map((p) => `  - "${p}"`), '---', `# 경로 규칙 — ${v.title}`, notice(v)],
+    // ⚠ `JSON.stringify` 로 감싼다 — 경로 안의 `"`·`\` 가 YAML 문자열을 깨뜨리면 그 규칙 파일 전체가 안 읽힌다
+    //   (INBOX G14). 보통 경로에서는 `"src/**"` 와 byte 가 같다.
+    head: (v) => ['---', 'paths:', ...v.paths.map((p) => `  - ${JSON.stringify(p)}`), '---', `# 경로 규칙 — ${v.title}`, notice(v)],
     slots: [{ section: 'scoped_rule' }],
   },
 

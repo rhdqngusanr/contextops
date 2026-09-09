@@ -1,4 +1,5 @@
 import { ERROR_CODES, type ErrorCode } from '@contextops/schema'
+import type { CompileErrorCode } from '@contextops/compiler'
 
 import type { ActorKind } from '../api/actor-rules'
 import { actorKindOf, clearSession, readSession } from './session'
@@ -44,7 +45,12 @@ export const ERROR_HINT: Record<ErrorCode, string> = {
   INTERNAL: '서버에서 처리하지 못했습니다. 잠시 후 다시 시도해주세요.',
   //  ⚠ 「AI」라고 말한다 — 사용자가 할 수 있는 일이 **다시 시도**밖에 없다는 점에서
   //     INTERNAL 과 같지만, 원인이 다르면 다시 시도의 성공 확률이 다르다 (SPEC §7).
+  //     이 코드는 `retryable` 이라 화면 3 이 [다시 시도] 를 **실제로 그린다** (INBOX G8) —
+  //     「다시 시도해주세요」라고 말하면서 버튼이 없던 자리였다.
   AI_OUTPUT_INVALID: 'AI가 정리한 결과를 읽지 못했습니다. 다시 시도해주세요.',
+  //  🔴 사람이 할 일이 「기다리기」가 아니라 **「운영자에게 알리기」**다 — 키가 없는 배포는
+  //     시간이 고치지 않는다 (INBOX G9). 「픽스처 결과」를 약속하지 않는다 — 그런 코드는 없다.
+  AI_NOT_CONFIGURED: 'AI 기능이 아직 설정되지 않았습니다. 운영자에게 알려주세요.',
 }
 
 /**
@@ -72,6 +78,28 @@ export function hintText(code: ErrorCode, actor: ActorKind): string {
   return (actor === 'guest' ? GUEST_HINT[code] : undefined) ?? ERROR_HINT[code]
 }
 
+/**
+ * 🔴 **서버가 `details.code` 로 덧붙인 원인 → 화면 문장** (INBOX G12 · 2026-09-09).
+ *
+ * ★ 왜 있나 — 승인 0개로 발행하면 서버는 `VALIDATION_FAILED` + `details.code:'EMPTY_SNAPSHOT'` 을 낸다
+ *   (`lib/api/publish.ts` 의 `COMPILE_ERROR_FAULT`). 코드 하나에 문구 하나인 `ERROR_HINT` 는 그것을
+ *   「입력한 내용을 다시 확인해주세요」로 뭉갰고, 사람은 **입력을 고치러 갔다** — 정답은 「Context 에서
+ *   초안을 승인하라」다. 코드를 하나 더 파지 않는다 (`VALIDATION_FAILED` 갈래를 늘리면 표가 는다 · `ERROR_STATUS`
+ *   주석) — 원인은 이미 `details` 에 있으니 **그것을 읽는 표**를 둔다.
+ * ★ 키는 컴파일러의 `CompileErrorCode` 다 — 서버가 `err.code` 를 그대로 싣기 때문에 같은 열거를 쓴다.
+ *   `null` 인 줄(서버 잘못 · 500)은 여기 오지 않으므로 적지 않는다.
+ * ⚠ 게스트 문구(`GUEST_HINT`)보다 **뒤**다 — 게스트는 애초에 발행 문을 못 지난다 (`writeDoor`).
+ */
+export const REASON_HINT: Partial<Record<CompileErrorCode, string>> = {
+  EMPTY_SNAPSHOT: '승인된 항목이 하나도 없습니다. Context 에서 초안을 승인한 뒤에 발행해주세요.',
+}
+
+/** 실패 봉투의 `details.code` — 컴파일 원인이면 그 코드, 아니면 `undefined`. 지어내지 않는다. */
+export function reasonOf(details: unknown): CompileErrorCode | undefined {
+  const code = (details as { code?: unknown } | null | undefined)?.code
+  return typeof code === 'string' && Object.hasOwn(REASON_HINT, code) ? (code as CompileErrorCode) : undefined
+}
+
 /** 서버가 낸 실패 봉투를 그대로 들고 다닌다 — 화면이 `code` 로 갈래를 탄다. */
 export class ApiClientError extends Error {
   readonly code: ErrorCode
@@ -84,7 +112,9 @@ export class ApiClientError extends Error {
    *   `raise()` 가 세션에서 읽어 넣는다. 시험은 손으로 넣는다.
    */
   constructor(code: ErrorCode, status: number, details?: unknown, requestId?: string, actor: ActorKind = 'user') {
-    super(hintText(code, actor))
+    //  원인이 `details` 에 적혀 있으면 그 문장이 코드의 일반 문장보다 먼저다 (`REASON_HINT` · INBOX G12).
+    const reason = reasonOf(details)
+    super(reason === undefined ? hintText(code, actor) : REASON_HINT[reason] ?? hintText(code, actor))
     this.name = 'ApiClientError'
     this.code = code
     this.status = status
@@ -95,7 +125,7 @@ export class ApiClientError extends Error {
 
 const API = '/api/v1'
 
-function isErrorCode(value: unknown): value is ErrorCode {
+export function isErrorCode(value: unknown): value is ErrorCode {
   return typeof value === 'string' && (ERROR_CODES as readonly string[]).includes(value)
 }
 

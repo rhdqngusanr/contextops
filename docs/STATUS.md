@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-09 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · 대회 감사 + 배포를 막던 코드 4건 · **CI GREEN 전 층** · 일감의 입구는 이제 `docs/feedback/INBOX.md` 맨 위 「대회 제출 계획」이다_
+_마지막 갱신: 2026-09-10 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · 대회 감사 + 블로커 2~6 의 코드·문서 + **INBOX 고장 G7~G15 아홉** · **CI GREEN 전 층** · 일감의 입구는 이제 `docs/feedback/INBOX.md` 맨 위 「대회 제출 계획」이다._
 
 ---
 
@@ -74,7 +74,18 @@ https 링크여야 함 · URL 이 오면 세 문서에 「production 이 아직 
 🔴 **GitHub Actions 가 `9c84aa9` 에서 빨갰다** — `deploy-doc.test` ⑤ 가 `apps/web/.env.vercel` 을 「없다」고 했다. 로컬에는 있고(gitignore) 러너에는 없는 파일을 DEPLOY.md 가
 백틱으로 가리킨 것이다. 문서를 고치고, 같은 종류가 다시 못 들어오게 그 시험이 **`git check-ignore` 로 gitignore 대상 경로도 FAIL** 로 만든다(로컬에서도 러너와 같은 판정).
 
-🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15 · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
+🔴 **고장 G7~G15 아홉을 닫았다** (2026-09-10 · 같은 사람 세션 · 사용자 지시 「INBOX 것도 전부 · 사람 몫만 정리해 달라」). 전부 게이트를 같이 뒀다:
+G7 Stop 훅이 **턴마다** 돌아 진행 이벤트가 쌓이던 것 — 보낸 뒤 훅 자신이 `cache/progress-<session>.json` 을 남기고(`_writes` 둘째 줄 · P6 시험이 실제 세션 id 로 대조) CLI 의 env 이름을
+`CLAUDE_CODE_SESSION_ID` 로(이 세션의 Bash 에서 그 값이 훅 stdin 의 session_id 와 **같음을 직접 쟀다**) · git 두 번 + 네트워크 합이 timeout 안(4500<5000 · 시험이 합을 센다).
+G8 `AI_OUTPUT_INVALID` 가 `retryable` 이 되고 **같은 행은 `MAX_JOB_REQUEUES`=2 번까지**(`ai_jobs.requeues` · 0009 마이그레이션 · 조건부 UPDATE 가 센다 · 화면은 「남은 n번」과 상한 뒤 「문서를 나눠 올려보세요」).
+G9 키 없는 배포는 `INTERNAL` 이 아니라 **`AI_NOT_CONFIGURED`(503 · 「운영자에게」)** · `/health` 에 `ai` 칸(값 없이 boolean · `verify:prod` 가 잰다) · 「픽스처 결과로 떨어진다」 문서 7곳을 사실로(그 갈래는 코드에 없었다 · `readme.test ⑧` 이 긍정문을 막는다).
+G10 Gemini 정가를 공개 정가 페이지에서 직접 읽어 고쳤다(3.5 Flash **1.50 / 9.00** · 3.6 Flash 0.75 / 3.75 는 2026-12-31 까지 도입가 — 시험이 날짜를 본다). 예전 값은 $3 가드가 $11~15 를 통과시켰다.
+G11 clone 한 팀원이 `manual` 로 찍히던 것 — `manifest.json` 이 git 에 추적되면 `applied`(줄에 「clone 으로 받았다」). G12 승인 0개 발행이 「입력을 확인하라」로 뭉개지던 것 — `REASON_HINT`(details.code → 문장) + 모달의 [초안 보기].
+G13 게스트에게 [승인 요청] 이 활성이고 「owner 만」·「낸 사람만」·「owner 가 합니다」가 거짓이던 것 — 결정 칸·충돌 카드가 `writeDoor()` 를 받아 닫혔으면 `GUEST_HINT` 를 말한다.
+G14 경로의 `-->`·`,`·`"` 가 역추적 태그·scoped frontmatter 를 깨뜨리던 것 — `safe()` 가 경로도 지나고 `,`→`%2C` · `paths:` 는 `JSON.stringify` · **TEMPLATE_VERSION 1.6 → 1.7** · golden 3종 재생성.
+G15 「브라우저 e2e 가 없다 · e2e 폴더가 없다」 — 사실로(CDP 헤드리스 Chrome 9파일 · 클릭 흐름 시나리오는 없음) · `readme.test ⑨` 가 「없다고 적은 경로가 실존하면 FAIL」 + 관통 9단계·표 18·enum 17 을 코드에서 세어 대조.
+
+🔴 **일감 이관** — INBOX 맨 위 「대회 제출 계획」: 블로커 6 · 고장 15(**전부 ✅** · G2 는 대시보드 🙋) · 고가치 11 · 하지 말 것 · 날짜별. 🙋 는 사람 몫이다.
 루프는 `loop/STOP` 그대로 멈춰 있다 — 9/9~9/11 은 계정 작업과 섞여 사람이 붙은 세션이 맞고, 그 뒤 켤지는 사람이 정한다(INBOX B1).
 
 🙋 **사람이 지금 해야 하는 것** — 참가 접수(9/18 마감 · 폼 규격 캡처) · `git push` · 9/10 DEPLOY 「가장 빠른 길」(Supabase Auth 걸음 넷 · Data API 끄기 · Vercel · 첫 리셋 · verify:prod · 로그인 실측).

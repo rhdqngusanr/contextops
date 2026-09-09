@@ -11,9 +11,15 @@ import { inline } from './text'
 //    그걸 재는 것은 `test/traceability.test.ts` 다.
 // =====================================================================
 
-/** 태그 안에 넣기 전에 주석을 닫는 문자열과 줄바꿈을 없앤다 — 태그가 깨지면 역추적이 끊긴다. */
+/**
+ * 태그 안에 넣기 전에 **주석을 닫는 문자열 · 주석을 여는 문자열 · 줄바꿈 · 조각 구분자**를 없앤다 —
+ * 태그가 깨지면 역추적이 끊긴다 (INBOX G14 · `test/escape.test.ts` 「경로·근거의 escape」).
+ * ★ `,` 는 `%2C` 로 — 근거 조각을 `,` 로 잇기 때문에(`traceTag`) 경로·메모 안의 쉼표 하나가 조각 수를
+ *   늘려 `parseTraceTag` 가 근거를 하나 더 읽었다. URL 식으로 적으면 사람이 읽을 수 있고 되돌릴 수 있다.
+ * ⚠ 경로도 지난다 — `RepoPath` 계약은 절대경로·`..`·NUL 만 막고 `-->`·`,`·`"` 는 통과시킨다.
+ */
 function safe(value: string, max: number): string {
-  return inline(value).replace(/--+>/g, '').replace(/<!--/g, '').slice(0, max)
+  return inline(value).replace(/--+>/g, '').replace(/<!--/g, '').replace(/,/g, '%2C').slice(0, max)
 }
 
 /**
@@ -35,7 +41,8 @@ export const SRC_TAG = {
     prefix: 'repo',
     body: (r) => {
       const lines = r.start_line === undefined ? '' : `:${r.start_line}${r.end_line === undefined ? '' : `-${r.end_line}`}`
-      return `${safe(r.repo, 60)}:${r.path}${lines}`
+      //  ⚠ 경로도 `safe` 를 지난다 — `src/a,b/x.ts` · `docs/-->/` 같은 경로가 태그를 깨뜨렸다 (INBOX G14).
+      return `${safe(r.repo, 60)}:${safe(r.path, 400)}${lines}`
     },
   },
   proposal: { prefix: 'proposal', body: (r) => r.proposal_id },

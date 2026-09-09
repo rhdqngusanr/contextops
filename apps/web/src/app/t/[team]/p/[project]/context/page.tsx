@@ -6,7 +6,7 @@ import {
 } from '@contextops/schema'
 
 import { writeDoor } from '../../../../../../lib/web/actor'
-import { ApiClientError, messageOf } from '../../../../../../lib/web/api'
+import { ApiClientError, messageOf, reasonOf } from '../../../../../../lib/web/api'
 import {
   fetchItems, fetchVersions, publishVersion, updateItemStatus,
   type ProjectRef, type VersionRow,
@@ -196,6 +196,8 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
           onDone={afterPublish}
           onCancel={() => setPublishing(false)}
           onStale={() => { versions.reload(); items.reload() }}
+          //  승인 0개 — 모달을 닫고 **초안만** 보여 준다. 사람이 할 일이 발행 칸이 아니라 목록에 있다 (INBOX G12).
+          onShowDrafts={() => { setPublishing(false); setFilter({ ...filter, status: 'draft' }) }}
         />
       ) : null}
     </>
@@ -393,6 +395,7 @@ function PublishModal({
   onDone,
   onCancel,
   onStale,
+  onShowDrafts,
 }: {
   projectId: string
   official: VersionRow | null
@@ -400,11 +403,16 @@ function PublishModal({
   onDone: (message: string) => void
   onCancel: () => void
   onStale: () => void
+  /** 승인된 항목이 0개라 발행이 거절됐을 때 — 모달 대신 **초안 목록**으로 (INBOX G12). */
+  onShowDrafts: () => void
 }) {
   const [bump, setBump] = useState<SemverBump>('minor')
   const [summary, setSummary] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  //  🔴 「입력한 내용을 다시 확인해주세요」로 끝내지 않는다 — 원인이 `EMPTY_SNAPSHOT` 이면 다음 걸음은
+  //     이 모달 안에 없다. 버튼 하나가 초안 목록으로 데려간다 (문장의 정본은 `REASON_HINT`).
+  const [emptySnapshot, setEmptySnapshot] = useState(false)
 
   const target = nextSemver(official?.semver ?? null, bump)
 
@@ -426,6 +434,8 @@ function PublishModal({
       setError(messageOf(err))
       //  409 는 「내가 본 것이 낡았다」다. 문구만 띄우고 끝내면 다시 눌러도 같은 409 다.
       if (err instanceof ApiClientError && err.code === 'STALE_BASE') onStale()
+      //  승인 0개 — 다시 눌러도 같은 400 이다. 할 일은 목록에 있다.
+      setEmptySnapshot(err instanceof ApiClientError && reasonOf(err.details) === 'EMPTY_SNAPSHOT')
     }
   }
 
@@ -473,6 +483,9 @@ function PublishModal({
         </p>
 
         {error ? <p className="meta ink-bad">✕ {error}</p> : null}
+        {emptySnapshot ? (
+          <button type="button" className="btn btn-sm" onClick={onShowDrafts}>초안 보기</button>
+        ) : null}
 
         <div className="row-between">
           <button type="button" className="btn" onClick={onCancel} disabled={busy}>취소</button>

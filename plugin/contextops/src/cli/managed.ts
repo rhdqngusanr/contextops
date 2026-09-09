@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Manifest, RepoPath, type SyncStatus } from '@contextops/schema'
@@ -176,8 +177,13 @@ export function judge(root: string, local: Manifest | undefined, official: Manif
   //  ⚠ `modified`·`missing` 검사 **뒤**에 온다. 파일이 어긋난 것이 먼저다 — 손으로 푼 뒤
   //    한 파일을 고쳤으면 그건 `manual` 이 아니라 `modified` 다.
   //  ⚠ `unknown` 과 달리 이 값은 **기기가 보고할 수 있다** (`REPORTABLE_SYNC_STATUSES`).
+  //  🔴 **clone 은 `manual` 이 아니다** (INBOX G11 · 2026-09-09). 동료가 sync 한 뒤 `manifest.json` 을
+  //     커밋했으면(SPEC §8.2 「선택」), 그것을 clone 한 팀원의 기계에도 캐시 자취가 없다 — 파일은 다 맞고
+  //     우리 캐시는 비어 있어서 정확히 `manual` 의 모양이다. 하지만 그 Pack 은 **우리를 거쳐** 놓인 것이다
+  //     (동료의 sync → git). 가르는 근거는 「manifest.json 이 git 에 추적되는가」다 — zip 을 손으로 푼
+  //     저장소에서는 그 파일이 untracked 다(`.contextops/.gitignore` 밖이지만 아무도 add 하지 않았다).
   const appliedByUs = existsSync(join(root, ...CACHE_DIR.split('/'), local.context_version))
-  if (!appliedByUs) {
+  if (!appliedByUs && !trackedByGit(root, LOCAL_FILES.manifest)) {
     const tail = official === undefined
       ? ' (서버에 못 닿아 최신 여부는 모른다)'
       : official.manifest_hash === local.manifest_hash ? ' · 최신이다' : ` · 공식 v${official.context_version} 이 나왔다`
@@ -188,18 +194,34 @@ export function judge(root: string, local: Manifest | undefined, official: Manif
       missing,
     }
   }
+  //  clone 으로 받은 경우 — `applied` 이되 어떻게 놓였는지는 줄에 남긴다 (아래 두 갈래의 줄 앞에 붙는다).
+  const how = appliedByUs ? '' : 'clone 으로 받았다 (동료의 sync 를 커밋한 것) · '
 
   if (official === undefined) {
     //  오프라인. 로컬은 멀쩡하니 마지막으로 아는 값을 그대로 말한다.
-    return { status: 'applied', line: `v${local.context_version} 적용됨 (서버에 못 닿아 최신 여부는 모른다)`, modified, missing }
+    return { status: 'applied', line: `${how}v${local.context_version} 적용됨 (서버에 못 닿아 최신 여부는 모른다)`, modified, missing }
   }
   if (official.manifest_hash === local.manifest_hash) {
-    return { status: 'applied', line: `v${local.context_version} 최신이다`, modified, missing }
+    return { status: 'applied', line: `${how}v${local.context_version} 최신이다`, modified, missing }
   }
   return {
     status: 'outdated',
-    line: `v${local.context_version} → 공식 v${official.context_version} 이 나왔다`,
+    line: `${how}v${local.context_version} → 공식 v${official.context_version} 이 나왔다`,
     modified,
     missing,
+  }
+}
+
+/**
+ * 그 경로가 git 에 **추적되는가** (`git ls-files --error-unmatch`). git 이 없거나 저장소가 아니거나
+ * 추적되지 않으면 전부 `false` — 이 물음은 `manual` 을 **덜 찍기 위한** 것이라 모르면 예전 판정 그대로다.
+ * ⚠ 이 CLI 가 git 을 부르는 자리는 여기 하나다. 읽기만 한다 (P6 은 훅 얘기지만 같은 태도다).
+ */
+export function trackedByGit(root: string, relative: string): boolean {
+  try {
+    execFileSync('git', ['ls-files', '--error-unmatch', relative], { cwd: root, stdio: 'ignore', timeout: 1500 })
+    return true
+  } catch {
+    return false
   }
 }

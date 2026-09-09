@@ -46,15 +46,15 @@
 | G4 | 매직링크 실패가 사용자 탓으로 읽힘 — 기본 SMTP 는 외부 주소 거절 | `lib/web/auth.ts:55-62` | ✅ (B3 코드) — `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` 플래그 뒤로 · 문구 · 콜백 원인 코드 + /demo 문 | — |
 | G5 | SKILL.md 셋 + Pack 진행 문단의 `$CLAUDE_PLUGIN_ROOT`(중괄호 없음) | `skills/sync/SKILL.md:16,38,55` · `skills.test.ts:66-71` | ✅ (B4 코드) — `${…}` 형태 + 시험이 bare 형태를 금지 · 진행 보고는 `/contextops:progress` Skill | — |
 | G6 | 「기기 추가」가 복사해 주는 `contextops setup …` 은 PATH 에 없다 | `schema/plugin.ts:81` → `sync.tsx:389` | ✅ (B4 코드) — `SETUP_COMMAND_NAME = '/contextops:setup'` · Skill 이 `setup $ARGUMENTS --no-browser` 로 CLI 를 부른다 | — |
-| G7 | Stop 훅이 **매 턴** 돌아 진행 이벤트가 턴마다 쌓임 · 중복 방지 env 이름 오타(`CLAUDE_SESSION_ID`→`CLAUDE_CODE_SESSION_ID`) · 5.5s > timeout 5s | `stop.mjs:151-168` · `progress.ts:39` | SessionEnd 로 이전 또는 세션·마일스톤 표시 파일(`_writes` 선언) + 「두 번 → 1건」 시험 | 3h |
-| G8 | `AI_OUTPUT_INVALID` retryable:false — 화면은 「다시 시도」인데 버튼이 없음 · 실측 실패율 약 1/3 은 비결정 | `schema/api.ts:107` · `retry/route.ts:17-21` | retryable:true + 재시도 상한 2 + 닻 시험 뒤집기 | 1.5h |
-| G9 | 「GEMINI_API_KEY 없으면 픽스처 결과로 떨어진다」 문서 4곳이 거짓 — 실제는 INTERNAL | `.env.example:42,44,50` · `DEPLOY.md` · `SUBMISSION.md:130` · `README.md:243` · `lib/ai` 에 fixture 갈래 0 | 문서 정정 + `AI_NOT_CONFIGURED`(503) 코드 + `/health` 에 ai 칸 | 2h |
-| G10 | AI 모델 정가가 실제의 1/5(입력)·1/3.6(출력) — $3 가드가 $11~15 통과 | `features.ts:142-143` | 🙋 정가 확인 뒤 두 줄 + 출처 주석 | 0.5h |
-| G11 | manifest.json 이 커밋된 저장소를 clone 한 팀원이 `manual` 로 오판 | `managed.ts:179-190` | git 추적 중이면 applied · clone 시험 | 1h |
-| G12 | 승인 0개 발행의 정답 문장이 「입력한 내용을 다시 확인해주세요」로 뭉개짐 | `publish.ts:52-56` · `lib/web/api.ts:85` | EMPTY_SNAPSHOT 이면 정본 문장 + [초안 보기] | 1h |
-| G13 | 게스트에게 draft 제안 [승인 요청] 활성 · 「owner 가 합니다」 두 문장이 게스트에겐 거짓 | `proposals.tsx:425-429,463` · `conflict-card.tsx:186-189` | author 갈래 + `writeDoor().reason` 우선 + 게이트 | 1h |
-| G14 | 경로가 escape 없이 태그·frontmatter·백틱에 들어감 — `-->`·`,` 한 글자로 P7 태그가 깨짐 | `tag.ts:38` · `common.ts:65-66` | 방어선만(safe + 치환 + JSON.stringify) · escape.test 표본 5 | 1.5h |
-| G15 | KNOWN_LIMITATIONS 「브라우저 e2e 가 없다 · e2e 폴더가 없다」 — 실제 `apps/web/e2e` 9파일 | `KNOWN_LIMITATIONS.md:66-67` | 사실로 교체 + 「없다고 적은 경로가 실존하면 FAIL」 시험 | 0.5h |
+| G7 | Stop 훅이 **매 턴** 돌아 진행 이벤트가 턴마다 쌓임 · 중복 방지 env 이름 오타(`CLAUDE_SESSION_ID`→`CLAUDE_CODE_SESSION_ID`) · 5.5s > timeout 5s | `stop.mjs:151-168` · `progress.ts:39` | ✅ 2026-09-10 — 훅이 보낸 뒤 `cache/progress-<session>.json` 을 스스로 남긴다(`_writes` 둘째 줄) · env `CLAUDE_CODE_SESSION_ID`(실측: 훅 stdin 과 같음) · git 1000×2+2500=4500<5000 · `hooks.test` 「두 턴 → 1건」·「합이 timeout 안」 | — |
+| G8 | `AI_OUTPUT_INVALID` retryable:false — 화면은 「다시 시도」인데 버튼이 없음 · 실측 실패율 약 1/3 은 비결정 | `schema/api.ts:107` · `retry/route.ts:17-21` | ✅ 2026-09-10 — `retryable:true` · `MAX_JOB_REQUEUES`=2 (`ai_jobs.requeues` + 0009 마이그레이션 · 조건부 UPDATE) · 화면 「남은 n번」·상한 뒤 「문서를 나눠 올려보세요」 · 닻 시험 넷 | — |
+| G9 | 「GEMINI_API_KEY 없으면 픽스처 결과로 떨어진다」 문서 4곳이 거짓 — 실제는 INTERNAL | `.env.example:42,44,50` · `DEPLOY.md` · `SUBMISSION.md:130` · `README.md:243` · `lib/ai` 에 fixture 갈래 0 | ✅ 2026-09-10 — `AI_NOT_CONFIGURED`(503 · 「운영자에게」) · `/health` `ai` 칸 + `verify:prod` 검사 · 문서 7곳 정정 · `readme.test ⑧` 「픽스처로 떨어진다」 긍정문 0 | — |
+| G10 | AI 모델 정가가 실제의 1/5(입력)·1/3.6(출력) — $3 가드가 $11~15 통과 | `features.ts:142-143` | ✅ 2026-09-10 — ai.google.dev/gemini-api/docs/pricing 에서 직접 읽음: 3.5 Flash 1.50/9.00 · 3.6 Flash 0.75/3.75(2026-12-31 까지 도입가 · 시험이 날짜를 본다) | — |
+| G11 | manifest.json 이 커밋된 저장소를 clone 한 팀원이 `manual` 로 오판 | `managed.ts:179-190` | ✅ 2026-09-10 — `trackedByGit(manifest.json)` 이면 `applied`(줄에 「clone 으로 받았다」) · untracked 는 여전히 `manual` · `managed.test` 둘 | — |
+| G12 | 승인 0개 발행의 정답 문장이 「입력한 내용을 다시 확인해주세요」로 뭉개짐 | `publish.ts:52-56` · `lib/web/api.ts:85` | ✅ 2026-09-10 — `REASON_HINT`(details.code → 문장) · 모달에 [초안 보기](status=draft 거르개) · `web-guest-copy.test` | — |
+| G13 | 게스트에게 draft 제안 [승인 요청] 활성 · 「owner 가 합니다」 두 문장이 게스트에겐 거짓 | `proposals.tsx:425-429,463` · `conflict-card.tsx:186-189` | ✅ 2026-09-10 — `DecisionState.door`·`ConflictCardState.door`(문 닫힘 → 버튼 대신 `GUEST_HINT`) · 두 화면이 `writeDoor()` 를 넘김 · `web-guest-copy.test` (author 갈래는 브라우저가 user_id 를 몰라 그대로) | — |
+| G14 | 경로가 escape 없이 태그·frontmatter·백틱에 들어감 — `-->`·`,` 한 글자로 P7 태그가 깨짐 | `tag.ts:38` · `common.ts:65-66` | ✅ 2026-09-10 — `safe()` 가 경로도 지나고 `,`→`%2C` · frontmatter `JSON.stringify` · TEMPLATE_VERSION 1.7 · `escape.test` 표본 5 + scoped YAML | — |
+| G15 | KNOWN_LIMITATIONS 「브라우저 e2e 가 없다 · e2e 폴더가 없다」 — 실제 `apps/web/e2e` 9파일 | `KNOWN_LIMITATIONS.md:66-67` | ✅ 2026-09-10 — KNOWN_LIMITATIONS·SPEC §12 를 사실로(CDP 헤드리스 Chrome · 클릭 흐름 시나리오는 없음) · `readme.test ⑨` 「없다고 적은 경로 실존 FAIL」 + 관통 9단계·표 18·enum 17 대조 | — |
 
 #### 고가치 11 — 효과/시간 순 (블로커·고장이 닫힌 뒤)
 

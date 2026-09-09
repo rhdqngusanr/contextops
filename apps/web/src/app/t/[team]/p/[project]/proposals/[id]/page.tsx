@@ -7,6 +7,7 @@ import {
   decideProposal, fetchProposal, fetchVersions,
   type ProjectRef, type VersionRow,
 } from '../../../../../../../lib/web/queries'
+import { writeDoor } from '../../../../../../../lib/web/actor'
 import { useAsync } from '../../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../../components/project-gate'
 import { ProposalDecisions, ProposalHead, ProposalItemCard } from '../../../../../../../components/proposals'
@@ -114,7 +115,8 @@ function ProposalDetailView({
           ))}
 
           <ProposalDecisions
-            state={{ status: detail.result.data.status, role, note, busy }}
+            //  🔴 게스트(문 닫힘)에겐 등급 문장이 전부 거짓이다 — 서버와 같은 표를 읽어 이유를 말한다 (INBOX G13).
+            state={{ status: detail.result.data.status, role, note, busy, door: writeDoor() }}
             onNote={setNote}
             onDecide={decide}
           />

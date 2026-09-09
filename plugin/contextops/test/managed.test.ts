@@ -1,9 +1,10 @@
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { REPORTABLE_SYNC_STATUSES, SYNC_STATUSES } from '@contextops/schema'
 
-import { MANAGED_PATHS, checkWritable, judge, readLocalManifest } from '../src/cli/managed'
+import { MANAGED_PATHS, checkWritable, judge, readLocalManifest, trackedByGit } from '../src/cli/managed'
 import { LOCAL_FILES } from '../src/cli/paths'
 import { manifestOf, writeLocalManifest } from './helpers/pack'
 import { tempDir } from './helpers/cli'
@@ -132,6 +133,35 @@ describe('judge — 상태 5종이 전부 실제로 나온다 (SPEC §6)', () =>
     expect(verdict.status).toBe('manual')
     //  보고할 수 있는 값이다 — `unknown` 과 다른 점이 이것이다.
     expect(REPORTABLE_SYNC_STATUSES as readonly string[]).toContain('manual')
+  })
+
+  //  🔴 **clone 은 manual 이 아니다** (INBOX G11). 동료가 sync 하고 `manifest.json` 을 커밋한 저장소를
+  //     clone 하면 캐시 자취가 없어 위 모양과 같다 — 가르는 것은 「manifest.json 이 git 에 추적되는가」다.
+  it('manifest.json 이 git 에 추적되면 캐시가 없어도 applied 다 — clone 한 팀원이 여기다', () => {
+    const root = repo()
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    const local = writeLocalManifest(root, { 'CLAUDE.md': '# 규칙\n' }, { byUs: false })
+    execFileSync('git', ['add', LOCAL_FILES.manifest], { cwd: root, stdio: 'ignore' })
+
+    const verdict = judge(root, local, local)
+    expect(verdict.status).toBe('applied')
+    expect(verdict.line).toContain('clone')
+    //  최신 여부의 갈래도 그대로 산다 — 공식이 앞서 있으면 outdated 다.
+    const official = manifestOf({ 'CLAUDE.md': '# 규칙 v2\n' }, { context_version: '1.1.0' })
+    expect(judge(root, local, official).status).toBe('outdated')
+    //  ⚠ 파일이 어긋나면 여전히 modified 가 먼저다.
+    writeFileSync(join(root, 'CLAUDE.md'), '# 사람이 고쳤다\n', 'utf8')
+    expect(judge(root, local, local).status).toBe('modified')
+  })
+
+  it('git 저장소인데 manifest.json 이 untracked 면 여전히 manual 이다 — zip 을 푼 뒤 add 하지 않은 것', () => {
+    const root = repo()
+    execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' })
+    const local = writeLocalManifest(root, { 'CLAUDE.md': '# 규칙\n' }, { byUs: false })
+    expect(trackedByGit(root, LOCAL_FILES.manifest)).toBe(false)
+    expect(judge(root, local, local).status).toBe('manual')
+    //  git 이 아예 없는 폴더도 같은 답이다 — 모르면 예전 판정 그대로.
+    expect(trackedByGit(repo(), LOCAL_FILES.manifest)).toBe(false)
   })
 
   it('손으로 푼 뒤 한 파일을 고쳤으면 manual 이 아니라 modified 다', () => {

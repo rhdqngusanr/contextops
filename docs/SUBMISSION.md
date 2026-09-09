@@ -181,13 +181,15 @@ claude plugin install contextops                                 # 플러그인�
 
 그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.
 
-**로컬에서** — 계정이 없어도 전부 돕니다. DB 는 프로세스 안의 PGlite 이고 서버측 AI 는 키가 없으면 픽스처 결과로
-떨어집니다 (`README.md` 「로컬에서 돌리기」).
+**로컬에서** — 계정이 없어도 전부 돕니다. DB 는 프로세스 안의 PGlite 이고, 서버측 AI(문서 구조화·충돌 탐지)만
+`GEMINI_API_KEY` 가 필요합니다 — 키가 없으면 그 job 은 `AI_NOT_CONFIGURED` 로 끝나고 화면이 그 사실을 말합니다
+(`README.md` 「로컬에서 돌리기」).
 
 ## 무엇이 검증돼 있나
 
 - **관통 시나리오** ([`tools/walkthrough.ps1`](../tools/walkthrough.ps1)) — 픽스처 → 항목 → 발행 → Pack → 배포되는
-  번들이 진짜 소켓으로 `scan → upload → sync → applied` 까지 **실제로 지난다.** 7단계.
+  번들이 진짜 소켓으로 `scan → upload → sync → applied` 까지 **실제로 지난다.** 9단계 (마지막 둘은 헤드리스 Chrome
+  캡처와 그 캡처를 랜딩으로 옮기기).
 - **원칙 검사** ([`tools/principles.ps1`](../tools/principles.ps1)) — P1·P2·P3·P4·P6·P7 을 기계로 센다.
 - **golden** ([`packages/compiler/test/golden/`](../packages/compiler/test/golden/)) — 같은 snapshot → 같은 byte 를 잠근다.
 - 전 층은 [`tools/ci.ps1`](../tools/ci.ps1) 한 줄 — 「테스트 초록」은 완성이 아니고, **관통이 지나야** 「된다」입니다.

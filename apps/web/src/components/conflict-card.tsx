@@ -5,6 +5,7 @@ import {
   type AnswerSlotKey, type ConflictAnchor, type ConflictChoice, type ContextItemView,
   type DetectedConflictKind,
 } from '@contextops/schema'
+import type { WriteDoor } from '../lib/web/actor'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
 import { dateText } from '../lib/web/time'
 import {
@@ -129,6 +130,13 @@ export type ConflictCardState = {
    * ⚠ 이건 **보안이 아니라 안내**다 — 막는 것은 서버의 guard 다.
    */
   canDecide: boolean
+  /**
+   * 🔴 이 세션이 **쓰기 문**을 지날 수 있나 (`writeDoor()` · INBOX G13). 게스트는 등급이 member 라
+   * `canDecide:false` 로 와서 「이 결정은 팀 owner 가 합니다」를 봤다 — 게스트에겐 거짓이다(로그인해도 샘플
+   * 팀에서는 못 한다). 그리고 질문 카드의 [답 저장하기] 는 member 문이라 게스트에게 **활성**으로 그려졌다.
+   * 닫혀 있으면 둘 다 버튼 대신 서버가 낼 문구(`GUEST_HINT`)를 말한다. 안 주면 열린 것으로 본다.
+   */
+  door?: WriteDoor
   /** 지금 칸에 쓰고 있는 글 — 탐지 카드는 **메모**, 질문 카드는 **답**이다. */
   draft: string
   /**
@@ -183,14 +191,33 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
 
       {conflict.status === 'open'
         ? (rule.detected
-          ? (state.canDecide
+          ? (state.canDecide && doorOpen(state)
             ? <Decision state={state} on={on} />
             //  ⚠ 「권한이 없습니다」로 끝내지 않는다 — 누구에게 말해야 하는지를 같이 낸다.
-            : <p className="meta">이 결정은 팀 owner 가 합니다. 아래 근거를 owner 에게 보여 주세요.</p>)
-          : <Answer state={state} on={on} />)
+            //     문이 닫힌 주체(게스트)에겐 그 문장도 거짓이라 서버의 문구가 먼저다 (INBOX G13).
+            : <p className="meta">{blockedText(state)}</p>)
+          : (doorOpen(state)
+            ? <Answer state={state} on={on} />
+            : <p className="meta">{blockedText(state)}</p>))
         : <Decided state={state} />}
     </article>
   )
+}
+
+/** 쓰기 문이 열려 있나 — `door` 를 안 준 호출은 열린 것으로 본다 (서버가 어차피 막는다). */
+function doorOpen(state: Pick<ConflictCardState, 'door'>): boolean {
+  return state.door === undefined || state.door.open
+}
+
+/** 「이 결정은 팀 owner 가 합니다」의 정본 — 게스트가 아닌 member 에게만 참이다. */
+export const OWNER_DECIDES = '이 결정은 팀 owner 가 합니다. 아래 근거를 owner 에게 보여 주세요.'
+
+/**
+ * 결정·답 칸 대신 뜨는 한 문장. 문이 닫혔으면(게스트) 서버가 낼 문구(`writeDoor().reason` · `GUEST_HINT`)이고,
+ * 열렸는데 등급이 모자라면 owner 문장이다. 두 문장을 한 자리에서 고른다 — 갈래를 카드 곳곳에 흩지 않는다.
+ */
+export function blockedText(state: Pick<ConflictCardState, 'door'>): string {
+  return state.door !== undefined && !state.door.open ? state.door.reason : OWNER_DECIDES
 }
 
 // ---------------------------------------------------------------------

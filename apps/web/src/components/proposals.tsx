@@ -5,6 +5,7 @@ import {
   type ContextItemView, type ProposalAction, type ProposalItem, type ProposalStatus, type TeamRole,
 } from '@contextops/schema'
 
+import type { WriteDoor } from '../lib/web/actor'
 import { diffCounts, lineDiff, type DiffLine } from '../lib/web/diff'
 import type { ProposalDetail, ProposalRow, VersionRow } from '../lib/web/queries'
 //  🔴 낱말 `MADE`(「만든」)의 정본은 `lib/web/screens.ts` 다 — 빈 목록 문구(`EMPTY_PLACES`)와
@@ -434,6 +435,13 @@ export interface DecisionState {
   readonly role: TeamRole
   readonly note: string
   readonly busy: ProposalAction | null
+  /**
+   * 🔴 이 세션이 쓰기 문을 지날 수 있나 (`writeDoor()` · INBOX G13). 게스트는 등급이 member 라
+   * `availableActions` 만으로는 [승인 요청] 이 **활성**으로 그려졌고, 「owner 만」·「낸 사람만」 두 문장은
+   * 게스트에겐 거짓이었다 — 로그인해도 샘플 팀에서는 못 한다. 닫혀 있으면 버튼 대신 그 이유를 말한다.
+   * ⚠ 안 주면 열린 것으로 본다 — 시험이 표를 손으로 짓는 자리가 여덟이라 선택으로 뒀다.
+   */
+  readonly door?: WriteDoor
 }
 
 export const ACTION_LABEL: Record<ProposalAction, string> = {
@@ -458,7 +466,9 @@ export const DECIDED_TEXT: Record<'approved' | 'rejected' | 'published', string>
 }
 
 /** 누를 것이 없을 때 **왜 없는지**. 빈 칸으로 두면 사람은 화면이 덜 그려졌다고 읽는다. */
-export function noActionText(status: ProposalRow['status']): string {
+export function noActionText(status: ProposalRow['status'], door?: WriteDoor): string {
+  //  🔴 문이 닫힌 주체(게스트)에겐 등급 문장이 전부 거짓이다 — 서버가 낼 문구(`GUEST_HINT`)가 먼저다 (INBOX G13).
+  if (door !== undefined && !door.open && (status === 'submitted' || status === 'draft')) return door.reason
   //  ⚠ `submitted` 인데 누를 것이 없다 = 등급이 모자란 것뿐이다 (표의 `role`).
   if (status === 'submitted') return '승인·거절은 owner만 할 수 있습니다.'
   //  ⚠ `draft` 는 오늘은 여기까지 오지 않는다 — `submit` 이 member 부터라 늘 버튼이 있다.
@@ -476,7 +486,8 @@ export function ProposalDecisions({
   onNote: (note: string) => void
   onDecide: (action: ProposalAction) => void
 }) {
-  const actions = availableActions(state.status, state.role)
+  //  🔴 문이 닫혔으면(게스트) 등급과 무관하게 누를 것이 없다 — 서버가 어차피 403 이다 (`refuseWrite`).
+  const actions = state.door !== undefined && !state.door.open ? [] : availableActions(state.status, state.role)
   const noteEmpty = state.note.trim() === ''
   const needsNote = actions.some((a) => PROPOSAL_DECISIONS[a].noteRequired)
 
@@ -486,7 +497,7 @@ export function ProposalDecisions({
         <span className="label">결정</span>
         {/* ⚠ 「할 수 있는 것이 없다」를 빈 칸으로 두지 않는다 — 사람은 화면이 덜
             그려졌다고 읽는다. 왜 없는지가 다음 걸음을 정한다. */}
-        <p className="meta">{noActionText(state.status)}</p>
+        <p className="meta">{noActionText(state.status, state.door)}</p>
       </section>
     )
   }

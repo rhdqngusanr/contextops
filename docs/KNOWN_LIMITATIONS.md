@@ -51,8 +51,9 @@
   쓰지 않는다 (SPEC §6 · `apps/web/test/web-landing.test.ts` 가 랜딩에서 그 낱말을 센다).
 - **서버측 AI 는 Gemini 무료 티어의 분당 요청 제한 안에서 돈다.** 키는 우리 것이고(P3) 호출은 전부 `withBudget()` 을
   거치지만, 무료 티어의 **분당 요청 제한**은 우리 예산 가드 바깥의 상한이다 — 데모 중 여러 사람이 동시에 구조화를 누르면
-  429 로 돌아오고 그 job 은 `RATE_LIMITED` 로 끝나 화면은 「요청이 너무 잦습니다」를 본다 — 픽스처 결과로 떨어지는 갈래는
-  게스트 데모(§7.4)에만 있다 (`apps/web/src/lib/ai/client.ts` 의 `GEMINI_HTTP_ERROR_CODES` · SPEC §7.5).
+  429 로 돌아오고 그 job 은 `RATE_LIMITED` 로 끝나 화면은 「요청이 너무 잦습니다」와 [다시 시도] 를 본다
+  (`apps/web/src/lib/ai/client.ts` 의 `GEMINI_HTTP_ERROR_CODES` · SPEC §7.5). **픽스처 결과로 떨어지는 갈래는 어디에도
+  없다** — 키가 없는 배포는 `AI_NOT_CONFIGURED`(503)로 끝나고 `/api/v1/health` 의 `ai:false` 가 그것을 미리 말한다 (INBOX G9).
 - **서버측 AI 4종 중 둘은 문이 없다.** `apps/web/src/lib/ai/features.ts` 의 표는 `structure · conflict · ask · demo`
   넷인데, 라우트에서 `withBudget()` 을 부르는 자리는 문서 구조화와 충돌 탐지 둘뿐이다. **질의창(§7.3 ·
   `POST …/ask`)과 「AI 한 번 실행해보기」(§7.4 · `POST /demo/ai-once`)는 없다** — 화면 9 에 질의창이 없고 게스트
@@ -75,8 +76,10 @@
   「내 Memory 와 팀 규칙이 어긋난다」를 알려 줄 수도 없다.
 - **단일 OS 설치 검증** — 관통과 `docs/evidence/2026-09-03-plugin/setup-new-repo.md` 는 Windows 개발 기계에서
   돌았다. macOS·Linux 에서의 fresh install 은 🙋 새 PC 에서 본다 (PLAN P5 둘째 행).
-- **브라우저 e2e 가 없다.** SPEC §12 의 Playwright 1 시나리오는 없고 관통의 `shots` 단계는 SKIP 이다
-  (e2e 폴더가 없다). 화면 판정은 SSR 로 그린 HTML 덤프(`apps/web/scripts/` 의 `dump-*.tsx`)와 눈이다.
+- **브라우저 e2e 는 캡처와 배포 검증까지다 — 사람처럼 클릭해 가며 흐름을 밟는 시나리오는 없다.** `apps/web/e2e/` 는
+  헤드리스 Chrome 을 CDP 로 직접 몰아(Playwright 없이) 화면 9개를 찍고(`shots.ts` · 관통 `shots` 단계) GATE 3 을
+  재고(`gate3.ts`) 배포를 두드린다(`production.ts`). 「import → review → publish → pack explorer」를 한 세션의 클릭으로
+  잇는 시험은 없다 — 그 흐름은 API 시험(`apps/web/test/`)과 SSR 로 그려 읽는 화면 시험이 나눠 잰다 (INBOX G15).
 - **다크 테마 고정 — 라이트 모드가 없다.**
   ★ 왜 — 두 벌을 만들면 두 벌 다 어중간해진다. 18일에 한 벌을 제대로 하는 편이 낫다.
   토큰은 `docs/DESIGN_BRIEF.md` §3 한 곳에 있어서, 나중에 라이트를 더할 때 고칠 자리는 한 곳이다

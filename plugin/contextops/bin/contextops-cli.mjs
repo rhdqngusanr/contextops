@@ -19307,7 +19307,13 @@ var ERROR_CODES = [
   //     넣어 1회 재시도, 재실패 시 `AI_OUTPUT_INVALID`」. `INTERNAL`(500)로 내면
   //     「AI 가 계약과 다른 걸 냈다」와 「서버가 터졌다」가 화면에서 구별되지 않는다
   //     (docs/feedback/FINDINGS.md 48번).
-  "AI_OUTPUT_INVALID"
+  "AI_OUTPUT_INVALID",
+  //  ⚠ **키 없는 배포**의 자리다 (INBOX G9 · 2026-09-09). 예전엔 `client.ts` 가 일반 `Error` 를 던져
+  //     job 이 `INTERNAL`(「잠시 후 다시」)로 끝났고, 문서 넷은 「픽스처 결과로 떨어진다」고
+  //     적었는데 **그 갈래는 코드 어디에도 없었다.** 사람이 할 일이 「기다리기」가 아니라
+  //     「운영자가 키를 꽂기」라서 코드가 따로 있어야 화면이 참말을 한다. `/health` 의 `ai` 칸이
+  //     같은 사실을 배포 검증에 낸다.
+  "AI_NOT_CONFIGURED"
 ];
 var ApiMeta = external_exports.object({ request_id: external_exports.uuid() }).strict();
 var ApiFailure = external_exports.object({
@@ -19752,6 +19758,7 @@ function describeIssues(error61) {
 }
 
 // src/cli/managed.ts
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join as join3 } from "node:path";
 
@@ -19856,7 +19863,7 @@ function judge(root, local, official) {
     return { status: "modified", line: `v${local.context_version} \u2014 ${parts.join(" \xB7 ")}`, modified, missing };
   }
   const appliedByUs = existsSync(join3(root, ...CACHE_DIR.split("/"), local.context_version));
-  if (!appliedByUs) {
+  if (!appliedByUs && !trackedByGit(root, LOCAL_FILES.manifest)) {
     const tail = official === void 0 ? " (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)" : official.manifest_hash === local.manifest_hash ? " \xB7 \uCD5C\uC2E0\uC774\uB2E4" : ` \xB7 \uACF5\uC2DD v${official.context_version} \uC774 \uB098\uC654\uB2E4`;
     return {
       status: "manual",
@@ -19865,18 +19872,27 @@ function judge(root, local, official) {
       missing
     };
   }
+  const how = appliedByUs ? "" : "clone \uC73C\uB85C \uBC1B\uC558\uB2E4 (\uB3D9\uB8CC\uC758 sync \uB97C \uCEE4\uBC0B\uD55C \uAC83) \xB7 ";
   if (official === void 0) {
-    return { status: "applied", line: `v${local.context_version} \uC801\uC6A9\uB428 (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)`, modified, missing };
+    return { status: "applied", line: `${how}v${local.context_version} \uC801\uC6A9\uB428 (\uC11C\uBC84\uC5D0 \uBABB \uB2FF\uC544 \uCD5C\uC2E0 \uC5EC\uBD80\uB294 \uBAA8\uB978\uB2E4)`, modified, missing };
   }
   if (official.manifest_hash === local.manifest_hash) {
-    return { status: "applied", line: `v${local.context_version} \uCD5C\uC2E0\uC774\uB2E4`, modified, missing };
+    return { status: "applied", line: `${how}v${local.context_version} \uCD5C\uC2E0\uC774\uB2E4`, modified, missing };
   }
   return {
     status: "outdated",
-    line: `v${local.context_version} \u2192 \uACF5\uC2DD v${official.context_version} \uC774 \uB098\uC654\uB2E4`,
+    line: `${how}v${local.context_version} \u2192 \uACF5\uC2DD v${official.context_version} \uC774 \uB098\uC654\uB2E4`,
     modified,
     missing
   };
+}
+function trackedByGit(root, relative) {
+  try {
+    execFileSync("git", ["ls-files", "--error-unmatch", relative], { cwd: root, stdio: "ignore", timeout: 1500 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // src/cli/config.ts
@@ -19981,7 +19997,10 @@ var PROGRESS_FLAGS = {
   "summary": { kind: "value", help: "\uD55C \uC904 \uC694\uC57D (\uD544\uC218)" },
   "status": { kind: "value", help: `\uC0C1\uD0DC (${PROGRESS_STATUSES.join("\xB7")} \xB7 \uAE30\uBCF8\uC740 \uC544\uB798 \uD45C)` },
   "source": { kind: "value", help: `\uBCF4\uACE0 \uC8FC\uCCB4 (${PROGRESS_SOURCES.join("\xB7")} \xB7 \uAE30\uBCF8 agent)` },
-  "session": { kind: "value", help: "\uC138\uC158 id \u2014 \uAC19\uC740 \uC138\uC158\uC5D0\uC11C Stop \uD6C5\uC774 \uACB9\uCCD0 \uBCF4\uACE0\uD558\uC9C0 \uC54A\uAC8C", env: "CLAUDE_SESSION_ID" }
+  //  🔴 env 이름은 **`CLAUDE_CODE_SESSION_ID`** 다 (INBOX G7). 예전 이름 `CLAUDE_SESSION_ID` 는 Claude Code 가
+  //     한 번도 준 적이 없는 변수라 표시 파일이 **한 번도 안 남았고**, Stop 훅은 매 턴 겹쳐 보고했다.
+  //     2026-09-10 실측: Claude Code 의 Bash 환경에서 이 변수의 값이 훅 stdin 의 `session_id` 와 같았다.
+  "session": { kind: "value", help: "\uC138\uC158 id \u2014 \uAC19\uC740 \uC138\uC158\uC5D0\uC11C Stop \uD6C5\uC774 \uACB9\uCCD0 \uBCF4\uACE0\uD558\uC9C0 \uC54A\uAC8C", env: "CLAUDE_CODE_SESSION_ID" }
 };
 function defaultStatus(milestone, criterion) {
   if (milestone === "none") return "none";

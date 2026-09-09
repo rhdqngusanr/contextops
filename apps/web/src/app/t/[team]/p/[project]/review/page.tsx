@@ -10,6 +10,7 @@ import {
   JOB_POLL_MS, answerQuestions, fetchConflicts, fetchItems, fetchJobs, resolveConflict,
   type AiJobSummary, type ConflictCard as ConflictRow, type ProjectRef,
 } from '../../../../../../lib/web/queries'
+import { writeDoor } from '../../../../../../lib/web/actor'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
 import { AiBadge, ConflictKindChip } from '../../../../../../components/chips'
 import { ConflictCard } from '../../../../../../components/conflict-card'
@@ -67,6 +68,8 @@ function ReviewView({
   //  🔴 열린 것만 읽는다. 결정된 카드는 응답을 갈아 끼워서 이 화면에 남지만,
   //     새로고침하면 사라진다 — 「무엇이 남았나」가 이 화면의 질문이기 때문이다.
   const cards = useAsync(() => fetchConflicts(project.id, { status: 'open' }), [project.id])
+  //  쓰기 문 — 서버와 같은 표(`ACTOR_RULES.writes`)에서 읽는다. 카드마다 다시 읽지 않는다.
+  const door = writeDoor()
   //  카드가 가리키는 항목을 붙이려고 한 번 읽는다. 카드마다 따로 읽으면 20장이면 40번이다.
   const items = useAsync(() => fetchItems(project.id, {}), [project.id])
   const jobs = usePolling(
@@ -185,6 +188,8 @@ function ReviewView({
             state={{
               conflict: row,
               canDecide,
+              //  🔴 게스트(문 닫힘)에겐 owner 문장도 [답 저장하기] 도 거짓이다 — 표에서 읽은 이유가 먼저다 (INBOX G13).
+              door,
               a: row.a_item_id === null ? null : byId.get(row.a_item_id) ?? null,
               b: row.b_item_id === null ? null : byId.get(row.b_item_id) ?? null,
               draft: drafts[row.id] ?? '',

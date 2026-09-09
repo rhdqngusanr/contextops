@@ -243,7 +243,9 @@ Skill 다섯(`/contextops:init` · `sync` · `propose` · `setup` · `progress`)
 
 ## 로컬에서 돌리기
 
-계정이 없어도 전부 돕니다 — DB 는 프로세스 안의 PGlite 이고 서버측 AI 는 키가 없으면 픽스처 결과로 떨어집니다.
+계정이 없어도 전부 돕니다 — DB 는 프로세스 안의 PGlite 입니다. 서버측 AI(문서 구조화·충돌 탐지)만 `GEMINI_API_KEY` 가
+필요하고, 키가 없으면 그 job 은 `AI_NOT_CONFIGURED` 로 끝나며 화면이 그 사실을 말합니다 — 나머지(항목·발행·Pack·sync·데모)는
+키 없이 전부 됩니다.
 
 ```
 pnpm install
@@ -266,7 +268,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `principles` | P1·P2·P3·P4·P6·P7 을 기계로 센다 |
 | `typecheck` · `test` | 전 패키지 `tsc` · vitest (schema · compiler golden · api · plugin CLI · 화면을 그려서 읽는 시험) |
 | `build` | `next build` |
-| `walkthrough` | 픽스처 → 항목 → 발행 → Pack → 배포되는 번들이 진짜 소켓으로 `scan → upload → sync → applied` 까지 **실제로 지난다.** 7단계 |
+| `walkthrough` | 픽스처 → 항목 → 발행 → Pack → 배포되는 번들이 진짜 소켓으로 `scan → upload → sync → applied` 까지 **실제로 지난다.** 9단계 (마지막 둘은 헤드리스 Chrome 캡처와 그 캡처를 랜딩으로 옮기기) |
 | `docs` | 루프 문서가 자기와 어긋나지 않는가 |
 
 「테스트 초록」은 완성이 아닙니다. **관통이 지나야** 「된다」이고, 화면은 캡처를 눈으로 보고 판정합니다.
@@ -283,7 +285,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `packages/compiler/test/golden/` | 같은 snapshot → 같은 byte 를 잠그는 golden 3종 (P4) |
 | `apps/web/src/app/` | Next.js 15 App Router — 화면 9개 + `/demo` |
 | `apps/web/src/app/api/v1/` | Route Handlers — 모든 외부 입력은 `packages/schema` 로 판다 |
-| `apps/web/src/db/` | Drizzle 스키마·마이그레이션 (표 16 · enum 14) |
+| `apps/web/src/db/` | Drizzle 스키마·마이그레이션 (표 18 · enum 17 · 전 표 RLS) |
 | `apps/web/src/lib/api/` | 인증 · 권한 · 에러 코드 · 요청 로그(필드 표 하나) · Cron 자물쇠 |
 | `apps/web/src/lib/ai/` | 서버측 AI — `withBudget()` · 기능 4종 표 · 문서 구조화 · 충돌 탐지 |
 | `apps/web/src/lib/demo/` | 데모 테넌트 — 시드 · 리셋 · 지우기 (제품 코드다 · Cron 이 부른다) |
@@ -299,7 +301,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `fixtures/seed/` | 데모 테넌트 시드 |
 | `tools/ci.ps1` | 전 층 검사 |
 | `tools/principles.ps1` | P1~P7 기계 검사 |
-| `tools/walkthrough.ps1` | 관통 시나리오 7단계 |
+| `tools/walkthrough.ps1` | 관통 시나리오 9단계 |
 | `tools/fixtures.mjs` | 픽스처가 조용히 상하지 않았나 (관통 첫 단계) |
 | `tools/status-shape.mjs` | 루프 문서가 자기와 어긋나지 않나 |
 | `loop/` | 🔁 자율 개발 루프 — 이 저장소를 만드는 도구 |

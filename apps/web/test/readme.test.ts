@@ -1,11 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
+import { ERROR_CODES } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 
 import {
   BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, SUBMISSION_IDENTITY, TRUST_BOUNDARY,
 } from '../src/components/landing'
+import { ERROR_HINT } from '../src/lib/web/api'
 
 // =====================================================================
 //  🔴 README · SUBMISSION · KNOWN_LIMITATIONS 가 **랜딩·코드와 다른 말을 하지 않는가**
@@ -373,5 +375,92 @@ describe('⑦ 마켓플레이스 이름과 목록 파일 (FINDINGS 140)', () => 
     expect(existsSync(join(repoRoot, first?.source ?? '')), `source 가 없는 폴더다: ${String(first?.source)}`).toBe(true)
     //  그 폴더가 진짜 플러그인인지 — manifest 가 있어야 `install` 이 된다.
     expect(existsSync(join(repoRoot, first?.source ?? '', '.claude-plugin', 'plugin.json'))).toBe(true)
+  })
+})
+
+// =====================================================================
+//  ⑧ 문서가 **없는 갈래를 약속하지 않는다** (INBOX G9 · 2026-09-09)
+//
+//  ★ 왜 시험인가 — 「키가 없으면 픽스처 결과로 떨어진다」가 README·제출서·.env.example·
+//    KNOWN_LIMITATIONS 네 곳에 있었고, **그 코드는 어디에도 없었다.** 실제는 job 이 `INTERNAL` 로
+//    끝나 화면이 「잠시 후 다시」를 띄웠다. 문서가 코드에 없는 행동을 적으면 심사위원이 그 장면을
+//    찾다가 「고장」으로 읽는다. 같은 문장이 네 번 적혔으니 규칙이 아니라 게이트다 (CLAUDE.md).
+//
+//  ⚠ 부정문(「…갈래는 없다」)은 통과다 — 같은 줄이나 다음 줄에 「없다/없었다/않는다」가 있어야 한다.
+//    문서는 줄을 접으므로 두 줄을 이어 본다.
+// =====================================================================
+describe('⑧ 「픽스처 결과로 떨어진다」를 어느 문서도 긍정문으로 적지 않는다 (INBOX G9)', () => {
+  const HONEST = [
+    ['README.md', readme],
+    ['docs/SUBMISSION.md', submission],
+    ['docs/KNOWN_LIMITATIONS.md', limits],
+    ['docs/DEPLOY.md', readFileSync(join(docsRoot, 'DEPLOY.md'), 'utf8')],
+    ['docs/SPEC.md', readFileSync(join(docsRoot, 'SPEC.md'), 'utf8')],
+    ['docs/DESIGN_BRIEF.md', readFileSync(join(docsRoot, 'DESIGN_BRIEF.md'), 'utf8')],
+    ['apps/web/.env.example', readFileSync(join(webRoot, '.env.example'), 'utf8')],
+  ] as const
+
+  it.each(HONEST.map(([name, text]) => [name, text] as const))('%s', (_name, text) => {
+    const lines = text.split('\n')
+    const offenders: string[] = []
+    lines.forEach((line, i) => {
+      if (!/픽스처[^\n]{0,20}떨어|떨어[^\n]{0,20}픽스처/.test(line)) return
+      const window = `${line} ${lines[i + 1] ?? ''}`
+      if (!/없다|없었다|않는다|없습니다/.test(window)) offenders.push(`${i + 1}: ${line.trim().slice(0, 80)}`)
+    })
+    expect(offenders, '「픽스처 결과로 떨어진다」는 코드에 없는 갈래다 — 문장을 사실로 고쳐라').toEqual([])
+  })
+
+  it('키 없는 배포의 코드가 실제로 있고, 화면 문구가 「운영자에게」다', () => {
+    expect(ERROR_CODES).toContain('AI_NOT_CONFIGURED')
+    expect(ERROR_HINT.AI_NOT_CONFIGURED).toContain('운영자')
+    //  README·제출서가 그 코드 이름으로 말한다 — 「픽스처」 대신.
+    expect(readme).toContain('AI_NOT_CONFIGURED')
+    expect(submission).toContain('AI_NOT_CONFIGURED')
+  })
+})
+
+// =====================================================================
+//  ⑨ 숫자와 「없다」가 코드와 같다 (INBOX G15 · H1 · 2026-09-09)
+//
+//  ★ 왜 시험인가 — README 가 「관통 7단계」(실제 9) · 「표 16 · enum 14」(실제 18 · 17) 를 적고 있었고,
+//    KNOWN_LIMITATIONS 는 「e2e 폴더가 없다」고 적었는데 `apps/web/e2e/` 에 파일이 아홉이었다. 숫자와
+//    부정문은 코드가 자라면 **저절로 거짓이 된다** — 사람이 다시 세지 않는다. 그래서 코드에서 센 값과 대조한다.
+// =====================================================================
+describe('⑨ 문서의 숫자·「없다」가 코드와 같다 (INBOX G15 · H1)', () => {
+  const schema = readFileSync(join(webRoot, 'src', 'db', 'schema.ts'), 'utf8')
+  const tables = (schema.match(/pgTable\(/g) ?? []).length
+  const enums = (schema.match(/= pgEnum\(/g) ?? []).length
+  const walkthrough = readFileSync(join(repoRoot, 'tools', 'walkthrough.ps1'), 'utf8')
+  const stages = (walkthrough.match(/@\{ name = "/g) ?? []).length
+
+  it('README 의 표·enum 수가 `schema.ts` 와 같다', () => {
+    expect(tables).toBeGreaterThan(0)
+    expect(readme).toContain(`(표 ${tables} · enum ${enums}`)
+  })
+
+  it('README·제출서의 「관통 N단계」가 `tools/walkthrough.ps1` 의 단계 표와 같다', () => {
+    expect(stages).toBeGreaterThan(0)
+    for (const { name, text } of DOCS) {
+      const said = [...text.matchAll(/(\d+)단계/g)].map((m) => Number(m[1]))
+      expect(said.length, `${name}: 「N단계」가 한 번도 없다`).toBeGreaterThan(0)
+      for (const n of said) expect(n, `${name}: 관통은 ${stages}단계인데 ${n}단계라고 적혀 있다`).toBe(stages)
+    }
+  })
+
+  it('「`경로` 가 없다」고 적은 저장소 경로는 실제로 없어야 한다 — 실존하면 그 한계는 낡은 것이다', () => {
+    const offenders: string[] = []
+    for (const [name, text] of [['README', readme], ['SUBMISSION', submission], ['KNOWN_LIMITATIONS', limits]] as const) {
+      for (const m of text.matchAll(/`([^`\n]+)`\s*(?:폴더|파일)?\s*(?:가|이|는|은)?\s*없다/g)) {
+        const token = m[1] as string
+        if (!REPO_DIRS.some((d) => token.startsWith(d))) continue
+        if (existsSync(join(repoRoot, token.replace(/\/$/, '')))) offenders.push(`${name}: ${token}`)
+      }
+    }
+    expect(offenders, '없다고 적은 경로가 실존한다').toEqual([])
+    //  산문의 부정문도 하나는 직접 본다 — `apps/web/e2e/` 가 있는 한 이 문장은 거짓이다.
+    expect(existsSync(join(webRoot, 'e2e'))).toBe(true)
+    expect(limits).not.toContain('e2e 폴더가 없다')
+    expect(limits).not.toContain('브라우저 e2e 가 없다')
   })
 })
