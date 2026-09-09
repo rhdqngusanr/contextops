@@ -39,6 +39,10 @@ jobs:
 
       - run: pnpm test
 
+      # 🔴 배포와 같은 빌드 (INBOX H6). 시험이 다 지나도 `next build` 만 깨지는 날이 있었고, 그건 Vercel 이
+      #    처음 알려 줬다 — 심사 기간엔 늦다. `.env.local` 없이도 지어진다 (env 는 전부 요청 시점에 읽는다 · 2026-09-10 확인).
+      - run: pnpm --filter web build
+
       # `claude plugin validate` 는 아직 여기서 안 돈다 — 그 CLI 가 러너에 없다.
       #  ★ 대신 `pnpm test` 안의 `plugin/contextops/test/plugin-manifest.test.ts` 가
       #    그 도구가 요구하는 최소 모양(name·version·description)과 **두 곳에 적힌 버전이

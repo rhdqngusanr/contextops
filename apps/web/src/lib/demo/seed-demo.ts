@@ -364,13 +364,17 @@ async function publish(seed: SeedResult, owner: string, semver: string, base: st
   return { id: data.id as string, semver: data.semver as string, manifestHash: data.manifest_hash as string }
 }
 
-export async function seedDemo(now: Date = new Date()): Promise<DemoSeedResult> {
+/**
+ * @param into 팀 slug 를 바꿔 심는다 — 리셋이 **옆자리**에 먼저 심고 성공하면 자리를 바꾸기 위해서다
+ *   (`reset.ts` · INBOX H6). 안 주면 정본 slug 다 (`demo:db`·시험이 그렇게 부른다).
+ */
+export async function seedDemo(now: Date = new Date(), into: { teamSlug?: string } = {}): Promise<DemoSeedResult> {
   const file = readDemoSeedFile()
 
   //  ── 항목·문서는 paylab 씨앗 그대로다 (정본 하나) ──────────────────────
   const seed = await seedPaylab(DEMO_TENANT.ownerSubject, {
     teamName: DEMO_TENANT.teamName,
-    teamSlug: DEMO_TENANT.teamSlug,
+    teamSlug: into.teamSlug ?? DEMO_TENANT.teamSlug,
     projectName: DEMO_TENANT.projectName,
     projectSlug: DEMO_TENANT.projectSlug,
   })

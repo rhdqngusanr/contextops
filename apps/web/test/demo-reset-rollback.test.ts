@@ -25,9 +25,10 @@ vi.mock('../src/lib/demo/seed-demo', async (importOriginal) => {
   const { DEMO_TENANT: tenant } = await import('../src/lib/demo/tenant')
   return {
     ...original,
-    seedDemo: async () => {
+    //  ⚠ 리셋은 옆자리 slug 로 심으라고 `into` 를 준다 (INBOX H6) — 진짜 seedDemo 처럼 그 값을 따른다.
+    seedDemo: async (_now: Date, into: { teamSlug?: string } = {}) => {
       await seedPaylab(tenant.ownerSubject, {
-        teamName: tenant.teamName, teamSlug: tenant.teamSlug,
+        teamName: tenant.teamName, teamSlug: into.teamSlug ?? tenant.teamSlug,
         projectName: tenant.projectName, projectSlug: tenant.projectSlug,
       })
       throw new Error('[test] 씨앗 뒤에서 일부러 던진다')

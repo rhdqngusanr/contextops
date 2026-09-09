@@ -206,6 +206,19 @@ README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 �
 
 ---
 
+## 심사 기간 런북 (9/20 제출 ~ 심사 종료)
+
+**지키는 것은 하나다 — `https://<production>/demo` 가 열린다.** 규정상 심사 기간에 링크가 안 열리면 심사에서 제외될 수 있다 (`docs/SUBMISSION.md` 「대회 규정 원문」).
+
+| 장치 | 무엇을 하나 | 🙋 사람이 할 것 |
+|---|---|---|
+| `.github/workflows/watch-prod.yml` | 30분마다 `/` · `/api/v1/health`(db·ai) · `POST /api/v1/demo/session` 을 두드리고 하나라도 아니면 **실패 메일** | 저장소 Settings → Variables 에 **PROD_ORIGIN**(GitHub 변수 · 환경변수 파일이 아니다)을 넣는다 · 만든 날 일부러 틀린 origin 으로 `workflow_dispatch` 해 메일이 오는지 확인 · 확인 뒤 되돌린다 |
+| `apps/web/src/lib/demo/reset.ts` (03:00 KST) | `demo-next` 옆자리에 끝까지 심은 뒤에야 옛 팀을 지우고 slug 를 바꾼다 — **심기가 죽으면 어제 데모가 그대로** | 실패 메일을 받으면 `GET /api/v1/cron/demo-reset`(`CRON_SECRET` Bearer)을 손으로 한 번 더 부른다 |
+| `verify:prod` | 배포 직후·릴리즈 뒤 한 번 — Supabase 공급자·JWKS·anon 거부·로그인 버튼·health.ai 까지 | 제출 전날(9/19) 한 번, 제출 뒤 코드가 바뀌면 그때마다 |
+| 동결 | `release` 브랜치를 Production Branch 로 · Preview 배포 끄기 · 루프 STOP | 9/18 저녁 (INBOX 블로커 6) — 심사 기간엔 main 에 push 해도 production 이 안 바뀐다 |
+
+**메일이 왔을 때 3분 안에 보는 순서** — ① 브라우저로 `/demo` 를 연다 (감시가 틀렸을 수도 있다) ② `https://<production>/api/v1/health` — `db:false` 면 Supabase 대시보드(프로젝트가 잠들었나 · 무료 플랜은 7일 미사용 시 일시정지) · `ai:false` 면 Vercel env 의 `GEMINI_API_KEY` ③ `/demo/session` 이 404 면 리셋을 손으로 부른다 ④ 그래도 안 되면 Vercel 대시보드에서 마지막 성공 배포로 **Instant Rollback**.
+
 ## 배포 뒤에 열리는 것들
 
 이 절차가 끝나야 닫을 수 있는 항목들이다 — **배포 전에는 재는 것이 불가능하다.**
@@ -216,5 +229,5 @@ README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 �
 | Vercel 함수 로그가 `src/lib/api/log.ts` 의 필드만 남기는가 | `docs/KNOWN_LIMITATIONS.md` |
 | `queued` 로 남는 job 이 실제로 생기는가 | `docs/feedback/FINDINGS.md` 156 |
 | 제출서의 production URL | `docs/SUBMISSION.md` 의 🙋 자리 |
-| 심사 기간 링크 유지 — 매일 `/demo` 가 열리는지 · 리셋 실패 시 대응 | INBOX 고가치 6(감시 · 리셋 구조 · 런북) — 그때까지는 아침에 `https://<production>/api/v1/health` 와 `/demo` 를 눈으로 |
+| 심사 기간 링크 유지 — 매일 `/demo` 가 열리는지 · 리셋 실패 시 대응 | 아래 「심사 기간 런북」 — 감시는 `.github/workflows/watch-prod.yml`(30분 · 🙋 GitHub 변수 **PROD_ORIGIN**) · 리셋은 옆자리에 심고 바꾸므로 실패해도 어제 데모가 산다 (`apps/web/src/lib/demo/reset.ts`) — 그래도 아침에 `https://<production>/api/v1/health` 와 `/demo` 를 눈으로 |
 | 제출 뒤 동결 — `release` 브랜치를 Production Branch 로 · Preview 배포 끄기 · 루프 STOP | INBOX 블로커 6 (9/18 저녁) |
