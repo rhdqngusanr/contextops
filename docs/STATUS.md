@@ -154,6 +154,12 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 고장 하나: `.map((d) => (` 바로 안에 JSX 주석을 넣어 esbuild 가 죽었다(시험 7파일 transform 실패) — 주석을 map 앞으로. 전체 1048 초록. DESIGN_BRIEF §4 ⑪.
 `tools/ci.ps1`: 2026-09-11 01:09 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열여섯째 판 — 제안 상세: 바뀐 낱말에 색 · 이제 무슨 일이 나나** (사용자가 제안 상세를 보며 「아직 이런 화면들도 눈이 확 안 보여서 어떻게 할지 모르겠어」 · 2026-09-11).
+**바뀐 낱말에 색**: `lib/web/diff.ts` 에 낱말 단위 `wordDiff`(줄 diff 와 같은 LCS · 공백도 조각 · 같은 표시는 합침). 「바꾸자는 규칙」 판에는 덧붙은 낱말이 초록 면(`.diff-add-text`), 「지금 규칙」 판에는 빠지는 낱말이 줄 긋기 — 규칙 문장과 설명 둘 다. 눈이 바로 「받은 토큰은 결제 확정 후 90일까지만 보관하고 그 뒤에는 지운다」로 간다.
+**무엇을 하자는 것인가**: 연산 칩을 진하게(추가 초록 / 수정 주황 / 폐기 빨강 면 — `.chip-strong.tone-*`) + 항목 카드 왼쪽 괘선(`data-op`). **이제 무슨 일이 나나**: `PROPOSAL_STATUS_SENTENCE`(상태 5종 — 「아직 올리지 않은 초안입니다. 만든 사람이 [승인 요청]을 누르면 팀장에게 갑니다.」 「팀장의 결정을 기다립니다. [모두 승인]이면 …」, 결정 뒤 셋은 `DECIDED_TEXT` 그대로)를 머리 카드와 결정 칸이 같이 읽는다 — 읽기 전용(게스트)이어도 다음 걸음이 보인다.
+시험: `web-diff-words.test.ts`(덧붙음/빠짐/합침/차례 · 상태 문장 5종). ⚠ 프로덕션 데모의 **씨앗 글자**(항목 제목·설명·제안 제목)는 매일 03:00 KST 리셋 때 새 빌드의 씨앗으로 바뀐다 — 그 전에는 옛 문장(「카드 원본이 우리 망에…」)이 보인다 (사용자 캡처가 그것이었다).
+`tools/ci.ps1`: 2026-09-11 01:29 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

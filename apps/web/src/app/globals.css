@@ -446,6 +446,14 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 /* 카드 머리의 사람 말 한 문장 — 두 쪽이 무엇인지 · 무엇을 정해 달라는지. 두 쪽의 이름은 굵고 잉크다. */
 .conflict-plain { font-size: var(--fs-body); color: var(--ink-2); line-height: 1.65; }
 .conflict-plain b { font-weight: 700; color: var(--ink); }
+/* 화면 어디서나 「이제 무슨 일이 나나」 한 문장 (제안 머리·결정 칸). */
+.plain-line { font-size: var(--fs-body); color: var(--ink-2); line-height: 1.65; }
+/* 제안의 항목 카드 — 연산이 왼쪽 괘선으로 (추가 초록 · 수정 주황 · 폐기 빨강). 바뀐 낱말: 덧붙음 = 초록 면, 빠짐 = 줄 긋기 (2026-09-11). */
+.item-card[data-op='add'] { border-left: 3px solid var(--ok); }
+.item-card[data-op='update'] { border-left: 3px solid var(--warn); }
+.item-card[data-op='deprecate'] { border-left: 3px solid var(--bad); }
+.diff-add-text { background: var(--ok-bg); color: var(--ok); font-weight: 600; border-radius: var(--radius); padding: 0 var(--sp-1); }
+.diff-del-text { text-decoration: line-through; color: var(--ink-3); }
 /* 두 쪽의 이름 — 카드 안에서 제일 크다: 표제체 600 (사용자: 「지금 문서 / 옛 문서 이런 걸 좀 강조하는 폰트였으면」 · 2026-09-11). */
 .side-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-section); letter-spacing: -0.02em; line-height: 1.25; color: var(--ink); }
 /* 두 쪽의 색 — 사실의 색이다 (2026-09-11 · 「색깔이 다르게 하든지」): 지금 적용 중 = 초록(「적용 중」 칩과 같다) · 옛 문서 = 주황(「옛 버전」 칩과 같다) + 회색 면 · 코드 = 모노.
@@ -470,7 +478,11 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .row-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sub); letter-spacing: -0.01em; color: var(--ink); }
 /* 심각도 높음 — 카드 왼쪽에 빨간 괘선, 칩은 옅은 빨강 면 (색 배경이 붙는 유일한 칩). 사용자: 「심각도 높으면 좀 더 눈에 잘 보여야」 (2026-09-10 저녁). */
 .conflict-card[data-severity='high'] { border-left: 3px solid var(--bad); }
-.chip.chip-strong { background: var(--bad-bg); color: var(--bad); padding: var(--sp-1) var(--sp-2); font-weight: 600; }
+.chip.chip-strong { padding: var(--sp-1) var(--sp-2); font-weight: 600; }
+.chip.chip-strong.tone-ok { background: var(--ok-bg); color: var(--ok); }
+.chip.chip-strong.tone-warn { background: var(--warn-bg); color: var(--warn); }
+.chip.chip-strong.tone-bad { background: var(--bad-bg); color: var(--bad); }
+.chip.chip-strong.tone-neutral { background: var(--surface-hi); color: var(--ink); }
 
 /* 3분 코스 — 게스트 배너의 둘째 줄 (`components/demo-banner.tsx` · 정본 `lib/web/tour.ts`).
    걸음 넷이 알약으로 서고, 지금 걸음은 잉크로 채운다. 셋째 줄은 지금 걸음의 「볼 것」 한 문장. */

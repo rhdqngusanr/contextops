@@ -292,7 +292,8 @@ export function ProposalStatusChip({ status }: { status: ProposalStatus }) {
 }
 
 export function ProposalOperationChip({ operation }: { operation: ProposalOperation }) {
-  return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={operation} />
+  //  진하다 — 항목 카드에서 「무엇을 하자는 것인가」가 제일 먼저 보여야 한다 (2026-09-11 · 「눈이 확 안 보여서」).
+  return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={operation} strong />
 }
 
 /**

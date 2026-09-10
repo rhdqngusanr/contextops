@@ -6,7 +6,7 @@ import {
 } from '@contextops/schema'
 
 import type { WriteDoor } from '../lib/web/actor'
-import { diffCounts, lineDiff, type DiffLine } from '../lib/web/diff'
+import { diffCounts, lineDiff, wordDiff, type DiffLine, type WordPiece } from '../lib/web/diff'
 import type { ProposalDetail, ProposalRow, VersionRow } from '../lib/web/queries'
 //  🔴 낱말 `MADE`(「만든」)의 정본은 `lib/web/screens.ts` 다 — 빈 목록 문구(`EMPTY_PLACES`)와
 //     같은 하나를 읽어야 세 자리가 안 갈라진다 (FINDINGS 167). 여기서 다시 적지 마라.
@@ -241,6 +241,8 @@ export function ProposalHead({
         <h2>{proposal.title}</h2>
         <ProposalStatusChip status={proposal.status} />
       </div>
+      {/* 상태를 사람 말 한 문장으로 — 「초안」 칩만으로는 다음에 무슨 일이 나는지 모른다 (2026-09-11). */}
+      <p className="plain-line">{PROPOSAL_STATUS_SENTENCE[proposal.status]}</p>
 
       {proposal.summary === ''
         ? null
@@ -370,6 +372,23 @@ export function DiffView({ before, after }: { before: string; after: string }) {
   )
 }
 
+/**
+ * 낱말 단위 표시 — 「지금 규칙」 판에는 빠지는 낱말을 줄 긋고, 「바꾸자는 규칙」 판에는 덧붙는 낱말에 초록 면을 준다.
+ * 같은 조각(`wordDiff`)을 두 판이 나눠 그린다 — 한쪽에서만 보이는 낱말은 없다.
+ */
+function Marked({ pieces, side }: { pieces: readonly WordPiece[]; side: 'before' | 'after' }) {
+  const hide = side === 'before' ? 'add' : 'del'
+  return (
+    <>
+      {pieces.filter((p) => p.mark !== hide).map((p, i) => (
+        p.mark === 'same'
+          ? <span key={i}>{p.text}</span>
+          : <span key={i} className={p.mark === 'add' ? 'diff-add-text' : 'diff-del-text'}>{p.text}</span>
+      ))}
+    </>
+  )
+}
+
 export function ProposalItemCard({
   item,
   target,
@@ -382,9 +401,13 @@ export function ProposalItemCard({
 }) {
   const sides = diffSidesOf(item, target)
   const draftType = item.draft?.type
+  //  바뀐 낱말만 눈에 띄게 — 두 판이 다 있을 때 규칙 문장·설명을 낱말 단위로 견준다 (`wordDiff`).
+  const gistPieces = target !== undefined && item.draft !== undefined ? wordDiff(itemGist(target), itemGist(item.draft)) : null
+  const bodyPieces = target !== undefined && item.draft !== undefined ? wordDiff(target.body, item.draft.body) : null
 
   return (
-    <section className="card pad col">
+    //  연산은 카드가 스스로 말한다 — 추가 초록 / 수정 주황 / 폐기 빨강 왼쪽 괘선 (`data-op` · globals.css).
+    <section className="card pad col item-card" data-op={item.operation}>
       <div className="row-between wrap">
         <div className="row wrap">
           <span className="label">{index + 1}</span>
@@ -422,8 +445,8 @@ export function ProposalItemCard({
                 <div className="card pad-sm col-tight side-card side-neutral">
                   <span className="side-name side-neutral">지금 규칙</span>
                   <span className="ink">{target.title}</span>
-                  <p className="key-line"><span className="key">{ITEM_GIST_KEY[target.type]}</span>{itemGist(target)}</p>
-                  {target.body === '' ? null : <p className="key-line"><span className="key">설명</span>{target.body}</p>}
+                  <p className="key-line"><span className="key">{ITEM_GIST_KEY[target.type]}</span>{gistPieces ? <Marked pieces={gistPieces} side="before" /> : itemGist(target)}</p>
+                  {target.body === '' ? null : <p className="key-line"><span className="key">설명</span>{bodyPieces ? <Marked pieces={bodyPieces} side="before" /> : target.body}</p>}
                 </div>
               )}
               {item.draft === undefined ? (
@@ -435,8 +458,8 @@ export function ProposalItemCard({
                 <div className="card pad-sm col-tight side-card side-new">
                   <span className="side-name side-new">{target === undefined ? '새로 올리는 규칙' : '바꾸자는 규칙'}</span>
                   <span className="ink">{item.draft.title}</span>
-                  <p className="key-line"><span className="key">{ITEM_GIST_KEY[item.draft.type]}</span>{itemGist(item.draft)}</p>
-                  {item.draft.body === '' ? null : <p className="key-line"><span className="key">설명</span>{item.draft.body}</p>}
+                  <p className="key-line"><span className="key">{ITEM_GIST_KEY[item.draft.type]}</span>{gistPieces ? <Marked pieces={gistPieces} side="after" /> : itemGist(item.draft)}</p>
+                  {item.draft.body === '' ? null : <p className="key-line"><span className="key">설명</span>{bodyPieces ? <Marked pieces={bodyPieces} side="after" /> : item.draft.body}</p>}
                 </div>
               )}
             </div>
@@ -515,6 +538,19 @@ export const DECIDED_TEXT: Record<'approved' | 'rejected' | 'published', string>
   published: '이미 발행된 제안입니다. 팀의 공식 판(Pack)에 들어가 있습니다.',
 }
 
+/**
+ * 상태 5종 전부의 **「이제 무슨 일이 나나」** 한 문장 (2026-09-11 · 사용자: 「눈이 확 안 보여서 어떻게 할지 모르겠어」).
+ * 결정이 끝난 셋은 `DECIDED_TEXT` 그대로고, 앞의 둘은 다음 걸음(누가 무엇을 누르나)을 버튼 이름(`ACTION_LABEL`)으로 말한다.
+ * 머리 카드와 결정 칸이 같은 문장을 읽는다 — `Record` 라 상태가 늘면 타입이 막는다.
+ */
+export const PROPOSAL_STATUS_SENTENCE: Record<ProposalRow['status'], string> = {
+  draft: `아직 올리지 않은 초안입니다. 만든 사람이 [${ACTION_LABEL.submit}]을 누르면 팀장에게 갑니다.`,
+  submitted: `팀장의 결정을 기다립니다. [${ACTION_LABEL.approve}]이면 다음 발행에 들어가고, [${ACTION_LABEL.reject}]이면 사유와 함께 돌아갑니다.`,
+  approved: DECIDED_TEXT.approved,
+  rejected: DECIDED_TEXT.rejected,
+  published: DECIDED_TEXT.published,
+}
+
 /** 누를 것이 없을 때 **왜 없는지**. 빈 칸으로 두면 사람은 화면이 덜 그려졌다고 읽는다. */
 export function noActionText(status: ProposalRow['status'], door?: WriteDoor): string {
   //  🔴 문이 닫힌 주체(게스트)에겐 등급 문장이 전부 거짓이다 — 서버가 낼 문구(`GUEST_HINT`)가 먼저다 (INBOX G13).
@@ -548,6 +584,10 @@ export function ProposalDecisions({
         {/* ⚠ 「할 수 있는 것이 없다」를 빈 칸으로 두지 않는다 — 사람은 화면이 덜
             그려졌다고 읽는다. 왜 없는지가 다음 걸음을 정한다. */}
         <p className="meta">{noActionText(state.status, state.door)}</p>
+        {/* 다음 걸음 — 읽기 전용(게스트)이어도 「여기서 무슨 일이 나는지」는 보여야 한다 (2026-09-11). */}
+        {state.status === 'draft' || state.status === 'submitted'
+          ? <p className="plain-line">{PROPOSAL_STATUS_SENTENCE[state.status]}</p>
+          : null}
       </section>
     )
   }

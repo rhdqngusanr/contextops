@@ -93,3 +93,42 @@ export function diffCounts(lines: readonly DiffLine[]): { added: number; removed
   }
   return { added, removed }
 }
+
+// ---------------------------------------------------------------------
+//  낱말 단위 — 한 문장 안에서 **무엇이 덧붙고 무엇이 빠졌나** (2026-09-11 · 사용자: 「눈이 확 안 보여서 어떻게 할지 모르겠어」)
+//
+//  ★ 왜 — 제안 상세의 「지금 규칙 / 바꾸자는 규칙」 두 판은 문장 전체를 나란히 놓는다. 사람은 두 문장을 글자 단위로
+//    비교하지 못한다 — 덧붙은 낱말에 색이 있어야 눈이 거기로 간다. 줄 diff 와 같은 LCS 이고 단위만 낱말이다.
+//  ⚠ 공백도 조각이다 — 지우면 낱말이 붙는다. 같은 표시가 이어지면 하나로 합친다 (렌더가 조각을 덜 만든다).
+// ---------------------------------------------------------------------
+
+export interface WordPiece {
+  readonly mark: DiffMark
+  readonly text: string
+}
+
+function wordsOf(text: string): string[] {
+  return text === '' ? [] : text.split(/(\s+)/).filter((t) => t !== '')
+}
+
+export function wordDiff(before: string, after: string): WordPiece[] {
+  const a = wordsOf(before)
+  const b = wordsOf(after)
+  const table = lcsTable(a, b)
+  const out: WordPiece[] = []
+  const push = (mark: DiffMark, text: string) => {
+    const last = out[out.length - 1]
+    if (last !== undefined && last.mark === mark) out[out.length - 1] = { mark, text: last.text + text }
+    else out.push({ mark, text })
+  }
+  let i = 0
+  let j = 0
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { push('same', a[i]!); i += 1; j += 1 }
+    else if (table[i + 1]![j]! >= table[i]![j + 1]!) { push('del', a[i]!); i += 1 }
+    else { push('add', b[j]!); j += 1 }
+  }
+  for (; i < a.length; i += 1) push('del', a[i]!)
+  for (; j < b.length; j += 1) push('add', b[j]!)
+  return out
+}
