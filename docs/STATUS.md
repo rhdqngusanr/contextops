@@ -113,6 +113,13 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 시험: `web-landing.test.ts` ② 에 한 칸 — 이름·읽은 것·쉬운 말·근거가 전부 그려지고 **질문은 한 번**. DESIGN_BRIEF §3 anti-slop 표 · §4 화면 1 B·B-2 에 모양을 적었다. 1440·375 캡처로 눈 판정.
 `tools/ci.ps1`: 2026-09-10 18:40 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열째 판 — 밑의 절 전부 「이해되게」** (사용자: 「저 섹션 말고도 밑의 섹션들도 저렇게 이해되게」). 제품의 문장(README·시험이 잠근 것)은 그대로 두고 **그 밑에 사람 말 한 층**을 깔았다 — 장치 여섯, 모양은 하나(모노 이름표 + 문장 · 24px 번호 동그라미 `.no` · 괘선 알약).
+02 「왜 git」: **낱말 풀이** 회색 띠(CLAUDE.md · git · 레포) + 주장마다 **「예를 들면」** 한 장면(Before/After 와 같은 재시도 이야기라 새로 외울 것이 없다). 03 「어떻게」: 걸음마다 **「쉬운 말로」**(README 「세 걸음」과 같은 말)가 제품 문장보다 먼저, 밑에 **누가·어디서 알약**(팀장 · 브라우저 / AI · 후보와 질문만 / AI 없음 / 개발자의 AI · Claude Code 안), 그림 사이 **「→」**(그림·화살표 1행 · 글 2행 · `--col`/`--row`).
+04 「AI」: 줄마다 **「AI → 사람」 손바뀜 줄**이 설명보다 먼저 — 둘째 자리는 늘 사람이거나 「AI 없음」(P4). 05 「개발자 쪽」: 낱말 풀이(Claude Code · 플러그인 · Roadmap) + 터미널 밑에 **「무슨 일이 일어나나」 넷**(v0.9.0 → v1.0.0 · 파일 8개 · 근거 0/3 → 1/3 — 녹화와 시험이 대조).
+06 「신뢰 경계」: 표 칸마다 **쉬운 말** 한 줄(README 의 같은 줄) · 「절대 받지 않는 것」 굵게. 07 「설치」: 첫 줄 **「개발자만 합니다 — 팀장은 설치할 것이 없습니다」** · 한 줄이 한 행(번호 · 어디서 알약 · 검은 상자 · 설명). `AI_USE.lead` 의 「결정론」→「AI 없이 정해진 규칙대로」.
+시험 ⑨(6칸): 풀이·예·쉬운 말·알약·손바뀜(사람 자리 필수)·넷의 숫자 = 녹화·표 칸 수·어디서(Skill 줄 = Claude Code 안). DESIGN_BRIEF §4 화면 1 에 장치 여섯을 적었다. 1440·375 캡처로 눈 판정.
+`tools/ci.ps1`: 2026-09-10 20:57 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

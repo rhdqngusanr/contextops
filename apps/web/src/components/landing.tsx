@@ -1,3 +1,5 @@
+import { Fragment, type CSSProperties } from 'react'
+
 import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 
 import replayRecording from '../../../../fixtures/replay/sync.json'
@@ -148,19 +150,30 @@ export const PRODUCT_SHOTS = ShotsManifest.parse(shotsManifest).shots
 export const WHY_NOT_GIT = {
   //  심사위원이 제일 먼저 던지는 질문을 제목으로 — 그 답이 세 줄이다.
   title: '「CLAUDE.md 를 git 에 올리면 되지 않나요?」',
+  //  낱말 풀이 — 제목에 개발자 낱말이 둘이다. 비개발자 심사위원이 여기서 멈추지 않게 (2026-09-10 저녁 · 「밑의 절도 이해되게」).
+  glossary: [
+    { term: 'CLAUDE.md', means: '개발자의 AI(Claude Code)가 일을 시작하기 전에 읽는 팀 규칙 파일' },
+    { term: 'git', means: '코드를 보관하고 「무엇이 바뀌었나」를 남기는 저장소' },
+    { term: '레포', means: '저장소 하나 — 보통 서비스 하나에 하나씩 있습니다' },
+  ],
+  exampleKey: '예를 들면',
   cards: [
     {
       //  2026-09-10 사용자: 「팀장이 git 을 안 쓴다」는 문장이 웃기다 — 사람을 깎는 말이 아니라 **결정이 나는 자리**를 말한다.
       head: '결정은 레포 밖에서 납니다',
       body: '목표·정책은 문서와 회의에서 정해집니다. 그걸 CLAUDE.md 로 옮기는 일은 개발자 각자의 손에 맡겨져 있어서, 사람마다 다른 파일이 됩니다.',
+      //  「예를 들면」 — 주장 하나에 장면 하나. 위의 Before/After 와 같은 재시도 이야기라 새로 외울 것이 없다.
+      example: '「재시도는 5번까지」는 회의에서 정해졌는데, 그걸 파일로 옮긴 사람은 A 뿐입니다. B 의 파일에는 그 줄이 없습니다.',
     },
     {
       head: '한 팀의 규칙은 여러 레포에 걸칩니다',
       body: '결제 팀의 재시도 규칙은 API·웹훅·정산 레포에 똑같이 적용돼야 합니다. 레포마다 복사해 두면 어느 날 하나만 바뀝니다.',
+      example: '결제 API·웹훅·정산, 저장소 셋에 같은 규칙을 복사해 두면 하나가 바뀌어도 나머지 둘은 모릅니다.',
     },
     {
       head: 'git 은 「왜」를 남기지 않습니다',
       body: 'diff 는 무엇이 바뀌었는지만 남깁니다. 누가 어떤 근거로 정했는지가 없으면, AI 도 사람도 그 규칙을 믿을 이유가 없습니다.',
+      example: '「3 → 5 로 바뀜」은 남지만, 누가 어떤 회의에서 왜 그렇게 정했는지는 남지 않습니다.',
     },
   ],
   line: 'ContextOps 는 흩어진 결정을 팀장이 승인한 한 벌로 만들고, 모든 팀원의 AI 에 같은 버전으로 꽂습니다.',
@@ -170,18 +183,27 @@ export const WHY_NOT_GIT = {
 export const HOW_IT_WORKS = {
   title: '어떻게 동작하나요',
   lead: '팀장은 브라우저에서 세 단계, 개발자는 명령 한 줄입니다.',
+  plainKey: '쉬운 말로',
+  //  걸음마다 「쉬운 말로」 한 줄(README 「세 걸음」과 같은 말)이 먼저 서고, 제품의 문장(`body`)은 그 밑에 작게.
+  //  `actors` 는 누가·어디서 — 팀장은 브라우저, AI 는 후보만, 발행 뒤는 AI 없음, 개발자의 AI 는 Claude Code 안 (P3·P4·P5).
   steps: [
     {
       head: '가져와서 정리한다',
       body: '목표 문서·회의록을 붙여 넣거나 질문 10개에 답하면, AI 가 규칙·마일스톤 후보를 뽑고 서로 어긋난 것을 찾아 질문으로 만듭니다. 결정은 사람이 합니다.',
+      plain: '흩어진 문서·회의·코드에서 팀이 지켜야 할 것을 모읍니다. 서로 어긋난 것은 카드로 물어봅니다.',
+      actors: ['팀장 · 브라우저', 'AI · 후보와 질문만'],
     },
     {
       head: '승인해서 발행한다',
       body: '팀장이 승인한 항목만 CLAUDE.md 한 벌로 묶여 버전이 붙습니다. 모든 팀원의 Claude Code 가 같은 버전을 받고, 받은 파일이 정말 같은지 확인표(해시)로 검증됩니다. 승인 뒤에는 AI 가 끼어들지 않습니다.',
+      plain: '팀장이 승인한 것만, 모든 팀원의 AI 에 같은 버전으로 갑니다. 이제 누구에게 물어도 같은 답이 나옵니다.',
+      actors: ['팀장 · 브라우저', 'AI 없음 · 정해진 규칙대로'],
     },
     {
       head: '진행이 근거와 함께 보인다',
       body: '개발자의 AI 가 작업을 마치면 어떤 파일을 고쳤는지 보고합니다. 로드맵은 마일스톤 단위로 채워지고, 완료 판정은 사람이 합니다.',
+      plain: '각자의 AI 가 일을 마칠 때마다 「어느 계획의 무엇이었는지」를 근거와 함께 보고합니다. 그래서 계획이 어디까지 왔는지 보입니다.',
+      actors: ['개발자의 AI · Claude Code 안', '완료 확인 · 사람'],
     },
   ],
 } as const
@@ -192,23 +214,30 @@ export const HOW_IT_WORKS = {
  */
 export const AI_USE = {
   title: 'AI 는 어디까지 쓰나요',
-  lead: 'AI 는 후보와 질문을 만들고, 결정은 사람이, 배포는 결정론이 맡습니다.',
+  lead: 'AI 는 후보와 질문을 만듭니다. 결정은 사람이 하고, 배포는 AI 없이 정해진 규칙대로 돕니다.',
+  /** 손바뀜 줄의 이름표 — `who` 값 하나가 여기 한 줄이다. */
+  who: { ai: 'AI', none: 'AI 없음', human: '사람' },
+  //  줄마다 「누가 → 누가」 손바뀜이 먼저 선다 (2026-09-10 저녁). 둘째 자리는 늘 사람이거나 「AI 없음」 — 결정은 사람 · 승인 뒤 LLM 0 (P4).
   rows: [
     {
       head: '문서를 항목 후보로 바꿉니다',
       body: '붙여 넣은 문서에서 규칙·마일스톤 후보를 뽑고 근거 위치를 같이 답니다 (서버쪽 모델은 Gemini). 후보는 후보일 뿐, 승인 버튼은 사람 몫입니다.',
+      hand: [{ who: 'ai', does: '후보를 뽑고 근거 위치를 단다' }, { who: 'human', does: '승인 버튼을 누른다' }],
     },
     {
       head: '서로 어긋난 결정을 찾아 묻습니다',
       body: '문서끼리, 또는 문서와 코드가 다르게 말하면 충돌 카드로 올립니다. 「A 가 맞다 · B 가 맞다 · 보류」는 사람이 고릅니다.',
+      hand: [{ who: 'ai', does: '충돌 카드로 질문을 올린다' }, { who: 'human', does: 'A 가 맞다 · B 가 맞다 · 보류를 고른다' }],
     },
     {
       head: '승인 뒤에는 쓰지 않습니다',
       body: '발행과 배포는 AI 없이 정해진 규칙대로만 돕니다. 같은 승인본은 언제나 똑같은 파일이 되고, 어느 기기가 무엇을 받았는지 확인표(해시)로 검증됩니다.',
+      hand: [{ who: 'human', does: '발행 버튼을 누른다' }, { who: 'none', does: '정해진 규칙대로만 파일을 만들고 나눈다' }],
     },
     {
       head: '개발자의 AI 는 보고만 합니다',
       body: '작업 끝에 어떤 경로를 고쳤는지 근거를 올립니다. 완료를 스스로 선언하지 못하고, 사람이 확인해야 완료가 됩니다.',
+      hand: [{ who: 'ai', does: '고친 파일 경로를 근거로 올린다' }, { who: 'human', does: '완료를 확인한다' }],
     },
   ],
 } as const
@@ -228,6 +257,21 @@ export const TERMINAL_REPLAY = {
   title: '개발자 쪽에서는 이렇게 보입니다',
   lead: 'Claude Code 를 열면 설치된 플러그인이 새 버전을 알리고, /contextops:sync 한 줄로 받습니다. '
     + '작업을 마치면 AI 가 근거와 함께 보고하고, 오른쪽 Roadmap 이 같은 순간 바뀝니다.',
+  //  낱말 풀이 — 검은 창을 처음 보는 심사위원을 위해 (2026-09-10 저녁).
+  glossary: [
+    { term: 'Claude Code', means: '개발자가 쓰는 AI 코딩 도구 — 터미널(검은 창) 안에서 돕니다' },
+    { term: '플러그인', means: 'Claude Code 에 끼우는 ContextOps 의 작은 부품 — 새 버전을 알리고 한 줄로 받게 합니다' },
+    { term: 'Roadmap', means: '계획이 어디까지 왔는지 근거와 함께 보는 화면' },
+  ],
+  //  🔴 「무슨 일이 일어나나」 넷 — 녹화(`fixtures/replay/sync.json`)가 실제로 찍은 숫자만 말한다: v0.9.0 → v1.0.0 · 파일 8개 · 근거 0/3 → 1/3.
+  //    시험이 녹화 본문과 대조한다 — 녹화가 다시 찍혀 숫자가 바뀌면 여기가 빨개진다.
+  legendTitle: '무슨 일이 일어나나',
+  legend: [
+    '개발자가 Claude Code 를 열면 플러그인이 알립니다 — 지금 적용된 판은 v0.9.0, 팀의 공식 판은 v1.0.0, 파일 8개.',
+    '/contextops:sync 한 줄로 받습니다 — 파일 8개가 v1.0.0 으로 바뀌고, 원본은 백업에 남고, 서버에는 「적용됨」이라고 보고합니다.',
+    '작업을 마친 AI 가 /contextops:progress 로 보고합니다 — 어느 마일스톤의 어느 조건을, 어떤 파일 몇 번째 줄이 근거인지.',
+    '오른쪽 Roadmap 의 「근거 0 / 3」이 「1 / 3」이 됩니다. 완료 확인은 사람이 합니다 — AI 가 스스로 완료를 선언하지 않습니다.',
+  ],
   source: '배포되는 플러그인을 실제로 돌려 남긴 출력입니다 (fixtures/replay/sync.json). '
     + '사이의 작업은 생략했고, 타이핑과 줄 사이 간격만 읽을 수 있게 늘렸습니다.',
   milestone: {
@@ -251,6 +295,7 @@ export const REPLAY_FRAMES = ReplayFrames.parse(replayRecording)
  */
 export const TRUST_BOUNDARY = {
   title: '서버는 코드를 보지 않습니다',
+  //  칸마다 「쉬운 말로」 한 줄 (README 「우리 서버가 보는 것 / 절대 못 보는 것」의 같은 줄 · 2026-09-10 저녁). 줄 수는 `rows` 와 같다 — 시험이 센다.
   knows: {
     head: '서버가 받는 것',
     rows: [
@@ -259,6 +304,13 @@ export const TRUST_BOUNDARY = {
       '팀장이 직접 등록한 문서 원문',
       '파일 경로 · 줄 번호 · 커밋 번호',
       '버전 · 확인표(해시)',
+    ],
+    plain: [
+      '팀 이름과 프로젝트 이름',
+      '정리된 규칙 문장',
+      '팀장이 손수 붙여 넣은 것만',
+      '「몇 번째 줄」이라는 위치 표시만',
+      '몇 판인지 · 내용이 같은지',
     ],
   },
   unknown: {
@@ -269,6 +321,13 @@ export const TRUST_BOUNDARY = {
       '개인 설정 파일(CLAUDE.local.md)',
       'Claude 의 개인 메모리(Auto Memory)',
       'Claude 대화 내용',
+    ],
+    plain: [
+      '소스 코드 그 자체',
+      '비밀번호·API 키 등 접속 정보',
+      '개인이 따로 쓰는 메모',
+      'AI 가 혼자 쌓아 둔 기억',
+      'AI 와 주고받은 말 전부',
     ],
   },
   foot: '올라가는 것은 정해진 스키마를 통과한 항목뿐입니다. 코드 본문·비밀값·개인 메모리·대화는 어떤 경우에도 서버로 가지 않고, 훅은 파일을 바꾸지 않습니다.',
@@ -317,13 +376,16 @@ export const INSTALL_STEPS = {
    *   `test/readme.test.ts` 가 같은 값인지 잰다 (번들 target 도 그 값이다 · `plugin/contextops/scripts/build.ts`).
    */
   requires: 'Node 22 이상이 필요합니다 (node -v) — 훅과 CLI 가 Node 로 돕니다.',
+  //  비개발자 심사위원이 「나도 뭘 깔아야 하나」에서 멈추지 않게 — 첫 줄이 이것이다 (2026-09-10 저녁).
+  who: '개발자만 합니다. 팀장은 설치할 것이 없습니다 — 브라우저로 끝납니다.',
+  //  `where` 는 그 줄을 어디에 치는가 — 터미널인지 Claude Code 안인지. 틀리면 첫 시도가 실패한다 (시험이 Skill 줄과 대조).
   lines: [
-    { cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록합니다' },
-    { cmd: 'claude plugin install contextops', note: '훅·Skill·CLI 가 함께 깔립니다' },
+    { where: '터미널', cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록합니다' },
+    { where: '터미널', cmd: 'claude plugin install contextops', note: '훅·Skill·CLI 가 함께 깔립니다' },
     //  ⚠ 셋째 줄은 Claude Code 안의 Skill 이다 — 터미널 명령이 아니다. 예전의 `node "$CLAUDE_PLUGIN_ROOT/…"` 는
     //    사용자 터미널에 없는 변수라 그대로 치면 「파일이 없다」였다. Skill 이 그 경로를 채운다.
-    { cmd: '/contextops:setup <Sync 화면이 준 인자>', note: 'Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다' },
-    { cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올립니다' },
+    { where: 'Claude Code 안', cmd: '/contextops:setup <Sync 화면이 준 인자>', note: 'Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다' },
+    { where: 'Claude Code 안', cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올립니다' },
   ],
   foot: '그 다음은 팀장이 웹에서 승인하고, 개발자는 /contextops:sync 로 받습니다.',
 } as const
@@ -515,7 +577,7 @@ function ProductShots({ index }: { index: string }) {
                 loading={i === 0 ? 'eager' : 'lazy'}
               />
               <figcaption className={styles.shotCap}>
-                {stop ? <span className={styles.shotNo} aria-hidden="true">{at + 1}</span> : <span />}
+                {stop ? <span className={styles.no} aria-hidden="true">{at + 1}</span> : <span />}
                 <span className={styles.shotTitle}>{shot.alt}</span>
                 {stop ? <span className={styles.shotSee}>{stop.see}</span> : null}
                 {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
@@ -530,16 +592,47 @@ function ProductShots({ index }: { index: string }) {
   )
 }
 
+/** 낱말 풀이 — 회색 띠 안에 「낱말 = 뜻」. 제목에 개발자 낱말이 있는 절(02·05)의 첫 줄이다. */
+function Glossary({ items }: { items: readonly { term: string; means: string }[] }) {
+  return (
+    <dl className={styles.glossary}>
+      {items.map((g) => (
+        <div key={g.term} className={styles.gloss}>
+          <dt className={styles.glossTerm}>{g.term}</dt>
+          <dd className={styles.glossMeans}>{g.means}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/** 「쉬운 말로」·「예를 들면」 한 줄 — 모노 이름표 + 문장 (Before/After 의 `Plain` 과 같은 줄, 숫자 알약만 없다). */
+function KeyLine({ k, text }: { k: string; text: string }) {
+  return (
+    <p className={styles.keyLine}>
+      <span className={styles.plainKey}>{k}</span>
+      <span>{text}</span>
+    </p>
+  )
+}
+
 function WhyNotGit({ index }: { index: string }) {
   return (
     <section className={`${styles.section} ${styles.sectionWhy}`} aria-labelledby="landing-why">
       <SectionHead id="landing-why" index={index} title={WHY_NOT_GIT.title} />
-      {/* 카드 셋이 아니라 정의 목록이다 — 주장 | 설명 (anti-slop: 「아이콘-원-제목-문단」 카드 금지). */}
+      <Glossary items={WHY_NOT_GIT.glossary} />
+      {/* 카드 셋이 아니라 정의 목록이다 — 번호 · 주장 | 설명 + 「예를 들면」 (anti-slop: 「아이콘-원-제목-문단」 카드 금지). */}
       <dl className={styles.defs}>
-        {WHY_NOT_GIT.cards.map((c) => (
+        {WHY_NOT_GIT.cards.map((c, i) => (
           <div key={c.head} className={styles.def}>
-            <dt>{c.head}</dt>
-            <dd>{c.body}</dd>
+            <dt className={styles.defHead}>
+              <span className={styles.no} aria-hidden="true">{i + 1}</span>
+              <span>{c.head}</span>
+            </dt>
+            <dd>
+              <p>{c.body}</p>
+              <KeyLine k={WHY_NOT_GIT.exampleKey} text={c.example} />
+            </dd>
           </div>
         ))}
       </dl>
@@ -551,39 +644,38 @@ function WhyNotGit({ index }: { index: string }) {
 function HowItWorks({ index }: { index: string }) {
   //  단계 그림은 정본(`ART.steps`)이 단계 수와 같을 때만 — 하나라도 빠지면 글로만 선다 (반쪽 시리즈를 보이지 않는다).
   const art = ART.steps.length === HOW_IT_WORKS.steps.length ? ART.steps : null
-  const steps = (
-    <ol className={art ? styles.stepsArt : styles.steps}>
-      {HOW_IT_WORKS.steps.map((s, i) => {
-        const a = art?.[i]
-        return (
-          <li key={s.head} className={art ? styles.stepArt : styles.step}>
-            {a ? <img className={styles.stepImg} src={a.src} width={a.width} height={a.height} alt={a.alt} loading="lazy" /> : null}
-            {/* 번호는 `<ol>` 이 이미 말한다 — 모노 숫자는 그림이다. */}
-            <span className={styles.stepNo} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-            <div className={styles.stepBody}>
-              <h3>{s.head}</h3>
-              <p>{s.body}</p>
-            </div>
-          </li>
-        )
-      })}
-    </ol>
-  )
-  if (art) {
-    return (
-      <section className={styles.section} aria-labelledby="landing-how">
-        <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} lead={HOW_IT_WORKS.lead} />
-        {steps}
-      </section>
-    )
-  }
+  //  격자의 자리 — 그림·화살표는 1행, 글은 2행(그림이 없으면 1행). 열은 CSS 변수로 넘긴다 (`.flow*` 가 읽는다).
+  const bodyRow = art ? 2 : 1
+  const at = (col: number, row?: number): CSSProperties =>
+    ({ '--col': String(col), ...(row === undefined ? {} : { '--row': String(row) }) }) as CSSProperties
   return (
     <section className={styles.section} aria-labelledby="landing-how">
-      <div className={styles.split}>
-        <div className={styles.splitHead}>
-          <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} lead={HOW_IT_WORKS.lead} />
-        </div>
-        {steps}
+      <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} lead={HOW_IT_WORKS.lead} />
+      <div className={styles.flow}>
+        {HOW_IT_WORKS.steps.map((s, i) => {
+          const col = i * 2 + 1
+          const a = art?.[i]
+          return (
+            <Fragment key={s.head}>
+              {a ? <img className={styles.flowImg} style={at(col)} src={a.src} width={a.width} height={a.height} alt={a.alt} loading="lazy" /> : null}
+              <div className={styles.flowBody} style={at(col, bodyRow)}>
+                <div className={styles.stepHead}>
+                  <span className={styles.no} aria-hidden="true">{i + 1}</span>
+                  <h3>{s.head}</h3>
+                </div>
+                {/* 쉬운 말이 먼저, 제품의 문장은 그 밑에 작게 — 읽는 사람의 차례다. */}
+                <p className={styles.stepPlain}>{s.plain}</p>
+                <p className={styles.stepDetail}>{s.body}</p>
+                <div className={styles.actors}>
+                  {s.actors.map((x) => <span key={x} className={styles.actor}>{x}</span>)}
+                </div>
+              </div>
+              {i < HOW_IT_WORKS.steps.length - 1 ? (
+                <span className={`${styles.turn} ${styles.flowTurn}`} style={at(col + 1)} aria-hidden="true">→</span>
+              ) : null}
+            </Fragment>
+          )
+        })}
       </div>
     </section>
   )
@@ -593,12 +685,30 @@ function AiUse({ index }: { index: string }) {
   return (
     <section className={styles.section} aria-labelledby="landing-ai">
       <SectionHead id="landing-ai" index={index} title={AI_USE.title} lead={AI_USE.lead} />
-      {/* 정의 목록 — 「왜 git」과 같은 모양. 아이콘 없이 글과 괘선으로만 (anti-slop). */}
+      {/* 정의 목록 — 「왜 git」과 같은 모양. 줄마다 「누가 → 누가」 손바뀜이 먼저 서고 설명은 그 밑 (아이콘 없이 글과 괘선으로만). */}
       <dl className={styles.defs}>
-        {AI_USE.rows.map((r) => (
+        {AI_USE.rows.map((r, i) => (
           <div key={r.head} className={styles.def}>
-            <dt>{r.head}</dt>
-            <dd>{r.body}</dd>
+            <dt className={styles.defHead}>
+              <span className={styles.no} aria-hidden="true">{i + 1}</span>
+              <span>{r.head}</span>
+            </dt>
+            <dd>
+              <div className={styles.hand}>
+                {r.hand.map((h, j) => (
+                  <span key={h.does} className={styles.handStep}>
+                    {/* 화살표는 다음 걸음의 일부다 — 접힐 때 같이 내려간다. */}
+                    {j > 0 ? <span className={styles.handArrow} aria-hidden="true">→</span> : null}
+                    <span className={styles.handWho}>
+                      {h.who === 'ai' ? <span className={styles.handGlyph} aria-hidden="true">✳</span> : null}
+                      {AI_USE.who[h.who]}
+                    </span>
+                    <span>{h.does}</span>
+                  </span>
+                ))}
+              </div>
+              <p>{r.body}</p>
+            </dd>
           </div>
         ))}
       </dl>
@@ -610,7 +720,20 @@ function Replay({ index }: { index: string }) {
   return (
     <section className={styles.section} aria-labelledby="landing-replay">
       <SectionHead id="landing-replay" index={index} title={TERMINAL_REPLAY.title} lead={TERMINAL_REPLAY.lead} />
+      <Glossary items={TERMINAL_REPLAY.glossary} />
       <TerminalReplay frames={REPLAY_FRAMES} milestone={TERMINAL_REPLAY.milestone} />
+      {/* 「무슨 일이 일어나나」 — 검은 창의 네 걸음을 사람 말로. 숫자는 녹화의 것이다 (시험이 대조). */}
+      <div className="col-tight">
+        <span className={styles.legendTitle}>{TERMINAL_REPLAY.legendTitle}</span>
+        <ol className={styles.legend}>
+          {TERMINAL_REPLAY.legend.map((t, i) => (
+            <li key={t} className={styles.legendItem}>
+              <span className={styles.no} aria-hidden="true">{i + 1}</span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
       <p className={styles.foot}>{TERMINAL_REPLAY.source}</p>
     </section>
   )
@@ -637,8 +760,15 @@ function TrustBoundary({ index }: { index: string }) {
             <tbody>
               {Array.from({ length: rows }, (_, i) => (
                 <tr key={i}>
-                  <td>{knows.rows[i] ?? ''}</td>
-                  <td>{unknown.rows[i] ?? ''}</td>
+                  {/* 칸 = 제품의 말 + 그 밑에 쉬운 말. 「절대 받지 않는 것」은 굵게 — 이 표의 주장은 그 열이다 (README 도 그렇게 굵다). */}
+                  <td>
+                    <span className={styles.cellMain}>{knows.rows[i] ?? ''}</span>
+                    {knows.plain[i] ? <span className={styles.cellPlain}>{knows.plain[i]}</span> : null}
+                  </td>
+                  <td>
+                    <span className={`${styles.cellMain} ${styles.cellStrong}`}>{unknown.rows[i] ?? ''}</span>
+                    {unknown.plain[i] ? <span className={styles.cellPlain}>{unknown.plain[i]}</span> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -652,20 +782,24 @@ function TrustBoundary({ index }: { index: string }) {
 function Install({ index }: { index: string }) {
   return (
     <section className={styles.section} aria-labelledby="landing-install">
-      {/* 이 절만 전폭이다 — 명령 넉 줄이 길어서 4/8 로 나누면 접힌 줄이 셋이 된다 (눈으로 봤다). */}
-      <SectionHead id="landing-install" index={index} title={INSTALL_STEPS.title} lead={INSTALL_STEPS.requires} />
-      <div className={`scroll-x ${styles.codeBlock}`}>
-        {/* 줄 사이는 진짜 개행이다 — `<pre>` 라서 그대로 서고, 글자로 뽑아 읽어도 네 줄이다. */}
-        <pre className={styles.pre}>
-          {INSTALL_STEPS.lines.map((l, i) => (
-            <span key={l.cmd}>
-              {i > 0 ? '\n' : ''}
-              <span className={styles.cmd}>{l.cmd}</span>
-              <span className={styles.cmdNote}>  # {l.note}</span>
-            </span>
-          ))}
-        </pre>
-      </div>
+      {/* 첫 줄은 「개발자만 합니다」 — 팀장·심사위원이 여기서 자기 일이 아님을 안다. 그 다음 한 줄이 한 행: 번호 · 어디서 · 명령 · 쉬운 설명. */}
+      <SectionHead id="landing-install" index={index} title={INSTALL_STEPS.title} lead={INSTALL_STEPS.who} />
+      <ol className={styles.installList}>
+        {INSTALL_STEPS.lines.map((l, i) => (
+          <li key={l.cmd} className={styles.installRow}>
+            <span className={styles.no} aria-hidden="true">{i + 1}</span>
+            <span className={styles.where}>{l.where}</span>
+            <div className={styles.installBody}>
+              {/* 명령은 검은 상자 안의 `<pre>` 다 — 글자로 뽑아도 명령 한 줄이고, 컨테이너는 scroll-x 다 (시험이 센다). */}
+              <div className={`scroll-x ${styles.codeBlock}`}>
+                <pre className={styles.pre}><span className={styles.cmd}>{l.cmd}</span></pre>
+              </div>
+              <span className={styles.installNote}>{l.note}</span>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className={styles.foot}>{INSTALL_STEPS.requires}</p>
       <p className={styles.foot}>{INSTALL_STEPS.foot}</p>
     </section>
   )

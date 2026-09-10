@@ -6,8 +6,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import {
-  BEFORE_AFTER, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, Landing, SUBMISSION_IDENTITY, TRUST_BOUNDARY,
-  skillNamesIn,
+  AI_USE, BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, Landing, REPLAY_FRAMES,
+  SUBMISSION_IDENTITY, TERMINAL_REPLAY, TRUST_BOUNDARY, WHY_NOT_GIT, skillNamesIn,
 } from '../src/components/landing'
 import { DEMO_PROPOSALS } from '../src/lib/demo/seed-demo'
 import { paylabDrafts } from '../src/lib/demo/seed'
@@ -272,5 +272,69 @@ describe('⑧ 낱말과 컨테이너', () => {
     const out = html()
     expect(out).toMatch(/class="scroll-x"><table/)
     expect(out).toMatch(/scroll-x[^>]*><pre/)
+  })
+})
+
+// ---------------------------------------------------------------------
+//  ⑨ 밑의 절도 이해되게 (2026-09-10 저녁 · 사용자: 「저 섹션 말고도 밑의 섹션들도 저렇게 이해되게」)
+//
+//  ★ 왜 — 비개발자 심사위원이 읽는 층은 제품의 문장이 아니라 그 밑의 한 줄이다: 낱말 풀이 · 「예를 들면」 · 「쉬운 말로」 ·
+//    「AI → 사람」 손바뀜 · 「무슨 일이 일어나나」 · 「개발자만 합니다」. 그 층이 빠지면 화면은 다시 개발자 전용이다.
+//    숫자를 말하는 줄(터미널 밑의 넷)은 녹화와 대조한다 — 설명이 녹화보다 오래되면 첫 화면이 거짓말을 한다.
+// ---------------------------------------------------------------------
+describe('⑨ 밑의 절도 이해되게 — 낱말 풀이 · 예를 들면 · 쉬운 말로 · 손바뀜 · 무슨 일이 일어나나', () => {
+  const out = html()
+
+  it('02 — 낱말 풀이 셋과 주장마다 「예를 들면」이 그려진다', () => {
+    expect(WHY_NOT_GIT.glossary.length).toBeGreaterThanOrEqual(2)
+    for (const g of WHY_NOT_GIT.glossary) {
+      expect(out).toContain(g.term)
+      expect(out).toContain(g.means)
+    }
+    for (const c of WHY_NOT_GIT.cards) expect(out).toContain(c.example)
+  })
+
+  it('03 — 걸음마다 「쉬운 말로」와 누가·어디서 칩이 그려진다', () => {
+    for (const s of HOW_IT_WORKS.steps) {
+      expect(out).toContain(s.plain)
+      expect(s.actors.length).toBeGreaterThanOrEqual(1)
+      for (const a of s.actors) expect(out).toContain(a)
+    }
+  })
+
+  it('04 — 줄마다 「누가 → 누가」 손바뀜이 있고, 사람이 반드시 한 자리에 있다 (결정은 사람 · P4)', () => {
+    for (const r of AI_USE.rows) {
+      expect(r.hand.length).toBeGreaterThanOrEqual(2)
+      for (const h of r.hand) expect(out).toContain(h.does)
+      expect(r.hand.some((h) => h.who === 'human'), r.head).toBe(true)
+    }
+    for (const label of Object.values(AI_USE.who)) expect(out).toContain(label)
+  })
+
+  it('05 — 「무슨 일이 일어나나」 넷이 녹화와 같은 숫자를 말한다 (v0.9.0 → v1.0.0 · 파일 8개 · 근거 n / 3)', () => {
+    const text = TERMINAL_REPLAY.legend.join(' ')
+    const frames = REPLAY_FRAMES.map((f) => f.text).join(' ')
+    for (const tok of ['v0.9.0', 'v1.0.0', '파일 8개']) {
+      expect(frames, `녹화에 ${tok} 가 없다`).toContain(tok)
+      expect(text, `설명에 ${tok} 가 없다`).toContain(tok)
+    }
+    expect(text).toContain(`/ ${TERMINAL_REPLAY.milestone.done_when.length}`)
+    for (const l of TERMINAL_REPLAY.legend) expect(out).toContain(l)
+    for (const g of TERMINAL_REPLAY.glossary) expect(out).toContain(g.means)
+  })
+
+  it('06 — 표의 칸마다 「쉬운 말로」가 있고 줄 수가 같다', () => {
+    expect(TRUST_BOUNDARY.knows.plain).toHaveLength(TRUST_BOUNDARY.knows.rows.length)
+    expect(TRUST_BOUNDARY.unknown.plain).toHaveLength(TRUST_BOUNDARY.unknown.rows.length)
+    for (const p of [...TRUST_BOUNDARY.knows.plain, ...TRUST_BOUNDARY.unknown.plain]) expect(out).toContain(p)
+  })
+
+  it('07 — 「개발자만 합니다」 한 줄과 줄마다 어디서(터미널 / Claude Code 안)가 그려지고, Skill 줄은 Claude Code 안이다', () => {
+    expect(out).toContain(INSTALL_STEPS.who)
+    for (const l of INSTALL_STEPS.lines) {
+      expect(out).toContain(l.where)
+      //  `/contextops:…` 는 터미널이 아니라 Claude Code 안이다 — 어디서가 틀리면 첫 시도가 실패한다 (2026-09-09 감사).
+      expect(l.where, l.cmd).toBe(l.cmd.startsWith('/contextops:') ? 'Claude Code 안' : '터미널')
+    }
   })
 })
