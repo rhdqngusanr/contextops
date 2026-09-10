@@ -14,11 +14,12 @@ export const SITE = {
   name: 'ContextOps',
   eyebrow: 'Team Context for Claude Code',
   /** 랜딩 제목과 같은 문장이다 (`LANDING_HEAD.title` 이 이 값을 읽는다). */
-  tagline: '팀의 지식과 Claude의 기억을 같은 방향으로',
+  //  2026-09-10 사용자 지시: 「팀의 기억과 AI 기억을 한 방향으로」 결로 — 짧고 곧게. 「지식」→「기억」, 「같은」→「한」.
+  tagline: '팀의 기억과 AI의 기억을 한 방향으로',
   /** 랜딩 부제와 같은 문장이다 (`LANDING_HEAD.subtitle`). 링크 미리보기의 설명 칸에 그대로 나간다. */
   description:
-    '팀장이 승인한 목표·로드맵·결정을 모든 팀원의 Claude Code에 같은 버전으로 배포하고, '
-    + '로드맵이 실제로 진행되는지 근거와 함께 보여줍니다.',
+    '팀장이 승인한 목표·로드맵·결정이 모든 팀원의 Claude Code에 같은 버전으로 닿고, '
+    + '진행은 근거와 함께 보입니다.',
   /** `public/og.png` — `pnpm --filter web og:image` 가 헤드리스 Chrome 으로 그린다 (1200×630). */
   ogImage: { path: '/og.png', width: 1200, height: 630 },
   /** `public/icon.svg` — 탭·북마크 아이콘. 색은 DESIGN_BRIEF §3 의 토큰 값 그대로다. */

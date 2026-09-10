@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { NO_ACCOUNT_HINT, authConfig, oauthUrl, sendMagicLink } from '../../lib/web/auth'
 import { PRIVACY_LABEL, PRIVACY_PATH } from '../../lib/web/privacy'
+import { SITE } from '../../lib/web/site'
 
 // =====================================================================
 //  화면 2 — 로그인 (SPEC §9 · DESIGN_BRIEF §4 「화면 2」)
@@ -51,7 +52,8 @@ function LoginCard() {
       <div className="card center-card">
         <div className="col-tight">
           <h1 className="text-section">ContextOps</h1>
-          <p className="ink-3">팀의 지식과 Claude의 기억을 같은 방향으로.</p>
+          {/* 한 줄의 정본은 `lib/web/site.ts` — 랜딩·<head>·OG 와 같은 문장이다. */}
+          <p className="ink-3">{SITE.tagline}.</p>
         </div>
 
         {config === null ? (
