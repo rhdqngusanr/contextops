@@ -86,6 +86,16 @@ push: `375be95..504bb66` 일곱 커밋 → Vercel 이 새 벌을 냈다 — 랜�
 스톱모션은 6초 → 3.4초(프레임 0.45초 × 4 + 완성 1.6초). og.png 다시 그림. 캡처 1440·375 가로 밀림 0 (`evidence/…/after/`).
 `tools/ci.ps1`: 2026-09-10 16:09 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **일곱째 판 — 심사위원 3분 코스** (사용자: 「데모 예시들이 하나도 안 와닿고 심사위원 입장에서 3분 만에 이해 못 할 것 같다」 · 「샘플 데모 텍스트도 이해하기 쉽게」).
+진단: 게스트가 [샘플 팀으로 둘러보기]를 누르면 Context 표 30줄에 떨어졌고, 무엇을 봐야 하는지 아무 화면도 말하지 않았다.
+만든 것: 코스의 정본 `lib/web/tour.ts`(걸음 넷 — 정리 → Pack Explorer → Roadmap → Sync · 걸음마다 「볼 것」 한 문장) · 게스트 배너가 둘째 줄에 걸음 넷(지금 걸음은 잉크로),
+셋째 줄에 「볼 것」을 띄운다 · `/demo` 가 첫 걸음(정리 — AI 가 찾은 충돌 3건)으로 보낸다(`DEMO_ENTRY_PATH`) · 랜딩의 「3분이면 됩니다」 절이 같은 네 걸음의 캡처를 싣고
+캡처 밑에 「볼 것」을 그대로 적는다(`e2e/plan.ts` `PUBLISHED` = 코스의 네 화면) · 제출서에 「심사위원이 3분에 보는 길」 절.
+게이트: `test/web-demo-tour.test.ts` — 걸음 path ⊂ 화면 표 · 차례 = 표의 차례 · 문장의 숫자(충돌 3건 · 기기 14대 · 근거 n / 3)가 씨앗과 같다 · `/demo` = 첫 걸음 · 캡처 = 걸음.
+샘플 텍스트: 항목 **제목**만 비유 대신 하는 일로(「밖으로 나가는 문」→「결제사 호출」 · 「돈이 쌓이는 장부」→「원장 — 돈의 기록」 · 목표 둘 · 열린 질문 넷을 질문 꼴로) —
+`quote` 는 문서 원문이라 그대로(관통이 원문 대조) · 마일스톤 제목은 `goals.md` 인용이라 그대로. 랜딩 Before/After 는 「결제사(PSP) 호출…」 「문서에는 …」 「코드에는 …」로 풀었다(README·SUBMISSION 동기).
+`tools/ci.ps1`: 2026-09-10 17:18 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

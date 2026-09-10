@@ -44,8 +44,10 @@ export const DEMO_BASE = `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug
  *   저장소에 들어가는 바이너리라 한 장이 늘면 매 관통마다 그만큼 diff 가 는다.
  */
 const PUBLISHED: Record<string, string> = {
-  context: '팀 Context 화면 — 항목마다 원문 근거가 옆에 붙어 있다',
+  //  🔴 3분 코스(`lib/web/tour.ts`)의 네 걸음과 같은 화면·같은 차례다 — `test/web-demo-tour.test.ts` 가 대조한다.
+  review: '정리 화면 — AI 가 찾은 충돌이 카드로 서 있고, 결정 버튼은 사람 몫이다',
   packs: 'Pack Explorer — 발행된 CLAUDE.md 와 그 줄의 출처',
+  roadmap: 'Roadmap — 마일스톤이 근거로 채워지고, 완료 확인은 사람이 한다',
   sync: 'Sync 화면 — 기기마다 어느 버전이 적용됐나',
 }
 

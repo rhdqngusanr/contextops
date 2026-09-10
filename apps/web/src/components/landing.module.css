@@ -323,6 +323,7 @@
   border-radius: var(--radius);
 }
 .shotCap { padding: 0 var(--sp-2) var(--sp-1); }
+.shotSee { color: var(--ink-2); line-height: 1.6; }
 
 /* ── 신뢰 경계 표 — 머리는 표제체, 아래 굵은 잉크 줄 ── */
 .trust :global(.table) th {

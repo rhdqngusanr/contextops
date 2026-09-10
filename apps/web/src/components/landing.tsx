@@ -3,6 +3,7 @@ import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 import replayRecording from '../../../../fixtures/replay/sync.json'
 import shotsManifest from '../../public/shots/manifest.json'
 import { ART } from '../lib/web/art'
+import { DEMO_TOUR } from '../lib/web/tour'
 import { SITE } from '../lib/web/site'
 import styles from './landing.module.css'
 import { TerminalReplay } from './terminal-replay'
@@ -73,19 +74,20 @@ export const LANDING_HEAD = {
 export const BEFORE_AFTER = {
   //  2026-09-10 사용자: 「문구가 안 와닿는다」 — 카드 위에 한 줄로 **무엇을 보고 있는지**부터 말한다.
   caption: '같은 질문을 같은 팀 두 사람의 Claude Code 에 던졌습니다.',
-  prompt: 'PSP 호출이 실패하면 몇 번까지 재시도해?',
+  //  PSP = 결제사. 심사위원이 결제 개발자가 아니어도 읽히게 괄호로 푼다 (2026-09-10).
+  prompt: '결제사(PSP) 호출이 실패하면 몇 번까지 재시도해?',
   before: {
     title: '지금 — 사람마다 다른 답',
     answers: [
       {
         who: 'A',
         source: 'paylab-docs/goals.md §3.1',
-        text: '최대 5회까지 지수 백오프로 재시도합니다. 고정 간격은 금지라고 되어 있습니다.',
+        text: '문서에는 최대 5회, 지수 백오프로 재시도하라고 되어 있습니다. 고정 간격은 금지입니다.',
       },
       {
         who: 'B',
         source: 'paylab-api/src/payment/retry.ts:11',
-        text: 'MAX_RETRY = 3 이고 간격은 500ms 고정입니다.',
+        text: '코드에는 MAX_RETRY = 3, 간격은 500ms 고정으로 되어 있습니다.',
       },
     ],
     foot: 'A 는 문서를, B 는 코드를 읽었습니다. 둘 다 틀리지 않았는데 팀은 둘로 갈립니다.',
@@ -110,9 +112,10 @@ export const BEFORE_AFTER = {
  *   여기 표에는 **절 제목과 설명**만 있다 — 파일 이름은 한 자도 없다.
  */
 export const PRODUCT_TOUR = {
-  title: '실제로 도는 화면입니다',
-  lead: '아래 세 장은 시안이 아니라 검증 시나리오가 실제 앱을 띄워 방금 찍은 캡처입니다. '
-    + '위의 [샘플 팀으로 둘러보기]를 누르면 같은 화면을 직접 만질 수 있습니다.',
+  //  2026-09-10 사용자: 「데모 예시가 안 와닿고 심사위원이 3분에 이해 못 할 것 같다」 — 이 절이 **3분 코스**가 됐다.
+  //  제목·설명은 코스의 정본(`lib/web/tour.ts`)에서 오고, 캡처 넉 장은 코스의 네 걸음과 같은 화면이다 (시험이 대조).
+  title: DEMO_TOUR.title,
+  lead: `${DEMO_TOUR.lead} 위의 [샘플 팀으로 둘러보기]를 누르면 같은 순서로 안내가 붙습니다.`,
   foot: '캡처는 검증 시나리오(tools/walkthrough.ps1)의 shots 단계가 매번 다시 찍습니다 — 낡은 그림이 남지 않습니다.',
 } as const
 
@@ -438,6 +441,12 @@ function ProductShots({ index }: { index: string }) {
             />
             <figcaption className={`col-tight ${styles.shotCap}`}>
               <span className="ink">{shot.alt}</span>
+              {/* 코스의 「볼 것」 — 이 캡처가 코스의 몇째 걸음이고 무엇을 봐야 하는지 (정본 `lib/web/tour.ts`). */}
+              {(() => {
+                const at = DEMO_TOUR.stops.findIndex((t) => shot.src.endsWith(`/${t.path}`))
+                const stop = DEMO_TOUR.stops[at]
+                return stop ? <span className={styles.shotSee}><span className="mono">{at + 1}</span> {stop.see}</span> : null
+              })()}
               {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
               <span className="meta mono">{shot.src}</span>
             </figcaption>

@@ -68,9 +68,13 @@ export const DEMO_TENANT = {
   resetUtcOffsetHours: 9,
 } as const
 
-/** 게스트가 들어가서 처음 보는 화면. `/demo` 가 여기로 보낸다. */
+/**
+ * 게스트가 들어가서 처음 보는 화면. `/demo` 가 여기로 보낸다.
+ * 2026-09-10: Context(표 30줄)가 아니라 **3분 코스의 첫 걸음**(정리 — AI 가 찾은 충돌)이다. 정본은 `lib/web/tour.ts`.
+ */
 export const DEMO_ENTRY_PATH =
-  `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug}/context`
+  //  ⚠ 글자로 적는다 — 이 파일은 import 가 없다(머리말). `test/web-demo-tour.test.ts` 가 `DEMO_TOUR.stops[0].path` 와 같은지 잰다.
+  `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug}/review`
 
 /**
  * 배너 문구 (DESIGN_BRIEF §4 「게스트 데모 배너」).

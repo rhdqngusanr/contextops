@@ -407,6 +407,32 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   font-size: var(--fs-table);
 }
 
+/* 3분 코스 — 게스트 배너의 둘째 줄 (`components/demo-banner.tsx` · 정본 `lib/web/tour.ts`).
+   걸음 넷이 알약으로 서고, 지금 걸음은 잉크로 채운다. 셋째 줄은 지금 걸음의 「볼 것」 한 문장. */
+.tour {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.tour-title { color: var(--ink); font-weight: 600; }
+.tour-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.tour-step:hover { text-decoration: none; color: var(--ink); border-color: var(--ink-3); }
+.tour-step[aria-current='step'] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.tour-see { font-size: var(--fs-body); line-height: 1.6; }
+
 /* 가운데 한 장짜리 화면 (로그인 · 팀/프로젝트 만들기) */
 .center {
   min-height: 100vh;

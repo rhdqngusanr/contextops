@@ -371,22 +371,24 @@ export function withRepo(entry: PaylabDraft, code: FixtureCode, quote: string): 
  *    ⚠ 순서를 컴파일러에서 고치려 하지 마라 — 정렬은 P4 의 심장이고 지금 맞다
  *      (`compiler/src/sort.ts`). 순서를 말하는 자리는 `priority` 하나다.
  */
+//  2026-09-10 사용자: 「샘플 데모 텍스트도 이해하기 쉽게」 — 제목은 비유(「밖으로 나가는 문」) 대신 하는 일 그대로.
+//  ⚠ 제목만 바꿨다. `quote` 는 문서 원문이라 그대로다 (관통이 원문에 있는지 센다).
 export const ARCHITECTURE = [
   ['item_arch_payment', 'payment', '승인·매입을 맡는다. PSP 를 직접 부르지 않고 psp 를 거친다',
     '- `payment` 는 승인·매입을 맡는다. PSP 를 직접 부르지 않고 `psp` 를 거친다.',
-    '결제가 들어오는 입구'],
+    '결제 요청 처리'],
   ['item_arch_psp', 'psp', '바깥으로 나가는 유일한 자리다. 재시도·타임아웃이 여기 산다',
     '- `psp` 만이 바깥으로 나간다. 재시도·타임아웃이 사는 자리다.',
-    '밖으로 나가는 문'],
+    '결제사 호출'],
   ['item_arch_webhook', 'webhook', 'PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다',
     '- `webhook` 은 PSP 콜백을 받아 상태를 맞춘다. 서명 검증이 먼저다.',
-    '밖에서 돌아오는 문'],
+    '결제사 알림 수신'],
   ['item_arch_refund', 'refund', '환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다',
     '- `refund` 는 환불을 맡는다. 원장에 반대 부호로 한 줄을 더한다.',
-    '돈을 되돌리는 길'],
+    '환불 처리'],
   ['item_arch_ledger', 'ledger', 'append only 다. 여기서 계산이 틀리면 정산이 틀린다',
     '- `ledger` 는 append only. 여기서 계산이 틀리면 정산이 틀린다.',
-    '돈이 쌓이는 장부'],
+    '원장 — 돈의 기록'],
 ] as const satisfies readonly (readonly [
   id: string, component: string, responsibility: string, quote: string, title: string,
 ])[]
@@ -423,7 +425,7 @@ const ARCHITECTURE_TOP_PRIORITY = 70
  *    (`GOAL_TOP_PRIORITY - i`). 같은 값이면 컴파일러가 제목 코드포인트 순으로 세운다.
  */
 export const GOALS = [
-  ['item_goal_success_rate', '장애 구간에도 승인이 선다', 'G2 와 서로 당긴다 — 재시도를 늘리면 승인률은 오르지만 환불이 늦어지고, 둘이 부딪히면 G2 가 우선이다.',
+  ['item_goal_success_rate', '장애 중에도 결제 승인이 된다', 'G2 와 서로 당긴다 — 재시도를 늘리면 승인률은 오르지만 환불이 늦어지고, 둘이 부딪히면 G2 가 우선이다.',
     '| G1 | 결제 승인 성공률 99.5% | PSP 장애 구간을 포함한 주간 성공률 | 2026-12-31 |',
     '결제 승인 성공률 99.5%', 'PSP 장애 구간을 포함한 주간 성공률', '2026-12-31'],
   ['item_goal_refund_sla', '환불이 하루 안에 끝난다', '접수에서 종결까지의 시각 차이 p95 로 잰다.',
@@ -434,7 +436,7 @@ export const GOALS = [
   //     이미 나르고, G2 의 body 는 식(`refund.closed_at - …`)을 사람 말로 푼 것이다.
   //     ⚠ **여기를 지어내서 채우지 마라.** 지표를 말만 바꿔 되풀이하는 줄이 되고, 그것이
   //       169·170 이 지운 바로 그 모양이다. roadmap 셋이 이미 빈 `body` 다.
-  ['item_goal_settlement_zero', '정산이 원장과 맞는다', '',
+  ['item_goal_settlement_zero', '정산 금액이 장부와 맞는다', '',
     '| G3 | 정산 오차 0원 | 일 배치 후 원장 대사 차액 | 2026-12-31 |',
     '정산 오차 0원', '일 배치 후 원장 대사 차액', '2026-12-31'],
 ] as const satisfies readonly (readonly [
@@ -524,16 +526,16 @@ const MILESTONE_TOP_PRIORITY = 70
  * ★ 질문을 하나 더하는 절차: **이 표에 한 줄.** `quote` 는 §5 의 불릿 첫 문장 그대로.
  */
 export const OPEN_QUESTIONS = [
-  ['item_oq_exhausted_payment', '재시도를 다 쓴 결제의 처리',
+  ['item_oq_exhausted_payment', '재시도를 다 쓴 결제는 어떻게 하나',
     '재시도를 다 쓰고도 실패한 결제를 **자동 취소할지, 수동 확인 큐에 넣을지** 못 정했다.',
     '재시도를 다 쓰고도 실패한 결제를 자동 취소하나, 수동 확인 큐에 넣나?'],
-  ['item_oq_partial_refund_sla', '부분 환불의 SLA',
+  ['item_oq_partial_refund_sla', '부분 환불도 24시간 안에 끝내야 하나',
     '**부분 환불도 24시간 SLA 인지** 정하지 않았다.',
     '부분 환불도 24시간 SLA 인가?'],
-  ['item_oq_webhook_redelivery', '웹훅 재전송을 받아 주는 기간',
+  ['item_oq_webhook_redelivery', '결제사 알림 재전송을 며칠까지 받아 주나',
     '웹훅 **재전송을 며칠까지 받아 줄지** 정하지 않았다.',
     '웹훅 재전송을 며칠까지 받아 주나? (멱등 테이블 보관 기간과 같이 정한다)'],
-  ['item_oq_rounding_rule', '외화 정산의 반올림 규칙',
+  ['item_oq_rounding_rule', '외화 정산은 어떻게 반올림하나',
     '정산 화폐가 KRW 외로 늘어날 때 **반올림 규칙**을 정하지 않았다.',
     '정산 화폐가 KRW 외로 늘어날 때 반올림 규칙은 무엇인가?'],
 ] as const satisfies readonly (readonly [id: string, title: string, quote: string, question: string])[]
