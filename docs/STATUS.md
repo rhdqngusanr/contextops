@@ -51,6 +51,14 @@ AI 산출물의 통계적 기본값으로 짚는다. 배포돼 있던 화면이 
 이미지: 사용자가 「코드로 그린 그림 금지 · Higgsfield 금지 · 로컬 Codex CLI 로」 — `codex exec`(imagegen 스킬)로 히어로 후보 4장을 뽑아 보였고
 ④ 클레이 카드(한 Pack → 세 기기)를 골랐다 (`public/art/hero-pack.webp` 16KB · 다음 커밋).
 
+🔴 **셋째 판 — 그림이 들어갔다** (사용자: 「로티·이미지 넣어도 되니 여러 방향으로」 → 「절대 코드로 이미지는 만들지 마」 → 「힉스필드 말고 로컬 Codex CLI 로」).
+`codex exec -s workspace-write --json -o last.md - < prompt.txt`(imagegen 스킬 · gpt-6-astra)로 히어로 후보 4장(나침반 바늘 · 한 줄 드로잉 · 화살표 격자 · 클레이 카드)을 뽑아
+보였고 사용자가 **④ 클레이 카드(한 Pack → 세 기기)** 를 골랐다 · 「어떻게」 절에도 그림을 넣기로 해 같은 스타일로 단계 그림 3장을 `-i hero-4.png` 참고로 더 뽑았다.
+잰 것: `public/art/*.webp` 넷 = 68KB(1536×1024 · q86) · 정본 `lib/web/art.ts`(경로·크기·alt) · 히어로 6/6 에 그림, Before/After 는 아래 두 열 ·
+「어떻게」는 그림 위 + 번호·글 아래 3열(`ART.steps` 가 단계 수와 같을 때만) · `web-landing-shots` ⑤ 는 `/shots/` `<img>` 만 센다(그림은 별도) ·
+가로 밀림 0(1440·375) · DESIGN_BRIEF §3 「그림」 절 신설 · 원본 PNG·프롬프트는 `evidence/…/art/`.
+`tools/ci.ps1`: 2026-09-10 14:18 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

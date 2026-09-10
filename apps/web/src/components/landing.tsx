@@ -2,6 +2,7 @@ import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 
 import replayRecording from '../../../../fixtures/replay/sync.json'
 import shotsManifest from '../../public/shots/manifest.json'
+import { ART } from '../lib/web/art'
 import { SITE } from '../lib/web/site'
 import styles from './landing.module.css'
 import { TerminalReplay } from './terminal-replay'
@@ -332,7 +333,11 @@ function Hero() {
           <span className={styles.note}>{LANDING_HEAD.note}</span>
         </div>
       </div>
-      <BeforeAfter />
+      <figure className={styles.heroArt}>
+        {/* 그림의 정본은 `lib/web/art.ts` — 사람이 고른 생성 이미지다 (코드로 그린 그림이 아니다 · DESIGN_BRIEF §3 「그림」).
+            첫 화면이라 즉시 받는다. 폭·높이는 정본이 준다 — 늦게 떠도 자리가 안 튄다. */}
+        <img src={ART.hero.src} width={ART.hero.width} height={ART.hero.height} alt={ART.hero.alt} loading="eager" />
+      </figure>
     </section>
   )
 }
@@ -423,24 +428,41 @@ function WhyNotGit({ index }: { index: string }) {
 }
 
 function HowItWorks({ index }: { index: string }) {
+  //  단계 그림은 정본(`ART.steps`)이 단계 수와 같을 때만 — 하나라도 빠지면 글로만 선다 (반쪽 시리즈를 보이지 않는다).
+  const art = ART.steps.length === HOW_IT_WORKS.steps.length ? ART.steps : null
+  const steps = (
+    <ol className={art ? styles.stepsArt : styles.steps}>
+      {HOW_IT_WORKS.steps.map((s, i) => {
+        const a = art?.[i]
+        return (
+          <li key={s.head} className={art ? styles.stepArt : styles.step}>
+            {a ? <img className={styles.stepImg} src={a.src} width={a.width} height={a.height} alt={a.alt} loading="lazy" /> : null}
+            {/* 번호는 `<ol>` 이 이미 말한다 — 모노 숫자는 그림이다. */}
+            <span className={styles.stepNo} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+            <div className={styles.stepBody}>
+              <h3>{s.head}</h3>
+              <p>{s.body}</p>
+            </div>
+          </li>
+        )
+      })}
+    </ol>
+  )
+  if (art) {
+    return (
+      <section className={styles.section} aria-labelledby="landing-how">
+        <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} />
+        {steps}
+      </section>
+    )
+  }
   return (
     <section className={styles.section} aria-labelledby="landing-how">
       <div className={styles.split}>
         <div className={styles.splitHead}>
           <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} />
         </div>
-        <ol className={styles.steps}>
-          {HOW_IT_WORKS.steps.map((s, i) => (
-            <li key={s.head} className={styles.step}>
-              {/* 번호는 `<ol>` 이 이미 말한다 — 모노 숫자는 그림이다. */}
-              <span className={styles.stepNo} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-              <div className={styles.stepBody}>
-                <h3>{s.head}</h3>
-                <p>{s.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        {steps}
       </div>
     </section>
   )
@@ -559,6 +581,8 @@ export function Landing() {
       </header>
       <main className={styles.main}>
         <Hero />
+        {/* Before/After 는 히어로 바로 밑의 두 열이다 — 그림이 오른쪽 자리를 가져가서 내려왔다 (문구·시험은 그대로). */}
+        <BeforeAfter />
         {/* 🔴 제품 화면이 히어로 **바로 아래**다 — 심사위원은 10초 안에 판단하고, 그때 제품 화면이
             첫 스크롤 안에 있어야 한다 (FINDINGS 131 의 증상이 그것이었다). 차례는 `SECTIONS` 하나다. */}
         {SECTIONS.map((s, i) => (

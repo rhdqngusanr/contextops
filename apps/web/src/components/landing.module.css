@@ -61,9 +61,10 @@
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: calc(var(--sp-7) * 1.5);
-  align-items: start;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  gap: calc(var(--sp-7) * 1.25);
+  /* 오른쪽이 그림이라 글을 그림의 세로 가운데에 맞춘다. */
+  align-items: center;
   /* 위는 눈금 하나 — 제품 화면이 첫 스크롤(900px) 안에 걸리게 (FINDINGS 131). */
   padding: var(--sp-6) 0 var(--sp-5);
 }
@@ -97,11 +98,21 @@
 .ctaRow :global(.btn-primary) { font-size: var(--fs-body); padding: var(--sp-3) var(--sp-5); }
 .ctaRow :global(.btn-primary)::after { content: '→'; margin-left: var(--sp-2); }
 
-/* ── Before/After — 두 장을 세로로 ── */
+/* 히어로 그림 — 사람이 고른 생성 이미지 (`lib/web/art.ts`). 옅은 회색 바탕이라 괘선 하나로 「액자」를 만든다. */
+.heroArt { margin: 0; }
+.heroArt img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+}
+
+/* ── Before/After — 히어로 밑의 두 열 ── */
 
 .compare {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--sp-4);
 }
 
@@ -233,6 +244,31 @@
 }
 .step:last-child { border-bottom: 1px solid var(--line); }
 .stepNo { font-family: var(--font-mono); font-size: var(--fs-label); color: var(--ink-3); padding-top: var(--sp-1); min-width: var(--sp-5); }
+
+/* 단계 그림이 있을 때 — 세 칸 가로. 그림이 위, 번호와 글이 아래 (`ART.steps` 가 단계 수와 같을 때만). */
+.stepsArt {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-5);
+}
+.stepArt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-2) var(--sp-3);
+  align-items: start;
+}
+.stepImg {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  margin-bottom: var(--sp-2);
+}
 .stepBody { display: flex; flex-direction: column; gap: var(--sp-1); }
 .step h3 { font-size: var(--fs-sub); }
 .step p { color: var(--ink-2); line-height: 1.65; }
@@ -307,7 +343,7 @@
 
 /* 좁은 폭 — 비대칭 격자가 전부 한 열로. */
 @media (max-width: 900px) {
-  .hero, .split, .def, .shotRow { grid-template-columns: 1fr; }
+  .hero, .split, .def, .shotRow, .compare, .stepsArt { grid-template-columns: 1fr; }
   .hero { gap: var(--sp-6); padding-top: var(--sp-6); }
   .title { font-size: var(--fs-hero-narrow); }
   .main { padding: var(--sp-5) var(--sp-4) var(--sp-6); gap: var(--sp-7); }

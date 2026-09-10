@@ -91,8 +91,8 @@ describe('④ 근거로 적는 주소가 실재하는 화면이다', () => {
 describe('⑤ 그려 보면 그림이 다 있다', () => {
   const out = html()
 
-  it('`<img>` 가 장수만큼 있다', () => {
-    expect([...out.matchAll(/<img\b/g)].length).toBe(PRODUCT_SHOTS.length)
+  it('캡처 `<img>`(`/shots/`) 가 장수만큼 있다 — 그림(`/art/` · `lib/web/art.ts`)은 여기 안 센다', () => {
+    expect([...out.matchAll(/<img\b[^>]*src="\/shots\//g)].length).toBe(PRODUCT_SHOTS.length)
   })
 
   it.each(PRODUCT_SHOTS.map((s) => [s.file, s] as const))('%s 가 alt·width·height 와 함께 실린다', (_file, shot) => {
