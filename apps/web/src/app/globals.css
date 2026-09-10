@@ -427,6 +427,11 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .key-line.jargon { font-size: var(--fs-table); color: var(--ink-2); }
 .key-line.jargon b { font-weight: 600; color: var(--ink); }
 .ctx-rev { color: var(--ink-3); }
+/* 카드 머리의 사람 말 한 문장 — 두 쪽이 무엇인지 · 무엇을 정해 달라는지 (`conflictSentence`). */
+.conflict-plain { font-size: var(--fs-body); color: var(--ink-2); line-height: 1.65; }
+/* 심각도 높음 — 카드 왼쪽에 빨간 괘선, 칩은 옅은 빨강 면 (색 배경이 붙는 유일한 칩). 사용자: 「심각도 높으면 좀 더 눈에 잘 보여야」 (2026-09-10 저녁). */
+.conflict-card[data-severity='high'] { border-left: 3px solid var(--bad); }
+.chip.chip-strong { background: var(--bad-bg); color: var(--bad); padding: var(--sp-1) var(--sp-2); font-weight: 600; }
 
 /* 3분 코스 — 게스트 배너의 둘째 줄 (`components/demo-banner.tsx` · 정본 `lib/web/tour.ts`).
    걸음 넷이 알약으로 서고, 지금 걸음은 잉크로 채운다. 셋째 줄은 지금 걸음의 「볼 것」 한 문장. */

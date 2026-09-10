@@ -7,6 +7,7 @@ import {
 } from '@contextops/schema'
 import type { WriteDoor } from '../lib/web/actor'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
+import { FALLBACK_NAMES, conflictSentence, sideNames, type SideNames } from '../lib/web/conflict-sides'
 import { ITEM_GIST_KEY, itemGist } from '../lib/web/item-gist'
 import { dateText } from '../lib/web/time'
 import {
@@ -57,7 +58,7 @@ import { ErrorState } from './states'
  * 🔴 **카드의 첫 줄 — 이 카드가 무엇인지 한 문장** (2026-09-10 · 사용자: 「이런 섹션의 내용이 눈에 확 안 들어와서 뭐를 뜻하는지 안 느껴져」).
  *
  * ★ 왜 — 카드가 AI 가 낸 긴 문단으로 시작하면 사람은 「무엇과 무엇이 부딪히는지」를 문단 안에서 찾아야 한다.
- *   종류마다 한 문장을 먼저 세우고, 그 밑에 A·B 의 **제목**을 나란히 놓는다. AI 의 질문 문단은 그 아래로 내려간다.
+ *   종류마다 한 문장을 먼저 세우고, 그 밑에 두 쪽의 **제목**을 나란히 놓는다. AI 의 질문 문단은 그 아래로 내려간다.
  * ⚠ 종류가 늘면 여기 한 줄 — `Record` 라 빠뜨리면 타입이 막는다. 문장은 판단이 아니라 **모양**만 말한다
  *   (「A 가 맞다」를 여기서 말하지 않는다 — 결정은 사람 몫 · DESIGN_BRIEF §2-4).
  */
@@ -70,20 +71,30 @@ export const CONFLICT_HEADLINE: Record<ConflictKind, string> = {
   seed_question: '팀에게 묻는 질문입니다',
 }
 
+/**
+ * 버튼 문구의 **틀**. `{a}`·`{b}` 자리에 두 쪽의 이름(`lib/web/conflict-sides.ts` — 「지금 규칙」「옛 규칙」「문서」「코드」…)이 들어간다
+ * (2026-09-10 저녁 · 「A, B 로 하지 말고」). 「쪽」 뒤에 조사를 붙여 이름의 받침과 무관하다. 채우는 문은 `fillSides()` 하나다.
+ */
 export const CONFLICT_SIDES: Record<DetectedConflictKind, { a: string; b: string }> = {
-  contradiction: { a: 'A가 맞음', b: 'B가 맞음' },
+  contradiction: { a: '{a} 쪽이 맞음', b: '{b} 쪽이 맞음' },
   //  ⚠ 「맞음」이 아니라 「최신」이다 — 오래됨은 옳고 그름이 아니라 **시점**의 문제다
   //    (`CONFLICT_KIND_RULES.stale.hint`: 「어느 쪽이 맞는지는 판단하지 마라」).
-  stale: { a: 'A가 최신', b: 'B가 최신' },
+  stale: { a: '{a} 쪽이 최신', b: '{b} 쪽이 최신' },
   //  ⚠ 「합침」이 아니라 **「만 남김」**이다 — 서버가 하는 일은 진 쪽을 `deprecated` 로
   //    보내는 것뿐이고 (`RESOLUTION_ITEM_OUTCOME`), 이긴 쪽으로 **아무것도 옮겨 오지
   //    않는다.** 「A로 합침」이라고 물으면 사람은 B 에만 있던 문장이 A 에 남는다고 믿고
   //    누른다 — 그리고 되돌릴 문이 없다 (`:resolve` 가 이미 처리된 충돌을 400 으로 막는다).
   //    표가 정말로 합치게 되면(진 쪽 `source_refs` 를 이긴 쪽에 이어 붙이면) 그때
   //    문구를 되돌려라 — `test/web-conflict-card.test.ts` 가 그 자리를 잡아 준다 (FINDINGS 76).
-  duplicate: { a: 'A만 남김', b: 'B만 남김' },
+  duplicate: { a: '{a} 쪽만 남김', b: '{b} 쪽만 남김' },
   //  DESIGN_BRIEF §4 화면 4 「문서↔코드 카드」의 문장 그대로다.
-  doc_vs_code: { a: '문서가 맞음 (코드 수정 필요)', b: '코드가 맞음 (문서 갱신)' },
+  doc_vs_code: { a: '문서 쪽이 맞음 (코드 수정 필요)', b: '코드 쪽이 맞음 (문서 갱신)' },
+}
+
+/** 틀에 두 쪽의 이름을 채운다 — 버튼과 「정했습니다 — 「…」」가 같은 문을 쓴다. */
+export function fillSides(kind: DetectedConflictKind, names: SideNames): { a: string; b: string } {
+  const tpl = CONFLICT_SIDES[kind]
+  return { a: tpl.a.replace('{a}', names.a.short), b: tpl.b.replace('{b}', names.b.short) }
 }
 
 /**
@@ -115,7 +126,7 @@ export const CHOICE_LABEL: Record<ConflictChoice, (sides: { a: string; b: string
  *   함수를 쓸 수 있고, 그래야 「누르기 전에 약속한 것」과 「누른 뒤에 말하는 것」이
  *   어긋날 수 없다.
  */
-export function choiceItemEffect(conflict: ConflictRow, choice: ConflictChoice): string {
+export function choiceItemEffect(conflict: ConflictRow, choice: ConflictChoice, names: SideNames = FALLBACK_NAMES): string {
   const rule = RESOLUTION_ITEM_OUTCOME[choice]
   if (rule === null) return '항목은 그대로'
   const outcome = itemOutcomeOf({
@@ -125,9 +136,9 @@ export function choiceItemEffect(conflict: ConflictRow, choice: ConflictChoice):
     choice,
   })
   if (outcome === undefined) return '바꿀 항목이 적혀 있지 않음'
-  //  본문에 붙인 이름과 **같은 이름**으로 부른다 — 여기만 「B」면 사람은 위에서 B 를 찾는다.
-  const label = sideLabel(conflict.b_item_id !== null, rule.loser)
-  return `${label} 항목 → 「${ITEM_STATUS_CHIP[outcome.status].label}」`
+  //  본문에 붙인 이름과 **같은 이름**으로 부른다 — 한쪽뿐이면 그냥 「항목」이다.
+  const label = conflict.b_item_id !== null ? `${names[rule.loser].short} 항목` : '항목'
+  return `${label} → 「${ITEM_STATUS_CHIP[outcome.status].label}」`
 }
 
 /** 카드가 그리는 것 전부. 상태는 화면(`review/page.tsx`)이 들고 여기는 **읽기만** 한다. */
@@ -188,7 +199,8 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
   const rule = CONFLICT_KIND_RULES[conflict.kind]
 
   return (
-    <article className="card pad col">
+    //  🔴 심각도 높음은 카드 자체가 말한다 — 왼쪽 빨간 괘선 (`data-severity` · globals.css). 사용자: 「심각도 높으면 좀 더 눈에 잘 보여야」.
+    <article className="card pad col conflict-card" data-severity={conflict.severity ?? undefined}>
       <div className="row-between wrap">
         <div className="row wrap">
           <ConflictKindChip kind={conflict.kind} />
@@ -204,6 +216,12 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
       {/* 첫 줄은 「이 카드가 무엇인지」 한 문장이다 (`CONFLICT_HEADLINE`). 탐지 카드는 그 밑에 A·B 의 제목이 나란히 서고,
           AI 의 질문 문단은 그 아래로 간다 — 질문 카드(탐지가 아닌 것)는 질문 자체가 본문이라 크게 둔다. */}
       <h3 className="conflict-head">{CONFLICT_HEADLINE[conflict.kind]}</h3>
+      {/* 사람 말 한 문장 — 두 쪽이 **무엇인지**와 **무엇을 정해 달라는지** (`conflictSentence`). 두 항목이 다 있을 때만. */}
+      {rule.detected && state.a !== null && state.b !== null ? (
+        <p className="conflict-plain">
+          {conflictSentence(conflict.kind as DetectedConflictKind, sideNames(state.a, state.b), state.a.title, state.b.title)}
+        </p>
+      ) : null}
       {rule.detected ? null : <p className="ink text-section">{conflict.question}</p>}
 
       {/* 표를 읽어서 무엇을 그릴지 고른다 — 여기에 종류 이름이 나오지 않는다. */}
@@ -261,10 +279,12 @@ export function blockedText(state: Pick<ConflictCardState, 'door'>): string {
 const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNode> = {
   items: (state) => {
     const two = state.conflict.b_item_id !== null
+    //  두 쪽의 이름은 항목의 사실에서 온다 (`sideNames`) — 「A」「B」가 아니다. 한쪽뿐이면 「근거」다.
+    const names = sideNames(state.a, state.b)
     return (
       <div className={two ? 'sides' : 'row items-start wrap'}>
-        <ItemSide label={sideLabel(two, 'a')} itemId={state.conflict.a_item_id} item={state.a} />
-        {two ? <ItemSide label={sideLabel(two, 'b')} itemId={state.conflict.b_item_id} item={state.b} /> : null}
+        <ItemSide label={two ? names.a.long : '근거'} itemId={state.conflict.a_item_id} item={state.a} />
+        {two ? <ItemSide label={names.b.long} itemId={state.conflict.b_item_id} item={state.b} /> : null}
       </div>
     )
   },
@@ -272,8 +292,8 @@ const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNod
     const two = state.conflict.b_ref !== null
     return (
       <div className="col-tight">
-        {state.conflict.a_ref ? <RefSide label={sideLabel(two, 'a')} refValue={state.conflict.a_ref} /> : null}
-        {state.conflict.b_ref ? <RefSide label={sideLabel(two, 'b')} refValue={state.conflict.b_ref} /> : null}
+        {state.conflict.a_ref ? <RefSide label={two ? '첫째 원문' : '근거'} refValue={state.conflict.a_ref} /> : null}
+        {state.conflict.b_ref ? <RefSide label="둘째 원문" refValue={state.conflict.b_ref} /> : null}
       </div>
     )
   },
@@ -284,16 +304,6 @@ const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNod
   none: () => (
     <p className="meta">가리킬 문서도 항목도 없습니다 — 답이 그대로 근거입니다.</p>
   ),
-}
-
-/**
- * 어긋난 쪽에 붙는 이름. **두 쪽이 있을 때만 A·B 다.**
- * ⚠ 한쪽뿐인 카드(열린 질문)에 「A」를 붙이면 사람은 B 를 찾는다 — 없는 짝을 그리는 것과 같다.
- *   눈으로 읽고 고쳤다: docs/evidence/2026-09-04-screen4/ 첫 판 ⑪.
- */
-function sideLabel(two: boolean, side: 'a' | 'b'): string {
-  if (!two) return '근거'
-  return side === 'a' ? 'A' : 'B'
 }
 
 /** 어긋난 두 항목 중 한쪽. **근거를 제목 옆에 같이 낸다** (DESIGN_BRIEF §2-1 · P7). */
@@ -355,7 +365,8 @@ function RefSide({ label, refValue }: { label: string; refValue: NonNullable<Con
 
 function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHandlers }) {
   //  ⚠ `detected` 인 종류만 여기 온다 — 그 좁힘의 근거는 `DetectedConflictKind` 표다.
-  const sides = CONFLICT_SIDES[state.conflict.kind as DetectedConflictKind]
+  const names = sideNames(state.a, state.b)
+  const sides = fillSides(state.conflict.kind as DetectedConflictKind, names)
   //  이 카드의 선택 중 **정말로 항목을 폐기하는 것**이 하나라도 있나. 표에서 센다.
   const retires = CONFLICT_CHOICES.some((choice) => itemOutcomeOf({
     kind: state.conflict.kind,
@@ -390,7 +401,7 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
             {/* 🔴 버튼 밑에 **그 버튼이 항목에 하는 일**을 적는다 (FINDINGS 74).
                 27바퀴가 세운 「저장 전에는 약속하지 않는다」와 부딪히지 않는다 — 그건
                 *안 일어날 일을 약속하지 마라*는 뜻이고, 이건 표가 **일어난다고 정한 일**이다. */}
-            <span className="meta">{choiceItemEffect(state.conflict, choice)}</span>
+            <span className="meta">{choiceItemEffect(state.conflict, choice, names)}</span>
           </div>
         ))}
         {state.busy ? <span className="meta">저장하는 중입니다…</span> : null}
@@ -494,6 +505,7 @@ function Decided({ state }: { state: ConflictCardState }) {
   const rule = CONFLICT_KIND_RULES[conflict.kind]
   const choice = conflict.resolution?.choice
   const note = conflict.resolution?.note
+  const names = sideNames(state.a, state.b)
 
   return (
     <div className="col-tight">
@@ -503,13 +515,13 @@ function Decided({ state }: { state: ConflictCardState }) {
           눈으로 읽고 고쳤다: docs/evidence/2026-09-04-screen4/ 첫 판 ⑩. */}
       <p className="ink-ok">
         ✓ {rule.detected && choice
-          ? `정했습니다 — 「${CHOICE_LABEL[choice](CONFLICT_SIDES[conflict.kind as DetectedConflictKind])}」`
+          ? `정했습니다 — 「${CHOICE_LABEL[choice](fillSides(conflict.kind as DetectedConflictKind, names))}」`
           : '답을 저장했습니다.'}
       </p>
       {/* 🔴 **무엇이 일어났는지**를 같이 낸다 (FINDINGS 74). 누르기 전에 보여 준
           것과 **같은 함수**라 둘이 어긋날 수 없다. 「정했습니다」만 남기면 사람은 자기가
           방금 항목 하나를 Pack 밖으로 보낸 것을 모른다. */}
-      {rule.detected && choice ? <p className="meta">{choiceItemEffect(conflict, choice)}</p> : null}
+      {rule.detected && choice ? <p className="meta">{choiceItemEffect(conflict, choice, names)}</p> : null}
       {/* 답변 문장이 곧 결정의 근거다 — 라우트가 그것을 `resolution.note` 에 남긴다. */}
       {note ? <p className="meta">{note}</p> : null}
       {/* ⚠ `null`(질문이 아니거나 아직 안 저장)과 `[]`(저장했는데 안 생겼다)를 가른다. */}

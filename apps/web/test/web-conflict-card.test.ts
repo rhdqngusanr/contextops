@@ -1,6 +1,8 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+
+import { sideNames } from '../src/lib/web/conflict-sides'
 import {
   ANSWER_MAX, ANSWER_SLOT_KEYS, ANSWER_SLOTS,
   CONFLICT_ANCHORS, CONFLICT_CHOICES, CONFLICT_KINDS, CONFLICT_KIND_RULES,
@@ -9,7 +11,7 @@ import {
 } from '@contextops/schema'
 
 import {
-  CHOICE_LABEL, CONFLICT_SIDES, ConflictCard, choiceItemEffect,
+  CHOICE_LABEL, CONFLICT_SIDES, ConflictCard, choiceItemEffect, fillSides,
   type ConflictCardHandlers, type ConflictCardState,
 } from '../src/components/conflict-card'
 import type { ConflictCard as ConflictRow } from '../src/lib/web/queries'
@@ -280,10 +282,13 @@ describe('🔴 종류마다 갈리는 것이 표에서만 온다', () => {
   it('🔴 탐지 4종의 카드가 **서로 다른 버튼 문구**를 그린다 — 종류가 실제로 화면을 바꾼다', () => {
     const rendered = (['contradiction', 'stale', 'duplicate', 'doc_vs_code'] as DetectedConflictKind[])
       .map((k) => text(draw({ conflict: row(k) })))
+    //  버튼 문구는 틀(`CONFLICT_SIDES`)에 두 쪽의 이름을 채운 것이다 — 기본 fixture 는 문서 vs 코드다.
+    const names = sideNames(base().a, base().b)
     for (const [i, t] of rendered.entries()) {
       const kind = (['contradiction', 'stale', 'duplicate', 'doc_vs_code'] as DetectedConflictKind[])[i]!
-      expect(t, kind).toContain(CONFLICT_SIDES[kind].a)
-      expect(t, kind).toContain(CONFLICT_SIDES[kind].b)
+      expect(t, kind).toContain(fillSides(kind, names).a)
+      expect(t, kind).toContain(fillSides(kind, names).b)
+      expect(t, `${kind}: 틀의 자리표가 그대로 나갔다`).not.toContain('{a}')
     }
     expect(new Set(rendered).size).toBe(rendered.length)
   })
@@ -385,19 +390,41 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
     })
     expect(html).not.toContain('<button')
     const t = text(html)
-    expect(t).toContain('B가 최신')
+    expect(t).toContain('코드 쪽이 최신')
     expect(t).toContain('8/4 가 최신')
   })
 
-  it('🔴 한쪽뿐인 카드에 「A」를 붙이지 않는다 — 없는 짝을 찾게 만든다', () => {
-    //  열린 질문은 `needsB: false` 라 가리키는 원문이 하나다.
+  it('🔴 두 쪽을 「A」「B」로 부르지 않는다 — 무엇인지로 부른다 (2026-09-10 저녁 · 「A, B 로 하지 말고」)', () => {
+    //  열린 질문은 `needsB: false` 라 가리키는 원문이 하나다 — 「근거」 하나뿐.
     const one = text(draw({ conflict: row('open_question'), a: null, b: null }))
     expect(one).toContain('근거')
-    expect(one).not.toMatch(/(^| )A( |$)/)
-    //  두 쪽이 있는 카드는 A·B 를 붙인다 — 그래야 버튼의 「A가 맞음」이 무엇인지 안다.
+    expect(one).not.toMatch(/(^| )[AB]( |$)/)
+    //  기본 fixture 는 문서(a) vs 코드(b) — 이름이 사실에서 온다. 머리 문장이 두 제목을 「」로 부르고 무엇을 정해 달라는지 말한다.
     const two = text(draw())
-    expect(two).toMatch(/(^| )A( |$)/)
-    expect(two).toMatch(/(^| )B( |$)/)
+    const names = sideNames(base().a, base().b)
+    expect(names.a.long).toBe('문서가 말하는 것')
+    expect(names.b.long).toBe('코드가 말하는 것')
+    expect(two).toContain(names.a.long)
+    expect(two).toContain(names.b.long)
+    expect(two).toContain(`「${base().a!.title}」`)
+    expect(two).toContain('정해 주세요')
+    expect(two).not.toMatch(/(^| )[AB]( |$)/)
+    //  옛 문서(stale 태그)가 한쪽이면 「지금 적용 중인 규칙」 vs 「옛 문서에 남은 규칙」.
+    const stale = sideNames(item(), item({ id: 'old', tags: ['stale'], status: 'draft', source_refs: [DOC_REF] }))
+    expect(stale.a.long).toBe('지금 적용 중인 규칙')
+    expect(stale.b.long).toBe('옛 문서에 남은 규칙')
+    //  가를 사실이 없으면 첫째·둘째 — 지어내지 않는다.
+    const same = sideNames(item(), item({ id: 'twin' }))
+    expect([same.a.short, same.b.short]).toEqual(['첫째', '둘째'])
+  })
+
+  it('심각도 높음은 카드가 스스로 말한다 — `data-severity="high"` 와 진한 칩', () => {
+    const high = draw()
+    expect(high).toContain('data-severity="high"')
+    expect(high).toContain('chip-strong')
+    const medium = draw({ conflict: row('contradiction', { severity: 'medium' }) })
+    expect(medium).toContain('data-severity="medium"')
+    expect(medium).not.toContain('chip-strong')
   })
 
   it('🔴 owner 가 아니면 결정 버튼을 그리지 않는다 — 누르면 403 인 버튼을 두지 않는다', () => {
@@ -432,12 +459,12 @@ describe('🔴 결정이 항목에 무엇을 하는지 카드가 말한다 (FIND
     //  ⚠ 표에서 뽑은 기대값과 카드가 같은 말을 하는지 본다 — 카드가 손으로 적은
     //     문구를 갖고 있으면 표를 고쳤을 때 여기서 갈린다.
     for (const choice of CONFLICT_CHOICES) {
-      expect(t, choice).toContain(choiceItemEffect(base().conflict, choice))
+      expect(t, choice).toContain(choiceItemEffect(base().conflict, choice, sideNames(base().a, base().b)))
     }
     //  🔴 그리고 **지금 표가 무엇인지**를 글자로 못 박는다. 표를 고치면 이 줄이
     //     빨개지고, 고치는 사람은 화면 문구가 같이 바뀌는 것을 눈으로 본다.
-    expect(t, 'a 를 고르면 B 가 진다').toContain('B 항목 → 「폐기」')
-    expect(t, 'b 를 고르면 A 가 진다').toContain('A 항목 → 「폐기」')
+    expect(t, 'a(문서) 를 고르면 코드 쪽이 진다').toContain('코드 항목 → 「폐기」')
+    expect(t, 'b(코드) 를 고르면 문서 쪽이 진다').toContain('문서 항목 → 「폐기」')
     expect(t, 'both·dismiss 는 항목을 안 건드린다').toContain('항목은 그대로')
   })
 
@@ -474,7 +501,7 @@ describe('🔴 결정이 항목에 무엇을 하는지 카드가 말한다 (FIND
     const decided = text(draw({
       conflict: row('contradiction', { status: 'resolved', resolution: { choice: 'a' } }),
     }))
-    expect(decided).toContain('B 항목 → 「폐기」')
+    expect(decided).toContain('코드 항목 → 「폐기」')
     //  ⚠ 결정된 카드에는 「되돌릴 수 없습니다」를 다시 말하지 않는다 — 버튼이 이미 없다.
     expect(decided).not.toContain('되돌릴 수 없습니다')
 

@@ -245,9 +245,10 @@ export const SOURCE_DOCUMENT_KIND_KEYS = SOURCE_DOCUMENT_KINDS
 //  그리는 쪽 — 표를 읽기만 한다
 // ---------------------------------------------------------------------
 
-export function Chip({ spec, title }: { spec: ChipSpec; title?: string }) {
+export function Chip({ spec, title, strong }: { spec: ChipSpec; title?: string; strong?: boolean }) {
+  //  `strong` — 색 배경이 붙는 유일한 칩 (심각도 높음). 「눈에 잘 보여야 한다」는 그 하나에만 (2026-09-10 저녁).
   return (
-    <span className={`chip tone-${spec.tone}`} title={title}>
+    <span className={`chip tone-${spec.tone}${strong ? ' chip-strong' : ''}`} title={title}>
       <span className="chip-dot" aria-hidden="true" />
       {spec.label}
     </span>
@@ -278,7 +279,8 @@ export function ConflictKindChip({ kind }: { kind: ConflictKind }) {
 }
 
 export function ConflictSeverityChip({ severity }: { severity: ConflictSeverity }) {
-  return <Chip spec={CONFLICT_SEVERITY_CHIP[severity]} />
+  //  높음만 진하다 — 카드의 왼쪽 빨간 괘선(`.conflict-card[data-severity='high']`)과 짝이다.
+  return <Chip spec={CONFLICT_SEVERITY_CHIP[severity]} strong={severity === 'high'} />
 }
 
 export function MilestoneChip({ status }: { status: MilestoneStatus }) {

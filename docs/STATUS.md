@@ -134,6 +134,13 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 시험: `web-jargon.test.ts`(모든 풀이가 데모 씨앗 글자에 실제로 나온다 · 차례·한 번씩 · 조각) · `web-tables` 는 아이콘 대신 「라벨이 사람 말 + `icon` 키 없음」 · 후보·Sync·제안 시험의 기호 기대 삭제 · 전체 1042 초록. DESIGN_BRIEF §3 칩·CtxTag·표 · §4 ⑨.
 `tools/ci.ps1`: 2026-09-10 22:59 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열셋째 판 — 「A·B」를 무엇인지로 부른다 · 심각도 높음이 보인다** (사용자: 「A, B 로 하지 말고 좀 더 쉽게 와닿는 설명 없어? 카드 A 카드 B 니까 이해가 안 되네」 · 「심각도 높으면 좀 더 눈에 잘 보여야 할 것 같아」).
+이름: `lib/web/conflict-sides.ts` 가 항목의 **사실**(근거 종류 코드/문서 · 폐기 표시 태그·상태·제목 · 적용 중/초안 · 갱신 시각)에서 두 쪽의 이름을 고른다 — 「지금 적용 중인 규칙 / 옛 문서에 남은 규칙」 「문서가 말하는 것 / 코드가 말하는 것」 「새로 올라온 초안」 「더 최근에 고친 규칙 / 먼저 있던 규칙」, 가를 수 없으면 「첫째·둘째」(지어내지 않는다). 데모 카드 셋은 전부 「지금 적용 중인 규칙」 vs 「옛 문서에 남은 규칙」.
+문장: 머리 밑에 사람 말 한 문장(`conflictSentence`) — 「지금 적용 중인 규칙은 「…」, 옛 문서에 남은 규칙은 「…」입니다. 둘 중 어느 쪽을 따를지 정해 주세요.」(종류별 꼬리 `CONFLICT_ASK`). 버튼은 틀 `{a} 쪽이 맞음`·`{a} 쪽이 최신`·`{a} 쪽만 남김`(「쪽」 뒤 조사라 받침 무관 · `fillSides`) → 「지금 규칙 쪽이 맞음」「옛 규칙 쪽이 맞음」. 버튼 밑 「옛 규칙 항목 → 「폐기」」 · 결정 뒤 「정했습니다 — 「…」」도 같은 이름.
+심각도: `data-severity` 로 카드가 스스로 말한다 — 높음은 왼쪽 3px 빨간 괘선 + 옅은 빨강 칩(`.chip-strong` — 색 배경이 붙는 유일한 칩). 정리 화면은 이미 심각도순 정렬.
+시험: `web-conflict-card` — 이름이 사실에서 오는지(문서 vs 코드 · stale · 첫째/둘째) · 「A」「B」 홀로 안 나감 · 틀 자리표 안 나감 · 심각도 표시. 전체 1043 초록. DESIGN_BRIEF §4 화면 4 · ⑩.
+`tools/ci.ps1`: 2026-09-10 23:52 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).
