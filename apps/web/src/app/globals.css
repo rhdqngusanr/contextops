@@ -407,6 +407,16 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   font-size: var(--fs-table);
 }
 
+/* 충돌 카드 (`components/conflict-card.tsx`) — 첫 줄 한 문장 · A/B 두 쪽을 나란히 · 제목이 주장이다 (2026-09-10). */
+.conflict-head { font-size: var(--fs-section); }
+.sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+}
+.side-title { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); line-height: 1.35; }
+
 /* 3분 코스 — 게스트 배너의 둘째 줄 (`components/demo-banner.tsx` · 정본 `lib/web/tour.ts`).
    걸음 넷이 알약으로 서고, 지금 걸음은 잉크로 채운다. 셋째 줄은 지금 걸음의 「볼 것」 한 문장. */
 .tour {
@@ -658,6 +668,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
        (둘 다 진짜 브라우저로 봤다). */
   .row { flex-wrap: wrap; }
   .drawer, .pack-tree, .pack-side { width: 100%; flex: 1 1 100%; }
+  /* 충돌 카드의 A/B 두 쪽도 좁은 폭에서는 위아래로. */
+  .sides { grid-template-columns: 1fr; }
   /* 팔레트 버튼이 막대의 남은 폭을 다 먹지 않게 — 이름 쪽이 먼저 줄어든다. */
   .nav .palette-trigger { flex: 0 0 auto; }
   .main { padding: var(--sp-4); }

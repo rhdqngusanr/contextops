@@ -265,13 +265,13 @@ function ItemTable({
         <tr>
           <th>타입</th>
           <th>제목</th>
-          <th>scope</th>
+          <th>범위</th>
           <th>상태</th>
-          <th>confidence</th>
+          <th>근거 확신</th>
           <th>근거</th>
           {/* DESIGN_BRIEF §4 화면 5 의 표 순서 그대로다 — 근거 수 다음이 「갱신」이다. */}
           <th>갱신</th>
-          <th>rev</th>
+          <th>개정</th>
         </tr>
       </thead>
       <tbody>

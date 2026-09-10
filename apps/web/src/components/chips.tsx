@@ -37,10 +37,11 @@ export type ChipSpec = { icon: string; label: string; tone: Tone }
  *   여섯째 칩이 영원히 화면 코드에 남는다.
  */
 export const SYNC_CHIP: Record<SyncStatus, ChipSpec> = {
-  applied: { icon: '✓', label: 'applied', tone: 'ok' },
-  outdated: { icon: '⚠', label: 'outdated', tone: 'warn' },
-  modified: { icon: '✎', label: 'modified', tone: 'warn' },
-  manual: { icon: '⇩', label: 'manual', tone: 'neutral' },
+  //  라벨은 사람 말이다 (2026-09-10 · 「비개발자가 봐도」). 값(SPEC §6 의 영어 상태 이름)은 그대로고 툴팁(`SYNC_MEANING`)이 뜻을 푼다.
+  applied: { icon: '✓', label: '적용됨', tone: 'ok' },
+  outdated: { icon: '⚠', label: '옛 버전', tone: 'warn' },
+  modified: { icon: '✎', label: '손으로 고침', tone: 'warn' },
+  manual: { icon: '⇩', label: '수동 적용', tone: 'neutral' },
   //  보고가 없는 기기다 — 서버가 매긴다. 「offline」이라고 쓰지 않는다 (DESIGN_BRIEF §5).
   unknown: { icon: '?', label: '보고 없음', tone: 'neutral' },
 }
@@ -73,9 +74,10 @@ export const ITEM_STATUS_CHIP: Record<ItemStatus, ChipSpec> = {
 
 /** 근거의 확실성 3단계 (SPEC §3). 낮을수록 사람이 봐야 하므로 low 가 warn 이다. */
 export const CONFIDENCE_CHIP: Record<Confidence, ChipSpec> = {
-  high: { icon: '●', label: 'high', tone: 'ok' },
-  medium: { icon: '◐', label: 'medium', tone: 'neutral' },
-  low: { icon: '○', label: 'low', tone: 'warn' },
+  //  라벨은 사람 말이다 (2026-09-10) — 「근거가 얼마나 확실한가」.
+  high: { icon: '●', label: '근거 확실', tone: 'ok' },
+  medium: { icon: '◐', label: '근거 보통', tone: 'neutral' },
+  low: { icon: '○', label: '근거 약함', tone: 'warn' },
 }
 
 /**

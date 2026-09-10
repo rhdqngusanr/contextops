@@ -37,7 +37,7 @@ export const DEMO_TOUR = {
     },
     {
       path: 'sync',
-      see: '기기 14대가 어느 버전을 받았는지 보입니다. 같은 버전은 같은 해시라 「적용됐다」가 그대로 검증됩니다.',
+      see: '기기 14대가 어느 버전을 받았는지 보입니다. 받은 파일이 정말 같은지 확인표(해시)로 검증되니 「적용됐다」를 믿을 수 있습니다.',
     },
   ],
 } as const satisfies { title: string; lead: string; stops: readonly TourStop[] }

@@ -158,7 +158,7 @@ export const HOW_IT_WORKS = {
     },
     {
       head: '승인해서 발행한다',
-      body: '팀장이 승인한 항목만 CLAUDE.md 한 벌로 묶여 버전이 붙습니다. 모든 팀원의 Claude Code 가 같은 버전·같은 해시를 받습니다. 승인 뒤에는 AI 가 끼어들지 않습니다.',
+      body: '팀장이 승인한 항목만 CLAUDE.md 한 벌로 묶여 버전이 붙습니다. 모든 팀원의 Claude Code 가 같은 버전을 받고, 받은 파일이 정말 같은지 확인표(해시)로 검증됩니다. 승인 뒤에는 AI 가 끼어들지 않습니다.',
     },
     {
       head: '진행이 근거와 함께 보인다',
@@ -185,7 +185,7 @@ export const AI_USE = {
     },
     {
       head: '승인 뒤에는 쓰지 않습니다',
-      body: '발행과 배포는 AI 없이 결정론적으로 돕니다. 같은 스냅샷은 언제나 같은 파일·같은 해시라서, 어느 기기가 무엇을 받았는지 그대로 검증됩니다.',
+      body: '발행과 배포는 AI 없이 정해진 규칙대로만 돕니다. 같은 승인본은 언제나 똑같은 파일이 되고, 어느 기기가 무엇을 받았는지 확인표(해시)로 검증됩니다.',
     },
     {
       head: '개발자의 AI 는 보고만 합니다',
@@ -207,7 +207,7 @@ export const AI_USE = {
  */
 export const TERMINAL_REPLAY = {
   title: '개발자 쪽에서는 이렇게 보입니다',
-  lead: 'Claude Code 를 열면 훅이 새 버전을 알리고, /contextops:sync 한 줄로 받습니다. '
+  lead: 'Claude Code 를 열면 설치된 플러그인이 새 버전을 알리고, /contextops:sync 한 줄로 받습니다. '
     + '작업을 마치면 AI 가 근거와 함께 보고하고, 오른쪽 Roadmap 이 같은 순간 바뀝니다.',
   source: '배포되는 플러그인을 실제로 돌려 남긴 출력입니다 (fixtures/replay/sync.json). '
     + '사이의 작업은 생략했고, 타이핑과 줄 사이 간격만 읽을 수 있게 늘렸습니다.',
@@ -235,20 +235,20 @@ export const TRUST_BOUNDARY = {
   knows: {
     head: '서버가 받는 것',
     rows: [
-      '팀·프로젝트 ID',
-      '구조화된 항목 (제목·규칙·마일스톤)',
+      '팀·프로젝트 이름과 ID',
+      '정리된 항목 (제목·규칙·마일스톤)',
       '팀장이 직접 등록한 문서 원문',
-      '경로 · 줄 번호 · 커밋 해시',
-      '버전 · manifest 해시',
+      '파일 경로 · 줄 번호 · 커밋 번호',
+      '버전 · 확인표(해시)',
     ],
   },
   unknown: {
     head: '절대 받지 않는 것',
     rows: [
       '저장소 코드 본문',
-      '환경변수 · secret',
-      '개인 CLAUDE.local.md',
-      'Auto Memory',
+      '환경변수 · 비밀값(secret)',
+      '개인 설정 파일(CLAUDE.local.md)',
+      'Claude 의 개인 메모리(Auto Memory)',
       'Claude 대화 내용',
     ],
   },

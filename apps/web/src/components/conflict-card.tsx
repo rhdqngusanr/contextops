@@ -3,7 +3,7 @@ import {
   ANSWER_MAX, ANSWER_SLOT_KEYS, ANSWER_SLOTS, CONFLICT_CHOICES, CONFLICT_KIND_RULES, itemOutcomeOf,
   RESOLUTION_ITEM_OUTCOME, RESOLUTION_NOTE_MAX,
   type AnswerSlotKey, type ConflictAnchor, type ConflictChoice, type ContextItemView,
-  type DetectedConflictKind,
+  type ConflictKind, type DetectedConflictKind,
 } from '@contextops/schema'
 import type { WriteDoor } from '../lib/web/actor'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
@@ -51,6 +51,23 @@ import { ErrorState } from './states'
  *   여기 `b` 를 비우지 말고 `CONFLICT_KIND_RULES[kind].needsB` 를 읽어 B 버튼을 빼라 —
  *   빈 문자열은 「이름 없는 버튼」이 되어 화면에 그대로 뜬다.
  */
+/**
+ * 🔴 **카드의 첫 줄 — 이 카드가 무엇인지 한 문장** (2026-09-10 · 사용자: 「이런 섹션의 내용이 눈에 확 안 들어와서 뭐를 뜻하는지 안 느껴져」).
+ *
+ * ★ 왜 — 카드가 AI 가 낸 긴 문단으로 시작하면 사람은 「무엇과 무엇이 부딪히는지」를 문단 안에서 찾아야 한다.
+ *   종류마다 한 문장을 먼저 세우고, 그 밑에 A·B 의 **제목**을 나란히 놓는다. AI 의 질문 문단은 그 아래로 내려간다.
+ * ⚠ 종류가 늘면 여기 한 줄 — `Record` 라 빠뜨리면 타입이 막는다. 문장은 판단이 아니라 **모양**만 말한다
+ *   (「A 가 맞다」를 여기서 말하지 않는다 — 결정은 사람 몫 · DESIGN_BRIEF §2-4).
+ */
+export const CONFLICT_HEADLINE: Record<ConflictKind, string> = {
+  contradiction: '두 규칙이 서로 다르게 말합니다',
+  stale: '한쪽이 오래된 규칙입니다',
+  duplicate: '같은 규칙이 둘입니다',
+  doc_vs_code: '문서와 코드가 다르게 말합니다',
+  open_question: '답이 필요한 질문입니다',
+  seed_question: '팀에게 묻는 질문입니다',
+}
+
 export const CONFLICT_SIDES: Record<DetectedConflictKind, { a: string; b: string }> = {
   contradiction: { a: 'A가 맞음', b: 'B가 맞음' },
   //  ⚠ 「맞음」이 아니라 「최신」이다 — 오래됨은 옳고 그름이 아니라 **시점**의 문제다
@@ -182,10 +199,20 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
         {rule.byAi ? <AiBadge /> : null}
       </div>
 
-      <p className="ink text-section">{conflict.question}</p>
+      {/* 첫 줄은 「이 카드가 무엇인지」 한 문장이다 (`CONFLICT_HEADLINE`). 탐지 카드는 그 밑에 A·B 의 제목이 나란히 서고,
+          AI 의 질문 문단은 그 아래로 간다 — 질문 카드(탐지가 아닌 것)는 질문 자체가 본문이라 크게 둔다. */}
+      <h3 className="conflict-head">{CONFLICT_HEADLINE[conflict.kind]}</h3>
+      {rule.detected ? null : <p className="ink text-section">{conflict.question}</p>}
 
       {/* 표를 읽어서 무엇을 그릴지 고른다 — 여기에 종류 이름이 나오지 않는다. */}
       {ANCHOR_BODY[rule.anchor](state)}
+
+      {rule.detected ? (
+        <div className="col-tight">
+          <span className="label">AI 가 올린 질문</span>
+          <p className="ink-2">{conflict.question}</p>
+        </div>
+      ) : null}
 
       {state.error ? <ErrorState error={state.error} /> : null}
 
@@ -233,7 +260,7 @@ const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNod
   items: (state) => {
     const two = state.conflict.b_item_id !== null
     return (
-      <div className="row items-start wrap">
+      <div className={two ? 'sides' : 'row items-start wrap'}>
         <ItemSide label={sideLabel(two, 'a')} itemId={state.conflict.a_item_id} item={state.a} />
         {two ? <ItemSide label={sideLabel(two, 'b')} itemId={state.conflict.b_item_id} item={state.b} /> : null}
       </div>
@@ -287,9 +314,10 @@ function ItemSide({ label, itemId, item }: { label: string; itemId: string | nul
         </>
       ) : (
         <>
+          {/* 제목이 먼저, 크게 — 두 쪽을 나란히 놓고 견주는 자리라 제목이 곧 주장이다. */}
           <div className="row wrap">
             <TypeIcon type={item.type} />
-            <span className="ink">{item.title}</span>
+            <span className="side-title">{item.title}</span>
           </div>
           <div className="row wrap">
             <CtxTag itemId={item.id} revision={item.revision} />

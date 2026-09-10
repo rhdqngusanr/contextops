@@ -96,6 +96,14 @@ push: `375be95..504bb66` 일곱 커밋 → Vercel 이 새 벌을 냈다 — 랜�
 `quote` 는 문서 원문이라 그대로(관통이 원문 대조) · 마일스톤 제목은 `goals.md` 인용이라 그대로. 랜딩 Before/After 는 「결제사(PSP) 호출…」 「문서에는 …」 「코드에는 …」로 풀었다(README·SUBMISSION 동기).
 `tools/ci.ps1`: 2026-09-10 17:18 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **여덟째 판 — 충돌 카드의 차례 · 비개발자 문장** (사용자: 「이런 섹션의 내용이 눈에 확 안 들어와서 뭐를 뜻하는지 안 느껴져」 · 「비개발자가 봐도 이해할 수 있는 텍스트, 메인·데모 전부」).
+카드: 첫 줄에 종류별 한 문장(`CONFLICT_HEADLINE` — 「두 규칙이 서로 다르게 말합니다」…) → A·B 두 쪽을 **나란히**(`.sides` · 좁은 폭은 위아래) · 각 쪽은 제목이 크게(`.side-title`) →
+AI 의 질문 문단은 「AI 가 올린 질문」으로 아래에 작게. 질문 카드(탐지가 아닌 것)는 질문이 본문이라 그대로 크게. 시험 16모양·A/B·anchor 셋 전부 초록.
+말: Sync 칩 applied/outdated/modified/manual → 적용됨/옛 버전/손으로 고침/수동 적용 · confidence high/medium/low → 근거 확실/보통/약함(값·아이콘·색은 그대로 · 시험은 값을 센다) ·
+Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜딩의 「해시」→「확인표(해시)」 · 「훅」→「설치된 플러그인」 · 「스냅샷」→「승인본」 · 신뢰 표의 secret/Memory/CLAUDE.local.md 에 한글 설명 ·
+코스 Sync 문장. README·SUBMISSION 거울(readme.test ①) 동기. 남긴 것: 근거 줄(문서 해시·글자 offset·코드 줄)은 P7 의 얼굴이라 그대로 — 대신 작게 선다.
+`tools/ci.ps1`: 2026-09-10 17:56 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).
