@@ -12,10 +12,10 @@ import type { ContextItemView, DetectedConflictKind } from '@contextops/schema'
 
 /**
  * `tone` — 이름의 **색** (2026-09-11 · 사용자: 「색깔이 다르게 하든지 뭔가 더 눈에 잘 보이면」). 제품의 칩과 같은 뜻의 색만 쓴다:
- * 지금 적용 중 = `ok`(「적용 중」 칩) · 옛 문서 = `warn`(「옛 버전」 칩) · 코드 = `code`(모노) · 나머지 = `neutral`.
+ * 지금 적용 중 = `ok`(「적용 중」 칩) · 옛 문서 = `warn`(「옛 버전」 칩) · 코드 = `code`(모노) · 제안이 바꾸자는 쪽 = `new`(잉크 괘선 · 제안 상세) · 나머지 = `neutral`.
  * ⚠ 색은 사실(적용 중인가 · 옛 문서인가)이지 판단(「맞다」)이 아니다 — 초록이 「맞는 쪽」을 뜻하지 않는다. 결정은 사람 몫이다.
  */
-export type SideTone = 'ok' | 'warn' | 'code' | 'neutral'
+export type SideTone = 'ok' | 'warn' | 'code' | 'neutral' | 'new'
 export type SideName = { readonly short: string; readonly long: string; readonly tone: SideTone }
 export type SideNames = { readonly a: SideName; readonly b: SideName }
 

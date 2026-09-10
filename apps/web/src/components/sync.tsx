@@ -5,6 +5,7 @@ import { SYNC_STATUSES, setupCommandLine, type SyncStatus } from '@contextops/sc
 import type { DeviceSyncRow, IssuedDevice, VersionRow } from '../lib/web/queries'
 import { dateText, sinceText } from '../lib/web/time'
 import { SYNC_CHIP, SYNC_MEANING, SyncChip } from './chips'
+import { FactLine, syncFact } from './fact-line'
 import { ErrorState, ReadOnlyNotice } from './states'
 
 // =====================================================================
@@ -137,19 +138,23 @@ export function SyncSummary({
   //    0 도 「셌다」는 뜻이 되지만, 여기서는 다섯 칸 중 하나다).
   const present = SYNC_STATUSES.filter((s) => counts[s] > 0)
   return (
-    <div className="row wrap">
-      {official === undefined
-        ? null
-        : official === null
-          ? <span className="meta">{OFFICIAL_HINT.none}</span>
-          : <span className="mono ink" title={official.snapshot_hash}>{OFFICIAL_HINT.of(official.semver)}</span>}
-      <span className="label">기기 {devices.length}</span>
-      {present.map((s) => (
-        <span key={s} className="row">
-          <SyncChip status={s} />
-          <span className="mono ink">{counts[s]}</span>
-        </span>
-      ))}
+    <div className="col-tight">
+      <div className="row wrap">
+        {official === undefined
+          ? null
+          : official === null
+            ? <span className="meta">{OFFICIAL_HINT.none}</span>
+            : <span className="mono ink" title={official.snapshot_hash}>{OFFICIAL_HINT.of(official.semver)}</span>}
+        <span className="label">기기 {devices.length}</span>
+        {present.map((s) => (
+          <span key={s} className="row">
+            <SyncChip status={s} />
+            <span className="mono ink">{counts[s]}</span>
+          </span>
+        ))}
+      </div>
+      {/* 사실 한 줄 (2026-09-11) — 표보다 먼저 「14대 중 9대가 최신 판」이 읽힌다. 문장의 정본은 `fact-line.tsx`. */}
+      <FactLine parts={syncFact(devices.map((d) => d.status))} />
     </div>
   )
 }
@@ -184,8 +189,9 @@ export function DeviceTable({
           </tr>
         </thead>
         <tbody>
+          {/* 볼 것이 있는 행(옛 판 · 손으로 고침)은 왼쪽 주황 괘선 — 칩의 tone 이 정한다 (2026-09-11). */}
           {sortDevices(devices).map((d) => (
-            <tr key={d.device_id}>
+            <tr key={d.device_id} data-tone={SYNC_CHIP[d.status].tone === 'warn' ? 'warn' : undefined}>
               <td className="ink">{d.user.name}</td>
               <td className="mono">{d.device_name}</td>
               {/* 🔴 버전을 못 들었으면 「—」다. `v0.0.0` 같은 기본값을 채우지 않는다 —

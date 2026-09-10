@@ -225,9 +225,10 @@ describe('「보고 없음」과 「근거 없음」을 섞지 않는다', () =>
     const html = row({ expanded: true })
     expect(html).toContain('보고 없음')
     expect(html).toContain('근거 2 · 8분 전')
-    //  상태를 색만으로 말하지 않는다 — 아이콘이 같이 나간다 (DESIGN_BRIEF §3).
-    expect(html).toContain('✓')
-    expect(html).toContain('○')
+    //  상태를 색만으로 말하지 않는다 — 낱말이 같이 나간다 (특수문자 기호는 없다 · 2026-09-11).
+    expect(html).toContain('근거 있음')
+    expect(html).toContain('근거 없음')
+    expect(html).not.toContain('✓')
   })
 
   it('접혀 있으면 완료 조건 줄이 없다 (아코디언)', () => {

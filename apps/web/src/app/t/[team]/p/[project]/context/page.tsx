@@ -18,6 +18,7 @@ import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ConfidenceChip, CtxTag, ITEM_STATUS_CHIP, ITEM_TYPE_LABEL, ItemStatusChip, SCOPE_KIND_LABEL, VersionPill } from '../../../../../../components/chips'
 import { Jargon } from '../../../../../../components/jargon'
+import { FactLine, itemsFact } from '../../../../../../components/fact-line'
 import { EvidenceList } from '../../../../../../components/evidence'
 import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
@@ -143,6 +144,8 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
       </header>
       {/* 사람 말 한 줄 (2026-09-10 저녁) — 이 표가 무엇인지, 무엇이 발행에 들어가는지. */}
       <p className="ink-2">팀이 승인한 목표·규칙·결정의 목록입니다. 「{ITEM_STATUS_CHIP.active.label}」인 항목만 발행에 들어갑니다.</p>
+      {/* 사실 한 줄 (2026-09-11) — 「30개 중 적용 중 27」이 표보다 먼저. 문장의 정본은 `fact-line.tsx`. */}
+      {items.result.state === 'ready' ? <FactLine parts={itemsFact(items.result.data.items.map((i) => i.status))} /> : null}
 
       {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
 
@@ -283,6 +286,7 @@ function ItemTable({
           <tr
             key={item.id}
             aria-selected={selected?.id === item.id}
+            data-tone={ITEM_STATUS_CHIP[item.status].tone === 'warn' ? 'warn' : undefined}
             onClick={() => onSelect(item)}
           >
             <td><span className="meta">{ITEM_TYPE_LABEL[item.type]}</span></td>

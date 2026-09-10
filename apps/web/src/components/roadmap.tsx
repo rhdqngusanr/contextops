@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { ProgressEventView, Roadmap, RoadmapMilestone } from '../lib/web/queries'
 import { STALE_REPORT_DAYS, isStaleReport, sinceText } from '../lib/web/time'
 import { PROGRESS_STATUS_LABEL, MilestoneChip, PROGRESS_SOURCE_LABEL } from './chips'
+import { FactLine, roadmapFact } from './fact-line'
 
 // =====================================================================
 //  화면 8 — Roadmap 이 그리는 조각들 (SPEC §9 화면 8 · DESIGN_BRIEF §4 「화면 8」)
@@ -68,33 +69,37 @@ export function RoadmapSummary({ roadmap, now }: { roadmap: Roadmap; now?: Date 
   const never = roadmap.milestones.filter((m) => m.last_report_at === null)
 
   return (
-    <div className="row wrap items-start">
-      <Tile label="마일스톤" value={roadmap.milestones.length} hint={`공식 v${roadmap.context_version ?? '—'} 기준`} />
-      <Tile
-        label="근거가 붙은 완료 조건"
-        value={`${cover.with} / ${cover.total}`}
-        hint={cover.total === 0 ? '완료 조건이 없습니다' : '어떤 파일 몇 번째 줄인지 근거가 붙은 것'}
-      />
-      {/* 🔴 0 도 그린다 — 「충돌 없음」을 안 보여 주면 사람은 아직 안 센 줄 안다. */}
-      <Tile
-        label="열린 충돌"
-        value={conflicts}
-        hint={conflicts === 0 ? '정리할 것이 없습니다' : '결정을 기다리는 카드 · 정리 화면에서 정합니다'}
-      />
-      <Tile
-        label={`${STALE_REPORT_DAYS}일 이상 보고 없음`}
-        value={stale.length}
-        //  ⚠ 「한 번도 보고 없음」과 섞지 않는다 — 그건 늦은 게 아니라 시작 전이다.
-        //  🔴 마일스톤이 0개일 때 「전부 한 번은 보고됐습니다」라고 쓰면 **거짓이다** —
-        //     아무것도 없는데 전부 됐다고 말한다. 덤프를 읽어서 잡았다 (⑮ 55바퀴).
-        hint={
-          roadmap.milestones.length === 0
-            ? '아직 마일스톤이 없습니다'
-            : never.length > 0
-              ? `아직 보고가 없는 마일스톤 ${never.length}`
-              : '전부 한 번은 보고됐습니다'
-        }
-      />
+    <div className="col-tight">
+      {/* 사실 한 줄 (2026-09-11) — 타일보다 먼저 「3개 중 무엇이 어디까지」가 읽힌다. 문장의 정본은 `fact-line.tsx`. */}
+      <FactLine parts={roadmapFact(roadmap.milestones.map((m) => m.status), cover)} />
+      <div className="row wrap items-start">
+        <Tile label="마일스톤" value={roadmap.milestones.length} hint={`공식 v${roadmap.context_version ?? '—'} 기준`} />
+        <Tile
+          label="근거가 붙은 완료 조건"
+          value={`${cover.with} / ${cover.total}`}
+          hint={cover.total === 0 ? '완료 조건이 없습니다' : '어떤 파일 몇 번째 줄인지 근거가 붙은 것'}
+        />
+        {/* 🔴 0 도 그린다 — 「충돌 없음」을 안 보여 주면 사람은 아직 안 센 줄 안다. */}
+        <Tile
+          label="열린 충돌"
+          value={conflicts}
+          hint={conflicts === 0 ? '정리할 것이 없습니다' : '결정을 기다리는 카드 · 정리 화면에서 정합니다'}
+        />
+        <Tile
+          label={`${STALE_REPORT_DAYS}일 이상 보고 없음`}
+          value={stale.length}
+          //  ⚠ 「한 번도 보고 없음」과 섞지 않는다 — 그건 늦은 게 아니라 시작 전이다.
+          //  🔴 마일스톤이 0개일 때 「전부 한 번은 보고됐습니다」라고 쓰면 **거짓이다** —
+          //     아무것도 없는데 전부 됐다고 말한다. 덤프를 읽어서 잡았다 (⑮ 55바퀴).
+          hint={
+            roadmap.milestones.length === 0
+              ? '아직 마일스톤이 없습니다'
+              : never.length > 0
+                ? `아직 보고가 없는 마일스톤 ${never.length}`
+                : '전부 한 번은 보고됐습니다'
+          }
+        />
+      </div>
     </div>
   )
 }
@@ -130,7 +135,8 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
   const confirmable = m.confirmable
 
   return (
-    <section className="card pad col-tight">
+    //  상태는 카드가 스스로 말한다 — 완료 확인 대기는 왼쪽 주황 괘선, 완료는 초록 (`data-status` · globals.css · 2026-09-11).
+    <section className="card pad col-tight milestone" data-status={m.status}>
       <div className="row-between wrap">
         <button
           type="button"
@@ -139,9 +145,9 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
           onClick={on.onToggle}
         >
           <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
-          <span className="mono ink">{m.milestone}</span>
-          {/* 제목이 있으면 id 옆에 — 「PL-M1」만으로는 무엇을 하는 일인지 아무도 모른다 (2026-09-10 저녁). */}
-          {state.title ? <span className="ink" style={{ marginLeft: 'var(--sp-2)' }}>{state.title}</span> : null}
+          {/* 제목이 제일 크다(표제체 `.row-name`) — 「PL-M1」만으로는 무엇을 하는 일인지 아무도 모른다. id 는 그 옆에 작게 (2026-09-11). */}
+          {state.title ? <span className="row-name" style={{ marginLeft: 'var(--sp-2)' }}>{state.title}</span> : null}
+          <span className="mono meta" style={{ marginLeft: 'var(--sp-2)' }}>{m.milestone}</span>
         </button>
         <div className="row wrap">
           {/* 기한은 Manifest 가 나른 날짜 **그대로**(`YYYY-MM-DD`) — Pack 본문의 `due:` 와 같은 글자다.
@@ -230,7 +236,8 @@ function CriterionLine({
   return (
     <div className="row-between wrap">
       <span className={ok ? 'row grow' : 'row grow ink-3'}>
-        <span aria-hidden="true" className={ok ? 'ink-ok' : ''}>{ok ? '✓' : '○'}</span>
+        {/* 기호(✓/○) 대신 색점 + 낱말 — 특수문자 없이 (2026-09-11). */}
+        <span className={ok ? 'chip tone-ok' : 'chip tone-neutral'}><span className="chip-dot" aria-hidden="true" />{ok ? '근거 있음' : '근거 없음'}</span>
         <span className="grow">{criterion.text}</span>
       </span>
       {last === null ? (

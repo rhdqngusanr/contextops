@@ -24,6 +24,7 @@ export type ProjectScreen = {
   /**
    * 라벨 밑의 한 줄 — 이 화면이 **무엇을 하는 화면인가** (2026-09-10 저녁 · 사용자: 「데모 사이트들도 알아듣기 어려운 텍스트」).
    * 라벨은 짧은 이름(「Context」·「Sync」)이라 처음 온 사람은 무엇인지 모른다. 내비가 이 줄을 라벨 밑에 그린다.
+   * ⚠ **한 줄(≤ 12자)** — 내비 폭(220px)에서 접히면 칸 높이가 들쭉날쭉해져 「대충」으로 읽힌다 (2026-09-11 · 「사이드도 별로야」).
    * ⚠ 링크(`<a>`)의 글자는 여전히 라벨뿐이다 — 프로덕션 검사가 링크 글자와 이 표의 라벨을 글자 그대로 대조한다.
    */
   readonly describe: string
@@ -39,22 +40,22 @@ export type ProjectScreen = {
 /** 이 프로젝트에서 **지금 열 수 있는** 화면. 순서가 곧 왼쪽 차례이자 팔레트의 차례다. */
 export const PROJECT_SCREENS: readonly ProjectScreen[] = [
   //  ⚠ 차례가 일의 차례다 — 문서를 넣는 화면이 먼저고, 그 결과를 보는 화면이 뒤다.
-  { path: 'import', label: '가져오기', describe: '문서를 넣으면 AI 가 후보를 뽑습니다', match: /\/import$/, keywords: ['import', '문서', '업로드'] },
+  { path: 'import', label: '가져오기', describe: '문서를 넣습니다', match: /\/import$/, keywords: ['import', '문서', '업로드'] },
   //  ⚠ 정리가 Context 앞이다 — 결정을 끝낸 것만 발행으로 간다 (SPEC §9 화면 4 → 5).
-  { path: 'review', label: '정리', describe: '어긋난 것을 사람이 결정합니다', match: /\/review$/, keywords: ['review', '충돌', '질문'] },
-  { path: 'context', label: 'Context', describe: '팀이 승인한 규칙 목록 · 발행', match: /\/context$/, keywords: ['항목', 'item', '컨텍스트'] },
+  { path: 'review', label: '정리', describe: '어긋난 것을 정합니다', match: /\/review$/, keywords: ['review', '충돌', '질문'] },
+  { path: 'context', label: 'Context', describe: '승인된 규칙 목록', match: /\/context$/, keywords: ['항목', 'item', '컨텍스트'] },
   //  ⚠ 제안은 Context 뒤다 — 승인된 제안은 **발행 트랜잭션 안에서** 항목이 되므로
   //    (SPEC §2.1 2단계), 사람은 지금 항목을 본 다음에 「무엇이 바뀌나」를 읽는다.
-  { path: 'proposals', label: '제안', describe: '개발자가 올린 변경 제안', match: /\/proposals(\/|$)/, keywords: ['proposal', '승인', '거절'] },
+  { path: 'proposals', label: '제안', describe: '개발자의 변경 제안', match: /\/proposals(\/|$)/, keywords: ['proposal', '승인', '거절'] },
   //  ⚠ Pack Explorer 는 버전 하나를 가리켜야 열린다. 목록에서는 「최신」으로 보낸다 —
   //    `latest` 는 semver 가 아니라 화면이 versions 를 읽어 고르는 자리다.
-  { path: 'packs', label: 'Pack Explorer', describe: '발행된 파일과 줄마다의 출처', match: /\/packs(\/|$)/, keywords: ['pack', '발행', '버전', 'claude.md'] },
+  { path: 'packs', label: 'Pack Explorer', describe: '발행된 파일과 출처', match: /\/packs(\/|$)/, keywords: ['pack', '발행', '버전', 'claude.md'] },
   //  ⚠ Roadmap 은 **발행된 Pack 이 있어야** 행이 생긴다 (마일스톤의 정본이 Manifest 다).
   //    그래서 Pack Explorer 뒤다 — 차례가 일의 차례라는 위 규칙 그대로다.
   { path: 'roadmap', label: 'Roadmap', describe: '계획이 어디까지 왔나', match: /\/roadmap$/, keywords: ['로드맵', '마일스톤', 'milestone'] },
   //  ⚠ Sync 가 마지막이다 — 발행한 Pack 이 **각 기기에 실제로 닿았나**를 보는 자리라
   //    일의 차례에서 제일 끝이다 (발행 → 로드맵이 움직임 → 기기가 받아 감).
-  { path: 'sync', label: 'Sync', describe: '기기마다 어느 판을 받았나', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
+  { path: 'sync', label: 'Sync', describe: '기기마다 받은 판', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
 ]
 
 /** `/t/{team}/p/{project}` + 화면 한 줄 → 실제 주소. 링크를 화면마다 적지 않는다. */

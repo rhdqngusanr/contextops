@@ -98,6 +98,8 @@ function PackHeader({ project, manifest, semver }: { project: ProjectRef; manife
         <ReceivedBy project={project} manifest={manifest} />
         <DownloadZip project={project} semver={semver} />
       </div>
+      {/* 사람 말 한 줄 (2026-09-11) — 세 칸이 각각 무엇인지. */}
+      <p className="ink-2">왼쪽은 AI 가 읽는 파일 목록, 가운데는 그 파일의 실제 내용입니다. 아무 줄이나 누르면 오른쪽에 그 줄이 어느 문서·코드에서 왔는지 뜹니다.</p>
     </header>
   )
 }

@@ -7,7 +7,7 @@ import type { ProposalStatus } from '@contextops/schema'
 import { fetchProposals, type ProjectRef } from '../../../../../../lib/web/queries'
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
-import {
+import { ProposalFact,
   ProposalListIntro, ProposalStatusFilter, ProposalTable, proposalEmptyMessage,
 } from '../../../../../../components/proposals'
 import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
@@ -52,6 +52,9 @@ function ProposalList({ base, project }: { base: string; project: ProjectRef }) 
             않고, 시험이 둘을 함께 읽는다. */}
         <ProposalListIntro />
       </header>
+
+      {/* 사실 한 줄 — 전체를 볼 때만 (거른 목록의 수는 거른 수라 「제안 n개」가 거짓이 된다). */}
+      {status === null && result.state === 'ready' ? <ProposalFact proposals={result.data.proposals} /> : null}
 
       <ProposalStatusFilter value={status} onChange={setStatus} />
 

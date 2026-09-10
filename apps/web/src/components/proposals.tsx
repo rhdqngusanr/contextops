@@ -14,6 +14,8 @@ import { MADE } from '../lib/web/screens'
 import { dateText } from '../lib/web/time'
 import { ITEM_TYPE_LABEL, PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, VersionPill } from './chips'
 import { EvidenceList } from './evidence'
+import { FactLine, proposalFact } from './fact-line'
+import { ITEM_GIST_KEY, itemGist } from '../lib/web/item-gist'
 
 // =====================================================================
 //  화면 6 — Proposals 가 그리는 조각들 (SPEC §9 화면 6 · DESIGN_BRIEF §4 「화면 6」)
@@ -140,6 +142,11 @@ export function ProposalListIntro() {
   )
 }
 
+/** 사실 한 줄 — 「제안 5개 — 승인 대기 1 · … 팀장이 볼 것은 승인 대기 1개입니다.」 문장의 정본은 `fact-line.tsx`. */
+export function ProposalFact({ proposals }: { proposals: readonly ProposalRow[] }) {
+  return <FactLine parts={proposalFact(proposals.map((p) => p.status))} />
+}
+
 export function ProposalTable({
   proposals,
   hrefOf,
@@ -166,8 +173,9 @@ export function ProposalTable({
           </tr>
         </thead>
         <tbody>
+          {/* 팀장이 볼 것(승인 대기)은 왼쪽 주황 괘선 — 칩의 tone 이 정한다 (2026-09-11). */}
           {proposals.map((p) => (
-            <tr key={p.id}>
+            <tr key={p.id} data-tone={PROPOSAL_STATUS_CHIP[p.status].tone === 'warn' ? 'warn' : undefined}>
               <td><ProposalStatusChip status={p.status} /></td>
               <td className="ink">{p.title}</td>
               {/* 🔴 없는 이름을 지어내지 않는다 — 주인 없는 제안(탈퇴·기기)이 있다. */}
@@ -314,6 +322,13 @@ export function diffSidesOf(item: ProposalItem, target: ContextItemView | undefi
   return item.draft === undefined ? { missing: 'draft' } : { before: target.body, after: item.draft.body }
 }
 
+/** 항목 카드의 머리 문장 — 연산별 한 줄. 「」 안은 대상(없으면 초안)의 제목. `Record` 라 연산이 늘면 타입이 막는다. */
+export const PROPOSAL_ITEM_SENTENCE: Record<ProposalItem['operation'], (title: string) => string> = {
+  add: (title) => `「${title}」 항목을 새로 올리자는 제안입니다.`,
+  update: (title) => `「${title}」 항목을 이렇게 바꾸자는 제안입니다.`,
+  deprecate: (title) => `「${title}」 항목을 폐기하자는 제안입니다.`,
+}
+
 /** 없는 쪽이 왜 없는지를 사람 말로. **표 하나** — 화면이 문장을 짓지 않는다. */
 export const DIFF_MISSING_TEXT: Record<'target' | 'draft', string> = {
   target: '대상 항목이 없어 본문을 견줄 수 없습니다.',
@@ -393,13 +408,44 @@ export function ProposalItemCard({
           : null}
       </div>
 
-      {item.draft === undefined
-        ? null
-        : <p className="ink">{item.draft.title}</p>}
+      {/* 사람 말 한 문장 — 이 카드가 무엇을 하자는 것인지 (연산별 표 `PROPOSAL_ITEM_SENTENCE`). */}
+      <p className="conflict-plain">{PROPOSAL_ITEM_SENTENCE[item.operation](target?.title ?? item.draft?.title ?? '')}</p>
 
       {'missing' in sides
         ? <span className="meta">{DIFF_MISSING_TEXT[sides.missing]}</span>
-        : <DiffView before={sides.before} after={sides.after} />}
+        : (
+          <>
+            {/* 두 판 — 「지금 규칙」과 「바꾸자는 규칙」 (충돌 카드의 두 쪽과 같은 모양 · 2026-09-11). 본문(body)만 견주던 줄 diff 는
+                규칙 문장(data)의 변화를 못 보여 줬다 — 한 줄 요약(`itemGist`)이 그것을 보여 주고, 줄 diff 는 접어 둔다. */}
+            <div className="sides">
+              {target === undefined ? null : (
+                <div className="card pad-sm col-tight side-card side-neutral">
+                  <span className="side-name side-neutral">지금 규칙</span>
+                  <span className="ink">{target.title}</span>
+                  <p className="key-line"><span className="key">{ITEM_GIST_KEY[target.type]}</span>{itemGist(target)}</p>
+                  {target.body === '' ? null : <p className="key-line"><span className="key">설명</span>{target.body}</p>}
+                </div>
+              )}
+              {item.draft === undefined ? (
+                <div className="card pad-sm col-tight side-card side-warn">
+                  <span className="side-name side-warn">폐기 뒤</span>
+                  <span className="ink-2">이 항목이 다음 발행에서 빠집니다.</span>
+                </div>
+              ) : (
+                <div className="card pad-sm col-tight side-card side-new">
+                  <span className="side-name side-new">{target === undefined ? '새로 올리는 규칙' : '바꾸자는 규칙'}</span>
+                  <span className="ink">{item.draft.title}</span>
+                  <p className="key-line"><span className="key">{ITEM_GIST_KEY[item.draft.type]}</span>{itemGist(item.draft)}</p>
+                  {item.draft.body === '' ? null : <p className="key-line"><span className="key">설명</span>{item.draft.body}</p>}
+                </div>
+              )}
+            </div>
+            <details>
+              <summary className="meta">설명 글을 줄 단위로 비교</summary>
+              <DiffView before={sides.before} after={sides.after} />
+            </details>
+          </>
+        )}
 
       <div className="col-tight">
         <span className="label">이 제안의 근거</span>

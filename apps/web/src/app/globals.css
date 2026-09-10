@@ -373,8 +373,9 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   width: var(--nav-w);
   flex: 0 0 var(--nav-w);
   border-right: 1px solid var(--line);
-  /* 내비도 종이(bg)다 — 본문과 같은 면이고 괘선 하나로만 갈린다. 카드(surface)만 뜬다. */
-  background: var(--bg);
+  /* 내비는 옅은 회색 면이다 — 본문(흰 종이)과 **면**으로 갈린다 (2026-09-11 · 사용자가 데스크톱 앱의 사이드바를 보여 주며
+     「이런 식으로 색깔이 다르면 좋겠어」). 지금 화면 칸만 흰 카드로 뜬다 (`.nav-item[data-current]`). */
+  background: var(--surface-hi);
   padding: var(--sp-5) var(--sp-4);
   display: flex;
   flex-direction: column;
@@ -391,8 +392,23 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .nav-link[aria-current='page'] { background: var(--accent-soft); color: var(--ink); }
 /* 내비 한 칸 — 링크(라벨) 밑에 「무엇을 하는 화면인가」 한 줄 (2026-09-10 저녁 · 「데모 텍스트도 이해되게」 · `PROJECT_SCREENS.describe`).
    ⚠ 설명은 <a> 밖의 형제다 — 프로덕션 검사(GATE 3)가 링크의 글자와 표의 라벨을 글자 그대로 대조한다. */
-.nav-item { display: flex; flex-direction: column; }
-.nav-link-hint { padding: 0 var(--sp-3) var(--sp-2); font-size: var(--fs-label); color: var(--ink-3); line-height: 1.4; }
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  /* 지금 화면 — 회색 내비 위의 **흰 카드** + 왼쪽 검정 괘선. 링크 자체는 면이 없다 (아래). */
+  border: 1px solid transparent;
+  border-left-width: 3px;
+}
+.nav-item[data-current='true'] { background: var(--surface); border-color: var(--line); border-left-color: var(--ink); }
+/* 내비 머리 — 프로젝트 이름이 표제체로 크고, 팀은 그 밑에 작게. */
+.nav-project { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sub); letter-spacing: -0.01em; color: var(--ink); }
+/* 라벨은 표제체 600 — 칸의 주인공. 설명은 그 밑 한 줄(넘치면 …). 2026-09-11 · 「사이드도 별로야」: 두 줄로 접히던 설명이 칸 높이를 들쭉날쭉하게 했다. */
+.nav-item .nav-link { padding: 0; border-radius: 0; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-body); color: var(--ink-2); }
+.nav-item .nav-link:hover { background: transparent; color: var(--ink); }
+.nav-item .nav-link[aria-current='page'] { background: transparent; color: var(--ink); }
+.nav-link-hint { font-size: var(--fs-label); color: var(--ink-3); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .main { flex: 1 1 auto; min-width: 0; padding: var(--sp-6); }
 .main-inner { max-width: var(--content-max); display: flex; flex-direction: column; gap: var(--sp-5); }
@@ -440,6 +456,18 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .side-name.side-ok, .conflict-plain b.side-ok { color: var(--ok); }
 .side-name.side-warn, .conflict-plain b.side-warn { color: var(--warn); }
 .side-name.side-code { font-family: var(--font-mono); letter-spacing: 0; }
+.side-card.side-new { border-top-color: var(--ink); }
+.side-name.side-new { color: var(--ink); }
+/* 사실 한 줄 — 숫자로 말하는 문장 (`components/fact-line.tsx` · 2026-09-11 「다른 화면들도 같은 식으로」). 숫자는 굵다. */
+.fact-line { font-size: var(--fs-body); color: var(--ink-2); line-height: 1.6; }
+.fact-line b { font-weight: 600; color: var(--ink); }
+/* 표의 행 — 사람이 볼 것이 있는 행(옛 판 · 손으로 고침 · 승인 대기 · 검토 중)은 왼쪽 주황 괘선. 칩의 tone 이 정한다. */
+.table tr[data-tone='warn'] > td:first-child { border-left: 3px solid var(--warn); }
+/* 마일스톤 카드 — 완료 확인 대기는 주황(사람이 할 일), 완료는 초록. 사실의 색이다. */
+.milestone[data-status='done_candidate'] { border-left: 3px solid var(--warn); }
+.milestone[data-status='done'] { border-left: 3px solid var(--ok); }
+/* 행의 제목 — 표제체. 마일스톤 제목이 id 보다 크다. */
+.row-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-sub); letter-spacing: -0.01em; color: var(--ink); }
 /* 심각도 높음 — 카드 왼쪽에 빨간 괘선, 칩은 옅은 빨강 면 (색 배경이 붙는 유일한 칩). 사용자: 「심각도 높으면 좀 더 눈에 잘 보여야」 (2026-09-10 저녁). */
 .conflict-card[data-severity='high'] { border-left: 3px solid var(--bad); }
 .chip.chip-strong { background: var(--bad-bg); color: var(--bad); padding: var(--sp-1) var(--sp-2); font-weight: 600; }
