@@ -67,7 +67,7 @@ URL 이 🙋 표에 적히는 순간 「배포가 없다」는 문장은 거짓�
 
 **팀의 기억과 AI의 기억을 한 방향으로**
 
-팀장이 승인한 목표·로드맵·결정이 모든 팀원의 Claude Code에 같은 버전으로 닿고, 진행은 근거와 함께 보입니다. 팀장은 브라우저에서 15분, 개발자는 명령 한 줄.
+같은 팀인데 AI 마다 답이 다릅니다. 팀의 목표·규칙·결정을 팀장이 한 번 승인하면 모든 팀원의 Claude Code 가 같은 내용을 받고, 로드맵이 실제로 어디까지 됐는지 근거와 함께 보입니다. 팀장은 브라우저에서 15분, 개발자는 명령 한 줄.
 
 ## 문제
 
@@ -83,7 +83,7 @@ AI 코딩 도구는 `CLAUDE.md` 같은 파일로 팀 지식을 받습니다. 그
 > |---|---|
 > | **A** (`paylab-docs/goals.md §3.1`) — 최대 5회까지 지수 백오프로 재시도합니다. 고정 간격은 금지라고 되어 있습니다. | PSP 호출은 최대 5회까지 재시도한다. 간격은 지수 백오프(0.5s·1s·2s·4s·8s)이고, 재시도 대상은 타임아웃과 5xx 뿐이다. |
 > | **B** (`paylab-api/src/payment/retry.ts:11`) — MAX_RETRY = 3 이고 간격은 500ms 고정입니다. | must · 근거: `paylab-docs/goals.md §3.1` · `paylab-api/src/payment/retry.ts:11–14` · 팀장 승인 · `<!-- ctx:item_policy_retry -->` |
-> | 같은 팀, 같은 질문, 다른 답 | A·B·C 모두 같은 답 |
+> | A 는 문서를, B 는 코드를 읽었습니다. 둘 다 틀리지 않았는데 팀은 둘로 갈립니다. | 팀장이 승인한 이 한 문장을 A·B·C 모두 같은 버전으로 받습니다. |
 
 After 의 문장은 예시가 아니라 **게스트가 `/demo` 에서 실제로 받는 Pack 의 그 줄**입니다. 줄 끝의 역추적 태그가
 그 문장이 어느 항목에서 왔는지를 말합니다.
@@ -94,9 +94,9 @@ ContextOps는 기존 문서·팀장 답변·코드에서 뽑은 항목을 AI가 
 결정하게 하고, 승인된 것을 모든 팀원의 Claude Code에 같은 버전·같은 해시로 배포하며, 각 팀원의 AI가 작업 끝에
 로드맵 진행을 근거와 함께 보고합니다.
 
-1. **만든다** — 문서·답변·코드에서 항목을 뽑고, 서로 어긋난 것은 사람이 결정합니다. 승인된 것만 남습니다.
-2. **배포한다** — 같은 snapshot 은 언제나 같은 Pack 입니다. 모든 기기가 같은 버전·같은 해시를 받습니다.
-3. **진행이 보인다** — 각자의 AI 가 작업 끝에 근거를 보고하고, 완료는 사람이 확인합니다. 행은 마일스톤입니다.
+1. **가져와서 정리한다** — 목표 문서·회의록을 붙여 넣거나 질문 10개에 답하면, AI 가 규칙·마일스톤 후보를 뽑고 서로 어긋난 것을 찾아 질문으로 만듭니다. 결정은 사람이 합니다.
+2. **승인해서 발행한다** — 팀장이 승인한 항목만 CLAUDE.md 한 벌로 묶여 버전이 붙습니다. 모든 팀원의 Claude Code 가 같은 버전·같은 해시를 받습니다. 승인 뒤에는 AI 가 끼어들지 않습니다.
+3. **진행이 근거와 함께 보인다** — 개발자의 AI 가 작업을 마치면 어떤 파일을 고쳤는지 보고합니다. 로드맵은 마일스톤 단위로 채워지고, 완료 판정은 사람이 합니다.
 
 ## AI 활용
 
@@ -206,16 +206,16 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 
 **개발자 설치**
 
-Node 22 이상이 필요하다 (node -v) — 훅과 CLI 가 Node 로 돈다.
+Node 22 이상이 필요합니다 (node -v) — 훅과 CLI 가 Node 로 돕니다.
 
 ```
-claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록한다
-claude plugin install contextops                                 # 플러그인을 깐다 (훅 · Skill · CLI)
-/contextops:setup <Sync 화면이 준 인자>                           # Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 준다 — 토큰은 저장소 밖에
-/contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다
+claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록합니다
+claude plugin install contextops                                 # 훅·Skill·CLI 가 함께 깔립니다
+/contextops:setup <Sync 화면이 준 인자>                           # Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다
+/contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올립니다
 ```
 
-그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.
+그 다음은 팀장이 웹에서 승인하고, 개발자는 /contextops:sync 로 받습니다.
 
 **로컬에서** — 계정이 없어도 전부 돕니다. DB 는 프로세스 안의 PGlite 이고, 서버측 AI(문서 구조화·충돌 탐지)만
 `GEMINI_API_KEY` 가 필요합니다 — 키가 없으면 그 job 은 `AI_NOT_CONFIGURED` 로 끝나고 화면이 그 사실을 말합니다

@@ -78,6 +78,14 @@ push: `375be95..504bb66` 일곱 커밋 → Vercel 이 새 벌을 냈다 — 랜�
 ⚠ 밟은 것: `art.ts` 머리 주석에 `//` 없는 줄을 끼워 넣어 typecheck·시험 셋이 빨갰다 — 주석 블록에 줄을 더할 때는 앞머리까지 같이.
 `tools/ci.ps1`: 2026-09-10 15:13 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **여섯째 판 — 문구 전체를 심사위원 기준으로** (사용자: 「팀장이 git 을 안 쓴다가 웃겨」 · 「문구·설명이 뭘 의도하는지 안 와닿아서 원티드에서 망할 것 같아, 제대로 해줘」 · 「캡처 속도 더 빨리」).
+문구: 부제가 문제(같은 팀, AI 마다 다른 답)부터 말한다 · Before/After 위에 「같은 질문을 두 사람의 Claude Code 에 던졌다」 한 줄 · 카드 제목·발 「지금 — 사람마다 다른 답 / A 는 문서를, B 는 코드를…」
+「ContextOps — v1.1.0 / 팀장이 승인한 이 한 문장을 A·B·C 모두 같은 버전으로」 · 「왜 git」 제목을 심사위원의 질문(「CLAUDE.md 를 git 에 올리면 되지 않나요?」)으로, 첫 줄을 「결정은 레포 밖에서 납니다」로
+· 「어떻게」 세 단계를 문장으로(가져와서 정리한다 → 승인해서 발행한다 → 진행이 근거와 함께 보인다) · **새 절 「AI 는 어디까지 쓰나요」**(후보 · 충돌 질문 · 승인 뒤 LLM 0 · 훅은 보고만 — 심사 기준 「AI 활용 적절성」의 답)
+· 신뢰 절 제목 「서버는 코드를 보지 않습니다」 · 설치 절 문장 존댓말 · 머리글 링크는 짧은 낱말 넷. `readme.test` ① 이 README·SUBMISSION 에 같은 문장을 요구해 두 문서도 같이 고쳤다 (124/124).
+스톱모션은 6초 → 3.4초(프레임 0.45초 × 4 + 완성 1.6초). og.png 다시 그림. 캡처 1440·375 가로 밀림 0 (`evidence/…/after/`).
+`tools/ci.ps1`: 2026-09-10 16:09 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

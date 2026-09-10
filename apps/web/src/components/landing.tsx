@@ -71,9 +71,11 @@ export const LANDING_HEAD = {
  *   근거 없는 줄이다 (P7 의 정신).
  */
 export const BEFORE_AFTER = {
+  //  2026-09-10 사용자: 「문구가 안 와닿는다」 — 카드 위에 한 줄로 **무엇을 보고 있는지**부터 말한다.
+  caption: '같은 질문을 같은 팀 두 사람의 Claude Code 에 던졌습니다.',
   prompt: 'PSP 호출이 실패하면 몇 번까지 재시도해?',
   before: {
-    title: 'Before · 각자의 Claude',
+    title: '지금 — 사람마다 다른 답',
     answers: [
       {
         who: 'A',
@@ -86,17 +88,17 @@ export const BEFORE_AFTER = {
         text: 'MAX_RETRY = 3 이고 간격은 500ms 고정입니다.',
       },
     ],
-    foot: '같은 팀, 같은 질문, 다른 답',
+    foot: 'A 는 문서를, B 는 코드를 읽었습니다. 둘 다 틀리지 않았는데 팀은 둘로 갈립니다.',
   },
   after: {
-    title: 'After · Team Context v1.1.0',
+    title: 'ContextOps — Team Context v1.1.0',
     /** 씨앗 초안의 id — Pack 의 역추적 태그(`<!-- ctx:… -->`)에 그대로 실리는 값이다. */
     itemId: 'item_policy_retry',
     text: 'PSP 호출은 최대 5회까지 재시도한다. 간격은 지수 백오프(0.5s·1s·2s·4s·8s)이고, '
       + '재시도 대상은 타임아웃과 5xx 뿐이다.',
     detail: 'must · 강제: 리뷰에서 본다',
     evidence: ['paylab-docs/goals.md §3.1', 'paylab-api/src/payment/retry.ts:11–14', '팀장 승인'],
-    foot: 'A·B·C 모두 같은 답',
+    foot: '팀장이 승인한 이 한 문장을 A·B·C 모두 같은 버전으로 받습니다.',
   },
 } as const
 
@@ -108,10 +110,10 @@ export const BEFORE_AFTER = {
  *   여기 표에는 **절 제목과 설명**만 있다 — 파일 이름은 한 자도 없다.
  */
 export const PRODUCT_TOUR = {
-  title: '제품 화면',
-  lead: '아래는 시안이 아니라 관통 시나리오가 실제 앱을 띄워 찍은 화면입니다. '
-    + '캡처마다 어느 주소의 화면인지 같이 적었습니다.',
-  foot: '캡처는 관통(tools/walkthrough.ps1)의 shots 단계가 매번 다시 찍습니다 — 낡은 그림이 남지 않습니다.',
+  title: '실제로 도는 화면입니다',
+  lead: '아래 세 장은 시안이 아니라 검증 시나리오가 실제 앱을 띄워 방금 찍은 캡처입니다. '
+    + '위의 [샘플 팀으로 둘러보기]를 누르면 같은 화면을 직접 만질 수 있습니다.',
+  foot: '캡처는 검증 시나리오(tools/walkthrough.ps1)의 shots 단계가 매번 다시 찍습니다 — 낡은 그림이 남지 않습니다.',
 } as const
 
 /**
@@ -122,39 +124,69 @@ export const PRODUCT_SHOTS = ShotsManifest.parse(shotsManifest).shots
 
 /** C-1. 왜 git 으로 안 되나요 — 세 문장 카드 + 한 줄. */
 export const WHY_NOT_GIT = {
-  title: '왜 git으로 안 되나요?',
+  //  심사위원이 제일 먼저 던지는 질문을 제목으로 — 그 답이 세 줄이다.
+  title: '「CLAUDE.md 를 git 에 올리면 되지 않나요?」',
   cards: [
     {
-      head: '팀장은 git을 안 씁니다',
-      body: '목표·정책은 문서와 회의에 있고, 레포의 CLAUDE.md 는 개발자 개인이 각자 관리합니다.',
+      //  2026-09-10 사용자: 「팀장이 git 을 안 쓴다」는 문장이 웃기다 — 사람을 깎는 말이 아니라 **결정이 나는 자리**를 말한다.
+      head: '결정은 레포 밖에서 납니다',
+      body: '목표·정책은 문서와 회의에서 정해집니다. 그걸 CLAUDE.md 로 옮기는 일은 개발자 각자의 손에 맡겨져 있어서, 사람마다 다른 파일이 됩니다.',
     },
     {
-      head: '컨텍스트는 레포 하나에 갇히지 않습니다',
-      body: '결제 팀의 재시도 규칙은 API·웹훅·정산 레포에 같이 적용됩니다. 레포마다 복사하면 갈립니다.',
+      head: '한 팀의 규칙은 여러 레포에 걸칩니다',
+      body: '결제 팀의 재시도 규칙은 API·웹훅·정산 레포에 똑같이 적용돼야 합니다. 레포마다 복사해 두면 어느 날 하나만 바뀝니다.',
     },
     {
-      head: 'git은 「왜」를 모릅니다',
-      body: 'diff 는 무엇이 바뀌었는지만 남깁니다. 누가 어떤 근거로 정했는지는 남지 않습니다.',
+      head: 'git 은 「왜」를 남기지 않습니다',
+      body: 'diff 는 무엇이 바뀌었는지만 남깁니다. 누가 어떤 근거로 정했는지가 없으면, AI 도 사람도 그 규칙을 믿을 이유가 없습니다.',
     },
   ],
-  line: 'DeepWiki는 코드를 사람에게 설명합니다. ContextOps는 팀의 결정을 AI에게 꽂습니다.',
+  line: 'ContextOps 는 흩어진 결정을 팀장이 승인한 한 벌로 만들고, 모든 팀원의 AI 에 같은 버전으로 꽂습니다.',
 } as const
 
 /** C-2. 어떻게 동작하나요 — 3단계. ⚠ 썸네일은 없다 (production 캡처가 아직 없다 · PLAN P5 둘째 행). */
 export const HOW_IT_WORKS = {
   title: '어떻게 동작하나요',
+  lead: '팀장은 브라우저에서 세 단계, 개발자는 명령 한 줄입니다.',
   steps: [
     {
-      head: '만든다',
-      body: '문서·답변·코드에서 항목을 뽑고, 서로 어긋난 것은 사람이 결정합니다. 승인된 것만 남습니다.',
+      head: '가져와서 정리한다',
+      body: '목표 문서·회의록을 붙여 넣거나 질문 10개에 답하면, AI 가 규칙·마일스톤 후보를 뽑고 서로 어긋난 것을 찾아 질문으로 만듭니다. 결정은 사람이 합니다.',
     },
     {
-      head: '배포한다',
-      body: '같은 snapshot 은 언제나 같은 Pack 입니다. 모든 기기가 같은 버전·같은 해시를 받습니다.',
+      head: '승인해서 발행한다',
+      body: '팀장이 승인한 항목만 CLAUDE.md 한 벌로 묶여 버전이 붙습니다. 모든 팀원의 Claude Code 가 같은 버전·같은 해시를 받습니다. 승인 뒤에는 AI 가 끼어들지 않습니다.',
     },
     {
-      head: '진행이 보인다',
-      body: '각자의 AI 가 작업 끝에 근거를 보고하고, 완료는 사람이 확인합니다. 행은 마일스톤입니다.',
+      head: '진행이 근거와 함께 보인다',
+      body: '개발자의 AI 가 작업을 마치면 어떤 파일을 고쳤는지 보고합니다. 로드맵은 마일스톤 단위로 채워지고, 완료 판정은 사람이 합니다.',
+    },
+  ],
+} as const
+
+/**
+ * C-2b. AI 는 어디까지 쓰나 — 심사 기준 「AI 활용 적절성」에 대한 랜딩의 답 (2026-09-10 · 사용자 「문구가 안 와닿는다」).
+ * ⚠ 쓰는 곳·안 쓰는 곳이 전부 실제 코드다: 구조화·충돌 탐지는 `lib/ai`(P3) · 발행·배포는 LLM 0 (P4) · 훅은 보고만 (SPEC §8.6).
+ */
+export const AI_USE = {
+  title: 'AI 는 어디까지 쓰나요',
+  lead: 'AI 는 후보와 질문을 만들고, 결정은 사람이, 배포는 결정론이 맡습니다.',
+  rows: [
+    {
+      head: '문서를 항목 후보로 바꿉니다',
+      body: '붙여 넣은 문서에서 규칙·마일스톤 후보를 뽑고 근거 위치를 같이 답니다 (서버쪽 모델은 Gemini). 후보는 후보일 뿐, 승인 버튼은 사람 몫입니다.',
+    },
+    {
+      head: '서로 어긋난 결정을 찾아 묻습니다',
+      body: '문서끼리, 또는 문서와 코드가 다르게 말하면 충돌 카드로 올립니다. 「A 가 맞다 · B 가 맞다 · 보류」는 사람이 고릅니다.',
+    },
+    {
+      head: '승인 뒤에는 쓰지 않습니다',
+      body: '발행과 배포는 AI 없이 결정론적으로 돕니다. 같은 스냅샷은 언제나 같은 파일·같은 해시라서, 어느 기기가 무엇을 받았는지 그대로 검증됩니다.',
+    },
+    {
+      head: '개발자의 AI 는 보고만 합니다',
+      body: '작업 끝에 어떤 경로를 고쳤는지 근거를 올립니다. 완료를 스스로 선언하지 못하고, 사람이 확인해야 완료가 됩니다.',
     },
   ],
 } as const
@@ -171,10 +203,10 @@ export const HOW_IT_WORKS = {
  *   보고 하나가 실제로 그만큼만 바꾼다.
  */
 export const TERMINAL_REPLAY = {
-  title: '터미널에서는 이렇게 보입니다',
-  lead: '세션을 열면 훅이 새 버전을 알리고, /contextops:sync 로 받고, 작업을 마치면 agent 가 '
-    + '근거와 함께 보고합니다. 오른쪽 Roadmap 이 같은 시각에 바뀝니다.',
-  source: '관통 시나리오가 배포되는 플러그인을 실제로 돌려 남긴 출력입니다 (fixtures/replay/sync.json). '
+  title: '개발자 쪽에서는 이렇게 보입니다',
+  lead: 'Claude Code 를 열면 훅이 새 버전을 알리고, /contextops:sync 한 줄로 받습니다. '
+    + '작업을 마치면 AI 가 근거와 함께 보고하고, 오른쪽 Roadmap 이 같은 순간 바뀝니다.',
+  source: '배포되는 플러그인을 실제로 돌려 남긴 출력입니다 (fixtures/replay/sync.json). '
     + '사이의 작업은 생략했고, 타이핑과 줄 사이 간격만 읽을 수 있게 늘렸습니다.',
   milestone: {
     id: 'PL-M1',
@@ -196,9 +228,9 @@ export const REPLAY_FRAMES = ReplayFrames.parse(replayRecording)
  *   한다 — 시험이 센다. 하나라도 빠지면 첫 화면이 제품의 첫 주장을 반만 말한다.
  */
 export const TRUST_BOUNDARY = {
-  title: '서버가 아는 것 / 모르는 것',
+  title: '서버는 코드를 보지 않습니다',
   knows: {
-    head: '서버가 아는 것',
+    head: '서버가 받는 것',
     rows: [
       '팀·프로젝트 ID',
       '구조화된 항목 (제목·규칙·마일스톤)',
@@ -208,7 +240,7 @@ export const TRUST_BOUNDARY = {
     ],
   },
   unknown: {
-    head: '서버가 모르는 것',
+    head: '절대 받지 않는 것',
     rows: [
       '저장소 코드 본문',
       '환경변수 · secret',
@@ -217,7 +249,7 @@ export const TRUST_BOUNDARY = {
       'Claude 대화 내용',
     ],
   },
-  foot: '올라가는 것은 allowlist 스키마로만 통과합니다. 훅은 파일을 바꾸지 않습니다.',
+  foot: '올라가는 것은 정해진 스키마를 통과한 항목뿐입니다. 코드 본문·비밀값·개인 메모리·대화는 어떤 경우에도 서버로 가지 않고, 훅은 파일을 바꾸지 않습니다.',
 } as const
 
 /**
@@ -256,22 +288,22 @@ export const SUBMISSION_IDENTITY = {
  * ⚠ `/contextops:…` 는 `plugin/contextops/skills/<이름>` 이 있어야 한다 (시험이 센다).
  */
 export const INSTALL_STEPS = {
-  title: '개발자 설치',
+  title: '설치는 명령 두 줄, 그 다음은 Claude Code 안에서',
   /**
    * 🔴 Node 가 있어야 한다 — 훅(`scripts/*.mjs`)과 CLI 번들이 `node` 로 돈다. 네이티브 Claude Code 만 깐 사람은
    *   이 줄이 없으면 **매 세션 훅 오류 줄**을 본다 (2026-09-09 감사). 숫자의 정본은 `.nvmrc` 이고
    *   `test/readme.test.ts` 가 같은 값인지 잰다 (번들 target 도 그 값이다 · `plugin/contextops/scripts/build.ts`).
    */
-  requires: 'Node 22 이상이 필요하다 (node -v) — 훅과 CLI 가 Node 로 돈다.',
+  requires: 'Node 22 이상이 필요합니다 (node -v) — 훅과 CLI 가 Node 로 돕니다.',
   lines: [
-    { cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록한다' },
-    { cmd: 'claude plugin install contextops', note: '플러그인을 깐다 (훅 · Skill · CLI)' },
+    { cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록합니다' },
+    { cmd: 'claude plugin install contextops', note: '훅·Skill·CLI 가 함께 깔립니다' },
     //  ⚠ 셋째 줄은 Claude Code 안의 Skill 이다 — 터미널 명령이 아니다. 예전의 `node "$CLAUDE_PLUGIN_ROOT/…"` 는
     //    사용자 터미널에 없는 변수라 그대로 치면 「파일이 없다」였다. Skill 이 그 경로를 채운다.
-    { cmd: '/contextops:setup <Sync 화면이 준 인자>', note: 'Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 준다 — 토큰은 저장소 밖에' },
-    { cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올린다' },
+    { cmd: '/contextops:setup <Sync 화면이 준 인자>', note: 'Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다' },
+    { cmd: '/contextops:init', note: 'Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올립니다' },
   ],
-  foot: '그 다음은 팀장이 웹에서 승인하고, /contextops:sync 로 받는다.',
+  foot: '그 다음은 팀장이 웹에서 승인하고, 개발자는 /contextops:sync 로 받습니다.',
 } as const
 
 /** 푸터 (DESIGN_BRIEF 화면 1 C-6: 제출 팀명 · GitHub 링크 · Known limitations 링크). 값은 `SUBMISSION_IDENTITY` 하나에서 온다. */
@@ -348,9 +380,11 @@ function Hero() {
 }
 
 function BeforeAfter() {
-  const { prompt, before, after } = BEFORE_AFTER
+  const { caption, prompt, before, after } = BEFORE_AFTER
   return (
-    <div className={styles.compare} aria-label="Before/After">
+    <section className={styles.compareBand} aria-label="Before/After">
+      <p className={styles.compareCaption}>{caption}</p>
+      <div className={styles.compare}>
       <div className={`card ${styles.slip} ${styles.slipBefore}`}>
         <span className={`${styles.slipLabel} ink-bad`}>{before.title}</span>
         <code className={styles.prompt}>$ {prompt}</code>
@@ -378,7 +412,8 @@ function BeforeAfter() {
           <span className="ctx-tag">ctx:{after.itemId}</span>
         </div>
       </div>
-    </div>
+      </div>
+    </section>
   )
 }
 
@@ -456,7 +491,7 @@ function HowItWorks({ index }: { index: string }) {
   if (art) {
     return (
       <section className={styles.section} aria-labelledby="landing-how">
-        <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} />
+        <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} lead={HOW_IT_WORKS.lead} />
         {steps}
       </section>
     )
@@ -465,10 +500,27 @@ function HowItWorks({ index }: { index: string }) {
     <section className={styles.section} aria-labelledby="landing-how">
       <div className={styles.split}>
         <div className={styles.splitHead}>
-          <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} />
+          <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} lead={HOW_IT_WORKS.lead} />
         </div>
         {steps}
       </div>
+    </section>
+  )
+}
+
+function AiUse({ index }: { index: string }) {
+  return (
+    <section className={styles.section} aria-labelledby="landing-ai">
+      <SectionHead id="landing-ai" index={index} title={AI_USE.title} lead={AI_USE.lead} />
+      {/* 정의 목록 — 「왜 git」과 같은 모양. 아이콘 없이 글과 괘선으로만 (anti-slop). */}
+      <dl className={styles.defs}>
+        {AI_USE.rows.map((r) => (
+          <div key={r.head} className={styles.def}>
+            <dt>{r.head}</dt>
+            <dd>{r.body}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   )
 }
@@ -560,11 +612,13 @@ function Foot() {
  */
 const SECTIONS = [
   { render: ProductShots, id: 'landing-shots', nav: null },
-  { render: WhyNotGit, id: 'landing-why', nav: WHY_NOT_GIT.title },
-  { render: HowItWorks, id: 'landing-how', nav: HOW_IT_WORKS.title },
+  //  머리글의 낱말은 절 제목의 **짧은 판**이다 — 제목은 문장이라 머리글에 넣으면 한 줄을 다 먹는다 (눈으로 봤다).
+  { render: WhyNotGit, id: 'landing-why', nav: '왜 git 이 아닌가' },
+  { render: HowItWorks, id: 'landing-how', nav: '어떻게 동작하나' },
+  { render: AiUse, id: 'landing-ai', nav: 'AI 활용' },
   { render: Replay, id: 'landing-replay', nav: null },
   { render: TrustBoundary, id: 'landing-trust', nav: null },
-  { render: Install, id: 'landing-install', nav: INSTALL_STEPS.title },
+  { render: Install, id: 'landing-install', nav: '설치' },
 ] as const
 
 /** 머리글 링크의 닻 — h2 의 id 에서 `landing-` 을 뗀 것 (`/#why` · `/#install`). */

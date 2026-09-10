@@ -18,8 +18,9 @@ export const SITE = {
   tagline: '팀의 기억과 AI의 기억을 한 방향으로',
   /** 랜딩 부제와 같은 문장이다 (`LANDING_HEAD.subtitle`). 링크 미리보기의 설명 칸에 그대로 나간다. */
   description:
-    '팀장이 승인한 목표·로드맵·결정이 모든 팀원의 Claude Code에 같은 버전으로 닿고, '
-    + '진행은 근거와 함께 보입니다.',
+    //  2026-09-10 사용자: 「문구가 뭘 의도하는지 안 와닿는다」 — 문제(같은 팀, 다른 답)부터 말한다.
+    '같은 팀인데 AI 마다 답이 다릅니다. 팀의 목표·규칙·결정을 팀장이 한 번 승인하면 '
+    + '모든 팀원의 Claude Code 가 같은 내용을 받고, 로드맵이 실제로 어디까지 됐는지 근거와 함께 보입니다.',
   /** `public/og.png` — `pnpm --filter web og:image` 가 헤드리스 Chrome 으로 그린다 (1200×630). */
   ogImage: { path: '/og.png', width: 1200, height: 630 },
   /** `public/icon.svg` — 탭·북마크 아이콘. 색은 DESIGN_BRIEF §3 의 토큰 값 그대로다. */
