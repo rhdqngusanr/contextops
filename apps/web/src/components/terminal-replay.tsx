@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { REPLAY_PROMPTS, isReplayCommand, type ReplayFrame } from '@contextops/schema'
 
+import { Chip, EVIDENCE_CHIP } from './chips'
 import styles from './terminal-replay.module.css'
 
 // =====================================================================
@@ -184,10 +185,12 @@ function MiniRoadmap({ milestone, state }: { milestone: ReplayMilestone; state: 
       <ul className={styles.criteria}>
         {milestone.done_when.map((c) => {
           const done = state.done.includes(c)
+          //  🔴 진짜 Roadmap 행(`roadmap.tsx`)과 **같은 표**(`EVIDENCE_CHIP`)를 읽는다 — 랜딩의 축소판이 앱과 다른 얼굴이면
+          //    심사위원이 [샘플 팀으로 둘러보기]로 들어갔을 때 같은 것을 두 번 배운다. 기호(✓/○) 대신 색점 + 「근거 있음/없음」 낱말 (2026-09-11).
           return (
-            <li key={c} className="row items-start">
-              <span className={done ? 'mono ink-ok' : 'mono ink-3'} aria-hidden="true">{done ? '✓' : '○'}</span>
-              <span className={done ? 'ink text-label' : 'meta'}>{c}</span>
+            <li key={c} className="row wrap">
+              <Chip spec={EVIDENCE_CHIP[done ? 'yes' : 'no']} />
+              <span className={done ? 'ink' : 'meta'}>{c}</span>
             </li>
           )
         })}

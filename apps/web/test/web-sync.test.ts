@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { SYNC_STATUSES, type SyncStatus } from '@contextops/schema'
 
 import {
-  DeviceTable, OFFICIAL_HINT, SYNC_APPLY, SYNC_ORDER, SyncLegend, SyncSummary, countByStatus, officialOf, sortDevices,
+  DeviceTable, OFFICIAL_HINT, SYNC_APPLY, SYNC_NEXT_STEP, SYNC_ORDER, SyncLegend, SyncSummary, countByStatus, officialOf,
+  sortDevices,
 } from '../src/components/sync'
 import { SYNC_CHIP, SYNC_MEANING } from '../src/components/chips'
 import { ScreenEmpty } from '../src/components/states'
@@ -72,6 +73,11 @@ function table(devices: readonly DeviceSyncRow[], now: Date = NOW): string {
   }))
 }
 
+/** 태그를 벗긴 글자 — 사실 한 줄은 수를 `<b>` 로 굵게 그려서 「기기 3대」가 마크업에서는 끊겨 있다. */
+function text(html: string): string {
+  return html.replace(/<[^>]+>/g, '')
+}
+
 describe('🔴 상태 5종이 전부 화면에 나온다 (FINDINGS 110 · ④2-B)', () => {
   it('다섯 상태의 칩이 표에 그려진다 — 표만 있고 그리는 자리가 없던 것이 고장이었다', () => {
     const html = table(oneOfEach())
@@ -80,22 +86,53 @@ describe('🔴 상태 5종이 전부 화면에 나온다 (FINDINGS 110 · ④2-B
     }
   })
 
-  it('상태마다 「적용 방식」이 갈린다 — 값을 바꾸면 결과가 달라진다', () => {
+  it('상태마다 「적용 방식」이 갈린다 — 값은 약어가 아니라 문장이다 (2026-09-11)', () => {
     const manual = table([device({ status: 'manual' })])
     const applied = table([device({ status: 'applied' })])
-    expect(manual).toContain('zip 수동')
-    expect(applied).toContain('플러그인')
-    expect(applied).not.toContain('zip 수동')
+    expect(manual).toContain('zip 을 손으로 풂')
+    expect(applied).toContain('플러그인이 받음')
+    expect(applied).not.toContain('zip 을 손으로 풂')
+    //  「zip 수동」「플러그인」 같은 낱말 조각으로 되돌아가지 않는다.
+    expect(manual).not.toContain('zip 수동')
   })
 
-  it('요약은 **있는 상태만** 센다 — 0인 칸을 다섯 개 세워 두지 않는다', () => {
+  it('요약은 사실 한 줄 하나로 센다 — 0인 상태를 적지 않고, 같은 수를 칩 줄로 한 번 더 그리지 않는다', () => {
     const html = renderToStaticMarkup(createElement(SyncSummary, {
       devices: [device({ status: 'applied' }), device({ status: 'applied' }), device({ status: 'outdated' })],
     }))
-    expect(html).toContain('기기 3')
-    expect(html).toContain(SYNC_CHIP.applied.label)
-    expect(html).toContain(SYNC_CHIP.outdated.label)
-    expect(html).not.toContain(SYNC_CHIP.modified.label)
+    const plain = text(html)
+    expect(plain).toContain('기기 3대')
+    expect(plain).toContain(`「${SYNC_CHIP.applied.label}」`)
+    expect(plain).toContain(`${SYNC_CHIP.outdated.label} 1대`)
+    //  0 인 상태는 어디에도 수로 서지 않는다 (「손으로 고침 0대」).
+    expect(plain).not.toContain('0대')
+    expect(plain).not.toContain(`${SYNC_CHIP.modified.label} 0`)
+    //  칩 줄(색점 칩 + 숫자)이 요약에 없다 — 사실 한 줄과 겹쳐 두 번 세던 것을 지웠다 (2026-09-11).
+    expect(html).not.toContain('class="chip')
+  })
+})
+
+describe('🔴 「그래서 어떻게 하면 고쳐지나」 — 다음 걸음 한 줄 (2026-09-11)', () => {
+  const summary = (statuses: SyncStatus[]) => renderToStaticMarkup(createElement(SyncSummary, {
+    devices: statuses.map((status, i) => device({ device_id: String(i), status, version: status === 'unknown' ? null : '1.1.0' })),
+  }))
+
+  it('옛 버전이 하나라도 있으면 그 팀원이 실행할 명령을 말한다', () => {
+    expect(summary(['applied', 'outdated'])).toContain('/contextops:sync')
+    expect(summary(['modified'])).toContain('/contextops:sync')
+    expect(summary(['unknown'])).toContain('/contextops:sync')
+  })
+
+  it('전부 적용됐으면(또는 zip 으로 받았으면) 다음 걸음이 없다 — 0 은 안 적는다', () => {
+    expect(summary(['applied', 'applied'])).not.toContain('/contextops:sync')
+    expect(summary(['applied', 'manual'])).not.toContain('/contextops:sync')
+  })
+
+  it('문장의 낱말은 칩 표에서 온다 — 상태 이름을 지어내지 않고, 판단 대신 할 일만 말한다', () => {
+    for (const s of ['outdated', 'modified', 'unknown'] as const) expect(SYNC_NEXT_STEP).toContain(`「${SYNC_CHIP[s].label}」`)
+    //  손으로 고친 파일을 말없이 덮는다고 말하지 않는다 — Skill 이 먼저 묻는다 (`plugin/contextops/skills/sync`).
+    expect(SYNC_NEXT_STEP).toContain('묻')
+    expect(SYNC_NEXT_STEP).toContain('백업')
   })
 })
 
@@ -235,7 +272,7 @@ describe('🔴 「그래서 무엇으로 맞춰야 하나」 — 요약이 공�
     //  ⚠ 「공식」 낱말 자체는 칩 툴팁(`로컬 버전이 공식보다 낮다`)에도 있다 — 요약 문장으로 센다.
     expect(html).not.toContain('공식 v')
     expect(html).not.toContain(OFFICIAL_HINT.none)
-    expect(html).toContain('기기 1')
+    expect(text(html)).toContain('기기 1대')
   })
 
   it('officialOf 는 is_official 인 행 하나를 고른다 — 없으면 null', () => {

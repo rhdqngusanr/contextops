@@ -8,6 +8,7 @@ import { createTeam } from '../../../lib/web/queries'
 import { readSession } from '../../../lib/web/session'
 import { toSlug } from '../../../lib/web/slug'
 import { NeedsLogin, ReadOnlyNotice } from '../../../components/states'
+import { Note } from '../../../components/chips'
 
 // =====================================================================
 //  화면 2 — 팀 만들기 (DESIGN_BRIEF §4 「화면 2」 · SPEC §5 `POST /teams`)
@@ -66,29 +67,30 @@ export default function NewTeamPage() {
             id="team-name"
             className="input"
             value={name}
-            placeholder="재미난사람들"
+            //  예시대로 적으면 주소 후보가 실제로 생기는 이름이어야 한다 — 한글 예시는 `toSlug` 가 빈 문자열을 낸다 (FINDINGS 158 의 결).
+            placeholder="Paylab"
             onChange={(e) => setName(e.target.value)}
           />
         </div>
 
         <div className="field">
-          <label className="label" htmlFor="team-slug">slug — 주소에 쓰입니다</label>
+          <label className="label" htmlFor="team-slug">주소용 이름 — 영문 소문자·숫자·하이픈. 팀 주소가 됩니다</label>
           <input
             id="team-slug"
             className="input mono"
             value={candidate}
-            placeholder="fun-people"
+            placeholder="paylab"
             onChange={(e) => { setTouchedSlug(true); setSlug(e.target.value) }}
           />
-          <span className="meta mono">/t/{candidate || '…'}</span>
+          <span className="meta">주소: <span className="mono">/t/{candidate || '…'}</span></span>
           {candidate.length === 0 && name.length > 0
             //  한글 이름은 후보가 비어 있다 — 지어내지 않는다 (`lib/web/slug.ts`).
-            ? <span className="meta ink-warn">⚠ 이름에서 slug 를 만들지 못했습니다. 영문·숫자로 직접 적어주세요.</span>
+            ? <Note tone="warn">이름에서 주소용 이름(slug)을 만들지 못했습니다. 영문·숫자로 직접 적어주세요.</Note>
             : null}
         </div>
 
         {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
-        {error ? <p className="meta ink-bad">✕ {error}</p> : null}
+        {error ? <Note tone="bad">{error}</Note> : null}
 
         <button type="submit" className="btn btn-primary" disabled={busy || name.trim().length === 0 || candidate.length < 2}>
           {busy ? '만드는 중' : '팀 만들기'}

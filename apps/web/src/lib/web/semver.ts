@@ -15,10 +15,11 @@
 export const SEMVER_BUMPS = ['patch', 'minor', 'major'] as const
 export type SemverBump = (typeof SEMVER_BUMPS)[number]
 
+//  라벨은 사람 말이다 (2026-09-11) — patch/minor/major · Schema · 템플릿은 팀장(비개발자)이 고르는 모달의 낱말이 아니었다.
 export const SEMVER_RULE: Record<SemverBump, { label: string; why: string }> = {
-  patch: { label: 'patch', why: '오탈자·설명만 고쳤습니다' },
-  minor: { label: 'minor', why: '항목을 더하거나 바꿨습니다' },
-  major: { label: 'major', why: 'Schema·템플릿이 바뀌었습니다' },
+  patch: { label: '작은 고침', why: '오탈자·설명만 고쳤습니다' },
+  minor: { label: '규칙 추가·변경', why: '규칙을 더하거나 바꿨습니다' },
+  major: { label: '틀이 바뀜', why: '규칙을 담는 형식 자체가 바뀌었습니다 — 드뭅니다' },
 }
 
 /** `1.2.3` → 등급별 다음 값. 형식이 아니면 `null` 이다 (지어내지 않는다). */

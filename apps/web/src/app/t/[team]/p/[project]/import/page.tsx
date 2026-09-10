@@ -15,7 +15,7 @@ import {
   type AiJobSummary, type ProjectRef, type QuestionRow,
 } from '../../../../../../lib/web/queries'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
-import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL } from '../../../../../../components/chips'
+import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL, Note } from '../../../../../../components/chips'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { QuestionStack, type QuestionStackState } from '../../../../../../components/question-stack'
@@ -43,7 +43,7 @@ import { ErrorState, ReadOnlyNotice, ScreenEmpty, Skeleton } from '../../../../.
 //     자리다 (FINDINGS 58). 그래서 이 화면은 **언제나 `GET …/jobs?feature=structure
 //     &limit=1` 부터 읽는다.** 방금 올렸든 어제 올렸든 그리는 것은 그 한 줄이다.
 //
-//  ⚠ accent 는 [구조화하기] 하나뿐이다 (DESIGN_BRIEF §3).
+//  ⚠ accent 는 [AI 로 정리하기] 하나뿐이다 (DESIGN_BRIEF §3).
 // =====================================================================
 
 /**
@@ -81,17 +81,22 @@ function ImportView({ base, project }: { base: string; project: ProjectRef }) {
       <header className="col-tight">
         <h1 className="text-section">가져오기</h1>
         <p className="meta">
-          있는 것부터 시작하세요. 올린 문서는 팀의 목표·정책·결정 후보로 정리되고,
-          결정이 필요한 것만 질문으로 남습니다.
+          팀 문서가 있으면 붙여넣고, 없으면 질문에 답하세요. 둘 다 해도 됩니다.
+          AI 가 정리한 결과는 「AI 정리 진행」 칸에 나타나고, 무엇을 남길지는 사람이 고릅니다.
         </p>
       </header>
 
       {/* 🔴 쓰기 문은 **누르기 전에** 서버와 같은 표(`ACTOR_RULES.writes`)를 읽는다 (INBOX H7 · FINDINGS 135).
-          세 카드가 같은 문을 받는다 — 게스트가 [구조화하기]·[저장하기]·[항목으로 만들기] 를 누르면 403 대신 그 자리에 이유가 뜬다. */}
-      <div className="row items-start wrap">
+          세 카드가 같은 문을 받는다 — 게스트가 [AI 로 정리하기]·[저장하기]·[항목으로 만들기] 를 누르면 403 대신 그 자리에 이유가 뜬다. */}
+      {/* 🔴 **자리를 격자로 못 박는다** (2026-09-11). `wrap` 이던 동안 카드 셋의 자리가
+          폭에 따라 바뀌었고(캡처 09-07 과 09-10 이 서로 다르다), 그래서 「AI 정리 진행」이
+          질문 카드 옆에 서서 **질문의 진행**처럼 보였다. 격자에서는 붙여넣기와 그 결과가
+          늘 한 줄이고, 「문서가 없어도 되는 길」인 질문 카드가 그 아래 한 줄을 통째로 쓴다.
+          ⚠ 자리를 정하는 것은 `globals.css` 의 `.import-grid` 네 줄이다 — 여기서 폭을 적지 마라. */}
+      <div className="import-grid">
         <PasteCard projectId={project.id} onCreated={jobs.reload} door={door} />
-        <QuestionsCard base={base} projectId={project.id} door={door} />
         <StructureCard base={base} projectId={project.id} jobs={jobs} door={door} />
+        <QuestionsCard base={base} projectId={project.id} door={door} />
       </div>
     </>
   )
@@ -142,10 +147,10 @@ function PasteCard({ projectId, onCreated, door }: { projectId: string; onCreate
   }
 
   return (
-    <form className="card pad col grow" onSubmit={submit}>
+    <form className="card pad col import-paste" onSubmit={submit}>
       <div className="col-tight">
         <h2 className="text-section">문서 붙여넣기</h2>
-        <p className="meta">목표 문서·정책·회의록 무엇이든 됩니다. 서버가 받는 것은 여기 붙여넣은 글자뿐입니다.</p>
+        <p className="meta">문서가 있으면 여기서 시작하세요. 목표 문서·정책·회의록 무엇이든 됩니다. 서버가 받는 것은 여기 붙여넣은 글자뿐입니다.</p>
         {/* 손에 든 문서가 없는 사람(심사위원)을 위한 문 — 정본 픽스처 goals.md 를 채운다. 실측 표가 이 문서로 잰 것이다. */}
         <span className="row"><button type="button" className="btn btn-sm" onClick={fillSample}>예시 문서 붙여넣기</button><span className="meta">샘플 팀의 목표 문서 · {SAMPLE_DOCUMENT.content.length.toLocaleString()}자</span></span>
       </div>
@@ -192,8 +197,17 @@ function PasteCard({ projectId, onCreated, door }: { projectId: string; onCreate
 
       <div className="row">
         <button type="submit" className="btn btn-primary" disabled={!ready || busy}>AI 로 정리하기</button>
+        {/* 🔴 **왜 못 누르는지를 버튼 옆에서 말한다** (2026-09-11). 잠긴 알약만 서 있으면
+            본문만 붙여넣고 제목을 안 적은 사람은 그것을 「고장」으로 읽는다 — 이 화면의
+            유일한 accent 버튼이 첫 화면부터 죽어 보이던 자리다.
+            ⚠ 제목과 본문을 갈라 말하지 않는다 — 한 문장이면 충분하고, 갈래가 늘면
+              화면이 `ready` 의 조건을 두 번 적게 된다. */}
         <span className="meta">
-          {busy ? '올리는 중입니다…' : 'AI 가 항목 후보와 질문을 만듭니다. 결정은 사람이 합니다.'}
+          {busy
+            ? '올리는 중입니다…'
+            : !ready
+              ? '제목과 본문을 채우면 누를 수 있습니다.'
+              : 'AI 가 항목 후보와 질문을 만듭니다. 결정은 사람이 합니다.'}
         </span>
       </div>
     </form>
@@ -215,7 +229,7 @@ function QuestionsCard({ base, projectId, door }: { base: string; projectId: str
   //  🔴 「이 답을 무엇으로 저장할까요」 — 열린 질문 카드에서만 고른다 (FINDINGS 106).
   //     ⚠ 답과 **따로** 든다. 한 장씩 넘기는 스택이라 사람은 고른 뒤에 답을 고치거나
   //       [이전] 로 되돌아온다 — 답에 묶어 두면 그때 고른 자리가 사라진다.
-  //     ⚠ 기본값은 **고르지 않음**(`''` = 기록만)이다. 기본을 항목으로 두면 사람이
+  //     ⚠ 기본값은 **고르지 않음**(`''` = 답만 저장)이다. 기본을 항목으로 두면 사람이
   //       고르지 않은 타입의 초안이 생기고, 그건 서버가 대신 고른 것과 같다 (화면 4 와 같은 판단).
   const [saveAs, setSaveAs] = useState<Record<string, AnswerSlotKey | ''>>({})
   const [draft, setDraft] = useState('')
@@ -259,7 +273,7 @@ function QuestionsCard({ base, projectId, door }: { base: string; projectId: str
   }
 
   return (
-    <section className="card pad col grow">
+    <section className="card pad col import-questions">
       <div className="col-tight">
         <h2 className="text-section">질문에 답하기</h2>
         <p className="meta">문서가 없어도 됩니다. 답한 것이 초안 항목이 되고, 발행하면 첫 버전이 됩니다.</p>
@@ -332,7 +346,7 @@ function StructureCard({
   }
 
   return (
-    <section className="card pad col drawer">
+    <section className="card pad col import-progress">
       <div className="row-between">
         <h2 className="text-section">AI 정리 진행</h2>
         <AiBadge />
@@ -381,9 +395,10 @@ function Succeeded({ base, projectId, jobId, door }: { base: string; projectId: 
   }
   return (
     <div className="col-tight">
-      <p className="ink-ok">✓ 항목 후보 {counts.items}개 · 질문 {counts.questions}개를 찾았습니다.</p>
+      <Note tone="ok">항목 후보 {counts.items}개 · 질문 {counts.questions}개를 찾았습니다.</Note>
+      {/* ⚠ 숫자만 mono 로 세워 두면 「4 / 12」가 무엇의 넷인지 안 읽힌다 — 문장으로 말한다. */}
       {counts.chunks ? (
-        <span className="meta mono">읽은 조각 {counts.chunks.used} / {counts.chunks.total}</span>
+        <span className="meta">문서 {counts.chunks.total}조각 중 {counts.chunks.used}조각을 읽었습니다.</span>
       ) : null}
       <Candidates
         base={base}

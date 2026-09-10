@@ -101,6 +101,11 @@
         더 길어지면 그때부터 스스로 스크롤한다. */
   --palette-w: 480px;
   --palette-list-h: 420px;
+  /* 화면 3 의 후보 목록이 스스로 스크롤하는 높이 (2026-09-11).
+     🔴 씨앗이 후보를 25장 내면 오른쪽 칸이 3,000px 넘게 늘어나 **왼쪽이 통째로 빈 채**로 남았다 —
+        캡처로 보고 고쳤다. 목록이 제 안에서 구르면 두 칸의 키가 서로 보인다.
+     ⚠ 목록을 감추는 것이 아니다 — 전부 들어 있고 굴려서 본다. */
+  --pick-list-h: 420px;
   /* 거르개의 자유 입력 칸(화면 5 의 `scope`) — placeholder 가 **쓰는 법**을 말하는 자리다.
      🔴 그 문구가 잘리면 사람은 잘린 문법을 따라 적는다 (FINDINGS 158 · `domain:billin`).
         1440×900 에서 잰 것: 칸 안쪽 195px · 문구 203.91px → **8.91px 모자랐다.**
@@ -348,6 +353,9 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 /* llm 은 AI 산출물에만 붙는다 (DESIGN_BRIEF §3) — 유일하게 테두리가 있는 칩이다 (「AI 가 만든 것」은 경계가 보여야 한다). */
 .tone-llm { border-color: var(--line-hi); padding: var(--sp-1) var(--sp-2); }
 .tone-llm .chip-dot { background: var(--llm); }
+/* 한 줄 알림(`Note`) — 색점 + 글자. ✓ ✕ ⚠ ◌ 기호가 서던 자리 전부 (2026-09-11). 글자는 잉크, 실패만 빨강 글자. */
+.note { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-table); color: var(--ink); line-height: 1.5; }
+.note.tone-bad { color: var(--bad); }
 
 /* CtxTag — 역추적 칩. 작고 회색이고 모노다 (P7 의 얼굴). */
 .ctx-tag {
@@ -434,7 +442,7 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sp-3);
-  align-items: start;
+  /* 두 쪽의 높이를 맞춘다(stretch) — 옛 문서 쪽이 짧아 「덜 채운 카드」로 읽혔다 (2026-09-11). */
 }
 .side-title { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); line-height: 1.35; }
 /* 이름표 한 줄 — 「규칙」「설명」「낱말 풀이」 모노 이름표 + 문장 (2026-09-10 저녁 · 카드 A/B · Context 드로어 · Pack 출처 패널). */
@@ -442,7 +450,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .key-line .key { font-family: var(--font-mono); font-size: var(--fs-label); color: var(--ink-3); margin-right: var(--sp-2); white-space: nowrap; }
 .key-line.jargon { font-size: var(--fs-table); color: var(--ink-2); }
 .key-line.jargon b { font-weight: 600; color: var(--ink); }
-.ctx-rev { color: var(--ink-3); }
+/* id 는 모노, 「개정 n」은 본문체 — 모노에 한글이 없어 글자가 벌어졌다 (2026-09-11). */
+.ctx-rev { color: var(--ink-3); font-family: var(--font-sans); }
+/* 근거 한 줄의 글자 범위(`841–964번째 글자`)는 한 덩어리로 — 「–」 뒤에서 접히면 두 값처럼 읽힌다. */
+.evidence-range { white-space: nowrap; }
 /* 카드 머리의 사람 말 한 문장 — 두 쪽이 무엇인지 · 무엇을 정해 달라는지. 두 쪽의 이름은 굵고 잉크다. */
 .conflict-plain { font-size: var(--fs-body); color: var(--ink-2); line-height: 1.65; }
 .conflict-plain b { font-weight: 700; color: var(--ink); }
@@ -507,7 +518,9 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   color: var(--ink-2);
 }
 .tour-step:hover { text-decoration: none; color: var(--ink); border-color: var(--ink-3); }
-.tour-step[aria-current='step'] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+/* 지금 걸음은 「어디」이지 액션이 아니다 — 검정 알약(accent)은 화면당 주요 액션 하나뿐이라 흰 카드 + 잉크 테두리 + 굵게 (2026-09-11). `aria-current` 가 같이 말한다. */
+.tour-step[aria-current='step'] { background: var(--surface); border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.tour-step-describe { font-weight: 400; margin-left: var(--sp-1); }
 .tour-see { font-size: var(--fs-body); line-height: 1.6; }
 
 /* 가운데 한 장짜리 화면 (로그인 · 팀/프로젝트 만들기) */
@@ -607,6 +620,30 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .pack-block-plain { cursor: default; }
 .pack-block:not(.pack-block-plain):hover { background: var(--surface-hi); }
 .pack-block[aria-selected='true'] { background: var(--accent-soft); border-left-color: var(--accent-ink); }
+/* ── 화면 5 · 문서로 보기 (2026-09-11 · 「Context 화면도 문서처럼 읽기 쉽게」) — 절마다 머리 한 줄, 항목마다 블록. 블록의 색·괘선은 화면 7 의 `.pack-block` 과 같다. ── */
+.context-doc { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-3) var(--sp-3) var(--sp-4); }
+.context-section { display: flex; flex-direction: column; gap: var(--sp-2); }
+.context-section > header { padding-bottom: var(--sp-2); border-bottom: 1px solid var(--line); }
+.context-section-title { font-size: var(--fs-sub); margin: 0; display: flex; align-items: baseline; gap: var(--sp-2); }
+.context-section-title .meta { font-weight: 400; }
+.doc-item {
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.doc-item:hover { background: var(--surface-hi); }
+.doc-item[aria-selected='true'] { background: var(--accent-soft); border-left-color: var(--accent-ink); }
+/* 「적용 중」이 아닌 항목만 괘선이 그 상태의 색이다 — 문서의 기본은 승인된 것이고 예외만 눈에 띈다. */
+.doc-item[data-tone='warn'] { border-left-color: var(--warn); }
+.doc-item[data-tone='bad'] { border-left-color: var(--bad); }
+.doc-item[data-tone='neutral'] { border-left-color: var(--line-hi); }
+.doc-item-title { font-weight: 600; color: var(--ink); font-size: var(--fs-body); }
+.doc-item-body { margin: 0; color: var(--ink-2); font-size: var(--fs-table); line-height: 1.6; white-space: pre-wrap; }
+.doc-item-foot { align-items: center; }
 /* 렌더된 마크다운 — 토큰만. 절 머리는 표제체, 본문은 본문체. */
 .md h1 { font-size: var(--fs-section); margin: var(--sp-2) 0 0; }
 .md h2 { font-size: var(--fs-sub); margin: var(--sp-3) 0 0; }
@@ -673,15 +710,31 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 /* 파일 트리의 한 줄 — 경로는 240px 안에서 **접어서 다 보여 준다.**
    ⚠ `.btn` 의 `white-space: nowrap` 을 여기서만 푼다. 경로가 잘리면 어느 파일인지
      알 수 없고, 그러면 트리가 아무 일도 안 하는 목록이 된다 (눈으로 확인했다). */
+/* 목록의 `<ul>` 은 브라우저 기본 점·들여쓰기를 쓰지 않는다 — 내 팀 홈의 프로젝트·팀원 목록이 40px 들여쓰인 채 떠 있었다 (2026-09-11). */
+ul.col-tight, ol.col-tight { list-style: none; margin: 0; padding: 0; }
+/* 상태 각주 — 상태당 한 줄(칩 + 뜻). 한 문단에 `=` 로 이어 붙였던 것을 푼다 (2026-09-11). */
+.legend { display: grid; gap: var(--sp-2); margin: 0; }
+.legend > div { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.legend dt, .legend dd { margin: 0; }
+/* 화면 3 의 세 카드 배치 — 붙여넣기 | 진행(결과) · 아래에 질문 전체 폭. flex-wrap 은 폭마다 자리가 바뀌어 「왼쪽에」가 틀렸다 (2026-09-11). */
+.import-grid { display: grid; grid-template-columns: minmax(0, 1fr) var(--drawer-w); gap: var(--sp-4); align-items: start; }
+.import-grid > .import-paste { grid-column: 1; }
+.import-grid > .import-progress { grid-column: 2; grid-row: 1; }
+.import-grid > .import-questions { grid-column: 1 / -1; }
+.pick-list { max-height: var(--pick-list-h); overflow-y: auto; }
+/* 마일스톤 행 머리의 펼치기 버튼 — 카드 안에 또 하나의 테두리 상자라 입력 칸처럼 읽혔다. 제목이 카드 위에 바로 선다 (2026-09-11). */
+.milestone .tree-item, .off-roadmap .tree-item { border: 0; background: transparent; padding: 0; }
 .tree-item {
   white-space: normal;
-  word-break: break-all;
+  /* 경로는 폴더/이름 두 줄로 그리고(화면 7 `splitPackPath`), 이건 넘칠 때만 — break-all 은 `arch|itecture.md` 처럼 낱말 가운데를 잘랐다 (2026-09-11). */
+  overflow-wrap: anywhere;
   text-align: left;
   gap: var(--sp-2);
-  /* 행처럼 넓게 서는 버튼(로드맵 행 · 파일 트리)은 알약이 아니다 — 폭 100% 알약은 캡슐로 읽힌다 (눈으로 봤다). */
+  /* 행처럼 넓게 서는 버튼(파일 트리)은 알약이 아니다 — 폭 100% 알약은 캡슐로 읽힌다 (눈으로 봤다).
+     ⚠ 로드맵 행은 위 `.milestone .tree-item` 이 테두리·배경을 지워 이 값이 안 보인다 (2026-09-11). */
   border-radius: var(--radius);
 }
-/* ⚠ sha 4자는 안 접는다 — `.tree-item` 의 break-all 이 `4175` 를 `41`/`75` 로 쪼갰다. */
+/* ⚠ sha 4자는 안 접는다 — 예전 `.tree-item` 의 break-all 이 `4175` 를 `41`/`75` 로 쪼갰다. */
 .tree-sha { white-space: nowrap; word-break: normal; flex: 0 0 auto; }
 
 /* ── 명령 팔레트 `⌘K` — 화면 이동과 검색만 (FINDINGS 132) ──────────
@@ -713,9 +766,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 }
 .palette-item:hover { text-decoration: none; }
 .palette-item[aria-selected='true'] { background: var(--accent-soft); color: var(--ink); }
-/* ⚠ 화살표 자리는 고른 줄이 아니어도 남는다 — 안 그러면 화살표가 옮겨 다닐 때
-   줄 전체가 좌우로 흔들린다 (눈으로 확인했다). */
-.palette-caret { flex: 0 0 auto; white-space: pre; }
+/* ⚠ 표시 막대 자리는 고른 줄이 아니어도 남는다 — 안 그러면 막대가 옮겨 다닐 때
+   줄 전체가 좌우로 흔들린다 (눈으로 확인했다). 기호(›) 대신 잉크 막대다 (2026-09-11). */
+.palette-caret { flex: 0 0 auto; width: var(--sp-1); height: var(--sp-4); border-radius: var(--radius-pill); }
+.palette-caret[data-active='true'] { background: var(--ink); }
 
 /* 묶음 제목(「화면」·「프로젝트」)과 안내 한 줄 — 고를 수 없는 줄이라 들여쓰기가
    `palette-item` 과 같아야 목록이 한 줄로 읽힌다 (FINDINGS 157). */
@@ -764,8 +818,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
        (둘 다 진짜 브라우저로 봤다). */
   .row { flex-wrap: wrap; }
   .drawer, .pack-tree, .pack-side { width: 100%; flex: 1 1 100%; }
-  /* 충돌 카드의 A/B 두 쪽도 좁은 폭에서는 위아래로. */
+  /* 충돌 카드의 두 쪽도 좁은 폭에서는 위아래로. 화면 3 의 세 카드도 한 열로. */
   .sides { grid-template-columns: 1fr; }
+  .import-grid { grid-template-columns: 1fr; }
+  .import-grid > .import-progress { grid-column: 1; grid-row: auto; }
   /* 팔레트 버튼이 막대의 남은 폭을 다 먹지 않게 — 이름 쪽이 먼저 줄어든다. */
   .nav .palette-trigger { flex: 0 0 auto; }
   .main { padding: var(--sp-4); }

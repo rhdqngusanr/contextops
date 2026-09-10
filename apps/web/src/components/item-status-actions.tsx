@@ -2,7 +2,7 @@
 
 import { ITEM_STATUS_EXCLUDE_REASON, ITEM_STATUSES, type ItemStatus } from '@contextops/schema'
 
-import { ITEM_STATUS_CHIP } from './chips'
+import { ITEM_STATUS_CHIP, Note } from './chips'
 
 // =====================================================================
 //  🔴 항목의 상태를 바꾸는 문 — 화면 5 드로어 (SPEC §5 · DESIGN_BRIEF §4 화면 5)
@@ -121,7 +121,7 @@ export function ItemStatusActions({
         ))}
         {state.busy === null ? null : <span className="meta">저장하는 중입니다…</span>}
       </div>
-      {state.error === null ? null : <p className="meta ink-warn">⚠ {state.error}</p>}
+      {state.error === null ? null : <Note tone="warn">{state.error}</Note>}
     </div>
   )
 }

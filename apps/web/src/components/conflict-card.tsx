@@ -13,10 +13,11 @@ import { dateText } from '../lib/web/time'
 import {
   AiBadge, ConfidenceChip, ConflictKindChip, ConflictSeverityChip, CtxTag, ITEM_STATUS_CHIP,
   ItemStatusChip,
+  Note,
 } from './chips'
 import { EvidenceLink, EvidenceList } from './evidence'
 import { Jargon } from './jargon'
-import { ErrorState } from './states'
+import { ErrorState, ReadOnlyNotice } from './states'
 
 // =====================================================================
 //  충돌 카드 한 장 (DESIGN_BRIEF §4 화면 4 · SPEC §9 화면 4)
@@ -67,8 +68,10 @@ export const CONFLICT_HEADLINE: Record<ConflictKind, string> = {
   stale: '한쪽이 오래된 규칙입니다',
   duplicate: '같은 규칙이 둘입니다',
   doc_vs_code: '문서와 코드가 다르게 말합니다',
-  open_question: '답이 필요한 질문입니다',
-  seed_question: '팀에게 묻는 질문입니다',
+  //  질문 둘은 **출처**를 말한다 — 종류는 칩(`CONFLICT_KIND_CHIP`)이 이미 말하므로 같은 말을 두 번 하지 않는다 (2026-09-11).
+  //  문장은 `api.ts` 의 `madeBy`(§7.1 문서 구조화의 open_questions · 프로젝트를 만들 때 심은 씨앗)와 같은 사실이다.
+  open_question: 'AI 가 문서를 읽다 남긴 질문입니다',
+  seed_question: '프로젝트를 만들 때 심어 둔 기본 질문입니다',
 }
 
 /**
@@ -154,9 +157,9 @@ export type ConflictCardState = {
    * 🔴 **이 사람이 결정을 눌러도 되나.** `POST /conflicts/{id}:resolve` 는 **owner** 만
    * 받고 (`requireProject(…, 'owner')`), 질문에 답하는 문은 member 도 받는다.
    *
-   * ★ 왜 화면이 이걸 아는가 — 모르면 member 에게 버튼 넷을 그려 놓고, 누르는 족족
-   *   403 을 낸다. 「눌러도 되는 것만 그린다」가 이 저장소의 규칙이다
-   *   (`versions.tsx` 의 「롤백 발행」 · 화면 3 의 zip 카드와 같은 판단).
+   * ★ 왜 화면이 이걸 아는가 — 모르면 member 에게 버튼 넷을 **활성**으로 그려 놓고, 누르는 족족
+   *   403 을 낸다. 버튼은 그리되 잠근다(`disabled` + 밑에 이유) — 무엇을 고를 수 있는지는 보이고,
+   *   누를 수 없으니 403 도 없다 (DESIGN_BRIEF §5 「버튼을 숨기지는 않는다 — 막는 것은 서버다」 · 2026-09-11).
    * ⚠ 이건 **보안이 아니라 안내**다 — 막는 것은 서버의 guard 다.
    */
   canDecide: boolean
@@ -164,7 +167,8 @@ export type ConflictCardState = {
    * 🔴 이 세션이 **쓰기 문**을 지날 수 있나 (`writeDoor()` · INBOX G13). 게스트는 등급이 member 라
    * `canDecide:false` 로 와서 「이 결정은 팀 owner 가 합니다」를 봤다 — 게스트에겐 거짓이다(로그인해도 샘플
    * 팀에서는 못 한다). 그리고 질문 카드의 [답 저장하기] 는 member 문이라 게스트에게 **활성**으로 그려졌다.
-   * 닫혀 있으면 둘 다 버튼 대신 서버가 낼 문구(`GUEST_HINT`)를 말한다. 안 주면 열린 것으로 본다.
+   * 닫혀 있으면 결정·답 칸을 전부 잠그고(`disabled`) 그 밑에 서버가 낼 문구(`GUEST_HINT` · `ReadOnlyNotice`)를 말한다.
+   * 안 주면 열린 것으로 본다.
    */
   door?: WriteDoor
   /** 지금 칸에 쓰고 있는 글 — 탐지 카드는 **메모**, 질문 카드는 **답**이다. */
@@ -228,25 +232,35 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
       {rule.detected ? (
         <div className="col-tight">
           <span className="label">AI 가 올린 질문</span>
-          <p className="ink-2">{conflict.question}</p>
+          {/* 문단 단위로 그린다 — 빈 줄로 갈린 문단(기록물 각주 등)이 한 덩어리로 붙지 않는다. 데모 특수 처리가 아니다 · 어느 AI 질문이든 같다. */}
+          {conflict.question.split('\n\n').map((para, i) => <p key={i} className="ink-2">{para}</p>)}
         </div>
       ) : null}
 
       {state.error ? <ErrorState error={state.error} /> : null}
 
+      {/* 🔴 결정·답 칸은 **누구에게나 그린다** — 못 누르는 사람에겐 전부 `disabled` 이고 그 밑에 이유가 선다 (`Blocked`).
+          ★ 왜 숨기지 않나 — 이 화면의 존재 이유가 「AI 는 찾고 사람이 정한다」인데, 게스트(심사위원)에게 한 줄만 남기면
+            선택지가 넷이고 하나를 고르면 진 쪽이 폐기된다는 것을 한 번도 못 본다. DESIGN_BRIEF §5: 「버튼을 숨기지는 않는다 —
+            막는 것은 서버다」 (`ReadOnlyNotice`). 잠근 버튼은 403 을 낼 수 없다 — 누를 수 없으니까. */}
       {conflict.status === 'open'
         ? (rule.detected
-          ? (state.canDecide && doorOpen(state)
-            ? <Decision state={state} on={on} />
-            //  ⚠ 「권한이 없습니다」로 끝내지 않는다 — 누구에게 말해야 하는지를 같이 낸다.
-            //     문이 닫힌 주체(게스트)에겐 그 문장도 거짓이라 서버의 문구가 먼저다 (INBOX G13).
-            : <p className="meta">{blockedText(state)}</p>)
-          : (doorOpen(state)
-            ? <Answer state={state} on={on} />
-            : <p className="meta">{blockedText(state)}</p>))
+          ? <Decision state={state} on={on} locked={!(state.canDecide && doorOpen(state))} />
+          : <Answer state={state} on={on} locked={!doorOpen(state)} />)
         : <Decided state={state} />}
     </article>
   )
+}
+
+/**
+ * 잠긴 결정·답 칸 밑의 이유. 문이 닫힌 주체(게스트)에겐 서버가 낼 문구 + [내 팀으로 시작하기] (`ReadOnlyNotice` · 다른 쓰기 버튼과
+ * 같은 모양) · 문은 열렸는데 등급이 모자란 member 에겐 owner 문장.
+ * ⚠ 「권한이 없습니다」로 끝내지 않는다 — 누구에게 말해야 하는지를 같이 낸다. 문장을 고르는 문은 `blockedText` 하나다 (INBOX G13).
+ */
+function Blocked({ state }: { state: Pick<ConflictCardState, 'door'> }) {
+  return doorOpen(state)
+    ? <p className="meta">{blockedText(state)}</p>
+    : <ReadOnlyNotice reason={blockedText(state)} />
 }
 
 /**
@@ -312,8 +326,9 @@ const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNod
   //     대신 「왜 없는지」와 「그럼 근거는 무엇이 되는지」를 말한다.
   //  ⚠ 「답이 근거가 **됩니다**」로 적지 마라 — 답한 뒤에도 이 줄이 그대로 남는다.
   //     때(時)를 타는 문장을 상태와 무관한 자리에 두면 반드시 한쪽에서 거짓말이 된다.
+  //  ⚠ 「가리킬」「항목」은 이 제품 안의 낱말이라 비개발자에겐 안 읽혔다 — 사람 말로 (2026-09-11).
   none: () => (
-    <p className="meta">가리킬 문서도 항목도 없습니다 — 답이 그대로 근거입니다.</p>
+    <p className="meta">가리키는 문서가 없어 근거가 따로 없습니다. 답이 그대로 근거입니다.</p>
   ),
 }
 
@@ -326,13 +341,13 @@ function ItemSide({ name, itemId, item }: { name: SideName; itemId: string | nul
       {item === null ? (
         <>
           {itemId === null
-            ? <span className="meta ink-warn">⚠ 가리키는 항목이 적혀 있지 않습니다.</span>
+            ? <Note tone="warn">가리키는 항목이 적혀 있지 않습니다.</Note>
             : (
               <>
                 <CtxTag itemId={itemId} />
                 {/* ⚠ 「없는 항목」이라고 단정하지 않는다 — 목록을 걸러서 읽었을 수도 있다.
                     본 것만 말한다 (loop/PROMPT.md ④2). */}
-                <span className="meta ink-warn">⚠ 이 항목을 목록에서 찾지 못했습니다.</span>
+                <Note tone="warn">이 항목을 목록에서 찾지 못했습니다.</Note>
               </>
             )}
         </>
@@ -375,7 +390,11 @@ function RefSide({ label, refValue }: { label: string; refValue: NonNullable<Con
 //  ② 결정 — 탐지가 만든 카드 (DecisionBar)
 // ---------------------------------------------------------------------
 
-function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHandlers }) {
+/**
+ * @param locked 이 사람이 못 누른다(owner 아님 · 게스트). 칸은 전부 그리되 `disabled` 이고 밑에 이유(`Blocked`)가 선다 —
+ *   무엇을 고를 수 있고 고르면 무슨 일이 나는지는 못 누르는 사람에게도 보여야 한다.
+ */
+function Decision({ state, on, locked }: { state: ConflictCardState; on: ConflictCardHandlers; locked: boolean }) {
   //  ⚠ `detected` 인 종류만 여기 온다 — 그 좁힘의 근거는 `DetectedConflictKind` 표다.
   const names = sideNames(state.a, state.b)
   const sides = fillSides(state.conflict.kind as DetectedConflictKind, names)
@@ -396,6 +415,7 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
           value={state.draft}
           maxLength={RESOLUTION_NOTE_MAX}
           placeholder="왜 그렇게 정했는지 한 줄"
+          disabled={locked}
           onChange={(e) => on.onDraft(e.target.value)}
         />
       </label>
@@ -405,7 +425,7 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
             <button
               type="button"
               className="btn btn-sm"
-              disabled={state.busy}
+              disabled={locked || state.busy}
               onClick={() => on.onChoose(choice)}
             >
               {CHOICE_LABEL[choice](sides)}
@@ -421,11 +441,12 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
       {/* ⚠ 실제로 폐기되는 선택이 있을 때만 경고한다 — 아무것도 안 없어지는 카드에
           이 줄을 붙이면 사람은 누르지 않아도 될 것을 무서워한다. */}
       {retires ? (
-        <p className="meta ink-warn">
-          ⚠ 「{ITEM_STATUS_CHIP.deprecated.label}」 항목은 다음 발행에 들어가지 않습니다.
+        <Note tone="warn">
+          「{ITEM_STATUS_CHIP.deprecated.label}」 항목은 다음 발행에 들어가지 않습니다.
           결정은 이 화면에서 되돌릴 수 없습니다.
-        </p>
+        </Note>
       ) : null}
+      {locked ? <Blocked state={state} /> : null}
     </div>
   )
 }
@@ -434,7 +455,8 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
 //  ③ 답 — 사람에게 묻는 카드 (열린 질문 · 씨앗 질문)
 // ---------------------------------------------------------------------
 
-function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandlers }) {
+/** @param locked 문이 닫힌 사람(게스트) — 답 칸은 그리되 전부 `disabled` 이고 밑에 이유(`Blocked`)가 선다. member 는 답할 수 있다. */
+function Answer({ state, on, locked }: { state: ConflictCardState; on: ConflictCardHandlers; locked: boolean }) {
   //  🔴 자리를 물어야 하는 카드인가는 **표가 정한다.** `kind === 'open_question'` 이라고
   //     적으면 질문 종류가 늘 때 이 파일을 찾아야 하고, 못 찾으면 답 칸만 있고 항목이
   //     안 생기는 카드가 조용히 하나 는다 (FINDINGS 105 가 그 고장이었다).
@@ -451,6 +473,7 @@ function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandl
           value={state.draft}
           maxLength={ANSWER_MAX}
           placeholder="한두 문장이면 충분합니다."
+          disabled={locked}
           onChange={(e) => on.onDraft(e.target.value)}
         />
         {/* ⚠ 상한을 손으로 적지 않는다 — 서버가 답을 담는 칸의 크기가 정본이다. */}
@@ -466,9 +489,11 @@ function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandl
           <select
             className="select"
             value={state.saveAs}
+            disabled={locked}
             onChange={(e) => on.onSaveAs(e.target.value as AnswerSlotKey | '')}
           >
-            <option value="">저장하지 않고 기록만 합니다</option>
+            {/* 화면 3 의 같은 고르개와 **한 낱말**이다 (`question-stack.tsx` · 2026-09-11) — 「저장하지 않고」라 해 놓고 [저장하기] 를 누르게 하면 무엇을 하는지 모른다. */}
+            <option value="">항목으로 만들지 않고 답만 저장합니다</option>
             {ANSWER_SLOT_KEYS.map((key) => (
               <option key={key} value={key}>{ANSWER_SLOTS[key].label}</option>
             ))}
@@ -480,7 +505,7 @@ function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandl
         <button
           type="button"
           className="btn btn-sm"
-          disabled={state.busy || state.draft.trim().length === 0}
+          disabled={locked || state.busy || state.draft.trim().length === 0}
           onClick={on.onAnswer}
         >
           답 저장하기
@@ -494,10 +519,11 @@ function Answer({ state, on }: { state: ConflictCardState; on: ConflictCardHandl
       {asks ? (
         <p className="meta">
           {slot === null
-            ? '이 답은 기록으로만 남습니다. 항목은 만들어지지 않습니다.'
+            ? '답만 저장됩니다. 항목은 만들어지지 않습니다.'
             : `이 답이 「${slot.label}」 초안 항목 한 개가 됩니다. 발행 전까지 팀 규칙이 아닙니다.`}
         </p>
       ) : null}
+      {locked ? <Blocked state={state} /> : null}
     </div>
   )
 }
@@ -525,11 +551,11 @@ function Decided({ state }: { state: ConflictCardState }) {
           갈리는데 버튼 문구는 넷이 제각각이다 (「무시」·「A가 맞음」). 조사를 고르는
           코드를 만드는 대신 **조사가 필요 없는 자리**로 옮겼다 — 문구가 늘어도 안 깨진다.
           눈으로 읽고 고쳤다: docs/evidence/2026-09-04-screen4/ 첫 판 ⑩. */}
-      <p className="ink-ok">
-        ✓ {rule.detected && choice
+      <Note tone="ok">
+        {rule.detected && choice
           ? `정했습니다 — 「${CHOICE_LABEL[choice](fillSides(conflict.kind as DetectedConflictKind, names))}」`
           : '답을 저장했습니다.'}
-      </p>
+      </Note>
       {/* 🔴 **무엇이 일어났는지**를 같이 낸다 (FINDINGS 74). 누르기 전에 보여 준
           것과 **같은 함수**라 둘이 어긋날 수 없다. 「정했습니다」만 남기면 사람은 자기가
           방금 항목 하나를 Pack 밖으로 보낸 것을 모른다. */}

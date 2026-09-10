@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { PROGRESS_SOURCES, PROGRESS_STATUSES, REPORTABLE_SYNC_STATUSES, TEAM_ROLES, type Manifest } from '@contextops/schema'
+import {
+  PROGRESS_SOURCES, PROGRESS_STATUSES, REPORTABLE_SYNC_STATUSES, SourceRef, TEAM_ROLES, type Manifest,
+} from '@contextops/schema'
 
 import { GET as listItems } from '../../app/api/v1/projects/[id]/context-items/route'
 import { GET as getManifest } from '../../app/api/v1/projects/[id]/packs/[semver]/manifest/route'
@@ -137,6 +139,14 @@ type DemoProposal = {
   data: Record<string, unknown>
   reason: string
   /**
+   * 문서·코드 근거만으로 부족한 행에 **사람이 직접 적는 근거 한 줄** (`{kind:'manual'}`).
+   * 🔴 제안의 근거는 기본으로 **대상 항목의 `source_refs`** 다 (`draftFor()` 가 같이 돌려준다) — 실제로 심어진
+   *    문서판·코드 경로를 가리켜야 P7 이 성립한다. 예전엔 `reason` 을 그대로 근거에 복사해 같은 문장이
+   *    「근거」와 「이유」에 두 번 섰다 (2026-09-11).
+   * ⚠ `reason` 과 **다른 문장**이어야 한다 — 근거는 「무엇을 봤나」이고 이유는 「왜 바꾸나」다.
+   */
+  evidenceNote?: string
+  /**
    * 🔴 이 제안이 **어느 마일스톤을 움직이나** (`relates_to` · FINDINGS 164).
    *    화면 6(제안)과 화면 8(로드맵)을 잇는 **유일한 줄**이다. 씨앗이 한 줄도 안 쓰면
    *    「관련 마일스톤」 칸이 전부 「—」로 서서, 두 화면이 이어진 적 없는 제품처럼 보인다.
@@ -170,7 +180,8 @@ type DemoProposal = {
 export const DEMO_PROPOSALS: DemoProposal[] = [
   {
     author: 'demo-member-junho',
-    title: '재시도 간격을 점점 늘리는 방식으로',
+    //  제목은 「~한다」 한 문법으로 (2026-09-11) — 한 표 안에 문장 조각·명사형·평서문이 섞이면 「대충」으로 읽힌다.
+    title: '재시도 간격을 점점 늘리는 방식으로 바꾼다',
     summary: '0.5초 고정이면 결제사(PSP)가 밀릴 때 같은 순간에 다시 몰립니다.',
     target: 'item_policy_retry',
     data: {
@@ -179,18 +190,20 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
       severity: 'must',
       enforcement: 'review',
     },
-    reason: 'goals.md §3.1 이 말하는 「5회 + 백오프」와 코드가 어긋나 있다.',
+    reason: 'goals.md §3.1 이 말하는 「5회 + 백오프」와 코드가 어긋나 있습니다.',
     //  M1 의 완료 기준이 「재시도 횟수와 간격」 그것이다.
     relatesTo: ['PL-M1'],
     decision: 'published',
   },
   {
     author: 'demo-member-seoyeon',
-    title: '결제 성공률 목표를 99.9% 로',
-    summary: '분기 목표를 한 칸 올리자는 제안.',
+    title: '결제 성공률 목표를 99.9%로 올린다',
+    summary: '분기 목표를 한 칸 올리자는 제안입니다.',
     target: 'item_goal_success_rate',
     data: { outcome: '결제 승인 성공률 99.9% 를 유지한다', metric: '승인 성공률(월)' },
-    reason: '이번 분기 실측이 99.7% 였다.',
+    reason: '이번 분기 실측이 99.7% 였습니다.',
+    //  목표 문서(§2 표)만으로는 「올리자」의 근거가 안 된다 — 실측을 본 자리를 적는다.
+    evidenceNote: '이번 분기 승인 성공률 실측 99.7% (대시보드)',
     //  ⚠ 이 하나는 **일부러 비운다** — 분기 목표는 세 마일스톤 중 어느 것도
     //  안 움직인다. 그래야 화면 6 의 「—」도 한 줄 선다 (FINDINGS 164).
     decision: 'rejected',
@@ -198,7 +211,7 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
   },
   {
     author: 'demo-member-doyun',
-    title: '결제사 알림(웹훅)의 서명 확인을 자동 검사로 강제',
+    title: '결제사 알림(웹훅)의 서명 확인을 자동 검사로 강제한다',
     summary: '코드 리뷰에서 두 번 놓쳤습니다. 자동 검사로 막자는 제안입니다.',
     target: 'item_policy_webhook_sig',
     data: {
@@ -206,7 +219,9 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
       severity: 'must',
       enforcement: 'hook',
     },
-    reason: '리뷰만으로는 두 번 새어 나갔다.',
+    reason: '리뷰만으로는 두 번 새어 나갔습니다.',
+    //  문서(§3.5)는 규칙을 말할 뿐 「새어 나갔다」의 근거가 아니다 — 그것을 잡은 기록을 적는다.
+    evidenceNote: '코드 리뷰에서 서명 확인 누락을 두 번 잡은 기록',
     //  M3 의 경로가 `src/webhook/` 이고 완료 기준에 웹훅 payload 줄이 있다.
     relatesTo: ['PL-M3'],
     decision: 'pending',
@@ -221,7 +236,7 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
       severity: 'must',
       enforcement: 'review',
     },
-    reason: 'goals.md §3.2 의 「환불 SLA 24h」가 항목에 안 적혀 있다.',
+    reason: 'goals.md §3.2 의 「환불 SLA 24h」가 항목에 안 적혀 있습니다.',
     //  둘을 적는 유일한 줄이다 — 이 제안은 M2(환불 SLA 계측)의 재료이면서
     //  문장 뒤의 「외부 호출에는 타임아웃」이 M1 의 완료 기준을 같이 건드린다.
     //  ★ 칩 **둘**이 서는 행이 하나 있어야 화면 6 의 `row wrap` 이 그려진 적이 생긴다.
@@ -233,13 +248,13 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
   {
     author: 'demo-member-seoyeon',
     title: '카드 정보 제약에 「토큰 보관 기간」을 적는다',
-    summary: '토큰만 받는다까지는 적혀 있는데, 그 토큰을 얼마나 들고 있나가 없다.',
+    summary: '토큰만 받는다고는 적혀 있는데, 그 토큰을 얼마나 오래 들고 있는지는 없습니다.',
     target: 'item_constraint_card',
     data: {
       statement: '카드 원본 정보를 저장하지 않는다 — 토큰만 받는다. '
         + '받은 토큰은 결제 확정 후 90일까지만 보관하고 그 뒤에는 지운다.',
     },
-    reason: '보관 기간이 항목에 없어서 리뷰마다 사람마다 다른 수를 말한다.',
+    reason: '보관 기간이 항목에 없어서 리뷰마다 사람마다 다른 숫자를 말합니다.',
     //  M3(PII 마스킹·감사 로그)가 「언제까지 들고 있나」를 말하는 자리다.
     relatesTo: ['PL-M3'],
     //  ⚠ 이 하나는 **제출하지 않는다** — 「올리다 만 초안」이 화면 6 에 한 줄 서야
@@ -318,8 +333,13 @@ async function addMember(
  *   제안이 바꾸는 것은 문장이다 (P7 — 태그가 가리키는 원문이 그대로 남아야 한다).
  * ⚠ 서버가 매기는 셋(`project_id`·`status`·`revision`)과 화면용 한 칸(`updated_at`)은
  *   초안에 없는 필드다 (`DraftBase`). 실으면 계약이 400 으로 막는다.
+ * ★ `sourceRefs` 도 같이 돌려준다 — 제안의 **근거**가 대상 항목이 실제로 가리키는 문서판·코드 경로가 되게
+ *   (2026-09-11 · 예전엔 `reason` 을 근거에 복사해 같은 문장이 두 번 섰다). 계약(`SourceRef`)으로 판다 —
+ *   라우트 응답도 외부 입력이다.
  */
-async function draftFor(seed: SeedResult, owner: string, p: DemoProposal): Promise<Record<string, unknown>> {
+async function draftFor(
+  seed: SeedResult, owner: string, p: DemoProposal,
+): Promise<{ draft: Record<string, unknown>; sourceRefs: SourceRef[] }> {
   const list = await dataOf(await listItems(
     req('GET', `/api/v1/projects/${seed.projectId}/context-items?limit=100`, { auth: owner }),
     params({ id: seed.projectId }),
@@ -337,7 +357,7 @@ async function draftFor(seed: SeedResult, owner: string, p: DemoProposal): Promi
     owner: _o,
     ...draft
   } = current
-  return { ...draft, data: p.data }
+  return { draft: { ...draft, data: p.data }, sourceRefs: z.array(SourceRef).parse(draft.source_refs) }
 }
 
 /** 발행된 버전의 Manifest 를 **라우트로** 읽는다 (화면·플러그인이 받는 것과 같은 것). */
@@ -391,7 +411,7 @@ export async function seedDemo(now: Date = new Date(), into: { teamSlug?: string
   }
   //  🔴 게스트도 **팀의 member 다.** 등급이 아니라 주체 종류로 읽기 전용이 된다
   //     (`lib/api/auth.ts` 의 `ACTOR_RULES`). 여기서 owner 를 주면 그 판단이 무너진다.
-  await addMember(seed.teamId, { sub: DEMO_GUEST_SUBJECT, name: '둘러보는 중', role: 'member' })
+  await addMember(seed.teamId, { sub: DEMO_GUEST_SUBJECT, name: '게스트 (심사위원)', role: 'member' })
 
   //  ── 발행 ①: v1.0.0 ──────────────────────────────────────────────────
   const v1 = await publish(seed, owner, '1.0.0', null, '첫 정본 — 목표·규칙·로드맵을 팀 공식으로')
@@ -402,6 +422,7 @@ export async function seedDemo(now: Date = new Date(), into: { teamSlug?: string
   const decideLater: { id: string; owner: string }[] = []
   for (const p of DEMO_PROPOSALS) {
     const author = memberJwt(file, p.author)
+    const { draft, sourceRefs } = await draftFor(seed, owner, p)
     const created = await dataOf(await createProposal(
       req('POST', `/api/v1/projects/${seed.projectId}/proposals`, {
         auth: author,
@@ -415,8 +436,13 @@ export async function seedDemo(now: Date = new Date(), into: { teamSlug?: string
           items: [{
             operation: 'update',
             target_item_id: p.target,
-            draft: await draftFor(seed, owner, p),
-            evidence: [{ kind: 'manual', note: p.reason }],
+            draft,
+            //  🔴 P7 — 근거는 대상 항목이 실제로 가리키는 문서판·코드 경로다. 그것만으로 부족한 행은
+            //     `evidenceNote` 한 줄을 **덧붙인다** (`reason` 을 복사하지 않는다 · 2026-09-11).
+            evidence: [
+              ...sourceRefs,
+              ...(p.evidenceNote === undefined ? [] : [{ kind: 'manual' as const, note: p.evidenceNote }]),
+            ],
             reason: p.reason,
           }],
           client_request_id: randomUUID(),

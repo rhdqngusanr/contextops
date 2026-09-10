@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { ApiClientError, ERROR_HINT, messageOf } from '../lib/web/api'
 import { NO_ACCOUNT_HINT } from '../lib/web/auth'
 import { EMPTY_PLACES, emptyNextHref, type EmptySlot } from '../lib/web/screens'
+import { Note } from './chips'
 
 // =====================================================================
 //  loading / empty / error — **세 상태를 전부** 그리는 자리 (DESIGN_BRIEF §5)
@@ -28,7 +29,6 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 export function EmptyState({ message, action }: { message: string; action?: ReactNode }) {
   return (
     <div className="state-box">
-      <span aria-hidden="true" className="ink-4">◌</span>
       <p>{message}</p>
       {action}
     </div>
@@ -71,10 +71,10 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
   const requestId = error instanceof ApiClientError ? error.requestId : undefined
   return (
     <div className="state-box">
-      <span aria-hidden="true" className="ink-bad">✕</span>
-      <p className="ink">{messageOf(error)}</p>
+      <Note tone="bad">{messageOf(error)}</Note>
       {retry ? <button type="button" className="btn btn-sm" onClick={retry}>다시 시도</button> : null}
-      {requestId ? <span className="meta mono">request_id {requestId}</span> : null}
+      {/* `request_id` 는 로그의 열 이름이다 — 왜 보여 주는지(문의용)를 같이 말한다 (2026-09-11). 값은 그대로. */}
+      {requestId ? <span className="meta">문의할 때 이 번호를 알려 주세요 · 요청 번호 <span className="mono">{requestId}</span></span> : null}
     </div>
   )
 }
@@ -87,7 +87,6 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
 export function NeedsLogin({ next }: { next: string }) {
   return (
     <div className="state-box">
-      <span aria-hidden="true" className="ink-4">◌</span>
       <p className="ink">{ERROR_HINT.UNAUTHORIZED}</p>
       <span className="row">
         <a className="btn btn-sm" href={`/login?next=${encodeURIComponent(next)}`}>로그인하러 가기</a>
@@ -107,7 +106,7 @@ export function NeedsLogin({ next }: { next: string }) {
 export function ReadOnlyNotice({ reason, onClose }: { reason: string; onClose?: () => void }) {
   return (
     <div className="card pad-sm row-between" role="status">
-      <span className="row"><span aria-hidden="true" className="ink-warn">⚠</span><span className="ink">{reason}</span></span>
+      <Note tone="warn">{reason}</Note>
       <span className="row">
         <a className="btn btn-sm" href="/login">내 팀으로 시작하기</a>
         {onClose ? <button type="button" className="btn btn-sm" onClick={onClose}>닫기</button> : null}

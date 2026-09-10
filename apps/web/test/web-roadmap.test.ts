@@ -7,7 +7,8 @@ import {
   MilestoneRow, OffRoadmap, ProgressDrawer, RoadmapSummary, evidenceCoverage, evidenceText,
   type MilestoneRowHandlers,
 } from '../src/components/roadmap'
-import { MILESTONE_CHIP } from '../src/components/chips'
+import { EVIDENCE_CHIP, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL } from '../src/components/chips'
+import { CODE_STAYS_LOCAL } from '../src/components/evidence'
 import { STALE_REPORT_DAYS } from '../src/lib/web/time'
 import type { ProgressEventView, Roadmap, RoadmapMilestone } from '../src/lib/web/queries'
 
@@ -145,6 +146,8 @@ describe('없는 문을 그리지 않는다 — [완료 확인]', () => {
     //  🔴 근거 없는 버튼을 두지 않는다 — 무엇을 확정하는지가 버튼 옆에 있다.
     expect(html).toContain('재시도 정책을 다 지켰다')
     expect(html).toContain('8분 전')
+    //  인용 부호가 보고 본문의 경계다 — 「무엇이 보고했나」가 앞에, 「언제」가 뒤에 선다 (2026-09-11).
+    expect(html).toContain(`${PROGRESS_SOURCE_LABEL.agent}: 「재시도 정책을 다 지켰다」 · 8분 전`)
   })
 
   it('🔴 owner 가 아니면 **버튼 대신 이유**가 나온다 (403 을 내는 버튼을 두지 않는다)', () => {
@@ -155,6 +158,9 @@ describe('없는 문을 그리지 않는다 — [완료 확인]', () => {
     expect(html).toContain('팀장만')
     expect(html).not.toContain('<button type="button" class="btn btn-sm" >완료 확인')
     expect(html).not.toContain('>완료 확인<')
+    //  팀원·게스트도 **무엇이 · 언제** 보고했는지 본다 — 팀장 쪽 문장에만 시각이 있었다 (2026-09-11).
+    expect(html).toContain(`${PROGRESS_SOURCE_LABEL.agent}: 「`)
+    expect(html).toContain('8분 전')
   })
 
   it('확정하는 중에는 버튼이 잠기고, 실패하면 다음 걸음을 말한다', () => {
@@ -209,16 +215,20 @@ describe('🔴 없는 숫자를 만들지 않는다 — 「완료 n/m」이 아�
 })
 
 describe('「보고 없음」과 「근거 없음」을 섞지 않는다', () => {
-  it('보고가 한 번도 없는 마일스톤은 「오래됨」이 아니라 「아직 없음」이다', () => {
+  it('보고가 한 번도 없는 마일스톤은 늦은 것이 아니라 시작 전이다 — 「아직 없음」이라고만 말한다', () => {
     const html = row({ milestone: milestone({ last_report_at: null, status: 'not_started' }) })
     expect(html).toContain('아직 보고가 없습니다')
-    expect(html).not.toContain('전 ⚠')
+    expect(html).not.toContain(`${STALE_REPORT_DAYS}일 이상`)
   })
 
-  it(`마지막 보고가 ${STALE_REPORT_DAYS}일을 넘기면 경고 표시가 붙는다`, () => {
+  it(`마지막 보고가 ${STALE_REPORT_DAYS}일을 넘기면 위 타일과 **같은 낱말**이 행에 붙는다`, () => {
     const html = row({ milestone: milestone({ last_report_at: LONG_AGO }) })
     expect(html).toContain('마지막 보고')
-    expect(html).toContain('⚠')
+    //  🔴 타일 라벨과 한 글자도 달라선 안 된다 — 타일이 「1」이라고 셀 때 **어느 행이 그 1인지**
+    //     눈으로 찾는 유일한 길이다. 색만 다른 글씨였을 때는 그 연결이 안 읽혔다 (2026-09-11).
+    expect(html).toContain(`${STALE_REPORT_DAYS}일 이상 보고 없음`)
+    //  색점 + 낱말이다 (DESIGN_BRIEF 「상태를 색만으로 구분하지 않는다」) — 색 하나로 말하지 않는다.
+    expect(html).toContain('chip-dot')
   })
 
   it('완료 조건 줄: 보고가 없는 줄과 근거가 있는 줄이 다르게 나온다', () => {
@@ -226,14 +236,34 @@ describe('「보고 없음」과 「근거 없음」을 섞지 않는다', () =>
     expect(html).toContain('보고 없음')
     expect(html).toContain('근거 2 · 8분 전')
     //  상태를 색만으로 말하지 않는다 — 낱말이 같이 나간다 (특수문자 기호는 없다 · 2026-09-11).
-    expect(html).toContain('근거 있음')
-    expect(html).toContain('근거 없음')
+    //  낱말의 정본은 `EVIDENCE_CHIP` 하나다 — 화면 5·7 의 근거 칩과 같은 글자여야 한다.
+    expect(html).toContain(EVIDENCE_CHIP.yes.label)
+    expect(html).toContain(EVIDENCE_CHIP.no.label)
     expect(html).not.toContain('✓')
   })
 
-  it('접혀 있으면 완료 조건 줄이 없다 (아코디언)', () => {
-    expect(row({ expanded: false })).not.toContain('재시도가 3회에서 멈춘다')
-    expect(row({ expanded: true })).toContain('재시도가 3회에서 멈춘다')
+  it('접혀 있으면 완료 조건 줄이 없다 (아코디언) — 펼치기 단서는 기호가 아니라 낱말이다', () => {
+    const closed = row({ expanded: false })
+    const open = row({ expanded: true })
+    expect(closed).not.toContain('재시도가 3회에서 멈춘다')
+    expect(open).toContain('재시도가 3회에서 멈춘다')
+    //  ▸/▾ 대신 낱말 (2026-09-11) — 글꼴마다 다르게 찍히고, 비개발자는 「누르면 펼쳐진다」를 그 기호에서 못 읽는다.
+    expect(closed).toContain('완료 조건 보기')
+    expect(closed).not.toContain('접기')
+    expect(open).toContain('접기')
+    expect(open).not.toContain('완료 조건 보기')
+  })
+
+  it('🔴 특수문자 아이콘이 한 자리도 없다 — 보고 늦음·확정 대기·실패·펼침을 전부 켠 행에서 (DESIGN_BRIEF §3)', () => {
+    //  ⚠ 한 상태만 켜고 재면 다른 상태의 기호를 못 본다 — 그래서 다 켠다 (⑨ 이후 다섯 자리가 남아 있었다).
+    const html = row({
+      expanded: true,
+      error: new Error('x'),
+      milestone: milestone({ last_report_at: LONG_AGO, status: 'done_candidate', confirmable: event({ status: 'done_candidate' }) }),
+    })
+    for (const glyph of ['▸', '▾', '⚠', '✓', '✕', '○', '●']) {
+      expect(html, `${glyph} 가 남아 있다 — 색점 + 낱말로 바꿔라`).not.toContain(glyph)
+    }
   })
 })
 
@@ -246,17 +276,33 @@ describe('상단 요약 4타일 — 전부 잰 것이다 (P5 · 사람 수 없�
       off_roadmap_total: 0,
       ...over,
     }
-    return renderToStaticMarkup(createElement(RoadmapSummary, { roadmap: road, now: NOW }))
+    return renderToStaticMarkup(createElement(RoadmapSummary, { roadmap: road, now: NOW, base: '/t/x/p/y' }))
   }
 
   it('네 타일이 다 있고, 근거 덮개와 오래된 행 수가 실제로 갈린다', () => {
     const html = summary()
     expect(html).toContain('마일스톤')
     expect(html).toContain('2 / 4')
-    expect(html).toContain('열린 충돌')
+    expect(html).toContain('정리 화면에서 정할 것')
     expect(html).toContain(`${STALE_REPORT_DAYS}일 이상 보고 없음`)
     //  PL-M2 하나만 오래됐다.
     expect(html).toContain('>1<')
+  })
+
+  it('🔴 셋째 타일은 정리 화면의 「전체」와 같은 수라고 말하고, 정리 화면으로 가는 문을 그린다', () => {
+    //  정리 화면은 「충돌 3 · 질문 9」로 가르고 여기는 12 하나다 — 같은 수라고 말하지 않으면 심사위원은 어느 쪽을 믿을지 모른다 (2026-09-11).
+    const html = summary({ milestones: [milestone({ conflicts: 12 })] })
+    expect(html).toContain('>12<')
+    expect(html).toContain('정리 화면의 「전체」와 같은 수')
+    expect(html).toContain('href="/t/x/p/y/review"')
+    //  「열린」은 개발자 낱말이다 (chips.tsx 주석) — 라벨에 안 쓴다.
+    expect(html).not.toContain('열린 충돌')
+  })
+
+  it('정리할 것이 0 이어도 타일은 있고(안 센 줄 안다), 문은 없다', () => {
+    const html = summary({ milestones: [milestone({ conflicts: 0 })] })
+    expect(html).toContain('정리할 것이 없습니다')
+    expect(html).not.toContain('/review')
   })
 
   it('🔴 열린 충돌을 행 수만큼 부풀리지 않는다 (프로젝트 단위의 수다)', () => {
@@ -268,6 +314,15 @@ describe('상단 요약 4타일 — 전부 잰 것이다 (P5 · 사람 수 없�
   it('보고가 한 번도 없는 마일스톤은 따로 센다 (늦은 것이 아니라 시작 전이다)', () => {
     const html = summary({ milestones: [milestone({ last_report_at: null })] })
     expect(html).toContain('아직 보고가 없는 마일스톤 1')
+    //  큰 숫자 「0」 밑에 「1」만 있으면 서로 부정하는 것처럼 읽혔다 — 「여기 세지 않는다」를 낱말로 (2026-09-11).
+    expect(html).toContain('여기 세지 않습니다')
+  })
+
+  it(`오래된 행이 없으면 「전부 ${STALE_REPORT_DAYS}일 안에 보고가 있었습니다」 — 0 이 좋은 소식이라는 것이 보인다`, () => {
+    const html = summary({ milestones: [milestone()] })
+    expect(html).toContain(`전부 ${STALE_REPORT_DAYS}일 안에 보고가 있었습니다`)
+    //  오래된 행이 하나라도 있으면 그 말을 못 한다.
+    expect(summary()).not.toContain(`전부 ${STALE_REPORT_DAYS}일 안에 보고가 있었습니다`)
   })
 
   it('🔴 마일스톤이 0개일 때 「전부 한 번은 보고됐습니다」라고 하지 않는다 (거짓말이다)', () => {
@@ -294,12 +349,17 @@ describe('🔴 로드맵 외 작업 — `none` 보고가 화면에 나타나는 
     expect(html).toContain('로드맵 외 작업 1')
     expect(html).toContain('로그인 리팩터링')
     expect(html).toContain('근거 0')
+    //  펼침 단서는 낱말 — 마일스톤 행과 같다 (2026-09-11).
+    expect(html).toContain('접기')
+    expect(html).not.toContain('▾')
   })
 
   it('접혀 있으면 수만 말하고 목록은 없다', () => {
     const html = off([event({ summary: '빌드 스크립트 정리' })], 1, false)
     expect(html).toContain('로드맵 외 작업 1')
     expect(html).not.toContain('빌드 스크립트 정리')
+    expect(html).toContain('목록 보기')
+    expect(html).not.toContain('▸')
   })
 
   it('🔴 잘렸으면 잘렸다고 말한다 (안 말하면 「전부 봤다」로 읽힌다)', () => {
@@ -317,10 +377,14 @@ describe('🔴 P1 — 근거는 경로·줄·커밋뿐이고, 코드 본문은 �
     expect(evidenceText({ path: 'src/a.ts', start_line: 9 })).toBe('src/a.ts:9')
   })
 
-  it('드로어가 「로컬에서 열어 보세요」를 말한다', () => {
+  it('드로어가 근거 줄 앞에 「코드 」를 붙이고, 코드 본문은 개발자가 자기 컴퓨터에서 연다고 말한다', () => {
     const html = renderToStaticMarkup(createElement(ProgressDrawer, { event: event(), onClose: () => {}, now: NOW }))
-    expect(html).toContain('src/payment/retry.ts:14–20')
+    //  Context·Pack 의 EvidenceLink 와 같은 틀 — 맨 경로만 있으면 「14–20」이 날짜인지 줄인지 안 읽힌다 (2026-09-11).
+    expect(html).toContain('코드 src/payment/retry.ts:14–20')
+    //  문장의 정본은 `evidence.tsx` 하나다 — 화면마다 다른 말이면 다른 제품처럼 읽힌다. 「로컬에서 열어 보세요」는 개발자 말이었다.
+    expect(html).toContain(CODE_STAYS_LOCAL)
     expect(html).toContain('코드 본문은 서버에 없습니다')
+    expect(html).not.toContain('로컬에서')
     //  그때 받은 Pack 이 같이 나온다 — 「어느 규칙을 보고 한 보고인가」가 근거의 일부다.
     expect(html).toContain('v1.0.0')
   })
@@ -330,7 +394,7 @@ describe('🔴 P1 — 근거는 경로·줄·커밋뿐이고, 코드 본문은 �
       event: event({ evidence: [] }), onClose: () => {}, now: NOW,
     }))
     expect(html).toContain('근거 없음')
-    expect(html).not.toContain('로컬에서 열어')
+    expect(html).not.toContain(CODE_STAYS_LOCAL)
   })
 
   it('확정된 보고는 확정됐다고 말한다', () => {

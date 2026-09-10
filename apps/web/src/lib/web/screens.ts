@@ -55,7 +55,7 @@ export const PROJECT_SCREENS: readonly ProjectScreen[] = [
   { path: 'roadmap', label: 'Roadmap', describe: '계획이 어디까지 왔나', match: /\/roadmap$/, keywords: ['로드맵', '마일스톤', 'milestone'] },
   //  ⚠ Sync 가 마지막이다 — 발행한 Pack 이 **각 기기에 실제로 닿았나**를 보는 자리라
   //    일의 차례에서 제일 끝이다 (발행 → 로드맵이 움직임 → 기기가 받아 감).
-  { path: 'sync', label: 'Sync', describe: '기기마다 받은 판', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
+  { path: 'sync', label: 'Sync', describe: '기기마다 받은 버전', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
 ]
 
 /** `/t/{team}/p/{project}` + 화면 한 줄 → 실제 주소. 링크를 화면마다 적지 않는다. */
@@ -122,8 +122,9 @@ export function screenEntries(
     group: 'screen' as const,
     label: screen.label,
     href: screenHref(base, screen),
-    hint: screen.path,
-    keywords: screen.keywords,
+    //  오른쪽 짧은 말은 「무엇을 하는 화면인가」다 — 경로 조각(`import`)은 검색어로 내려간다 (2026-09-11).
+    hint: screen.describe,
+    keywords: [screen.path, ...screen.keywords],
     here: isActiveScreen(screen, pathname),
   }))
 }
@@ -271,8 +272,9 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
   //     화면이 사실이 아닌 것을 말하고 있었다. 이름도 `import.jobs` 로 바꿈 — 자리 이름이
   //     세는 것과 다르면 다음 사람이 같은 문구를 다시 쓴다.
   'import.jobs': {
-    message: 'AI 가 정리하는 중인 문서가 없습니다. 왼쪽에 문서를 붙여넣고 [AI 로 정리하기] 를 눌러 보세요.',
-    noNext: '다음 행동이 같은 화면 왼쪽 칸이다 — 옮길 곳이 없다.',
+    //  「왼쪽에」는 폭에 따라 틀리는 방향 낱말이었다 (2026-09-11) — 칸 이름으로 가리킨다.
+    message: '아직 AI 로 정리한 문서가 없습니다. 「문서 붙여넣기」 칸에 문서를 넣고 [AI 로 정리하기] 를 누르면 여기에 진행이 보입니다.',
+    noNext: '다음 행동이 같은 화면의 「문서 붙여넣기」 칸이다 — 옮길 곳이 없다.',
   },
   'context.items': {
     message: '아직 항목이 없습니다. 가져오기에서 문서를 올리거나 질문에 답해보세요.',
@@ -303,11 +305,11 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
     next: { label: 'Pack 목록으로', to: 'packs', tone: 'plain' },
   },
   'roadmap.versions': {
-    message: '아직 발행된 버전이 없습니다. 로드맵은 발행된 판(Pack)의 마일스톤에서 옵니다.',
+    message: '아직 발행된 버전이 없습니다. 로드맵은 발행된 판의 마일스톤에서 오니, Context 에서 먼저 발행해 주세요.',
     next: { label: 'Context로 이동', to: 'context', tone: 'accent' },
   },
   'roadmap.milestones': {
-    message: '공식 Pack에 마일스톤이 없습니다. roadmap 타입 항목을 만들면 여기 행이 생깁니다.',
+    message: '발행된 공식 판에 마일스톤이 없습니다. Context 에서 「로드맵」 종류의 항목(기한·완료 조건)을 만들고 발행하면 여기 행이 생깁니다.',
     next: { label: 'Context로 이동', to: 'context', tone: 'plain' },
   },
   //  ⚠ 「웹에 그 문이 없다」였다 (FINDINGS 36). **이제 있다** — 같은 화면 머리의

@@ -5,6 +5,7 @@ import {
 
 import type { QuestionRow } from '../lib/web/queries'
 import { ErrorState } from './states'
+import { Note } from './chips'
 
 // =====================================================================
 //  질문 카드 스택 — 「문서가 없어도 됩니다」의 화면 (DESIGN_BRIEF §4 화면 3 3번 카드)
@@ -26,7 +27,7 @@ import { ErrorState } from './states'
 //       ⚠ 씨앗 질문 카드에는 고르는 칸을 그리지 마라 — 서버가 400 을 낸다
 //         (`POST /projects/{id}/questions`: 「저장될 자리가 이미 정해져 있다」).
 //
-//  ⚠ accent 는 이 화면에서 [구조화하기] 하나다 (DESIGN_BRIEF §3). 그래서 여기 버튼은
+//  ⚠ accent 는 이 화면에서 [AI 로 정리하기] 하나다 (DESIGN_BRIEF §3). 그래서 여기 버튼은
 //    전부 기본 버튼이다 — 두 카드가 서로 accent 를 다투면 눈이 갈 곳을 잃는다.
 // =====================================================================
 
@@ -41,7 +42,7 @@ export type QuestionStackState = {
   /**
    * `question_id` → 「이 답을 무엇으로 저장할까요」 (FINDINGS 106).
    *
-   * ⚠ 키가 없거나 `''` 면 **안 고른 것**이고, 그 답은 기록으로만 남는다. 기본을
+   * ⚠ 키가 없거나 `''` 면 **안 고른 것**이고, 그때는 답만 저장된다. 기본을
    *   항목으로 두지 않는 이유는 화면 4 와 같다 — 기본값이 있으면 사람이 고르지 않은
    *   타입의 초안이 생기고, 그건 서버가 대신 고른 것과 같다.
    * ⚠ `answerSlot: 'seeded'` 인 카드에는 값이 안 생긴다 (고르는 칸을 안 그린다).
@@ -156,7 +157,10 @@ export function QuestionStack({
             value={pick}
             onChange={(e) => on.onSaveAs(e.target.value as AnswerSlotKey | '')}
           >
-            <option value="">저장하지 않고 기록만 합니다</option>
+            {/* ⚠ 「저장하지 않고」라고 해 놓고 [저장하기] 를 누르게 하면 사람은 자기가
+                무엇을 하는지 모른다 (2026-09-11). 답은 **언제나 저장된다** — 갈리는 것은
+                그 답이 항목까지 되느냐뿐이라 그것만 말한다. */}
+            <option value="">항목으로 만들지 않고 답만 저장합니다</option>
             {ANSWER_SLOT_KEYS.map((key) => (
               <option key={key} value={key}>{ANSWER_SLOTS[key].label}</option>
             ))}
@@ -165,7 +169,7 @@ export function QuestionStack({
               말한다 — 두 줄이 서로 다른 약속을 해야 사람이 고른 것이 뜻을 갖는다. */}
           <span className="meta">
             {slot === null
-              ? '이 답은 기록으로만 남습니다. 항목은 만들어지지 않습니다.'
+              ? '답만 저장됩니다. 항목은 만들어지지 않습니다.'
               : `이 답이 「${slot.label}」 초안 항목 한 개가 됩니다.`}
           </span>
         </label>
@@ -192,7 +196,7 @@ export function QuestionStack({
  *
  * ★ 왜 세는가 — 씨앗 질문만 있던 때는 「답한 것 = 항목」이라 요약이 그냥 「만들어집니다」
  *   라고 말해도 참이었다. 문서를 올린 뒤에는 §7.1 이 남긴 열린 질문이 같은 스택에
- *   섞이고, 그중 **자리를 안 고른 답은 기록으로만 남는다.** 그래서 「몇 개가 항목이
+ *   섞이고, 그중 **자리를 안 고른 것은 답만 저장된다.** 그래서 「몇 개가 항목이
  *   되나」를 저장 **전에** 말해야 한다 — 저장한 뒤에 수가 줄면 사람은 하나가 사라진
  *   줄 안다 (`Saved` 가 두 수를 갈라 말하는 것과 같은 이유).
  * ⚠ 판정을 여기서 세지 않는다: `seeded` 는 자리가 표에 이미 있어 서버가 옮기고,
@@ -212,7 +216,7 @@ function Becoming({ answered, becoming }: { answered: number; becoming: number }
   if (becoming === 0) {
     return (
       <p className="meta">
-        답한 {answered}개는 모두 <strong>기록으로만</strong> 남습니다.
+        답한 {answered}개는 모두 <strong>답만 저장</strong>됩니다.
         자리를 고르지 않으면 항목은 만들어지지 않습니다.
       </p>
     )
@@ -222,7 +226,7 @@ function Becoming({ answered, becoming }: { answered: number; becoming: number }
       {becoming === answered
         ? <>답한 것은 <strong>초안 항목</strong>으로 만들어집니다.</>
         : <>그중 <strong>{becoming}개</strong>가 초안 항목으로 만들어집니다.
-            나머지 {answered - becoming}개는 자리를 안 골라서 기록으로만 남습니다.</>}
+            나머지 {answered - becoming}개는 자리를 안 골라서 답만 저장됩니다.</>}
       {' '}초안은 발행 전까지 팀 규칙이 아닙니다.
     </p>
   )
@@ -238,14 +242,14 @@ function Saved({
 }) {
   return (
     <div className="col-tight">
-      <p className="ink-ok">✓ 답 {saved.resolved}개를 저장했습니다.</p>
+      <Note tone="ok">답 {saved.resolved}개를 저장했습니다.</Note>
       {/* ⚠ 「항목이 만들어졌습니다」를 답의 수로 말하지 마라 — 답했는데 항목이 안 되는
           질문이 있다 (§7.1 이 문서에서 남긴 질문은 구조화가 따로 필요하다).
           서버가 낸 수를 그대로 쓴다. */}
       <p className="meta">
         {saved.created.length > 0
           ? `초안 항목 ${saved.created.length}개가 만들어졌습니다. 발행하면 팀의 첫 버전이 됩니다.`
-          : '이 답들은 기록으로 남았습니다. 항목은 만들어지지 않았습니다.'}
+          : '답만 저장됐습니다. 항목은 만들어지지 않았습니다.'}
       </p>
       {/* ⚠ 두 수가 다르면 **왜 다른지** 말한다. 「답 3개 · 항목 2개」만 있으면 사람은
           하나가 사라진 줄 안다 (눈으로 읽고 넣었다: 첫 판 ⑨ 에 이 줄이 없었다).
@@ -254,7 +258,7 @@ function Saved({
              자리를 고를 수 있으므로, 수가 갈리는 이유는 **안 고른 것**뿐이다. */}
       {saved.created.length > 0 && saved.created.length < saved.resolved ? (
         <span className="meta">
-          자리를 고르지 않은 답은 기록으로만 남습니다 — 정리 화면에서 다시 답하면 항목으로 만들 수 있습니다.
+          자리를 고르지 않은 답은 답만 저장됩니다 — 정리 화면에서 다시 답하면 항목으로 만들 수 있습니다.
         </span>
       ) : null}
       <a className="btn btn-sm" href={contextHref}>Context 보기</a>

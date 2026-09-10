@@ -13,11 +13,13 @@ import { GET as roadmap } from '../src/app/api/v1/projects/[id]/roadmap/route'
 import { GET as listProposals } from '../src/app/api/v1/projects/[id]/proposals/route'
 import { POST as createDocument } from '../src/app/api/v1/projects/[id]/documents/route'
 import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
+import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
 import { seedDemo, readDemoSeedFile, demoGuestMembership, type DemoSeedResult } from '../src/lib/demo/seed-demo'
 import { MILESTONES, seedSession, UNFINISHED_JOB_STATUSES } from '../src/lib/demo/seed'
 import { AI_JOB_STATUS_RULES } from '../src/db/schema'
+import { structureCounts } from '../src/lib/web/queries'
 import { closeDb, dataOf, errorOf, freshDb, params, req, sessionJwt, TEST_JWT_SECRET } from './helpers/db'
 
 // =====================================================================
@@ -207,6 +209,13 @@ describe('데모 테넌트를 심으면', () => {
     for (const row of rows.filter((p) => p.status === 'draft')) {
       expect((row as { decided_by?: unknown }).decided_by ?? null).toBeNull()
     }
+    //  🔴 P7 — 제안의 근거는 **실제로 심어진 문서판·코드 경로**다. 예전엔 `reason` 을 `manual` 근거에
+    //     복사해 「이 제안의 근거」와 「이유」에 같은 문장이 두 번 섰다 (2026-09-11). 되돌리면 여기서 빨개진다.
+    type Item = { evidence: { kind: string; note?: string }[]; reason: string }
+    for (const item of (rows as unknown as { items: Item[] }[]).flatMap((p) => p.items)) {
+      expect(item.evidence.some((e) => e.kind !== 'manual'), '문서·코드 근거가 한 줄도 없다').toBe(true)
+      for (const e of item.evidence.filter((x) => x.kind === 'manual')) expect(e.note).not.toBe(item.reason)
+    }
   })
 
   it('화면 6 이 로드맵과 이어져 있다 — `relates_to` 가 마일스톤 3종을 전부 가리킨다', async () => {
@@ -297,6 +306,37 @@ describe('데모 테넌트를 심으면', () => {
     expect(jobs.filter((j) => UNFINISHED_JOB_STATUSES.includes(j.status as never))).toEqual([])
     //  ⚠ 「멈춘 것 같음」 chip 을 없앤 것이 아니다 — 씨앗이 그 자리를 안 만들 뿐이다.
     expect(jobs.filter((j) => j.stalled)).toEqual([])
+  })
+
+  // -------------------------------------------------------------------
+  //  🔴 화면 3 — 씨앗이 **끝난 job 하나**는 남긴다 (2026-09-11)
+  //
+  //  ★ 왜 이 시험이 있나 — 위 시험(끝나지 않은 job 을 안 남긴다)만 있으면 「job 을 하나도
+  //    안 남긴다」로도 초록이다. 그러면 게스트(심사위원)는 화면 3 의 절반 — 진행 막대 ·
+  //    「항목 후보 n개」 · 고르는 목록 — 을 한 번도 못 보고 「AI 가 안 돈다」로 읽는다.
+  //    두 시험이 **한 쌍**이라야 「가짜 대기는 없고, 보여 줄 결과는 있다」가 잠긴다.
+  //  ⚠ 화면이 읽는 문(`structureCounts`)으로 잰다 — 「끝났는데 보여 줄 것이 없다」를 놓치지 않으려고.
+  // -------------------------------------------------------------------
+
+  it('🔴 씨앗이 끝난 job 하나는 남긴다 — 게스트가 화면 3 의 결과를 본다', async () => {
+    const token = await guestToken()
+    const list = await dataOf(await listJobs(
+      req('GET', `/api/v1/projects/${seeded.projectId}/jobs?feature=structure&limit=1`, { auth: token }),
+      params({ id: seeded.projectId }),
+    ))
+    const jobs = list.jobs as { id: string; status: string; finished_at: string | null; stalled: boolean }[]
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0]!.status).toBe('succeeded')
+    expect(jobs[0]!.finished_at).not.toBeNull()
+    expect(jobs[0]!.stalled).toBe(false)
+
+    const full = await dataOf(await readJob(
+      req('GET', `/api/v1/projects/${seeded.projectId}/jobs/${jobs[0]!.id}`, { auth: token }),
+      params({ id: seeded.projectId, jobId: jobs[0]!.id }),
+    ))
+    const counts = structureCounts(full.result)
+    expect(counts, '화면이 읽는 문이 null 이면 카드가 「못 읽었다」를 그린다').not.toBeNull()
+    expect(counts!.items).toBeGreaterThan(0)
   })
 
   it('지우는 자리는 씨앗뿐이다 — 씨앗 뒤에 올린 문서는 여전히 job 을 만든다', async () => {

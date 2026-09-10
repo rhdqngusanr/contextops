@@ -8,6 +8,7 @@ import { LIST_LIMIT_MAX, TEAM_ROLES } from '@contextops/schema'
 
 import { CREATION_LIMITS } from '../src/lib/api/limits'
 import { GUEST_HINT, REASON_HINT, ApiClientError } from '../src/lib/web/api'
+import { CALLBACK_CODE_HINT } from '../src/lib/web/auth'
 import type { TeamMemberView, TeamRef } from '../src/lib/web/queries'
 import { ROLE_LABEL, TEAM_HOME_TEXT, TeamHome, type TeamHomeHandlers, type TeamHomeState } from '../src/components/team-home'
 
@@ -56,6 +57,21 @@ describe('① 홈이 팀·프로젝트·팀원을 한 화면에 낸다', () => {
 
   it('프로젝트가 없으면 빈 칸이 아니라 문장이다', () => {
     expect(text(draw({ teams: [team({ projects: [] })] }))).toContain(TEAM_HOME_TEXT.noProjects)
+  })
+
+  it('프로젝트 행에는 여는 버튼이 있고, 팀 머리에 주소 조각(/t/…)은 없다 (2026-09-11)', () => {
+    const html = draw()
+    expect(html).toMatch(new RegExp(`<a class="btn btn-sm" href="/t/paylab/p/api/import">${TEAM_HOME_TEXT.openProject}</a>`))
+    expect(text(html)).not.toContain('/t/paylab')
+    //  「팀원」 제목 밑에 「팀장」이 서지 않는다 — 제목은 등급을 가리지 않는 낱말이다.
+    expect(TEAM_HOME_TEXT.members).not.toBe(ROLE_LABEL.member)
+  })
+
+  it('문이 닫힌 사람(게스트)에겐 첫 줄이 「샘플 팀 · 읽기 전용」이고, 열린 사람에겐 코스 문장이다', () => {
+    const guest = text(draw({ door: { open: false, reason: GUEST_HINT.FORBIDDEN! } }))
+    expect(guest).toContain(TEAM_HOME_TEXT.leadGuest)
+    expect(guest).not.toContain(TEAM_HOME_TEXT.lead)
+    expect(text(draw())).toContain(TEAM_HOME_TEXT.lead)
   })
 })
 
@@ -124,5 +140,15 @@ describe('④ 로그인 뒤의 기본 목적지는 홈이다', () => {
     const home = readFileSync(join(webRoot, 'src', 'app', 't', 'page.tsx'), 'utf8')
     expect(home).toContain("window.location.replace('/t/new')")
     expect(home).toContain('writeDoor()')
+    //  게스트가 주소로 `/t` 에 와도 다른 앱 화면과 같은 배너를 본다 (2026-09-11).
+    expect(home).toContain('<DemoBanner />')
+  })
+})
+
+describe('⑤ 로그인이 튕겼을 때 원인은 사람 말이다 (`CALLBACK_CODE_HINT` · 2026-09-11)', () => {
+  it('Supabase 가 주는 두 코드가 문장을 갖고, 되돌아오는 화면이 그 표를 읽는다', () => {
+    for (const code of ['access_denied', 'validation_failed']) expect(CALLBACK_CODE_HINT[code]).toMatch(/(습니다|하세요|해주세요)/)
+    const callback = readFileSync(join(webRoot, 'src', 'app', 'auth', 'callback', 'page.tsx'), 'utf8')
+    expect(callback).toContain('CALLBACK_CODE_HINT[error.code]')
   })
 })

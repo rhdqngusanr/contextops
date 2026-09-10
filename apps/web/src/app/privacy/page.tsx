@@ -19,12 +19,14 @@ export default function PrivacyPage() {
       <article className="card center-card">
         <header className="col-tight">
           <h1 className="text-section">{PRIVACY.title}</h1>
-          <p className="meta">마지막 갱신 {PRIVACY.updated} · 이 문장은 코드와 같은 저장소에 있고 시험이 몇 줄을 코드와 대조합니다.</p>
+          {/* 「시험이 대조한다」는 개발자끼리의 말이다 — 읽는 사람에게 뜻이 있는 것은 「코드가 바뀌면 같이 바뀐다」다. */}
+          <p className="meta">마지막 갱신 {PRIVACY.updated} · 이 문장은 코드와 같은 저장소에 있어 코드가 바뀌면 같이 바뀝니다.</p>
         </header>
 
         {PRIVACY.sections.map((section) => (
           <section key={section.heading} className="col-tight">
-            <h2 className="label">{section.heading}</h2>
+            {/* 절 머리가 본문(14.5px)보다 작은 라벨(11.5px)이면 30초에 훑는 사람에게 안 보인다. */}
+            <h2 className="row-name">{section.heading}</h2>
             {section.lines.map((line) => <p key={line} className="ink-2">{line}</p>)}
           </section>
         ))}

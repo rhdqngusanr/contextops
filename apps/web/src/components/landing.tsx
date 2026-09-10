@@ -9,6 +9,7 @@ import { DEMO_TOUR } from '../lib/web/tour'
 import { SITE } from '../lib/web/site'
 import styles from './landing.module.css'
 import { TerminalReplay } from './terminal-replay'
+import { Note } from './chips'
 
 // =====================================================================
 //  화면 1 — 랜딩 `/` (SPEC §9 표 1행 · DESIGN_BRIEF §4 「화면 1」)
@@ -118,7 +119,8 @@ export const BEFORE_AFTER = {
     text: 'PSP 호출은 최대 5회까지 재시도한다. 간격은 지수 백오프(0.5s·1s·2s·4s·8s)이고, '
       + '재시도 대상은 타임아웃과 5xx 뿐이다.',
     plain: { count: '5번까지', how: '기다리는 시간은 0.5초 → 8초로 늘리고, 응답이 없거나(타임아웃) 상대 서버가 고장 났을 때(5xx)만' },
-    detail: 'must · 강제: 리뷰에서 본다',
+    //  세기(`severity`)는 사람 말이 먼저, 값은 괄호 안 — 「must」가 규칙의 세기라는 걸 심사위원은 모른다 (2026-09-11). 시험이 괄호 안을 픽스처와 대조한다.
+    detail: '강제 규칙(must) — 지켰는지 코드 리뷰에서 확인합니다',
     evidenceKey: '근거',
     evidence: ['paylab-docs/goals.md §3.1', 'paylab-api/src/payment/retry.ts:11–14', '팀장 승인'],
     foot: '팀장이 승인한 이 한 문장을 A·B·C 모두 같은 버전으로 받습니다.',
@@ -137,7 +139,8 @@ export const PRODUCT_TOUR = {
   //  제목·설명은 코스의 정본(`lib/web/tour.ts`)에서 오고, 캡처 넉 장은 코스의 네 걸음과 같은 화면이다 (시험이 대조).
   title: DEMO_TOUR.title,
   lead: `${DEMO_TOUR.lead} 위의 [샘플 팀으로 둘러보기]를 누르면 같은 순서로 안내가 붙습니다.`,
-  foot: '캡처는 검증 시나리오(tools/walkthrough.ps1)의 shots 단계가 매번 다시 찍습니다 — 낡은 그림이 남지 않습니다.',
+  //  하려는 말은 「시안이 아니라 실제 화면」이다 — 경로·단계 이름은 괄호 뒤로 (2026-09-11).
+  foot: '위 캡처는 시안이 아니라, 자동 검사가 실제 앱을 띄워 매번 새로 찍은 화면입니다 — 낡은 그림이 남지 않습니다. (검사 스크립트: tools/walkthrough.ps1)',
 } as const
 
 /**
@@ -172,7 +175,8 @@ export const WHY_NOT_GIT = {
     },
     {
       head: 'git 은 「왜」를 남기지 않습니다',
-      body: 'diff 는 무엇이 바뀌었는지만 남깁니다. 누가 어떤 근거로 정했는지가 없으면, AI 도 사람도 그 규칙을 믿을 이유가 없습니다.',
+      //  「diff」는 위 풀이 띠에 없는 낱말이다 — 문장 안에서 바로 푼다 (2026-09-11).
+      body: '변경 기록(diff)은 무엇이 바뀌었는지만 남깁니다. 누가 어떤 근거로 정했는지가 없으면, AI 도 사람도 그 규칙을 믿을 이유가 없습니다.',
       example: '「3 → 5 로 바뀜」은 남지만, 누가 어떤 회의에서 왜 그렇게 정했는지는 남지 않습니다.',
     },
   ],
@@ -226,8 +230,10 @@ export const AI_USE = {
     },
     {
       head: '서로 어긋난 결정을 찾아 묻습니다',
-      body: '문서끼리, 또는 문서와 코드가 다르게 말하면 충돌 카드로 올립니다. 「A 가 맞다 · B 가 맞다 · 보류」는 사람이 고릅니다.',
-      hand: [{ who: 'ai', does: '충돌 카드로 질문을 올린다' }, { who: 'human', does: 'A 가 맞다 · B 가 맞다 · 보류를 고른다' }],
+      //  ⚠ 「A 가 맞다 · B 가 맞다」가 아니다 — 충돌 카드는 두 쪽을 무엇인지로 부른다(`lib/web/conflict-sides.ts` · 「지금 규칙 / 옛 규칙」「문서 / 코드」)
+      //    고 버튼은 「… 쪽이 맞음」이다. 이름이 종류마다 달라서 「처럼」으로 예를 든다 — 버튼 틀은 `conflict-card.tsx` 와 같은 낱말 (2026-09-11).
+      body: '문서끼리, 또는 문서와 코드가 다르게 말하면 충돌 카드로 올립니다. 「지금 규칙 쪽이 맞음 · 옛 규칙 쪽이 맞음 · 둘 다 보류」처럼 어느 쪽을 따를지는 사람이 고릅니다.',
+      hand: [{ who: 'ai', does: '충돌 카드로 질문을 올린다' }, { who: 'human', does: '어느 쪽을 따를지, 아니면 보류할지 고른다' }],
     },
     {
       head: '승인 뒤에는 쓰지 않습니다',
@@ -262,6 +268,8 @@ export const TERMINAL_REPLAY = {
     { term: 'Claude Code', means: '개발자가 쓰는 AI 코딩 도구 — 터미널(검은 창) 안에서 돕니다' },
     { term: '플러그인', means: 'Claude Code 에 끼우는 ContextOps 의 작은 부품 — 새 버전을 알리고 한 줄로 받게 합니다' },
     { term: 'Roadmap', means: '계획이 어디까지 왔는지 근거와 함께 보는 화면' },
+    //  「훅」은 검은 창 셋째 줄과 06 절 꼬리(P6 「훅은 파일을 바꾸지 않는다」)에 나오는데 풀이가 없었다 (2026-09-11).
+    { term: '훅(Hook)', means: 'Claude Code 를 열고 닫을 때 플러그인이 자동으로 도는 작은 장치 — 새 판을 알리고 작업을 보고할 뿐, 파일은 바꾸지 않습니다' },
   ],
   //  🔴 「무슨 일이 일어나나」 넷 — 녹화(`fixtures/replay/sync.json`)가 실제로 찍은 숫자만 말한다: v0.9.0 → v1.0.0 · 파일 8개 · 근거 0/3 → 1/3.
   //    시험이 녹화 본문과 대조한다 — 녹화가 다시 찍혀 숫자가 바뀌면 여기가 빨개진다.
@@ -272,8 +280,9 @@ export const TERMINAL_REPLAY = {
     '작업을 마친 AI 가 /contextops:progress 로 보고합니다 — 어느 마일스톤의 어느 조건을, 어떤 파일 몇 번째 줄이 근거인지.',
     '오른쪽 Roadmap 의 「근거 0 / 3」이 「1 / 3」이 됩니다. 완료 확인은 사람이 합니다 — AI 가 스스로 완료를 선언하지 않습니다.',
   ],
-  source: '배포되는 플러그인을 실제로 돌려 남긴 출력입니다 (fixtures/replay/sync.json). '
-    + '사이의 작업은 생략했고, 타이핑과 줄 사이 간격만 읽을 수 있게 늘렸습니다.',
+  //  하려는 말은 「지어낸 대사가 아니다」다 — 녹화 파일 경로는 괄호 뒤로 (2026-09-11).
+  source: '지어낸 대사가 아니라, 배포되는 플러그인을 실제로 돌려 남긴 출력입니다. '
+    + '사이의 작업은 생략했고, 타이핑과 줄 사이 간격만 읽을 수 있게 늘렸습니다. (녹화 원본: fixtures/replay/sync.json)',
   milestone: {
     id: 'PL-M1',
     title: '재시도·타임아웃 정리',
@@ -330,7 +339,8 @@ export const TRUST_BOUNDARY = {
       'AI 와 주고받은 말 전부',
     ],
   },
-  foot: '올라가는 것은 정해진 스키마를 통과한 항목뿐입니다. 코드 본문·비밀값·개인 메모리·대화는 어떤 경우에도 서버로 가지 않고, 훅은 파일을 바꾸지 않습니다.',
+  //  안심시키는 문단이라 「스키마」「훅」을 문장 안에서 바로 푼다 — 표의 칸에 붙인 「쉬운 말로」 층과 같은 자리 (2026-09-11).
+  foot: '서버로 올라가는 것은 정해진 모양(스키마)을 통과한 항목뿐입니다. 코드 본문·비밀값·개인 메모리·대화는 어떤 경우에도 서버로 가지 않고, 개발자 쪽에서 자동으로 도는 훅은 파일을 바꾸지 않습니다.',
 } as const
 
 /**
@@ -381,7 +391,8 @@ export const INSTALL_STEPS = {
   //  `where` 는 그 줄을 어디에 치는가 — 터미널인지 Claude Code 안인지. 틀리면 첫 시도가 실패한다 (시험이 Skill 줄과 대조).
   lines: [
     { where: '터미널', cmd: `claude plugin marketplace add ${SUBMISSION_IDENTITY.marketplaceRef}`, note: '플러그인 저장소를 등록합니다' },
-    { where: '터미널', cmd: 'claude plugin install contextops', note: '훅·Skill·CLI 가 함께 깔립니다' },
+    //  개발자 낱말 셋을 각각 한 마디로 푼다 — README·제출서의 같은 줄 주석과 글자 그대로 같아야 한다 (`readme.test.ts` · 2026-09-11).
+    { where: '터미널', cmd: 'claude plugin install contextops', note: '자동으로 도는 작은 장치(훅) · Claude Code 안의 명령(Skill) · 실행 도구(CLI) 가 함께 깔립니다' },
     //  ⚠ 셋째 줄은 Claude Code 안의 Skill 이다 — 터미널 명령이 아니다. 예전의 `node "$CLAUDE_PLUGIN_ROOT/…"` 는
     //    사용자 터미널에 없는 변수라 그대로 치면 「파일이 없다」였다. Skill 이 그 경로를 채운다.
     { where: 'Claude Code 안', cmd: '/contextops:setup <Sync 화면이 준 인자>', note: 'Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다' },
@@ -394,9 +405,11 @@ export const INSTALL_STEPS = {
 export const LANDING_FOOT = {
   brand: 'ContextOps',
   event: 'Wanted AI Championship 2026 출품작',
-  team: { label: '팀', name: SUBMISSION_IDENTITY.team },
+  //  라벨은 「팀명」이고 푸터가 이름을 「 」로 감싼다 — 「팀 퇴직했는데…」로 한 문장처럼 읽혔다 (2026-09-11).
+  team: { label: '팀명', name: SUBMISSION_IDENTITY.team },
   github: { label: 'GitHub', href: SUBMISSION_IDENTITY.repoUrl },
-  limits: { label: 'Known limitations', href: `${SUBMISSION_IDENTITY.repoUrl}/blob/main/${SUBMISSION_IDENTITY.limitsPath}` },
+  //  한글 푸터에서 유일한 영어 라벨이었다 — 문서 이름(KNOWN_LIMITATIONS)은 href 에 남고 라벨은 사람 말.
+  limits: { label: '알려진 한계', href: `${SUBMISSION_IDENTITY.repoUrl}/blob/main/${SUBMISSION_IDENTITY.limitsPath}` },
   health: { label: '서버 상태', href: '/api/v1/health' },
   //  개인정보 처리방침 — 문장의 정본은 `lib/web/privacy.ts` (INBOX H4). 앱 안 링크라 rel 이 없다.
   privacy: { label: '개인정보 처리방침', href: '/privacy' },
@@ -511,7 +524,7 @@ function BeforeAfter() {
           </header>
           <div className={styles.thread}>
             <div className={styles.reply}>
-              <span className={`${styles.who} ${styles.whoAll}`} aria-hidden="true">✓</span>
+              <span className={`${styles.who} ${styles.whoAll}`} aria-hidden="true" />
               <div className={styles.replyBody}>
                 <div className={styles.replyMeta}>
                   <span className={styles.replyName}>{after.name}</span>
@@ -753,8 +766,8 @@ function TrustBoundary({ index }: { index: string }) {
           <table className="table">
             <thead>
               <tr>
-                <th><span className="ink-ok">✓</span> {knows.head}</th>
-                <th><span className="ink-bad">✕</span> {unknown.head}</th>
+                <th><Note tone="ok">{knows.head}</Note></th>
+                <th><Note tone="bad">{unknown.head}</Note></th>
               </tr>
             </thead>
             <tbody>
@@ -810,7 +823,7 @@ function Foot() {
     <footer className={styles.footer}>
       <span className={styles.footBrand}>{LANDING_FOOT.brand}</span>
       <span>{LANDING_FOOT.event}</span>
-      <span>{LANDING_FOOT.team.label} {LANDING_FOOT.team.name}</span>
+      <span>{LANDING_FOOT.team.label} 「{LANDING_FOOT.team.name}」</span>
       <a className={styles.footLink} href={LANDING_FOOT.github.href} rel="noreferrer">{LANDING_FOOT.github.label}</a>
       <a className={styles.footLink} href={LANDING_FOOT.limits.href} rel="noreferrer">{LANDING_FOOT.limits.label}</a>
       <a className={styles.footLink} href={LANDING_FOOT.health.href}>{LANDING_FOOT.health.label}</a>

@@ -35,7 +35,8 @@ export default function ProjectLayout({
           {/* 프로젝트 이름이 머리다 (표제체) — 팀은 그 밑에 작게. `demo/paylab-api` 한 줄 모노는 처음 온 사람에게 주소로 읽혔다 (2026-09-11). */}
           <span className="label">프로젝트</span>
           <span className="nav-project">{project}</span>
-          <span className="meta mono">{team}</span>
+          {/* 「demo」가 이름표 없이 모노로 혼자 서서 「데모 모드」 표시로 읽혔다 (2026-09-11). */}
+          <span className="meta">팀 <span className="mono">{team}</span></span>
           {/* 「내 팀」 홈 — 다른 프로젝트·팀원 초대는 거기 있다 (INBOX H9). */}
           <a className="meta" href="/t">내 팀</a>
         </div>

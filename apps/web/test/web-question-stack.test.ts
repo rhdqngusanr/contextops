@@ -23,7 +23,7 @@ import type { QuestionRow } from '../src/lib/web/queries'
 //    ④ 진행은 **몇 번째인가**다 — 사람 이름도 점수도 없다 (P5)
 //    ⑤ 답 칸의 상한을 화면이 손으로 적지 않는다 (`ANSWER_MAX` 를 읽는다)
 //    ⑥ **자리를 묻는 카드는 표가 정한다** (`answerSlot` · FINDINGS 106) — 씨앗 질문에
-//      그리면 서버가 400 이고, 열린 질문에 안 그리면 답이 기록으로만 남는다
+//      그리면 서버가 400 이고, 열린 질문에 안 그리면 항목이 안 생긴다
 //
 //  🔴 **왜 「섞인 스택」을 재나** — 문서를 올리기 전에는 이 스택에 씨앗 질문 10장밖에
 //    없어서 「답한 것 = 항목」이 늘 참이었다. §7.1 이 남긴 열린 질문이 섞이는 순간
@@ -190,7 +190,7 @@ describe('질문 카드 스택 — 열 모양을 그려서 읽는다', () => {
     //  그 자리에 있어야 한다 — `ErrorState` 의 [다시 시도] 를 따로 두지 않는 이유다.
     const html = draw({ index: QUESTIONS.length, answers: answered(3), error: new Error('x') })
     expect(html).toContain('3개 저장하기')
-    expect(html).toContain('ink-bad')
+    expect(html).toContain('tone-bad')
   })
 
   it('🔴 답한 것이 0개면 「초안 항목으로 만들어집니다」라고 하지 않는다 (FINDINGS 66)', () => {
@@ -202,9 +202,9 @@ describe('질문 카드 스택 — 열 모양을 그려서 읽는다', () => {
   it('저장한 답 수와 만들어진 항목 수가 다르면 **왜 다른지** 말한다', () => {
     const html = draw({ saved: { resolved: 3, created: ['item_seed_mission', 'item_seed_goal_done'] } })
     expect(html).toContain('초안 항목 2개가 만들어졌습니다')
-    expect(html).toContain('기록으로만 남습니다')
+    expect(html).toContain('답만 저장됩니다')
     //  수가 같으면 그 설명이 없다 — 없는 차이를 설명하면 사람은 무언가 빠진 줄 안다.
-    expect(draw({ saved: { resolved: 2, created: ['a', 'b'] } })).not.toContain('기록으로만 남습니다')
+    expect(draw({ saved: { resolved: 2, created: ['a', 'b'] } })).not.toContain('답만 저장됩니다')
   })
 
   it('🔴 항목이 하나도 안 생겼으면 「만들어졌습니다」라고 하지 않는다 (FINDINGS 66)', () => {
@@ -248,7 +248,7 @@ describe('질문 카드 스택 — 답이 갈 자리를 묻는다 (FINDINGS 106)
     //  ⚠ 위 시험은 표에서 기대를 **파생**시키므로 표를 통째로 뒤집으면 같이 뒤집힌다
     //    (FINDINGS 103·104-B 가 배운 것). 그래서 두 종류를 **손으로** 적어 잠근다:
     //    씨앗 질문에 그리면 서버가 400 이고 (「저장될 자리가 이미 정해져 있다」),
-    //    열린 질문에 안 그리면 답이 기록으로만 남는다 — 둘 다 조용한 고장이다.
+    //    열린 질문에 안 그리면 항목이 안 생긴다 — 둘 다 조용한 고장이다.
     expect(oneCard(QUESTIONS[0]!)).not.toContain(PICK_LABEL)
     expect(oneCard(OPEN[0]!)).toContain(PICK_LABEL)
   })
@@ -259,18 +259,18 @@ describe('질문 카드 스택 — 답이 갈 자리를 묻는다 (FINDINGS 106)
       expect(html, `${key} 의 라벨이 없다`).toContain(ANSWER_SLOTS[key].label)
     }
     //  안 고르는 것도 **하나의 선택**이다 — 그 문을 지우면 사람은 고를 수밖에 없다.
-    expect(html).toContain('저장하지 않고 기록만 합니다')
+    expect(html).toContain('항목으로 만들지 않고 답만 저장합니다')
   })
 
   it('🔴 고르기 전과 후가 **서로 다른 약속**을 한다', () => {
     const before = oneCard(OPEN[0]!)
-    expect(before).toContain('이 답은 기록으로만 남습니다')
+    expect(before).toContain('답만 저장됩니다')
     expect(before).not.toContain('초안 항목 한 개가 됩니다')
 
     const after = oneCard(OPEN[0]!, { [OPEN[0]!.id]: 'policy_must' })
     expect(after).toContain(ANSWER_SLOTS.policy_must.label)
     expect(after).toContain('초안 항목 한 개가 됩니다')
-    expect(after).not.toContain('이 답은 기록으로만 남습니다')
+    expect(after).not.toContain('답만 저장됩니다')
   })
 
   it('🔴 요약이 **몇 개가 항목이 되나**를 말한다 — 답한 수로 말하지 않는다', () => {
@@ -283,7 +283,7 @@ describe('질문 카드 스택 — 답이 갈 자리를 묻는다 (FINDINGS 106)
     }))
     expect(html).toContain('4개 저장하기')
     expect(html).toContain('3개')
-    expect(html).toContain('자리를 안 골라서 기록으로만 남습니다')
+    expect(html).toContain('자리를 안 골라서 답만 저장됩니다')
   })
 
   it('🔴 하나도 자리를 안 골랐으면 「만들어집니다」라고 하지 않는다 (FINDINGS 66 과 같은 판단)', () => {

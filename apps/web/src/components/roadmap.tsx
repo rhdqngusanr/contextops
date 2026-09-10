@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 
 import type { ProgressEventView, Roadmap, RoadmapMilestone } from '../lib/web/queries'
 import { STALE_REPORT_DAYS, isStaleReport, sinceText } from '../lib/web/time'
-import { PROGRESS_STATUS_LABEL, MilestoneChip, PROGRESS_SOURCE_LABEL } from './chips'
+import { Chip, EVIDENCE_CHIP, MilestoneChip, Note, PROGRESS_SOURCE_LABEL, PROGRESS_STATUS_LABEL } from './chips'
+import { CODE_STAYS_LOCAL } from './evidence'
 import { FactLine, roadmapFact } from './fact-line'
 
 // =====================================================================
@@ -59,11 +60,16 @@ function Tile({ label, value, hint }: { label: string; value: ReactNode; hint?: 
   )
 }
 
-export function RoadmapSummary({ roadmap, now }: { roadmap: Roadmap; now?: Date }) {
+/** `base` — 이 프로젝트의 화면 뿌리(`/t/{team}/p/{project}`). 셋째 타일이 정리 화면으로 가는 문을 그린다. */
+export function RoadmapSummary({ roadmap, now, base }: { roadmap: Roadmap; now?: Date; base: string }) {
   const cover = evidenceCoverage(roadmap.milestones)
-  //  ⚠ 열린 충돌은 **프로젝트 단위**로만 셀 수 있어서 행마다 같은 수가 실려 온다
+  //  ⚠ 정리할 것(열린 충돌 행)은 **프로젝트 단위**로만 셀 수 있어서 행마다 같은 수가 실려 온다
   //    (라우트 주석). 그래서 더하지 않고 **한 행에서 읽는다** — 더하면 마일스톤 수만큼
-  //    부풀어 「충돌 9」가 사실은 충돌 3 이 된다.
+  //    부풀어 「3」이 사실은 「9」가 된다.
+  //  🔴 이 수는 종류를 가리지 않는다 — 라우트가 `status='open'` 을 전부 세므로 **AI 가 찾은 충돌과
+  //     팀에게 묻는 질문을 합친 수**다. 정리 화면의 「전체」와 같은 수라고 화면이 말해야 심사위원이
+  //     두 화면에서 다른 숫자(정리 「충돌 3」 · 여기 「12」)를 보고 어느 쪽을 믿을지 헤매지 않는다 (2026-09-11).
+  //     종류별로 가르려면 라우트 응답 모양이 먼저다 — 여기서 나누어 세지 마라.
   const conflicts = roadmap.milestones[0]?.conflicts ?? 0
   const stale = roadmap.milestones.filter((m) => isStaleReport(m.last_report_at, now))
   const never = roadmap.milestones.filter((m) => m.last_report_at === null)
@@ -79,24 +85,31 @@ export function RoadmapSummary({ roadmap, now }: { roadmap: Roadmap; now?: Date 
           value={`${cover.with} / ${cover.total}`}
           hint={cover.total === 0 ? '완료 조건이 없습니다' : '어떤 파일 몇 번째 줄인지 근거가 붙은 것'}
         />
-        {/* 🔴 0 도 그린다 — 「충돌 없음」을 안 보여 주면 사람은 아직 안 센 줄 안다. */}
+        {/* 🔴 0 도 그린다 — 「정리할 것 없음」을 안 보여 주면 사람은 아직 안 센 줄 안다.
+            「열린」은 개발자 낱말이라 라벨에 안 쓴다 (chips.tsx 주석). 수가 있으면 어디로 가서 정하는지가 같은 칸에 선다. */}
         <Tile
-          label="열린 충돌"
+          label="정리 화면에서 정할 것"
           value={conflicts}
-          hint={conflicts === 0 ? '정리할 것이 없습니다' : '결정을 기다리는 카드 · 정리 화면에서 정합니다'}
+          hint={conflicts === 0
+            ? '정리할 것이 없습니다'
+            : <>AI 가 찾은 충돌과 팀에게 묻는 질문을 합친 수 — 정리 화면의 「전체」와 같은 수입니다. <a href={`${base}/review`}>정리 화면에서 정하기</a></>}
         />
         <Tile
           label={`${STALE_REPORT_DAYS}일 이상 보고 없음`}
           value={stale.length}
-          //  ⚠ 「한 번도 보고 없음」과 섞지 않는다 — 그건 늦은 게 아니라 시작 전이다.
+          //  ⚠ 「한 번도 보고 없음」과 섞지 않는다 — 그건 늦은 게 아니라 시작 전이다. 그 구분을 **낱말로** 말한다 —
+          //    큰 숫자 「0」 밑에 「보고가 없는 마일스톤 1」만 있으면 둘이 서로 부정하는 것처럼 읽혔다 (2026-09-11).
+          //    0 이 좋은 소식일 때는 그렇다고 말한다 (「전부 n일 안에 보고가 있었습니다」).
           //  🔴 마일스톤이 0개일 때 「전부 한 번은 보고됐습니다」라고 쓰면 **거짓이다** —
           //     아무것도 없는데 전부 됐다고 말한다. 덤프를 읽어서 잡았다 (⑮ 55바퀴).
           hint={
             roadmap.milestones.length === 0
               ? '아직 마일스톤이 없습니다'
               : never.length > 0
-                ? `아직 보고가 없는 마일스톤 ${never.length}`
-                : '전부 한 번은 보고됐습니다'
+                ? `아직 보고가 없는 마일스톤 ${never.length}개는 시작 전이라 여기 세지 않습니다`
+                : stale.length === 0
+                  ? `전부 ${STALE_REPORT_DAYS}일 안에 보고가 있었습니다`
+                  : '전부 한 번은 보고됐습니다'
           }
         />
       </div>
@@ -138,16 +151,20 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
     //  상태는 카드가 스스로 말한다 — 완료 확인 대기는 왼쪽 주황 괘선, 완료는 초록 (`data-status` · globals.css · 2026-09-11).
     <section className="card pad col-tight milestone" data-status={m.status}>
       <div className="row-between wrap">
+        {/* 상자 없는 토글 — 테두리·배경·padding 은 `.milestone .tree-item`(globals.css) 이 지운다. 카드 안의 긴 흰 상자는
+            입력 칸처럼 읽혔다. `.btn` 은 남긴다(글꼴 상속·커서·색 — 버튼은 글꼴을 안 물려받는다) · `.row` 가 flex 와 간격을 준다
+            (화면 7 파일 트리의 `btn btn-sm row-between tree-item` 과 같은 짜임 · 2026-09-11). */}
         <button
           type="button"
-          className="btn btn-sm grow tree-item"
+          className="btn btn-sm row grow tree-item"
           aria-expanded={expanded}
           onClick={on.onToggle}
         >
-          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
           {/* 제목이 제일 크다(표제체 `.row-name`) — 「PL-M1」만으로는 무엇을 하는 일인지 아무도 모른다. id 는 그 옆에 작게 (2026-09-11). */}
-          {state.title ? <span className="row-name" style={{ marginLeft: 'var(--sp-2)' }}>{state.title}</span> : null}
-          <span className="mono meta" style={{ marginLeft: 'var(--sp-2)' }}>{m.milestone}</span>
+          {state.title ? <span className="row-name">{state.title}</span> : null}
+          <span className="mono meta">{m.milestone}</span>
+          {/* 펼치기 단서는 낱말이다 — ▸ 같은 기호는 글꼴마다 다르게 찍히고 비개발자는 「누르면 펼쳐진다」를 못 읽는다 (DESIGN_BRIEF §3 · 2026-09-11). */}
+          <span className="meta" style={{ marginLeft: 'auto' }}>{expanded ? '접기' : '완료 조건 보기'}</span>
         </button>
         <div className="row wrap">
           {/* 기한은 Manifest 가 나른 날짜 **그대로**(`YYYY-MM-DD`) — Pack 본문의 `due:` 와 같은 글자다.
@@ -156,11 +173,15 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
           {m.due === null ? null : <span className="meta mono">기한 {m.due}</span>}
           <MilestoneChip status={m.status} />
           {/* 🔴 「마지막 보고」는 늘 경과다 — 「지금 이렇다」를 말할 수 있는 값이 없다. */}
-          <span className={stale ? 'meta mono ink-warn' : 'meta mono'}>
+          <span className="meta mono">
             {m.last_report_at === null
               ? '아직 보고가 없습니다'
-              : `마지막 보고 ${sinceText(m.last_report_at, now)}${stale ? ' ⚠' : ''}`}
+              : `마지막 보고 ${sinceText(m.last_report_at, now)}`}
           </span>
+          {/* 늦은 행은 **위 타일과 같은 낱말**로 말한다 — 타일이 「1」이라고 셀 때 어느 행이 그 1인지
+              눈으로 바로 찾으려면 글자가 같아야 한다. 색만 다른 글씨였을 때는 그 연결이 안 읽혔다 (2026-09-11).
+              🔴 「아직 보고가 없습니다」와는 겹치지 않는다 — 시작 전인 것은 늦은 것이 아니다 (`isStaleReport`). */}
+          {stale ? <Note tone="warn">{STALE_REPORT_DAYS}일 이상 보고 없음</Note> : null}
         </div>
       </div>
 
@@ -190,15 +211,13 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
           <button type="button" className="btn btn-sm" disabled={busy} onClick={on.onConfirm}>
             완료 확인
           </button>
-          <span className="meta">
-            보고: {confirmable.summary} · {sinceText(confirmable.at, now)}
-          </span>
+          <span className="meta">{reportedLine(confirmable, now)}</span>
         </div>
       ) : (
-        <span className="meta">완료 확인은 팀장만 할 수 있습니다 — 보고: {confirmable.summary}</span>
+        <span className="meta">{reportedLine(confirmable, now)}. 완료 확인은 팀장만 할 수 있습니다.</span>
       )}
       {error === null || error === undefined ? null : (
-        <span className="meta ink-bad">✕ 확인하지 못했습니다. 다시 시도해주세요.</span>
+        <Note tone="bad">확인하지 못했습니다. 다시 시도해주세요.</Note>
       )}
 
       {expanded ? (
@@ -219,8 +238,17 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
 }
 
 /**
- * 완료 조건 한 줄. **근거 수를 색만으로 말하지 않는다** — 아이콘 + 낱말을 같이 낸다
- * (DESIGN_BRIEF §3 「상태를 색만으로 구분하지 않는다」).
+ * 확정을 기다리는 보고 한 줄 — 「무엇이 보고: 「본문」 · 언제」.
+ * 인용 부호가 보고 본문의 경계다 — 줄표로 이으면 어디까지가 안내이고 어디부터가 개발자 AI 의 말인지
+ * 안 갈렸고, 「확인 부탁」이 시스템이 자기에게 하는 말로 읽혔다 (2026-09-11). 팀장·팀원 두 자리가 같은 줄을 쓴다.
+ */
+function reportedLine(report: ProgressEventView, now?: Date): string {
+  return `${PROGRESS_SOURCE_LABEL[report.source]}: 「${report.summary}」 · ${sinceText(report.at, now)}`
+}
+
+/**
+ * 완료 조건 한 줄. **근거 수를 색만으로 말하지 않는다** — 색점 + 낱말을 같이 낸다
+ * (DESIGN_BRIEF §3 「상태를 색만으로 구분하지 않는다」). 칩의 정본은 `EVIDENCE_CHIP`.
  */
 function CriterionLine({
   criterion,
@@ -236,13 +264,13 @@ function CriterionLine({
   return (
     <div className="row-between wrap">
       <span className={ok ? 'row grow' : 'row grow ink-3'}>
-        {/* 기호(✓/○) 대신 색점 + 낱말 — 특수문자 없이 (2026-09-11). */}
-        <span className={ok ? 'chip tone-ok' : 'chip tone-neutral'}><span className="chip-dot" aria-hidden="true" />{ok ? '근거 있음' : '근거 없음'}</span>
+        {/* 기호 대신 색점 + 낱말 — 특수문자 없이 (2026-09-11). 라벨·색은 `EVIDENCE_CHIP` 한 곳에서 온다. */}
+        <Chip spec={EVIDENCE_CHIP[ok ? 'yes' : 'no']} />
         <span className="grow">{criterion.text}</span>
       </span>
       {last === null ? (
         //  ⚠ 「근거 0」이라고 쓰지 않는다 — 보고 자체가 없는 것과 근거 없는 보고는 다르다.
-        <span className="meta ink-warn">⚠ 보고 없음</span>
+        <Note tone="warn">보고 없음</Note>
       ) : (
         <button type="button" className="btn btn-sm" onClick={() => onEvidence(last)}>
           근거 {criterion.evidence_count} · {sinceText(last.at, now)}
@@ -281,15 +309,17 @@ export function ProgressDrawer({
       <p className="ink">{event.summary}</p>
       <div className="col-tight">
         <span className="label">근거</span>
-        {/* 🔴 P1 — 서버가 아는 것은 경로·줄·커밋뿐이다. 코드 본문은 각자 로컬에 있다. */}
+        {/* 🔴 P1 — 서버가 아는 것은 경로·줄·커밋뿐이다. 코드 본문은 각자 로컬에 있다.
+            줄 앞의 「코드 」는 Context·Pack 의 `EvidenceLink` 와 같은 틀 — 맨 경로만 있으면 「18–46」이 날짜인지 줄인지,
+            「7d1b0e4」가 오류 코드인지 안 읽힌다. 문장의 정본은 `evidence.tsx` 의 `CODE_STAYS_LOCAL` (2026-09-11). */}
         {event.evidence.length === 0 ? (
-          <span className="meta ink-warn">⚠ 근거 없음</span>
+          <Note tone="warn">근거 없음</Note>
         ) : (
           <>
             {event.evidence.map((e, i) => (
-              <span key={`${e.path}-${i}`} className="mono meta scroll-x">{evidenceText(e)}</span>
+              <span key={`${e.path}-${i}`} className="mono meta scroll-x">코드 {evidenceText(e)}</span>
             ))}
-            <span className="meta">코드 본문은 서버에 없습니다 — 로컬에서 열어 보세요.</span>
+            <span className="meta">{CODE_STAYS_LOCAL}</span>
           </>
         )}
       </div>
@@ -302,7 +332,7 @@ export function ProgressDrawer({
         <span className="meta">보고 상태: {PROGRESS_STATUS_LABEL[event.status]}</span>
         {event.confirmed_at === null
           ? null
-          : <span className="meta ink-ok">✓ 확정됨 · {sinceText(event.confirmed_at, now)}</span>}
+          : <Note tone="ok">확정됨 · {sinceText(event.confirmed_at, now)}</Note>}
       </div>
     </aside>
   )
@@ -338,10 +368,12 @@ export function OffRoadmap({
 }) {
   if (total === 0) return null
   return (
-    <section className="card pad col-tight">
-      <button type="button" className="btn btn-sm tree-item" aria-expanded={expanded} onClick={onToggle}>
-        <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
-        로드맵 외 작업 {total}
+    //  `.off-roadmap` — 토글의 상자를 지우는 자리 (`.off-roadmap .tree-item` · globals.css). 마일스톤 행과 같은 짜임이다.
+    <section className="card pad col-tight off-roadmap">
+      <button type="button" className="btn btn-sm row tree-item" aria-expanded={expanded} onClick={onToggle}>
+        <span>로드맵 외 작업 {total}</span>
+        {/* 펼치기 단서는 낱말 — 마일스톤 행과 같은 이유 (2026-09-11). */}
+        <span className="meta" style={{ marginLeft: 'auto' }}>{expanded ? '접기' : '목록 보기'}</span>
       </button>
       {expanded ? (
         <div className="col-tight">

@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { ReplayFrames, isReplayCommand } from '@contextops/schema'
 
+import { EVIDENCE_CHIP } from '../src/components/chips'
 import { Landing, REPLAY_FRAMES, TERMINAL_REPLAY } from '../src/components/landing'
 import { REPLAY_PACE, TerminalReplay, panelState } from '../src/components/terminal-replay'
 import { paylabDrafts } from '../src/lib/demo/seed'
@@ -135,12 +136,22 @@ describe('④ 서버 렌더 — 전부 드러난 상태로 글로 읽힌다', ()
     for (const f of REPLAY_FRAMES) expect(out, f.text).toContain(escaped(f.text))
   })
 
-  it('패널이 근거 1 / 3 을 말하고, 세 완료 기준이 전부 서 있다 — 기호(✓/○)와 글자로 갈린다', () => {
+  it('패널이 근거 1 / 3 을 말하고, 세 완료 기준이 전부 「근거 있음/근거 없음」 색점 칩과 함께 선다 — 진짜 Roadmap 행과 같은 표(EVIDENCE_CHIP · 2026-09-11)', () => {
     const out = html()
+    const total = TERMINAL_REPLAY.milestone.done_when.length
+    const withEvidence = panelState(REPLAY_FRAMES, REPLAY_FRAMES.length, TERMINAL_REPLAY.milestone).done.length
     expect(out).toContain('근거 1 / 3')
     for (const c of TERMINAL_REPLAY.milestone.done_when) expect(out).toContain(c)
-    expect(out).toContain('>✓</span>')
-    expect(out).toContain('>○</span>')
+    //  낱말이 상태를 말하고 색점은 거든다 — 「근거 있음」이 보고된 만큼, 「근거 없음」이 나머지만큼, 색점은 조건 수만큼.
+    expect(out).toContain(EVIDENCE_CHIP.yes.label)
+    expect(out).toContain(EVIDENCE_CHIP.no.label)
+    expect(out.match(new RegExp(EVIDENCE_CHIP.yes.label, 'g'))?.length).toBe(withEvidence)
+    expect(out.match(new RegExp(EVIDENCE_CHIP.no.label, 'g'))?.length).toBe(total - withEvidence)
+    expect(out.match(/class="chip-dot"/g)?.length).toBe(total)
+    expect(out).toContain(`class="chip tone-${EVIDENCE_CHIP.yes.tone}"`)
+    expect(out).toContain(`class="chip tone-${EVIDENCE_CHIP.no.tone}"`)
+    //  ⚠ 녹화 본문의 `✓ 파일` 은 CLI 가 실제로 찍는 글자다 — 기록이라 그대로 둔다. 완료 기준 줄에만 기호가 없다.
+    expect(out).not.toContain('>○<')
     expect(out).toContain('role="progressbar"')
     expect(out).toContain('aria-valuenow="1"')
   })

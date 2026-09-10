@@ -32,8 +32,9 @@ import { useAsync } from '../lib/web/use-async'
 
 /** 여는 열쇠. 화면의 안내 문구와 실제 판정이 **같은 상수**를 읽는다. */
 export const PALETTE_KEY = 'K'
-/** 트리거 버튼과 dialog 제목이 같이 쓰는 낱말. mac 도 win 도 이 한 줄을 본다. */
-export const PALETTE_HINT = '⌘K'
+/** 트리거 버튼과 dialog 제목이 같이 쓰는 낱말. mac 도 win 도 이 한 줄을 본다 — `isPaletteKey` 가 ctrlKey 도 받으므로 mac 에서도 참이다.
+ *  「⌘K」였다 — 심사위원 대다수의 Windows 키보드에 없는 기호라 눌러 볼 방법이 안 보였다 (2026-09-11). */
+export const PALETTE_HINT = 'Ctrl+K'
 export const PALETTE_TITLE = '화면 이동'
 /** 프로젝트 묶음이 아직 안 왔을 때 · 못 왔을 때. 문장의 정본은 여기 하나다. */
 export const PALETTE_PROJECTS_LOADING = '프로젝트 목록을 불러오는 중입니다'
@@ -111,7 +112,7 @@ export function PaletteDialog({
             aria-label={PALETTE_TITLE}
             onChange={(e) => { onQuery(e.target.value); onIndex(0) }}
           />
-          <span className="meta mono" aria-hidden="true">esc</span>
+          <span className="meta" aria-hidden="true">Esc 닫기</span>
         </div>
         {groups.length === 0
           ? <p className="meta">{PALETTE_EMPTY}</p>
@@ -133,10 +134,8 @@ export function PaletteDialog({
                       onMouseEnter={() => onIndex(hits.indexOf(entry))}
                     >
                       {/* ⚠ 고른 줄을 **색만으로** 표시하지 않는다 (DESIGN_BRIEF §3) —
-                          화살표가 먼저고 배경색은 거들 뿐이다. */}
-                      <span aria-hidden="true" className="mono palette-caret">
-                        {entry === active ? '›' : ' '}
-                      </span>
+                          왼쪽 막대가 먼저고 배경색은 거들 뿐이다 (기호 › 대신 · 2026-09-11). */}
+                      <span aria-hidden="true" className="palette-caret" data-active={entry === active ? 'true' : undefined} />
                       <span className="grow">{entry.label}</span>
                       {entry.here
                         ? <span className="meta">지금 여기</span>

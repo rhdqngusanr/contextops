@@ -66,10 +66,12 @@ export function JobProgress({
 
       {/* 🔴 판정 옆에 **근거**를 같이 둔다 (DESIGN_BRIEF §2-1). 「멈췄다」만 있으면
           사람은 그 말을 확인할 방법이 없다. 「실시간」이라고 쓰지 않는다 (§2-3).
-          ⚠ 아직 한 걸음도 안 간 job 에 「마지막 걸음」이라고 쓰지 않는다 — 그 job 의
-            `updated_at` 은 만든 시각이다. 가른 것은 **상태 이름이 아니라 칸**이다. */}
+          ⚠ 아직 아무것도 안 한 job 에 「마지막 진행」이라고 쓰지 않는다 — 그 job 의
+            `updated_at` 은 만든 시각이다. 가른 것은 **상태 이름이 아니라 칸**이다.
+          🔴 「걸음」은 개발자의 은유였다 (2026-09-11) — 문서가 나뉘어 읽힌다는 것을
+             모르는 사람에게는 무엇의 한 번인지 안 읽힌다. */}
       <span className="meta mono" title={job.updated_at}>
-        {job.started_at === null ? '올린 지' : '마지막 걸음'} {sinceText(job.updated_at, now)}
+        {job.started_at === null ? '올린 지' : '마지막 진행'} {sinceText(job.updated_at, now)}
       </span>
 
       {/* 🔴 멈춘 job 은 **되돌리는 것이 아니라 새로 만드는** 갈래다 (FINDINGS 154).
@@ -78,7 +80,7 @@ export function JobProgress({
           ⚠ 그 갈래를 여기서 고르지 않는다 — `JobRetry` 가 서버와 같은 표를 읽는다. */}
       {job.stalled ? (
         <div className="col-tight">
-          <p className="meta">이 일이 한동안 움직이지 않았습니다.</p>
+          <p className="meta">이 작업이 한동안 움직이지 않았습니다.</p>
           <JobRetry job={job} retry={retry} />
         </div>
       ) : null}
@@ -100,9 +102,10 @@ export function JobBar({ job }: { job: AiJobSummary }) {
     return (
       <div className="col-tight">
         <div className="skeleton" />
-        {/* ⚠ 「몇 조각」이라고 쓰지 않는다 — 걸음의 낱말(`unit`)은 진행률과 같이 오는
-            값이라, 진행률이 없는 지금은 **그 낱말도 모른다.** */}
-        <span className="meta">몇 걸음짜리 일인지 아직 모릅니다.</span>
+        {/* ⚠ 「몇 조각」이라고 쓰지 않는다 — 세는 낱말(`unit`)은 진행률과 같이 오는
+            값이라, 진행률이 없는 지금은 **그 낱말도 모른다.** 그래서 사람이 실제로
+            궁금한 것(얼마나 남았나)만 말한다. */}
+        <span className="meta">얼마나 남았는지 아직 모릅니다.</span>
       </div>
     )
   }
@@ -170,7 +173,7 @@ export function retryExhausted(job: Pick<AiJobSummary, 'status' | 'error_code' |
  */
 const RETRY_NOTE: Record<AiJobRetryMode, string> = {
   requeue: '올린 문서를 그대로 다시 읽습니다. 문서를 다시 올릴 필요는 없습니다.',
-  fresh: '멈춘 일은 실패로 닫고, 같은 문서로 일을 새로 만듭니다. 문서를 다시 올릴 필요는 없습니다.',
+  fresh: '멈춘 작업은 실패로 기록하고, 같은 문서로 새 작업을 시작합니다. 문서를 다시 올릴 필요는 없습니다.',
 }
 
 /**
@@ -178,7 +181,7 @@ const RETRY_NOTE: Record<AiJobRetryMode, string> = {
  * (FINDINGS 59 · 154). 그릴지·무엇이 달라지는지는 **서버와 같은 표**가 정한다
  * (`jobRetryMode` · `packages/schema`).
  *
- * ⚠ accent 를 쓰지 않는다 — 화면 3 의 주요 액션은 [구조화하기] 하나다 (DESIGN_BRIEF §3).
+ * ⚠ accent 를 쓰지 않는다 — 화면 3 의 주요 액션은 [AI 로 정리하기] 하나다 (DESIGN_BRIEF §3).
  */
 export function JobRetry({
   job,
@@ -192,7 +195,7 @@ export function JobRetry({
   return (
     <div className="col-tight">
       <button type="button" className="btn" onClick={retry.run} disabled={retry.busy}>
-        {retry.busy ? '다시 굴리는 중…' : '다시 시도'}
+        {retry.busy ? '다시 시도하는 중…' : '다시 시도'}
       </button>
       <span className="meta">{RETRY_NOTE[mode]}{mode === 'requeue' ? ` ${requeuesLeftText(job)}` : ''}</span>
     </div>
@@ -200,13 +203,13 @@ export function JobRetry({
 }
 
 /**
- * 「같은 일을 몇 번 더 되돌릴 수 있나」 — 숫자의 정본은 `MAX_JOB_REQUEUES`(서버와 같은 표)다.
+ * 「같은 작업을 몇 번 더 되돌릴 수 있나」 — 숫자의 정본은 `MAX_JOB_REQUEUES`(서버와 같은 표)다.
  * ★ 왜 말하나 — 이 버튼은 LLM 을 한 번 더 부른다 (P3). 마지막 한 번임을 모르고 누른 사람은
  *   다음에 버튼이 사라진 것을 「고장」으로 읽는다. 상한에 닿은 뒤의 말은 `RETRY_EXHAUSTED` 다.
  */
 export function requeuesLeftText(job: Pick<AiJobSummary, 'requeues'>): string {
   const left = MAX_JOB_REQUEUES - job.requeues
-  return `같은 일은 ${MAX_JOB_REQUEUES}번까지 다시 굴릴 수 있습니다 (남은 ${left}번).`
+  return `같은 작업은 ${MAX_JOB_REQUEUES}번까지 다시 시도할 수 있습니다 (남은 ${left}번).`
 }
 
 /**
@@ -214,7 +217,7 @@ export function requeuesLeftText(job: Pick<AiJobSummary, 'requeues'>): string {
  * 비결정 실패(`AI_OUTPUT_INVALID`)가 `MAX_JOB_REQUEUES` 번 연속이면 모델이 아니라 문서 쪽이다 —
  * 길이를 줄이거나 나눠 올리는 것이 사람이 할 수 있는 유일한 일이다.
  */
-export const RETRY_EXHAUSTED = `같은 일을 ${MAX_JOB_REQUEUES}번 다시 굴렸지만 또 실패했습니다. 문서를 더 짧게 나눠 새로 올려보세요.`
+export const RETRY_EXHAUSTED = `같은 작업을 ${MAX_JOB_REQUEUES}번 다시 시도했지만 또 실패했습니다. 문서를 더 짧게 나눠 새로 올려보세요.`
 
 /**
  * 🔴 **[다시 시도] 를 그릴 수 있나** — 서버의 재시도 라우트와 **같은 표**를 읽는다

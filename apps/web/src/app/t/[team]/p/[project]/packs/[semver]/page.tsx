@@ -9,12 +9,14 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { messageOf } from '../../../../../../../lib/web/api'
-import { downloadPackZip, fetchItems, fetchManifest, fetchPackFile, fetchSyncStatus, type ProjectRef } from '../../../../../../../lib/web/queries'
+import { downloadPackZip, fetchItems, fetchManifest, fetchPackFile, fetchSyncStatus, fetchVersions, type ProjectRef } from '../../../../../../../lib/web/queries'
 import { useAsync } from '../../../../../../../lib/web/use-async'
-import { ITEM_TYPE_LABEL, ConfidenceChip, CtxTag, ItemStatusChip } from '../../../../../../../components/chips'
+import { ITEM_TYPE_LABEL, ConfidenceChip, CtxTag, ItemStatusChip, Note, VersionPill } from '../../../../../../../components/chips'
 import { Jargon } from '../../../../../../../components/jargon'
+import { formatBytes } from '../../../../../../../lib/web/bytes'
 import { ITEM_GIST_KEY, itemGist } from '../../../../../../../lib/web/item-gist'
 import { packBlocks } from '../../../../../../../lib/web/pack-blocks'
+import { orderPackFiles, splitPackPath } from '../../../../../../../lib/web/pack-files'
 import { countReceived } from '../../../../../../../components/sync'
 import { EvidenceList } from '../../../../../../../components/evidence'
 import { ProjectGate } from '../../../../../../../components/project-gate'
@@ -23,10 +25,12 @@ import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../../componen
 // =====================================================================
 //  화면 7 — Pack Explorer (SPEC §9 · DESIGN_BRIEF §4 「화면 7」)
 //
-//  🔴 **이 화면이 P7 을 사람이 눈으로 확인하는 자리다.** 줄을 누르면 그 줄이 어느 항목에서
-//     왔는지, 그 항목의 근거가 무엇인지가 오른쪽에 뜬다. 태그가 없는 줄은
-//     「이 줄은 어느 항목에도 속하지 않습니다」라고 **그대로 말한다** — 감추면
-//     근거 없는 줄이 있는지 없는지 화면에서 알 수 없다.
+//  🔴 **이 화면이 P7 을 사람이 눈으로 확인하는 자리다.** 문단(원본 보기에서는 줄)을 누르면 그것이 어느
+//     항목에서 왔는지, 그 항목의 근거가 무엇인지가 오른쪽에 뜬다. 태그가 없는 문단은
+//     「이 문단은 어느 항목에도 속하지 않습니다」라고 **그대로 말한다** — 감추면
+//     근거 없는 줄이 있는지 없는지 화면에서 알 수 없다. 「문단/줄」 낱말은 `UNIT` 표 하나다.
+//  ★ 본문이 오면 **첫 항목 문단이 골라진 채** 선다 (2026-09-11) — 누르기 전까지 오른쪽이 빈 칸이면
+//    이 화면의 주장(출처가 붙는다)이 첫 3초에 안 보인다. 주소(`#L`)가 있으면 그것이 이긴다.
 //
 //  ★ 3열이다: 파일 트리 240 / 내용 flexible / 항목·근거 320 (DESIGN_BRIEF §4).
 //  ★ 태그를 읽는 것은 `@contextops/compiler` 의 `traceLines` 다 — **쓰는 코드와 같은 파일**에
@@ -55,6 +59,8 @@ function PackExplorer({ base, project, semver }: { base: string; project: Projec
   //  항목은 오른쪽 패널이 「제목·상태·근거」를 붙이는 데 쓴다. 없어도 화면은 열린다 —
   //  그래서 실패해도 여기서 죽이지 않는다 (빈 색인으로 둔다).
   const items = useAsync(() => fetchItems(project.id, {}), [project.id])
+  //  「지금 보는 것이 팀이 쓰는 판인가, 옛 판인가」 — 목록(`VersionHistory`)과 같은 문을 읽는다. 못 읽으면 말하지 않는다.
+  const versions = useAsync(() => fetchVersions(project.id), [project.id])
   const [path, setPath] = useState<string | null>(null)
 
   if (manifest.result.state === 'loading') return <div className="card pad"><Skeleton rows={6} /></div>
@@ -63,19 +69,24 @@ function PackExplorer({ base, project, semver }: { base: string; project: Projec
   }
 
   const m = manifest.result.data
-  //  ⚠ 처음 열리는 파일은 **CLAUDE.md** 다. 경로순 첫째(`.claude/rules/…`)를 열면
-  //    사람이 Pack 의 현관이 아니라 곁방부터 보게 된다 (눈으로 확인하고 고쳤다).
-  const first = m.files.find((f) => f.path === 'CLAUDE.md') ?? m.files[0]
-  const current = m.files.find((f) => f.path === path) ?? first
+  //  ⚠ 처음 열리는 파일은 **현관(CLAUDE.md)** 이고 트리의 맨 윗줄도 그것이다 — 둘 다 `orderPackFiles` 한 곳에서 나온다.
+  //    경로순 첫째(`.claude/rules/…`)를 열면 사람이 Pack 의 현관이 아니라 곁방부터 보게 된다 (눈으로 확인하고 고쳤다).
+  const ordered = orderPackFiles(m.files)
+  const first = ordered[0]
+  const current = ordered.find((f) => f.path === path) ?? first
   const byItemId = new Map<string, ContextItem>(
     items.result.state === 'ready' ? items.result.data.items.map((i) => [i.id, i]) : [],
   )
+  //  undefined = 아직 모름/못 읽음 · null = 공식 판이 없음 · 문자열 = 공식 판의 semver. 화면은 아는 것만 말한다.
+  const official = versions.result.state === 'ready'
+    ? (versions.result.data.versions.find((v) => v.is_official)?.semver ?? null)
+    : undefined
 
   return (
     <>
-      <PackHeader project={project} manifest={m} semver={semver} />
+      <PackHeader base={base} project={project} manifest={m} semver={semver} official={official} />
       <div className="row items-start">
-        <FileTree files={m.files} current={current} onPick={setPath} />
+        <FileTree files={ordered} current={current} onPick={setPath} />
         {current
           ? <FileView project={project} semver={semver} file={current} manifest={m} byItemId={byItemId} />
           : <ScreenEmpty slot="pack.files" base={base} />}
@@ -84,11 +95,25 @@ function PackExplorer({ base, project, semver }: { base: string; project: Projec
   )
 }
 
-function PackHeader({ project, manifest, semver }: { project: ProjectRef; manifest: Manifest; semver: string }) {
+function PackHeader({
+  base,
+  project,
+  manifest,
+  semver,
+  official,
+}: {
+  base: string
+  project: ProjectRef
+  manifest: Manifest
+  semver: string
+  /** 공식 판의 semver · `null` = 공식 판 없음 · `undefined` = 아직 모름/못 읽음. */
+  official: string | null | undefined
+}) {
   return (
     <header className="row-between wrap">
       <div className="col-tight">
-        <h1 className="text-section">Pack v{semver}</h1>
+        {/* 「공식」 칩은 목록(`VersionHistory`)의 것과 같은 `VersionPill` 이다 — 목록에는 있는데 상세에서 사라졌다 (2026-09-11). `.mono` 는 서체만이라 표제 크기 그대로다. */}
+        <h1 className="text-section row wrap">Pack <VersionPill semver={semver} official={official === semver} /></h1>
         {/* 파일 수가 먼저, 해시는 「확인표」「승인본」이라는 이름을 달고, 도구 버전은 맨 뒤 (2026-09-10 저녁). 값은 전부 그대로다. */}
         <div className="row wrap meta mono">
           <span>파일 {manifest.files.length}</span>
@@ -96,14 +121,20 @@ function PackHeader({ project, manifest, semver }: { project: ProjectRef; manife
           <span title={manifest.snapshot_hash}>승인본(snapshot) {manifest.snapshot_hash.slice(0, 8)}</span>
           <span>도구 compiler {manifest.compiler_version} · template {manifest.template_version}</span>
         </div>
+        {/* 있는 것만 말한다 — 못 읽었거나(undefined) 공식 판이 없으면(null) 아무것도 안 그린다. 링크는 잉크 밑줄 — 검정 알약은 [Pack 다운로드] 하나뿐이다. */}
+        {official === semver ? (
+          <p className="ink-2">지금 팀의 공식 판입니다. 팀원 기기가 받는 파일이 이 파일들입니다.</p>
+        ) : typeof official === 'string' ? (
+          <p className="ink-2">옛 판입니다. 지금 공식은 <a href={`${base}/packs/${official}`}>v{official}</a> 입니다.</p>
+        ) : null}
       </div>
       {/* DESIGN_BRIEF §4 화면 7 「상단 우측: [Pack 다운로드 (.zip)] · 이 Pack을 받은 기기 9 / 12」 */}
       <div className="row wrap">
         <ReceivedBy project={project} manifest={manifest} />
         <DownloadZip project={project} semver={semver} />
       </div>
-      {/* 사람 말 한 줄 (2026-09-11) — 세 칸이 각각 무엇인지. */}
-      <p className="ink-2">왼쪽은 AI 가 읽는 파일 목록, 가운데는 그 파일의 실제 내용입니다. 아무 줄이나 누르면 오른쪽에 그 줄이 어느 문서·코드에서 왔는지 뜹니다.</p>
+      {/* 사람 말 한 줄 (2026-09-11) — 세 칸이 각각 무엇인지. 기본 보기가 문단이라 「줄」이 아니다. */}
+      <p className="ink-2">왼쪽은 AI 가 읽는 파일 목록, 가운데는 그 파일의 실제 내용입니다. 아무 문단이나 누르면 오른쪽에 그 문단이 어느 문서·코드에서 왔는지 뜹니다.</p>
     </header>
   )
 }
@@ -153,7 +184,7 @@ function DownloadZip({ project, semver }: { project: ProjectRef; semver: string 
       <button type="button" className="btn btn-sm" disabled={state.kind === 'busy'} onClick={() => void download()}>
         {state.kind === 'busy' ? '받는 중…' : 'Pack 다운로드 (.zip)'}
       </button>
-      {state.kind === 'error' ? <span className="meta ink-bad">✕ {messageOf(state.error)}</span> : null}
+      {state.kind === 'error' ? <Note tone="bad">{messageOf(state.error)}</Note> : null}
     </span>
   )
 }
@@ -170,19 +201,26 @@ function FileTree({
   return (
     <nav className="card pad-sm col-tight pack-tree scroll-x">
       <span className="label">파일</span>
-      {files.map((f) => (
-        <button
-          key={f.path}
-          type="button"
-          className="btn btn-sm row-between tree-item"
-          aria-current={f.path === current?.path ? 'true' : undefined}
-          onClick={() => onPick(f.path)}
-        >
-          <span className="mono">{f.path}</span>
-          {/* sha 앞 4자 — 같은 파일이 버전 간에 바뀌었는지 눈으로 잡는 자리 */}
-          <span className="mono ink-3 tree-sha" title={f.sha256}>{f.sha256.slice(0, 4)}</span>
-        </button>
-      ))}
+      {files.map((f) => {
+        //  폴더는 작은 회색 윗줄, 파일 이름은 잉크 아랫줄 — 240px 에서 `arch|itecture.md` 처럼 낱말 가운데가 접혔다 (2026-09-11).
+        const { dir, name } = splitPackPath(f.path)
+        return (
+          <button
+            key={f.path}
+            type="button"
+            className="btn btn-sm row-between tree-item"
+            aria-current={f.path === current?.path ? 'true' : undefined}
+            onClick={() => onPick(f.path)}
+          >
+            <span className="col-tight">
+              {dir === '' ? null : <span className="mono meta">{dir}</span>}
+              <span className="mono ink">{name}</span>
+            </span>
+            {/* sha 앞 4자 — 같은 파일이 버전 간에 바뀌었는지 눈으로 잡는 자리 */}
+            <span className="mono ink-3 tree-sha" title={f.sha256}>{f.sha256.slice(0, 4)}</span>
+          </button>
+        )
+      })}
     </nav>
   )
 }
@@ -208,16 +246,6 @@ function FileView({
   const [line, setLine] = useState<number | null>(null)
   //  문서로 읽기가 기본이다 — 원본(줄 번호 · 꼬리표 그대로)은 토글 (2026-09-11).
   const [mode, setMode] = useState<'doc' | 'raw'>('doc')
-  useEffect(() => {
-    const m = /^#L(\d+)$/.exec(window.location.hash)
-    if (m) setLine(Number(m[1]) - 1)
-  }, [file.path])
-
-  function pick(index: number): void {
-    setLine(index)
-    //  `replaceState` 다 — 줄을 훑을 때마다 뒤로 가기 기록이 쌓이면 못 빠져나온다.
-    window.history.replaceState(null, '', `#L${index + 1}`)
-  }
 
   const lines = body.result.state === 'ready' ? body.result.data.split('\n') : []
   //  ⚠ 본문이 길다. 파일이 바뀔 때만 다시 훑는다.
@@ -227,6 +255,24 @@ function FileView({
   )
   const selectedTag = line === null ? undefined : trace.get(line)
   const blocks = useMemo(() => (body.result.state === 'ready' ? packBlocks(body.result.data) : []), [body.result])
+
+  useEffect(() => {
+    const m = /^#L(\d+)$/.exec(window.location.hash)
+    if (m) {
+      setLine(Number(m[1]) - 1)
+      return
+    }
+    //  주소가 없으면 첫 항목 문단을 골라 둔다 — 오른쪽에 그 항목·근거가 바로 뜬다. `setLine` 만이고
+    //  `replaceState` 는 부르지 않는다 — 주소는 사람이 누를 때만 남긴다.
+    const firstTagged = blocks.find((b) => b.tag !== null)
+    if (firstTagged) setLine(firstTagged.end)
+  }, [file.path, blocks])
+
+  function pick(index: number): void {
+    setLine(index)
+    //  `replaceState` 다 — 줄을 훑을 때마다 뒤로 가기 기록이 쌓이면 못 빠져나온다.
+    window.history.replaceState(null, '', `#L${index + 1}`)
+  }
 
   if (body.result.state === 'loading') return <div className="card pad grow"><Skeleton rows={10} /></div>
   if (body.result.state === 'error') {
@@ -242,7 +288,8 @@ function FileView({
             {/* 보기 토글 — 문서로(기본) / 원본(줄 번호·꼬리표). 둘 다 같은 줄 → 항목 표를 읽는다. */}
             <button type="button" className="btn btn-sm" aria-pressed={mode === 'doc'} onClick={() => setMode('doc')}>문서로 보기</button>
             <button type="button" className="btn btn-sm" aria-pressed={mode === 'raw'} onClick={() => setMode('raw')}>원본 보기</button>
-            <span className="meta mono" title={file.sha256}>sha256 {file.sha256.slice(0, 8)} · {file.size}B</span>
+            {/* 「확인값」은 머리의 「확인표」·ReceivedBy 의 「확인표(해시)로 대조」와 같은 낱말 계열 — `sha256`·`B` 는 개발자 낱말이었다 (2026-09-11). 값은 그대로. */}
+            <span className="meta" title={`sha256 ${file.sha256}`}>확인값 <span className="mono">{file.sha256.slice(0, 8)}</span> · {formatBytes(file.size)}</span>
           </span>
         </div>
         {mode === 'doc' ? (
@@ -264,7 +311,7 @@ function FileView({
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(b.end) } }}
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{b.text}</ReactMarkdown>
-                  <CtxTag itemId={b.tag.itemId} revision={b.tag.revision} />
+                  <CtxTag itemId={b.tag.itemId} revision={b.tag.revision} title={ctxTitle(byItemId.get(b.tag.itemId))} />
                 </div>
               )
             ))}
@@ -289,19 +336,32 @@ function FileView({
       </section>
 
       <aside className="card pad col pack-side">
-        <TracePanel tag={selectedTag} picked={line !== null} item={selectedTag ? byItemId.get(selectedTag.itemId) : undefined} />
-        <Excluded manifest={manifest} />
+        <TracePanel unit={UNIT[mode]} tag={selectedTag} picked={line !== null} item={selectedTag ? byItemId.get(selectedTag.itemId) : undefined} />
+        <Excluded manifest={manifest} byItemId={byItemId} />
       </aside>
     </>
   )
 }
 
-/** 🔴 P7 의 얼굴 — 고른 줄 → 항목 → 원문. */
+/**
+ * 누르는 단위의 낱말 — 문서 보기는 문단(항목 블록), 원본 보기는 줄. 오른쪽 패널의 라벨·빈 문구·알림이 전부 이 표를 읽는다.
+ * (문단을/줄을 · 문단이/줄이 · 문단은/줄은 — 둘 다 받침이라 조사가 같다.)
+ */
+const UNIT: Record<'doc' | 'raw', string> = { doc: '문단', raw: '줄' }
+
+/** 꼬리표 칩의 툴팁 앞머리 — 「정책 · PSP 재시도」. 항목을 못 찾으면 없다 (지어내지 않음). 세 자리(문단 끝·출처 패널·안 들어간 항목)가 같은 것을 읽는다. */
+function ctxTitle(item: ContextItem | undefined): string | undefined {
+  return item === undefined ? undefined : `${ITEM_TYPE_LABEL[item.type]} · ${item.title}`
+}
+
+/** 🔴 P7 의 얼굴 — 고른 문단(줄) → 항목 → 원문. */
 function TracePanel({
+  unit,
   tag,
   picked,
   item,
 }: {
+  unit: string
   tag: TraceTag | undefined
   picked: boolean
   item: ContextItem | undefined
@@ -309,24 +369,24 @@ function TracePanel({
   if (!picked) {
     return (
       <div className="col-tight">
-        <span className="label">이 줄의 출처</span>
-        <p className="meta">줄을 누르면 그 줄이 어느 항목에서 왔는지 보여줍니다.</p>
+        <span className="label">이 {unit}의 출처</span>
+        <p className="meta">{unit}을 누르면 그 {unit}이 어느 문서·코드에서 왔는지 보여줍니다.</p>
       </div>
     )
   }
   if (!tag) {
-    //  🔴 감추지 않는다. 태그 없는 줄이 있다는 것 자체가 P7 의 판정 재료다.
+    //  🔴 감추지 않는다. 태그 없는 문단이 있다는 것 자체가 P7 의 판정 재료다.
     return (
       <div className="col-tight">
-        <span className="label">이 줄의 출처</span>
-        <p className="ink-warn">⚠ 이 줄은 어느 항목에도 속하지 않습니다 (머리말·빈 줄).</p>
+        <span className="label">이 {unit}의 출처</span>
+        <Note tone="warn">이 {unit}은 어느 항목에도 속하지 않습니다 (절 머리·머리말).</Note>
       </div>
     )
   }
   return (
     <div className="col-tight">
-      <span className="label">이 줄의 출처</span>
-      <CtxTag itemId={tag.itemId} revision={tag.revision} />
+      <span className="label">이 {unit}의 출처</span>
+      <CtxTag itemId={tag.itemId} revision={tag.revision} title={ctxTitle(item)} />
       {item ? (
         <>
           <div className="row wrap">
@@ -341,7 +401,6 @@ function TracePanel({
           )}
           <p className="ink-3">{item.body}</p>
           <Jargon text={`${item.title} ${itemGist(item)} ${item.body}`} />
-          <span className="label">근거</span>
           <EvidenceList refs={item.source_refs} />
         </>
       ) : (
@@ -357,19 +416,36 @@ function TracePanel({
   )
 }
 
-/** 제외된 항목 — 왜 Pack 에 안 들어갔는지 (DESIGN_BRIEF §4 화면 7 우측 접이식). */
-function Excluded({ manifest }: { manifest: Manifest }) {
+/**
+ * 제외된 항목 — 왜 Pack 에 안 들어갔는지 (DESIGN_BRIEF §4 화면 7 우측 접이식).
+ * ★ 제목·종류를 앞에 세운다 — id 하나로는 **어느 규칙이** 빠졌는지 못 읽었다 (2026-09-11). 상태 칩은 「적용 중」이 아닐 때만
+ *   (화면 5 문서 보기와 같은 규칙) — 답이 필요한 질문은 종류 라벨이 「왜 빠졌나」를 말하고, 초안·검토 중·폐기는 칩 글자가 말한다.
+ * 🔴 이유 원문은 manifest 에 박힌 기록이라(P4 · 골든 잠금) 바꾸지도 감추지도 않는다. 항목을 못 찾으면 예전 모양 그대로 (지어내지 않음).
+ */
+function Excluded({ manifest, byItemId }: { manifest: Manifest; byItemId: Map<string, ContextItem> }) {
   if (manifest.excluded.length === 0) return null
   return (
     <details>
       <summary className="label">이 판에 안 들어간 항목 {manifest.excluded.length}</summary>
       <div className="col-tight">
-        {manifest.excluded.map((e) => (
-          <div key={e.item_id} className="col-tight">
-            <CtxTag itemId={e.item_id} />
-            <span className="meta">{e.reason}</span>
-          </div>
-        ))}
+        {manifest.excluded.map((e) => {
+          const item = byItemId.get(e.item_id)
+          return (
+            <div key={e.item_id} className="col-tight">
+              {item ? (
+                <>
+                  <b>{item.title}</b>
+                  <span className="row wrap">
+                    <span className="meta">{ITEM_TYPE_LABEL[item.type]}</span>
+                    {item.status !== 'active' ? <ItemStatusChip status={item.status} /> : null}
+                  </span>
+                </>
+              ) : null}
+              <CtxTag itemId={e.item_id} title={ctxTitle(item)} />
+              <span className="meta">{e.reason}</span>
+            </div>
+          )
+        })}
       </div>
     </details>
   )

@@ -32,12 +32,12 @@ function listed<K extends string>(keys: readonly K[], counts: Record<K, number>,
   return keys.filter((k) => counts[k] > 0).map((k) => `${label(k)} ${counts[k]}${unit}`).join(' · ')
 }
 
-/** Sync — 「기기 14대 중 9대가 최신 판을 받았습니다. 옛 버전 2대 · 손으로 고침 1대 · …」 */
+/** Sync — 「기기 14대 중 9대가 「적용됨」입니다 — 공식 판이 그대로 들어가 있습니다. 옛 버전 2대 · 손으로 고침 1대 · …」 (「최신 판」은 표에 없는 셋째 이름이었다 · 2026-09-11) */
 export function syncFact(statuses: readonly SyncStatus[]): FactPart[] {
   if (statuses.length === 0) return ['아직 등록된 기기가 없습니다.']
   const counts = countBy(SYNC_STATUSES, statuses)
   const rest = listed(SYNC_STATUSES.filter((s) => s !== 'applied'), counts, (s) => SYNC_CHIP[s].label, '대')
-  return ['기기 ', { strong: `${statuses.length}대` }, ' 중 ', { strong: `${counts.applied}대` }, '가 최신 판을 받았습니다.', rest === '' ? '' : ` ${rest}.`]
+  return ['기기 ', { strong: `${statuses.length}대` }, ' 중 ', { strong: `${counts.applied}대` }, `가 「${SYNC_CHIP.applied.label}」입니다 — 공식 판이 그대로 들어가 있습니다.`, rest === '' ? '' : ` ${rest}.`]
 }
 
 /** Roadmap — 「마일스톤 3개 — 완료 확인 대기 1 · 진행 중 1 · 시작 전 1. 완료 조건 9개 중 3개에 근거가 붙었습니다.」 */

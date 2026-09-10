@@ -251,6 +251,16 @@ describe('화면 7 — [Pack 다운로드 (.zip)] · 이 Pack 을 받은 기기'
     expect(page).not.toMatch(/href=\{?["'`][^"'`]*\/zip/)
   })
 
+  it('지금 보는 판이 공식인지 옛 판인지 말한다 — 목록과 같은 문(fetchVersions)을 읽는다', () => {
+    //  목록에는 「공식」 칩이 있는데 상세로 들어오면 사라져서, v1.0.0 을 열어도 화면이 똑같이 생겼다 (2026-09-11).
+    expect(page).toContain('fetchVersions(')
+    expect(page).toContain('official={official === semver}')
+    expect(page).toContain('지금 팀의 공식 판입니다')
+    expect(page).toContain('옛 판입니다')
+    //  못 읽었거나 공식 판이 없으면 아무 말도 안 한다 — 지어내지 않는다.
+    expect(page).toContain("typeof official === 'string'")
+  })
+
   it('「받았다」는 manifest_hash 하나로 센다 — 상태가 아니다', () => {
     const hash = 'a'.repeat(64)
     const row = (over: Partial<DeviceSyncRow>): DeviceSyncRow => ({
@@ -268,6 +278,7 @@ describe('화면 7 — [Pack 다운로드 (.zip)] · 이 Pack 을 받은 기기'
     expect(countReceived(devices, 'c'.repeat(64))).toBe(0)
     //  화면 9 의 요약과 같은 표에서 왔다 — 둘이 다른 수를 말하지 않는다.
     const html = renderToStaticMarkup(createElement(SyncSummary, { devices }))
-    expect(html).toContain('기기 5')
+    //  사실 한 줄은 수를 `<b>` 로 굵게 싸므로 태그를 벗기고 견준다 (2026-09-11 · 칩 줄을 걷어 냈다).
+    expect(html.replace(/<[^>]+>/g, '')).toContain('기기 5대')
   })
 })

@@ -210,7 +210,7 @@ P1 의 근거 문서는 [`docs/evidence/2026-09-06-p1-payload/p1-payload.md`](ev
 **샘플 팀** — <https://contextops-rosy.vercel.app/demo> 를 열면 게스트 세션으로 샘플 팀에 들어갑니다. 읽기 전용이고 매일 03:00(KST) 초기화됩니다.
 로그인 없이 앱 화면(가져오기 · 정리 · Context · 제안 · Pack Explorer · Roadmap · Sync)을 그대로 봅니다.
 「정리」의 **AI 제안 카드 3장**은 2026-09-07 에 gemini-3.5-flash 가 샘플 팀의 두 문서에서 실제로 찾은 모순의 기록이고, 카드 본문이
-「이 데모에서는 다시 탐지하지 않습니다」라고 스스로 말합니다 — 게스트는 쓸 수 없어서, AI 가 새로 도는 장면은 로그인한 팀장이
+「이 샘플 팀에서는 다시 찾지 않고 그때의 기록을 그대로 보여 줍니다」라고 스스로 말합니다 — 게스트는 쓸 수 없어서, AI 가 새로 도는 장면은 로그인한 팀장이
 문서를 붙여 넣을 때 봅니다.
 
 **개발자 설치**
@@ -219,7 +219,7 @@ Node 22 이상이 필요합니다 (node -v) — 훅과 CLI 가 Node 로 돕니�
 
 ```
 claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록합니다
-claude plugin install contextops                                 # 훅·Skill·CLI 가 함께 깔립니다
+claude plugin install contextops                                 # 자동으로 도는 작은 장치(훅) · Claude Code 안의 명령(Skill) · 실행 도구(CLI) 가 함께 깔립니다
 /contextops:setup <Sync 화면이 준 인자>                           # Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다
 /contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올립니다
 ```

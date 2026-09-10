@@ -30,7 +30,8 @@ import { actorKindOf, clearSession, readSession } from './session'
  */
 export const ERROR_HINT: Record<ErrorCode, string> = {
   UNAUTHORIZED: '로그인이 필요합니다. 다시 로그인해주세요.',
-  FORBIDDEN: '이 작업은 팀 owner만 할 수 있습니다.',
+  //  낱말은 `components/team-home.tsx` 의 `ROLE_LABEL.owner`(팀장)와 같게 — lib 는 components 를 못 읽어 글자를 같게 적는다 (2026-09-11).
+  FORBIDDEN: '이 작업은 팀장만 할 수 있습니다.',
   NOT_FOUND: '찾을 수 없습니다. 주소가 바뀌었거나 삭제되었을 수 있습니다.',
   VALIDATION_FAILED: '입력한 내용을 다시 확인해주세요.',
   STALE_BASE: '그 사이 새 버전이 발행되었습니다. 최신 내용을 불러왔어요. 다시 발행해주세요.',

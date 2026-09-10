@@ -214,7 +214,7 @@ Node 22 이상이 필요합니다 (node -v) — 훅과 CLI 가 Node 로 돕니�
 
 ```
 claude plugin marketplace add rhdqngusanr/contextops             # 플러그인 저장소를 등록합니다
-claude plugin install contextops                                 # 훅·Skill·CLI 가 함께 깔립니다
+claude plugin install contextops                                 # 자동으로 도는 작은 장치(훅) · Claude Code 안의 명령(Skill) · 실행 도구(CLI) 가 함께 깔립니다
 /contextops:setup <Sync 화면이 준 인자>                           # Claude Code 안에서. 웹의 Sync → [기기 추가] 가 이 줄을 통째로 줍니다 — 토큰은 저장소 밖에 둡니다
 /contextops:init                                                 # Claude Code 안에서 한 번. 저장소를 훑어 첫 항목을 올립니다
 ```

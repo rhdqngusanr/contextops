@@ -12,7 +12,7 @@ import type { ProposalDetail, ProposalRow, VersionRow } from '../lib/web/queries
 //     같은 하나를 읽어야 세 자리가 안 갈라진다 (FINDINGS 167). 여기서 다시 적지 마라.
 import { MADE } from '../lib/web/screens'
 import { dateText } from '../lib/web/time'
-import { ITEM_TYPE_LABEL, PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, VersionPill } from './chips'
+import { PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, VersionPill, Note } from './chips'
 import { EvidenceList } from './evidence'
 import { FactLine, proposalFact } from './fact-line'
 import { ITEM_GIST_KEY, itemGist } from '../lib/web/item-gist'
@@ -134,9 +134,10 @@ export function ProposalListIntro() {
     <>
       {/* 사람 말이 먼저 (2026-09-10 저녁) — 아래 문장은 낱말이 시험에 잠겨 있어 그대로 둔다. */}
       <p className="ink-2">개발자가 「이 규칙을 이렇게 바꾸자」고 올린 것입니다. 팀장이 승인하면 다음 발행에 들어갑니다.</p>
+      {/* 「승인된 제안만 다음 발행에 들어갑니다」는 윗줄이 이미 말한다 — 두 줄이 같은 말이었다 (2026-09-11). */}
       <p className="meta">
         Claude Code에서 <span className="mono ink">contextops propose</span> 로 {MADE} 변경 제안입니다.
-        올린 것만 승인 대기로 가고, 승인된 제안만 다음 발행에 들어갑니다.
+        올린 것만 승인 대기로 갑니다.
       </p>
     </>
   )
@@ -147,15 +148,32 @@ export function ProposalFact({ proposals }: { proposals: readonly ProposalRow[] 
   return <FactLine parts={proposalFact(proposals.map((p) => p.status))} />
 }
 
+/**
+ * 관련 마일스톤 하나 — 「PL-M3」 만으로는 심사위원이 어느 마일스톤인지 모른다 (2026-09-11).
+ * 제목을 알면 id 옆에 붙이고, 못 읽었으면 id 만 선다 — **지어내지 않는다.** 제목 표의 정본은 `lib/web/milestone-titles.ts`.
+ */
+export function MilestoneRef({ id, titles }: { id: string; titles?: Record<string, string> }) {
+  const title = titles?.[id]
+  return (
+    <span className="row">
+      <span className="ctx-tag">{id}</span>
+      {title === undefined ? null : <span className="ink">{title}</span>}
+    </span>
+  )
+}
+
 export function ProposalTable({
   proposals,
   hrefOf,
   empty,
+  titles,
 }: {
   proposals: readonly ProposalRow[]
   hrefOf: (proposal: ProposalRow) => string
   /** 빈 자리는 `ScreenEmpty` 가 그린다 — 문구·다음 행동의 정본은 `EMPTY_PLACES` 다 (FINDINGS 133). */
   empty: ReactNode
+  /** 마일스톤 id → 제목 (`useMilestoneTitles`). 없으면 id 만 그린다. */
+  titles?: Record<string, string>
 }) {
   if (proposals.length === 0) return <>{empty}</>
   return (
@@ -189,7 +207,7 @@ export function ProposalTable({
                   ? <span aria-hidden="true" className="ink-4">—</span>
                   : (
                     <span className="row wrap">
-                      {p.relates_to.map((m) => <span key={m} className="ctx-tag">{m}</span>)}
+                      {p.relates_to.map((m) => <MilestoneRef key={m} id={m} titles={titles} />)}
                     </span>
                   )}
               </td>
@@ -230,10 +248,13 @@ const DECIDED_BY_LABEL: Record<ProposalStatus, string | null> = {
 export function ProposalHead({
   proposal,
   base,
+  titles,
 }: {
   proposal: ProposalDetail
   /** 기준 버전 행. 못 찾으면 `null` — **uuid 를 대신 그리지 않는다.** */
   base: VersionRow | null
+  /** 마일스톤 id → 제목 (`useMilestoneTitles`). 없으면 id 만 그린다. */
+  titles?: Record<string, string>
 }) {
   return (
     <section className="card pad col">
@@ -254,16 +275,23 @@ export function ProposalHead({
           ? (
             //  ⚠ 「기준이 없다」와 「못 찾았다」를 같은 말로 그리지 않는다.
             <span className="meta ink-warn">
-              {proposal.base_version_id === null ? '기준 버전 없음' : '⚠ 기준 버전을 찾을 수 없습니다'}
+              {proposal.base_version_id === null ? '기준 버전 없음' : '기준 버전을 찾을 수 없습니다'}
             </span>
           )
-          : <VersionPill semver={base.semver} hash={base.snapshot_hash} official={base.is_official} />}
+          : (
+            //  승인본 8자는 여기서 뺀다 — 이 자리에서 사람이 알아야 하는 것은 「어느 판을 보고 쓴 제안인가」 하나다 (2026-09-11).
+            //  ⚠ 숫자 뒤에 조사를 붙이지 않는다 — `v1.0.0을`·`v1.2.0를` 처럼 마지막 숫자마다 을/를이 갈린다.
+            <>
+              <VersionPill semver={base.semver} official={base.is_official} />
+              <span className="meta">이 판을 보고 만든 제안입니다</span>
+            </>
+          )}
       </div>
 
       {proposal.relates_to.length === 0 ? null : (
         <div className="row wrap">
           <span className="label">관련 마일스톤</span>
-          {proposal.relates_to.map((m) => <span key={m} className="ctx-tag">{m}</span>)}
+          {proposal.relates_to.map((m) => <MilestoneRef key={m} id={m} titles={titles} />)}
         </div>
       )}
 
@@ -350,10 +378,12 @@ export function DiffView({ before, after }: { before: string; after: string }) {
 
   return (
     <div className="col-tight">
-      <span className="meta mono">
-        <span className="ink-ok">+{counts.added}</span>{' '}
-        <span className="ink-bad">−{counts.removed}</span>
-        {counts.added === 0 && counts.removed === 0 ? ' · 본문이 그대로다' : ''}
+      {/* 「+1 −0」은 git 약어다 — 사람 말로 (2026-09-11). 한글이라 mono 를 쓰지 않는다 (글자 사이가 벌어진다). */}
+      <span className="meta">
+        {[
+          counts.added > 0 ? `추가 ${counts.added}줄` : '',
+          counts.removed > 0 ? `삭제 ${counts.removed}줄` : '',
+        ].filter(Boolean).join(' · ') || '설명 글이 그대로입니다'}
       </span>
       <div className="scroll-x">
         <div className="diff-body">
@@ -400,7 +430,6 @@ export function ProposalItemCard({
   index: number
 }) {
   const sides = diffSidesOf(item, target)
-  const draftType = item.draft?.type
   //  바뀐 낱말만 눈에 띄게 — 두 판이 다 있을 때 규칙 문장·설명을 낱말 단위로 견준다 (`wordDiff`).
   const gistPieces = target !== undefined && item.draft !== undefined ? wordDiff(itemGist(target), itemGist(item.draft)) : null
   const bodyPieces = target !== undefined && item.draft !== undefined ? wordDiff(target.body, item.draft.body) : null
@@ -418,15 +447,14 @@ export function ProposalItemCard({
           {item.target_item_id === undefined
             ? (item.draft === undefined ? null : <CtxTag itemId={item.draft.id} />)
             : <CtxTag itemId={item.target_item_id} revision={target?.revision} />}
-          {draftType === undefined
-            ? null
-            : <span className="meta">{ITEM_TYPE_LABEL[draftType]}</span>}
+          {/* 종류 낱말(「제약」)은 여기서 뺐다 — 꼬리표 옆에 홀로 서면 무엇의 이름표인지 모른다.
+              종류는 두 판의 key-line 이름표(`ITEM_GIST_KEY`)가 계속 말한다 (2026-09-11). */}
         </div>
         {item.target_item_id !== undefined && target === undefined
           ? (
             //  🔴 발행이 이 제안에서 막힌다 (`applyProposals` 가 `NOT_FOUND` 로 롤백한다).
             //     화면이 그것을 미리 말한다 — 승인해 놓고 발행에서 처음 아는 것보다 낫다.
-            <span className="meta ink-warn">⚠ 대상 항목을 찾을 수 없습니다</span>
+            <Note tone="warn">대상 항목을 찾을 수 없습니다</Note>
           )
           : null}
       </div>
@@ -471,9 +499,8 @@ export function ProposalItemCard({
         )}
 
       <div className="col-tight">
-        <span className="label">이 제안의 근거</span>
-        {/* 🔴 P7 — 제안의 줄도 근거에서 온다. 근거가 0건이면 그렇게 말한다. */}
-        <EvidenceList refs={item.evidence} />
+        {/* 🔴 P7 — 제안의 줄도 근거에서 온다. 근거가 0건이면 그렇게 말한다. 머리는 EvidenceList 가 든다. */}
+        <EvidenceList refs={item.evidence} heading="이 제안의 근거" />
       </div>
 
       <div className="col-tight">

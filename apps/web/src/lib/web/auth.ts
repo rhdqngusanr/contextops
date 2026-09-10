@@ -95,6 +95,16 @@ export type CallbackResult =
   | { ok: false; message: string; code?: string }
 
 /**
+ * 실패 원인 코드 → 사람 말. 코드는 그대로 mono 로 옆에 붙고, 여기 없는 코드는 「원인을 알 수 없습니다」가 된다.
+ * ⚠ 판단을 말하지 않는다 — 「누구 잘못」이 아니라 「무슨 일이 있었고 다음에 무엇을 하나」만.
+ */
+//  새 코드는 여기 한 줄
+export const CALLBACK_CODE_HINT: Partial<Record<string, string>> = {
+  access_denied: 'GitHub 에서 허용을 취소했습니다. 다시 누르면 됩니다.',
+  validation_failed: '로그인 제공자가 꺼져 있습니다. 운영자에게 알려주세요.',
+}
+
+/**
  * ③ URL 조각을 세션으로 바꾼다. **여기만 조각을 읽는다.**
  *
  * ⚠ `expires_in`(초)을 받아서 `expires_at`(epoch 초)로 바꾼다 — 저장하는 값은

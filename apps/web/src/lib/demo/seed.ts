@@ -1,7 +1,8 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { AI_JOB_STATUSES, type SourceRef } from '@contextops/schema'
 
 import { AI_JOB_STATUS_RULES, aiJobs, conflicts, contextItemRevisions, contextItems, users } from '../../db/schema'
+import { AI_JOB_RUNNERS } from '../ai/job'
 import { POST as createTeam } from '../../app/api/v1/teams/route'
 import { POST as createProject } from '../../app/api/v1/teams/[id]/projects/route'
 import { POST as createRepo } from '../../app/api/v1/projects/[id]/repos/route'
@@ -552,15 +553,15 @@ export const OPEN_QUESTIONS = [
  *   진술이라 인용 칸이 아니다 (`QUOTED_DATA.policy = []`).
  */
 export const STALE_RULES = [
-  ['item_stale_retry_fixed', '(폐기 문서) 결제사 재시도는 3번, 0.5초 간격 고정',
+  ['item_stale_retry_fixed', '(옛 문서) 결제사 재시도는 3번, 0.5초 간격 고정',
     'PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정.',
     'PSP 호출은 3회까지 재시도한다 — 간격은 0.5초 고정',
     '2025 하반기 로드맵의 운영 규칙이다 — 「트래픽이 아직 작아서 고정 간격으로 충분하다」고 적혀 있다.'],
-  ['item_stale_refund_no_deadline', '(폐기 문서) 환불 기한을 따로 두지 않는다',
+  ['item_stale_refund_no_deadline', '(옛 문서) 환불 기한을 따로 두지 않는다',
     '환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다.',
     '환불은 담당자가 확인하는 대로 처리한다 — 기한은 따로 두지 않는다',
     '2025 하반기 로드맵의 운영 규칙이다.'],
-  ['item_stale_webhook_payload_log', '(폐기 문서) 결제사 알림 원본을 기록에 7일 보관',
+  ['item_stale_webhook_payload_log', '(옛 문서) 결제사 알림 원본을 기록에 7일 보관',
     '장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일.',
     '웹훅 원본 payload 를 로그에 남긴다 — 보관 7일',
     '2025 하반기 로드맵의 운영 규칙이다.'],
@@ -572,7 +573,10 @@ export const STALE_RULE_IDS: ReadonlySet<string> = new Set(STALE_RULES.map((r) =
 /**
  * 🔴 **실측 충돌 카드 3장 — 기록물이다.** 2026-09-07 gemini-3.5-flash 가 goals.md + old-roadmap.md 에서 실제로 찾은 모순
  * (`probe-87-run3.json` 의 `conflict.conflicts` 5장 중 SPEC §10.1 「의도된 어긋남 3곳」에 하나씩 닿는 셋). `question` 은 모델이
- * 낸 문장 **그대로**다 — 다듬지 않는다(기록이다). 항목 id 만 이 씨앗의 id 로 잇는다 (probe 는 자기 실행의 id 를 썼다).
+ * 낸 문장이다 — 다듬지 않는다(기록이다). 항목 id 만 이 씨앗의 id 로 잇는다 (probe 는 자기 실행의 id 를 썼다).
+ * ⚠ 단 하나의 예외 — 따옴표 안의 **항목 이름**은 이 씨앗의 지금 제목이다 (2026-09-11). probe 가 부른 이름(「외부 PSP 호출 최대 5회
+ *   재시도」…)은 그때 모델이 지은 제목이고, 씨앗의 제목을 사람 말로 바꾼 뒤 한 카드 안에서 같은 규칙이 이름 둘로 불렸다. 원문은
+ *   probe 파일에 그대로 있고 바꾼 내역은 `docs/evidence/2026-09-07-p3-gemini/FIXTURE-CHANGES.md` 에 있다.
  *
  * ⚠ **이 카드는 이 데모에서 다시 탐지되지 않는다** — 리셋마다 같은 기록을 다시 심을 뿐이다. 그 사실을 `RECORDED_CONFLICT_NOTE` 가
  *   카드 본문에 그대로 말한다. 「방금 AI 가 찾은 것」처럼 보이게 하면 이 제품이 파는 정직성이 무너진다 (INBOX 「하지 말 것」).
@@ -582,21 +586,24 @@ export const STALE_RULE_IDS: ReadonlySet<string> = new Set(STALE_RULES.map((r) =
 export const RECORDED_CONFLICTS = [
   {
     a: 'item_policy_retry', b: 'item_stale_retry_fixed', severity: 'high',
-    question: "새 항목 '외부 PSP 호출 최대 5회 재시도'(지수 백오프)와 기존 항목 'PSP 호출 재시도 규칙'(3회, 0.5초 고정)이 서로 상충됩니다. 재시도 횟수 및 간격 정책을 어떻게 조정해야 합니까?",
+    question: "새 항목 '결제사 호출 재시도는 5번까지, 간격은 점점 늘려서'(지수 백오프)와 기존 항목 '(옛 문서) 결제사 재시도는 3번, 0.5초 간격 고정'(3회, 0.5초 고정)이 서로 상충됩니다. 재시도 횟수 및 간격 정책을 어떻게 조정해야 합니까?",
   },
   {
     a: 'item_policy_refund', b: 'item_stale_refund_no_deadline', severity: 'high',
-    question: "새 항목 '환불 24시간 이내 종결'에서는 환불 요청을 접수 후 24시간 안에 종결하도록 규정하고 있으나, 기존 항목에서는 환불 기한을 따로 두지 않는다고 되어 있습니다. 어느 쪽이 맞습니까?",
+    question: "새 항목 '환불은 24시간 안에 종결한다'에서는 환불 요청을 접수 후 24시간 안에 종결하도록 규정하고 있으나, 기존 항목에서는 환불 기한을 따로 두지 않는다고 되어 있습니다. 어느 쪽이 맞습니까?",
   },
   {
     a: 'item_policy_pii_log', b: 'item_stale_webhook_payload_log', severity: 'high',
-    question: "새 항목 '로그에 개인정보(PII) 기록 금지'에서는 PSP 원본 payload 등 개인정보를 로그에 남기지 않도록 하는 반면, 기존 항목 '웹훅 원본 payload 로그 보관 규칙'에서는 장애 조사를 위해 웹훅 원본 payload를 로그에 남긴다고 되어 있습니다. 어느 정책을 따라야 합니까?",
+    question: "새 항목 '기록(로그)에 개인정보를 남기지 않는다'에서는 PSP 원본 payload 등 개인정보를 로그에 남기지 않도록 하는 반면, 기존 항목 '(옛 문서) 결제사 알림 원본을 기록에 7일 보관'에서는 장애 조사를 위해 웹훅 원본 payload를 로그에 남긴다고 되어 있습니다. 어느 정책을 따라야 합니까?",
   },
 ] as const satisfies readonly { a: string; b: string; severity: 'high' | 'medium' | 'low'; question: string }[]
 
-/** 카드 본문 끝에 붙는 한 줄 — 기록물임을 카드 스스로 말한다. `docs/SUBMISSION.md` 「어떻게 보나」가 같은 문장을 쓴다. */
+/**
+ * 카드 본문 끝에 붙는 한 줄(빈 줄로 갈린 둘째 문단) — 기록물임을 카드 스스로 말한다. `docs/SUBMISSION.md` 「어떻게 보나」가 같은 문장을 쓴다.
+ * ⚠ 모델 이름·저장소 경로·「탐지」는 개발자 말이라 뺐다 (2026-09-11) — 심사위원에게 「미완성 메모」로 읽혔다. 파일 경로는 SUBMISSION 에 있다.
+ */
 export const RECORDED_CONFLICT_NOTE =
-  '(2026-09-07 gemini-3.5-flash 실측 기록 — 이 데모에서는 다시 탐지하지 않습니다 · docs/evidence/2026-09-07-p3-gemini/probe-87-run3.json)'
+  '2026-09-07 에 AI(Gemini) 가 실제로 찾아낸 기록입니다 — 이 샘플 팀에서는 다시 찾지 않고 그때의 기록을 그대로 보여 줍니다.'
 
 /** 폐기 문서의 규칙 셋을 초안으로. 문서가 없으면(시험의 가짜 픽스처) 빈 목록이다. */
 function staleDrafts(roadmap: FixtureDoc | undefined): PaylabDraft[] {
@@ -1030,6 +1037,42 @@ export async function seedPaylab(ownerSub: string, tenant: SeedTenant = DEFAULT_
   //     한다. 「끝났나」는 손으로 세지 않고 수명 표의 `finished` 축을 읽는다.
   //  ⚠ 「멈춘 것 같음」 chip 자체는 그대로다 (FINDINGS 137 의 판단) — 진짜로 멈춘 것을
   //     숨기지 마라. 여기서 없애는 것은 **씨앗이 만든 가짜 대기**뿐이다.
+
+  //  🔴 **끝난 job 을 하나는 남긴다** (2026-09-11). 지우기만 하면 게스트(심사위원)가 여는
+  //     화면 3 은 언제나 빈 칸이라, 이 제품의 첫 AI 기능이 **진행 막대도 후보 목록도 없이**
+  //     「눌러도 안 되는 버튼」으로만 보인다 — 137 이 걱정한 인상이 자리만 바꿔 남았다.
+  //  ⚠ 새 행을 만들지 않는다 — `POST /documents` 가 **이미 만든** goals 문서의 job 을
+  //     끝난 모양으로 바꾼다. 그래야 `input`·`created_at` 이 사실 그대로다.
+  //  ⚠ 결과를 지어내지 않는다: 이 씨앗이 「그 job 이 낼 것」이라고 이미 못 박아 둔 초안
+  //     (`paylabDrafts()` 가 정본) 중 **근거가 goals 문서뿐인 것**을 그대로 싣는다.
+  //     1조각은 실측이다 (`test/ai-structure.test.ts` 의 「paylab 픽스처(goals.md)는 한 조각이다」).
+  //  ⚠ 세는 낱말은 러너 표(`AI_JOB_RUNNERS`)를 읽는다 — 손으로 적으면 진짜 job 과 갈린다.
+  const goalsItems = drafts
+    .map((d) => d.draft)
+    .filter((d) => (d.source_refs as SourceRef[]).every(
+      (r) => r.kind === 'source_document' && r.document_version_id === goals.versionId,
+    ))
+  const structureFinishedAt = new Date()
+  await getDb()
+    .update(aiJobs)
+    .set({
+      status: 'succeeded',
+      startedAt: structureFinishedAt,
+      finishedAt: structureFinishedAt,
+      progress: { done: 1, total: 1, unit: AI_JOB_RUNNERS.structure.unit },
+      result: {
+        items: goalsItems,
+        merge_candidates: [],
+        chunks: { used: 1, total: 1 },
+        open_question_ids: [],
+      },
+    })
+    .where(and(
+      eq(aiJobs.projectId, projectId),
+      eq(aiJobs.feature, 'structure'),
+      sql`${aiJobs.input}->>'document_version_id' = ${goals.versionId}`,
+    ))
+
   await getDb()
     .delete(aiJobs)
     .where(and(eq(aiJobs.projectId, projectId), inArray(aiJobs.status, UNFINISHED_JOB_STATUSES)))

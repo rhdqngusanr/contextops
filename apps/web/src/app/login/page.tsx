@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { NO_ACCOUNT_HINT, authConfig, oauthUrl, sendMagicLink } from '../../lib/web/auth'
 import { PRIVACY_LABEL, PRIVACY_PATH } from '../../lib/web/privacy'
-import { SITE } from '../../lib/web/site'
+import { Note } from '../../components/chips'
 
 // =====================================================================
 //  화면 2 — 로그인 (SPEC §9 · DESIGN_BRIEF §4 「화면 2」)
@@ -52,15 +52,14 @@ function LoginCard() {
       <div className="card center-card">
         <div className="col-tight">
           <h1 className="text-section">ContextOps</h1>
-          {/* 한 줄의 정본은 `lib/web/site.ts` — 랜딩·<head>·OG 와 같은 문장이다. */}
-          <p className="ink-3">{SITE.tagline}.</p>
+          {/* 슬로건은 랜딩의 것이다 — 이 카드는 첫 3초에 「로그인」이라고 말해야 한다 (2026-09-11). */}
+          <p className="plain-line">GitHub 계정으로 로그인하면 내 팀을 만들고 팀원을 초대할 수 있습니다.</p>
         </div>
 
         {config === null ? (
           //  🔴 「아직 연결되지 않았다」를 그대로 말한다 (DESIGN_BRIEF §2-5).
           <div className="card state-box">
-            <span aria-hidden="true" className="ink-warn">⚠</span>
-            <p className="ink">로그인 서버가 아직 연결되지 않았습니다.</p>
+            <Note tone="warn">로그인 서버가 아직 연결되지 않았습니다.</Note>
             <p className="meta">
               <span className="mono">NEXT_PUBLIC_SUPABASE_URL</span> 과{' '}
               <span className="mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</span> 가 필요합니다
@@ -82,7 +81,7 @@ function LoginCard() {
         )}
 
         {/* 🔴 이메일 문은 플래그 뒤다 (`lib/web/auth.ts` 머리) — 기본 SMTP 로는 심사위원에게 메일이
-            절대 안 가서, 열어 두면 「✓ 보냈습니다」 뒤에 아무것도 안 오는 문이 된다. */}
+            절대 안 가서, 열어 두면 「보냈습니다」 뒤에 아무것도 안 오는 문이 된다. */}
         {config?.emailLogin ? (
           <div className="col-tight">
             <label className="label" htmlFor="email">이메일 링크 받기</label>
@@ -105,17 +104,20 @@ function LoginCard() {
                 {busy ? '보내는 중' : '보내기'}
               </button>
             </div>
-            {sent ? <p className="meta ink-ok">✓ 메일을 보냈습니다. 링크를 열면 로그인됩니다.</p> : null}
-            {error ? <p className="meta ink-bad">✕ {error}</p> : null}
+            {sent ? <Note tone="ok">메일을 보냈습니다. 링크를 열면 로그인됩니다.</Note> : null}
+            {error ? <Note tone="bad">{error}</Note> : null}
           </div>
         ) : null}
 
-        <p className="meta">
-          {/* DESIGN_BRIEF 화면 2 「심사위원이신가요? → 샘플 팀으로 둘러보기」 — 문구의 정본은
+        <div className="col-tight">
+          {/* DESIGN_BRIEF 화면 2 「심사위원이신가요? 샘플 팀으로 둘러보기」 — 문구의 정본은
               `NO_ACCOUNT_HINT` 하나다(GitHub 계정이 없는 사람에게도 같은 문이다).
-              ⚠ 주소는 랜딩과 같은 `/demo` 하나다 — 게스트 세션을 받는 자리가 둘이 되면 안 된다. */}
-          {NO_ACCOUNT_HINT.text} <a href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
-        </p>
+              주소는 랜딩과 같은 `/demo` 하나다 — 게스트 세션을 받는 자리가 둘이 되면 안 된다.
+              ★ 심사위원의 문이 화면에서 제일 작은 글자면 GitHub 계정이 없는 사람은 검정 버튼 앞에서 멈춘다 —
+                outline 버튼으로 세운다. accent 는 [GitHub로 계속] 하나 그대로다. */}
+          <p className="meta">{NO_ACCOUNT_HINT.text}</p>
+          <a className="btn text-center" href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
+        </div>
         {/* 로그인 전에 읽을 수 있어야 한다 — 무엇을 받고 AI 가 무엇을 보는지 (INBOX H4). */}
         <p className="meta"><a href={PRIVACY_PATH}>{PRIVACY_LABEL}</a></p>
       </div>

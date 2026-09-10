@@ -17,9 +17,10 @@ import {
   AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
   ITEM_STATUS_CHIP, ITEM_TYPE_LABEL, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
   PROPOSAL_OPERATION_CHIP, PROPOSAL_STATUS_CHIP, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP, SYNC_MEANING,
+  CONFIDENCE_MEANING, PROPOSAL_STATUS_MEANING, PROPOSAL_OPERATION_MEANING,
 } from '../src/components/chips'
 import { SYNC_APPLY, SYNC_ORDER } from '../src/components/sync'
-import { SRC_LABEL } from '../src/components/evidence'
+import { SRC_FONT, SRC_LABEL, SRC_MEANING } from '../src/components/evidence'
 
 // =====================================================================
 //  🔴 화면의 표들이 **정의만 있고 아무 일도 안 하는 자리**가 되지 않게 잠근다
@@ -53,6 +54,11 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('sync 5종의 **뜻** (SPEC §6) — 툴팁과 화면 9 각주가 같이 읽는다', () => {
     assertLiveTable('SYNC_MEANING', SYNC_STATUSES, SYNC_MEANING, (k) => SYNC_MEANING[k])
+    assertLiveTable('CONFIDENCE_MEANING', CONFIDENCE_LEVELS, CONFIDENCE_MEANING, (k) => CONFIDENCE_MEANING[k])
+    assertLiveTable('PROPOSAL_STATUS_MEANING', PROPOSAL_STATUSES, PROPOSAL_STATUS_MEANING, (k) => PROPOSAL_STATUS_MEANING[k])
+    assertLiveTable('PROPOSAL_OPERATION_MEANING', PROPOSAL_OPERATIONS, PROPOSAL_OPERATION_MEANING, (k) => PROPOSAL_OPERATION_MEANING[k])
+    assertLiveTable('SRC_MEANING', SOURCE_REF_KINDS, SRC_MEANING, (k) => SRC_MEANING[k])
+    assertLiveTable('SRC_FONT (표의 키)', SOURCE_REF_KINDS, SRC_FONT, (k) => `${k}:${SRC_FONT[k]}`)
   })
 
   it('sync 5종의 **차례** (DESIGN_BRIEF §4 화면 9 「outdated 먼저」)', () => {
@@ -61,7 +67,7 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('sync 5종의 **적용 방식** — 키는 enum 과 같고, 방식은 셋이다', () => {
     expect(Object.keys(SYNC_APPLY).sort()).toEqual([...SYNC_STATUSES].sort())
-    //  ★ 여기만 ②(값이 전부 다르다)를 쓰지 않는다 — 방식은 셋(플러그인 · zip 수동 · 모름)
+    //  ★ 여기만 ②(값이 전부 다르다)를 쓰지 않는다 — 방식은 셋(플러그인이 받음 · zip 을 손으로 풂 · 모름)
     //    뿐이고 상태 다섯이 그 셋에 모인다. 「전부 달라야 한다」를 강요하면 없는 방식을
     //    지어내게 된다. 대신 **갈려야 하는 자리**를 직접 잰다.
     expect(new Set(Object.values(SYNC_APPLY)).size).toBe(3)
@@ -189,8 +195,9 @@ describe('🔴 근거 4종이 서로 다른 한 줄을 낸다 (SPEC §3 · DESIG
     const docRef = SAMPLES.source_document as Extract<SourceRef, { kind: 'source_document' }>
     const other = { ...docRef, document_version_id: '00000000-0000-4000-8000-000000000999' }
     expect(SRC_LABEL.source_document(docRef)).not.toBe(SRC_LABEL.source_document(other))
-    //  앞 8자를 쓴다 — uuid 전체를 찍으면 좁은 칸에서 다른 것을 다 밀어낸다.
-    expect(SRC_LABEL.source_document(other)).toContain('00000000')
+    //  끝 8자를 쓴다 — 고정 씨앗의 앞 8자는 전부 0 이라 두 문서를 못 갈랐다 (2026-09-11).
+    expect(SRC_LABEL.source_document(other)).toContain('00000999')
+    expect(SRC_LABEL.source_document(other)).toContain('문서판')
   })
 })
 

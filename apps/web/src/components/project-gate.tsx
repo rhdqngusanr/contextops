@@ -43,7 +43,6 @@ export function ProjectGate({
     //    (`lib/api/guard.ts`: 404/403 의 차이로 존재를 캐낼 수 있다).
     return (
       <div className="card state-box">
-        <span aria-hidden="true" className="ink-4">◌</span>
         <p className="ink">그런 프로젝트를 찾을 수 없습니다.</p>
         <a className="btn btn-sm" href="/t">내 팀으로</a>
       </div>

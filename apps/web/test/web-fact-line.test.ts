@@ -10,10 +10,11 @@ import { FactLine, factText, itemsFact, proposalFact, roadmapFact, syncFact } fr
 // =====================================================================
 
 describe('사실 한 줄', () => {
-  it('Sync — 전체와 최신 판 수가 굵고, 0 인 상태는 안 적는다', () => {
+  it('Sync — 전체와 「적용됨」 수가 굵고, 낱말은 칩 표에서 오고, 0 인 상태는 안 적는다', () => {
     const parts = syncFact(['applied', 'applied', 'outdated', 'unknown'])
     const text = factText(parts)
-    expect(text).toBe(`기기 4대 중 2대가 최신 판을 받았습니다. ${SYNC_CHIP.outdated.label} 1대 · ${SYNC_CHIP.unknown.label} 1대.`)
+    expect(text).toBe(`기기 4대 중 2대가 「${SYNC_CHIP.applied.label}」입니다 — 공식 판이 그대로 들어가 있습니다. ${SYNC_CHIP.outdated.label} 1대 · ${SYNC_CHIP.unknown.label} 1대.`)
+    expect(text).not.toContain('최신 판')
     expect(text).not.toContain(SYNC_CHIP.modified.label)
     expect(parts.filter((p) => typeof p !== 'string').map((p) => (p as { strong: string }).strong)).toEqual(['4대', '2대'])
     expect(factText(syncFact([]))).toContain('없습니다')

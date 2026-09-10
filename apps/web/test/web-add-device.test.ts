@@ -146,10 +146,11 @@ describe('③ 🔴 줄을 화면이 짓지 않는다 — 정본은 스키마 하
 })
 
 describe('④ 🔴 「한 번만 보인다」를 말한다', () => {
-  it('경고가 아이콘과 글자를 같이 낸다 — 색만으로 말하지 않는다', () => {
+  it('경고가 색점과 글자를 같이 낸다 — 색만으로 말하지 않는다 (기호는 없다 · 2026-09-11)', () => {
     const markup = html({ kind: 'issued', issued: ISSUED, copied: null })
     expect(markup).toContain(ADD_DEVICE.once)
-    expect(markup).toContain('⚠')
+    expect(markup).toContain('class="note tone-warn"')
+    expect(markup).not.toContain('⚠')
     expect(ADD_DEVICE.once).toContain('한 번만')
   })
 })

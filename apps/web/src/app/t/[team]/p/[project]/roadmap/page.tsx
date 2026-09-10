@@ -3,11 +3,12 @@
 import { use, useState } from 'react'
 
 import {
-  REALTIME_POLL_MS, confirmProgress, fetchItems, fetchRoadmap,
+  REALTIME_POLL_MS, confirmProgress, fetchRoadmap,
   type ProgressEventView, type ProjectRef,
 } from '../../../../../../lib/web/queries'
 import { writeDoor } from '../../../../../../lib/web/actor'
-import { useAsync, usePolling } from '../../../../../../lib/web/use-async'
+import { useMilestoneTitles } from '../../../../../../lib/web/milestone-titles'
+import { usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { MilestoneRow, OffRoadmap, ProgressDrawer, RoadmapSummary } from '../../../../../../components/roadmap'
 import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
@@ -59,15 +60,10 @@ function RoadmapView({
   canConfirm: boolean
 }) {
   const road = usePolling(() => fetchRoadmap(project.id), [project.id], () => REALTIME_POLL_MS)
-  //  마일스톤 **제목** — 로드맵 응답은 id(`PL-M1`)만 나른다 (정본은 Manifest). 제목은 그 id 를 가진 roadmap 항목에 있다.
-  //  못 읽으면 id 만 선다 — 지어내지 않는다 (2026-09-10 저녁 · 「데모 텍스트도 이해되게」).
-  const roadmapItems = useAsync(() => fetchItems(project.id, { type: 'roadmap' }), [project.id])
-  const titles: Record<string, string> = {}
-  if (roadmapItems.result.state === 'ready') {
-    for (const it of roadmapItems.result.data.items) {
-      if (it.type === 'roadmap') titles[it.data.milestone_id] = it.title
-    }
-  }
+  //  마일스톤 **제목** — 로드맵 응답은 id(`PL-M1`)만 나른다 (정본은 Manifest). 찾는 법의 정본은
+  //  `lib/web/milestone-titles.ts` 하나이고 화면 6(제안)도 같은 것을 읽는다 (2026-09-11 · 두 곳이 따로
+  //  접혀 있으면 한쪽만 고쳐진다). 못 읽으면 id 만 선다 — 지어내지 않는다.
+  const titles = useMilestoneTitles(project.id)
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [offOpen, setOffOpen] = useState(false)
@@ -118,7 +114,7 @@ function RoadmapView({
           <ScreenEmpty slot="roadmap.versions" base={base} />
         ) : (
           <>
-            <RoadmapSummary roadmap={road.result.data} />
+            <RoadmapSummary roadmap={road.result.data} base={base} />
 
             {road.result.data.milestones.length === 0 ? (
               <ScreenEmpty slot="roadmap.milestones" base={base} />

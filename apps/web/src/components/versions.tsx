@@ -31,7 +31,6 @@ export function VersionHistory({
         <thead>
           <tr>
             <th>버전</th>
-            <th>승인본(해시)</th>
             <th>발행 시각</th>
             <th>변경 요약</th>
             <th />
@@ -40,9 +39,8 @@ export function VersionHistory({
         <tbody>
           {versions.map((v) => (
             <tr key={v.id}>
-              <td><VersionPill semver={v.semver} official={v.is_official} /></td>
-              {/* 해시는 앞 8자만 + 전체는 title 로 (DESIGN_BRIEF §3 「타이포」). */}
-              <td className="mono" title={v.snapshot_hash}>{v.snapshot_hash.slice(0, 8)}</td>
+              {/* 승인본 해시 칸은 뺐다 — 뜻 없는 8자 코드가 표의 한 칸을 먹었다 (2026-09-11). 전체는 툴팁에 남는다. */}
+              <td title={`승인본 ${v.snapshot_hash}`}><VersionPill semver={v.semver} official={v.is_official} /></td>
               <td className="mono">{v.published_at.replace('T', ' ').slice(0, 16)}</td>
               {/* 빈 칸의 `—` 는 **장식이다** — `aria-hidden` 이라야 `ink-4`(비활성 색)를
                   쓸 수 있다. 읽어야 하는 글자에 그 색을 쓰면 design-tokens.test.ts 가 막는다. */}

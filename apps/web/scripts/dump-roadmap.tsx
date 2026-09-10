@@ -101,7 +101,8 @@ const ROADMAPS: [string, Roadmap][] = [
 ]
 for (const [what, road] of ROADMAPS) {
   lines.push(`  ${what}`)
-  lines.push(`    ${text(renderToStaticMarkup(createElement(RoadmapSummary, { roadmap: road, now: NOW })))}`)
+  //  `base` — 셋째 타일이 정리 화면으로 가는 문을 그린다 (2026-09-11). 덤프는 글자만 보므로 값은 데모 경로면 된다.
+  lines.push(`    ${text(renderToStaticMarkup(createElement(RoadmapSummary, { roadmap: road, now: NOW, base: '/t/demo/p/paylab-api' })))}`)
 }
 lines.push('')
 

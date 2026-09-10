@@ -8,6 +8,7 @@ import { createProject, createRepo, fetchTeams } from '../../../../../lib/web/qu
 import { toSlug } from '../../../../../lib/web/slug'
 import { useAsync } from '../../../../../lib/web/use-async'
 import { ErrorState, NeedsLogin, ReadOnlyNotice, Skeleton } from '../../../../../components/states'
+import { Note } from '../../../../../components/chips'
 
 // =====================================================================
 //  화면 2 — 프로젝트 만들기 (DESIGN_BRIEF §4 「화면 2」 · SPEC §5)
@@ -85,7 +86,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
     return (
       <div className="center">
         <div className="card center-card">
-          <p className="ink">✕ 그런 팀을 찾을 수 없습니다.</p>
+          <Note tone="bad">그런 팀을 찾을 수 없습니다.</Note>
           <a className="btn" href="/t/new">팀 만들기</a>
         </div>
       </div>
@@ -97,7 +98,8 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
       <form className="card center-card" onSubmit={(e) => { e.preventDefault(); void submit(team.id) }}>
         <div className="col-tight">
           <h1 className="text-section">프로젝트 만들기</h1>
-          <p className="ink-3">{team.name} · <span className="mono">/t/{team.slug}</span></p>
+          {/* 주소 조각(`/t/…`)은 개발자에게만 뜻이 있다 — 어느 팀에 만드는지만 말한다. */}
+          <p className="ink-3">{team.name} 팀에 만듭니다</p>
         </div>
 
         <div className="field">
@@ -106,7 +108,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
         </div>
 
         <div className="field">
-          <label className="label" htmlFor="p-slug">slug</label>
+          <label className="label" htmlFor="p-slug">주소용 이름 — 프로젝트 주소가 됩니다</label>
           <input
             id="p-slug"
             className="input mono"
@@ -114,7 +116,7 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
             placeholder="api"
             onChange={(e) => { setTouchedSlug(true); setSlug(e.target.value) }}
           />
-          <span className="meta mono">/t/{team.slug}/p/{candidate || '…'}</span>
+          <span className="meta">주소: <span className="mono">/t/{team.slug}/p/{candidate || '…'}</span></span>
         </div>
 
         <div className="field">
@@ -123,7 +125,8 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
         </div>
 
         <div className="field">
-          <label className="label" htmlFor="p-repo">레포 이름 — 근거가 가리킬 저장소입니다</label>
+          {/* 팀장(비개발자)이 적는 칸이다 — 「레포」「근거가 가리킬 저장소」로는 무엇을 적을지에서 막혔다. */}
+          <label className="label" htmlFor="p-repo">코드 저장소 이름 (GitHub 레포) — 비워 둬도 됩니다</label>
           <div className="row">
             <input
               id="p-repo"
@@ -140,15 +143,16 @@ export default function NewProjectPage({ params }: { params: Promise<{ team: str
               {repos.map((r) => (
                 <span key={r} className="ctx-tag">
                   {r}
-                  <button type="button" className="btn btn-sm" onClick={() => setRepos(repos.filter((x) => x !== r))}>✕</button>
+                  <button type="button" className="btn btn-sm" onClick={() => setRepos(repos.filter((x) => x !== r))}>빼기</button>
                 </span>
               ))}
             </div>
-          ) : <span className="meta">나중에 추가해도 됩니다.</span>}
+          //  「나중에 추가해도 됩니다」는 적지 않는다 — 웹에 그 문이 없다.
+          ) : <span className="meta">개발자가 Claude Code 에서 근거를 보고할 때 이 이름으로 저장소를 찾습니다. 모르면 개발자에게 물어보세요.</span>}
         </div>
 
         {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
-        {error ? <p className="meta ink-bad">✕ {error}</p> : null}
+        {error ? <Note tone="bad">{error}</Note> : null}
 
         <button type="submit" className="btn btn-primary" disabled={busy || name.trim().length === 0 || candidate.length < 2}>
           {busy ? '만드는 중' : '프로젝트 만들기'}

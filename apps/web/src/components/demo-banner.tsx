@@ -53,6 +53,8 @@ export function DemoBanner() {
             <li key={stop.path}>
               <a className="tour-step" href={screenHref(base, screen)} aria-current={i === here ? 'step' : undefined}>
                 <span className="mono">{i + 1}</span> {screen.label}
+                {/* 「Pack Explorer」가 무엇인지 알약만 보고는 몰랐다 — 내비의 설명 한 줄을 여기도 (2026-09-11). */}
+                <span className="meta tour-step-describe">{screen.describe}</span>
               </a>
             </li>
           )

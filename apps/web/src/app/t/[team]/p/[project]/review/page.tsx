@@ -12,7 +12,7 @@ import {
 } from '../../../../../../lib/web/queries'
 import { writeDoor } from '../../../../../../lib/web/actor'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
-import { AiBadge, ConflictKindChip } from '../../../../../../components/chips'
+import { AiBadge, ConflictKindChip, Note } from '../../../../../../components/chips'
 import { ConflictCard } from '../../../../../../components/conflict-card'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
@@ -25,7 +25,7 @@ import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/
 //    여기서 사람의 판단을 받고, 그 판단이 화면 5 의 발행으로 간다.
 //
 //  🔴 **머리의 숫자를 `kind` 로 가른다.** `GET /conflicts` 는 §7.2 탐지가 만든 카드와
-//     **사람이 미리 물어 둔 씨앗 질문 10장**을 같이 낸다. 한 수로 합쳐 「AI 가 찾은
+//     **프로젝트를 만들 때 심어 둔 씨앗 질문 10장**을 같이 낸다. 한 수로 합쳐 「AI 가 찾은
 //     결정이 필요한 것 14건」이라고 쓰면 그 문장은 거짓이다 — 열 장은 AI 가 찾은 것이
 //     아니다. 가르는 기준은 `CONFLICT_KIND_RULES[kind].byAi` 하나다 (배지도 같은 축).
 //
@@ -159,10 +159,11 @@ function ReviewView({
         <h1 className="text-section">정리</h1>
         {/* 사람 말 한 줄이 먼저 (2026-09-10 저녁). */}
         <p className="ink-2">문서끼리, 문서와 코드가 서로 다르게 말하는 자리를 AI 가 찾아 카드로 올렸습니다. 어느 쪽이 맞는지는 사람이 정합니다.</p>
-        {/* 🔴 두 수를 **따로** 낸다. 합치면 「AI 가 찾았다」가 씨앗 질문까지 삼킨다. */}
+        {/* 🔴 두 수를 **따로** 낸다. 합치면 「AI 가 찾았다」가 씨앗 질문까지 삼킨다.
+            뒤 절은 카드의 표제(`CONFLICT_HEADLINE.seed_question`)와 같은 낱말 — 「사람이 미리 물어 둔」의 사람이 누구인지 안 읽혔다 (2026-09-11). */}
         <p className="meta">
           {cards.result.state === 'ready'
-            ? `AI가 찾은 결정이 필요한 것 ${byAi.length}건 · 사람이 미리 물어 둔 질문 ${asked.length}장`
+            ? `AI가 찾은 결정이 필요한 것 ${byAi.length}건 · 프로젝트를 만들 때 심어 둔 기본 질문 ${asked.length}개`
             : '결정을 기다리는 것을 세는 중입니다.'}
         </p>
       </header>
@@ -173,9 +174,14 @@ function ReviewView({
       {cards.result.state === 'error' ? <ErrorState error={cards.result.error} retry={cards.reload} /> : null}
       {/* ⚠ 항목을 못 읽어도 카드는 그린다 — 그때 카드가 「항목을 찾지 못했다」를 말한다.
           카드를 통째로 안 그리면 결정할 것이 없는 것처럼 보인다. */}
-      {items.result.state === 'error'
-        ? <p className="meta ink-warn">⚠ 항목 목록을 읽지 못해 A·B 의 내용을 못 붙였습니다.</p>
-        : null}
+      {items.result.state === 'error' ? (
+        //  다시 읽는 문을 같이 낸다 — 여기서만 실패했으므로 화면 전체를 새로고침할 이유가 없다
+        //  (`ErrorState` 의 [다시 시도] 와 같은 낱말 · 같은 모양).
+        <div className="row wrap">
+          <Note tone="warn">항목 목록을 읽지 못해 두 쪽의 내용을 못 붙였습니다.</Note>
+          <button type="button" className="btn btn-sm" onClick={items.reload}>다시 시도</button>
+        </div>
+      ) : null}
 
       {cards.result.state === 'ready' && all.length === 0 ? (
         <ScreenEmpty slot="review.cards" base={base} />

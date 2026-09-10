@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react'
 
-import { NO_ACCOUNT_HINT, readCallbackHash } from '../../../lib/web/auth'
+import { Note } from '../../../components/chips'
+import { CALLBACK_CODE_HINT, NO_ACCOUNT_HINT, readCallbackHash } from '../../../lib/web/auth'
 import { writeSession } from '../../../lib/web/session'
 
 // =====================================================================
@@ -34,14 +35,14 @@ function Callback() {
   }, [])
 
   if (error) {
-    //  ⚠ 원인 코드를 mono 로 같이 보인다 — 운영자가 「공급자가 꺼져 있다」(validation_failed)와
-    //    「사람이 취소했다」(access_denied)를 화면만 보고 가른다. 그리고 심사위원에게는 로그인
+    //  ⚠ 원인은 사람 말(`CALLBACK_CODE_HINT`)로 먼저, 코드는 mono 로 뒤에 — 심사위원은 「내가 취소했구나」를,
+    //    운영자는 「공급자가 꺼져 있다」(validation_failed)를 화면만 보고 가른다. 그리고 심사위원에게는 로그인
     //    없이 볼 수 있는 문(`/demo`)을 그 자리에서 준다.
     return (
       <div className="center">
         <div className="card center-card">
-          <p className="ink">✕ {error.message}</p>
-          {error.code ? <p className="meta">원인 코드: <span className="mono">{error.code}</span></p> : null}
+          <Note tone="bad">{error.message}</Note>
+          {error.code ? <p className="meta">{CALLBACK_CODE_HINT[error.code] ?? '원인을 알 수 없습니다.'} <span className="mono">{error.code}</span></p> : null}
           <div className="row">
             <a className="btn" href="/login">로그인으로 돌아가기</a>
             <a className="btn" href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>

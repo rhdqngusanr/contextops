@@ -45,10 +45,12 @@ export const DEMO_BASE = `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug
  */
 const PUBLISHED: Record<string, string> = {
   //  🔴 3분 코스(`lib/web/tour.ts`)의 네 걸음과 같은 화면·같은 차례다 — `test/web-demo-tour.test.ts` 가 대조한다.
-  review: '정리 화면 — AI 가 찾은 충돌이 카드로 서 있고, 결정 버튼은 사람 몫이다',
-  packs: 'Pack Explorer — 발행된 CLAUDE.md 와 그 줄의 출처',
-  roadmap: 'Roadmap — 마일스톤이 근거로 채워지고, 완료 확인은 사람이 한다',
-  sync: 'Sync 화면 — 기기마다 어느 버전이 적용됐나',
+  //  ⚠ 전부 **명사구**로 끝난다 — 랜딩은 이 줄을 카드 제목으로 그리고, 설명은 그 밑의 코스 문장(`DEMO_TOUR.stops[].see` · 존댓말)이
+  //    맡는다. 「…이다/…한다」로 끝나면 같은 카드 안에서 말투가 두 벌이 된다 (2026-09-11).
+  review: '정리 화면 — AI 가 찾은 충돌 카드와 사람의 결정 버튼',
+  packs: 'Pack Explorer — 발행된 CLAUDE.md 와 각 줄의 출처',
+  roadmap: 'Roadmap — 근거로 채워지는 마일스톤과 완료 확인',
+  sync: 'Sync 화면 — 기기마다 받은 버전',
 }
 
 /**

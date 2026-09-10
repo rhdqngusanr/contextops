@@ -37,9 +37,9 @@ function sourceKind(item: ContextItemView): 'code' | 'doc' | 'other' {
   return 'other'
 }
 
-/** 폐기된 문서에서 온 것인가 — 씨앗은 `stale` 태그와 「(폐기 문서)」 제목을, 결정은 `deprecated` 상태를 남긴다. */
+/** 옛 문서에서 온 것인가 — 씨앗은 `stale` 태그와 「(옛 문서)」 제목을, 결정은 `deprecated` 상태를 남긴다. (제목의 「폐기」가 상태 칩 「폐기」와 다른 뜻으로 겹쳤다 · 2026-09-11) */
 function isOld(item: ContextItemView): boolean {
-  return item.tags.includes('stale') || item.status === 'deprecated' || item.title.startsWith('(폐기')
+  return item.tags.includes('stale') || item.status === 'deprecated' || item.title.startsWith('(옛')
 }
 
 function nowOrNew(item: ContextItemView): SideName {

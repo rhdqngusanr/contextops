@@ -167,7 +167,8 @@ describe('🔴 ⑤ Before/After 는 paylab 픽스처의 사실이다 (SPEC §10.
     expect(published, 'v1.1.0 에 실린 제안이 이 항목을 고쳐야 한다').toBeDefined()
     const data = (published as NonNullable<typeof published>).data as { rule: string; severity: string }
     expect(BEFORE_AFTER.after.text).toBe(data.rule)
-    expect(BEFORE_AFTER.after.detail.startsWith(data.severity)).toBe(true)
+    //  세기는 사람 말 뒤 괄호 안의 값이다 — 픽스처의 severity 가 바뀌면 여기가 빨개진다.
+    expect(BEFORE_AFTER.after.detail).toContain(`(${data.severity})`)
     //  제목의 버전이 데모가 실제로 발행하는 버전이다.
     const m = /v(\d+\.\d+\.\d+)/.exec(BEFORE_AFTER.after.title)
     expect(m).not.toBeNull()
@@ -219,10 +220,12 @@ describe('⑥ 신뢰 경계 표 — 「모르는 것」이 P1 의 넷을 전부 
     expect(unknown).toMatch(/대화/)
   })
 
-  it('두 열이 색만이 아니라 기호(✓/✕)와 글자로 갈린다', () => {
+  it('두 열이 색만이 아니라 색점 + 글자로 갈린다 (기호 ✓/✕ 는 없다 · 2026-09-11)', () => {
     const out = html()
-    expect(out).toContain(`✓</span> ${TRUST_BOUNDARY.knows.head}`)
-    expect(out).toContain(`✕</span> ${TRUST_BOUNDARY.unknown.head}`)
+    expect(out).toContain(`<span class="note tone-ok"><span class="chip-dot" aria-hidden="true"></span><span>${TRUST_BOUNDARY.knows.head}</span></span>`)
+    expect(out).toContain(`<span class="note tone-bad"><span class="chip-dot" aria-hidden="true"></span><span>${TRUST_BOUNDARY.unknown.head}</span></span>`)
+    //  ⚠ 터미널 녹화(`TerminalReplay`)는 CLI 가 실제로 찍는 글자(`✓ 파일`)를 그대로 보여 준다 — 그건 화면 장식이 아니라 기록이다. 표 머리만 잰다.
+    expect(out).not.toMatch(/<th>[^<]*[✓✕]/)
   })
 })
 

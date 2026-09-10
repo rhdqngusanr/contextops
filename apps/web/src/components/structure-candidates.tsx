@@ -1,14 +1,14 @@
 'use client'
 
 import type { StructureCandidate } from '../lib/web/queries'
-import { ITEM_TYPE_LABEL } from './chips'
+import { ITEM_TYPE_LABEL, Note } from './chips'
 import { EvidenceList } from './evidence'
 
 // =====================================================================
 //  🔴 §7.1 이 낸 항목 후보를 사람이 고르는 카드 — 화면 3 (SPEC §7.1 · FINDINGS 84)
 //
 //  ★ 왜 이 파일이 생겼나 — **화면이 찾았다고 말하고 아무 데도 안 보냈다.**
-//    구조화가 끝나면 「✓ 항목 후보 6개를 찾았습니다」와 [Context 보기] 가 떴는데,
+//    정리가 끝나면 「항목 후보 6개를 찾았습니다」와 [Context 보기] 가 떴는데,
 //    후보는 `ai_jobs.result` 안에만 있었고 Context 는 비어 있었다. 문서를 올리는
 //    길로 들어온 사람은 발행까지 갈 수 없었다.
 //
@@ -85,8 +85,10 @@ export function StructureCandidates({
   if (state.made !== null) {
     return (
       <div className="col-tight">
-        <p className="ink-ok">✓ 항목 {state.made}개를 Context 에 만들었습니다.</p>
-        <span className="meta">아직 초안입니다 — Context 화면에서 승인해야 다음 Pack 에 나갑니다.</span>
+        <Note tone="ok">항목 {state.made}개를 Context 에 만들었습니다.</Note>
+        {/* ⚠ 「Pack」은 이 문장에서 **갈 곳 이름**으로 읽힌다 — 비개발자는 거기서 멈춘다.
+            「버전」은 이 화면의 다른 자리(빈 상태의 「아직 발행된 버전이 없습니다」)와 같은 낱말이다 (2026-09-11). */}
+        <span className="meta">아직 초안입니다 — Context 화면에서 승인해야 다음 버전에 들어갑니다.</span>
         <a className="btn btn-sm" href={`${base}/context`}>Context 보기</a>
       </div>
     )
@@ -95,7 +97,8 @@ export function StructureCandidates({
   return (
     <div className="col-tight">
       <span className="label">항목으로 만들 것 고르기</span>
-      <div className="col-tight">
+      {/* 목록이 제 안에서 구른다 — 25장이면 카드가 3,000px 로 늘어나 옆 칸이 빈 채로 남았다 (2026-09-11 · 높이는 `--pick-list-h`). */}
+      <div className="col-tight pick-list">
         {state.candidates.map((c) => {
           const preview = bodyPreview(c.body)
           return (
@@ -117,7 +120,8 @@ export function StructureCandidates({
                     **비활성**이고 카드 바탕 위 대비가 1.6:1 이다. 사람이 고르라고 낸
                     문장을 안 보이게 그리면 이 항목을 안 고친 것과 같다. 보조 글자는 `meta`(ink-3)다. */}
                 {preview === null ? null : <span className="meta">{preview}</span>}
-                <EvidenceList refs={c.evidence === null ? [] : [c.evidence]} />
+                {/* 머리(「근거」)는 안 단다 — 25줄에 같은 이름표가 25번 서면 목록이 이름표로 덮인다 (2026-09-11). */}
+                <EvidenceList refs={c.evidence === null ? [] : [c.evidence]} heading={null} />
               </div>
             </label>
           )
@@ -135,7 +139,7 @@ export function StructureCandidates({
         {/* 🔴 누르기 **전에** 무엇이 되는지 말한다 — 「승인」이 아니라 「초안」이다. */}
         <span className="meta">초안으로 들어갑니다 · 승인은 Context 화면에서 합니다</span>
       </div>
-      {state.error === null ? null : <p className="meta ink-warn">⚠ {state.error}</p>}
+      {state.error === null ? null : <Note tone="warn">{state.error}</Note>}
     </div>
   )
 }

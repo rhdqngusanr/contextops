@@ -111,15 +111,15 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
     const html = draw({ stalled: true, updated_at: ago(8 * 60) })
     expect(html).toContain('멈춘 것 같음')
     //  🔴 판정만 있으면 사람은 그 말을 확인할 수 없다.
-    expect(html).toContain('마지막 걸음 8분 전')
+    expect(html).toContain('마지막 진행 8분 전')
   })
 
-  it('🔴 아직 한 걸음도 안 간 job 에 「마지막 걸음」이라고 쓰지 않는다', () => {
-    //  `queued` 인 job 의 `updated_at` 은 **만든 시각**이다. 「마지막 걸음 방금」은
-    //  가지도 않은 걸음을 말한다 (눈으로 읽고 고쳤다 · 가른 것은 `started_at` 칸이다).
+  it('🔴 아직 아무것도 안 한 job 에 「마지막 진행」이라고 쓰지 않는다', () => {
+    //  `queued` 인 job 의 `updated_at` 은 **만든 시각**이다. 「마지막 진행 방금」은
+    //  가지도 않은 것을 말한다 (눈으로 읽고 고쳤다 · 가른 것은 `started_at` 칸이다).
     expect(draw({ status: 'queued', started_at: null })).toContain('올린 지')
-    expect(draw({ status: 'queued', started_at: null })).not.toContain('마지막 걸음')
-    expect(draw({ status: 'running', started_at: ago(30) })).toContain('마지막 걸음')
+    expect(draw({ status: 'queued', started_at: null })).not.toContain('마지막 진행')
+    expect(draw({ status: 'running', started_at: ago(30) })).toContain('마지막 진행')
   })
 
   it('③ 「실시간」이라는 낱말이 없다 (DESIGN_BRIEF §2-3)', () => {
@@ -158,7 +158,7 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
     expect(after).not.toContain('<button')
     expect(after).toContain(RETRY_EXHAUSTED)
     expect(canRetryJob(job({ ...failed, requeues: MAX_JOB_REQUEUES }))).toBe(false)
-    //  안 되는 코드는 상한과 무관하게 그 문장을 안 낸다 — 「다시 굴렸지만」이 거짓이 된다.
+    //  안 되는 코드는 상한과 무관하게 그 문장을 안 낸다 — 「다시 시도했지만」이 거짓이 된다.
     expect(drawWithRetry({ ...failedWith('COMPILE_FAILED'), requeues: MAX_JOB_REQUEUES })).not.toContain(RETRY_EXHAUSTED)
   })
 
@@ -177,14 +177,14 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
     expect(canRetryJob(job({ status: 'running', stalled: true }))).toBe(true)
     expect(stalled).toContain('<button')
     //  버튼 옆 문장이 실패 갈래와 **다르다** — 그 행은 실패로 닫히고 일이 새로 생긴다.
-    expect(stalled).toContain('멈춘 일은 실패로 닫고, 같은 문서로 일을 새로 만듭니다')
+    expect(stalled).toContain('멈춘 작업은 실패로 기록하고, 같은 문서로 새 작업을 시작합니다')
     expect(stalled).not.toContain('올린 문서를 그대로 다시 읽습니다')
     //  ⚠ 「문서를 다시 올려 주세요」는 이 문이 없애려던 말이다 (59) — 남아 있으면 안 된다.
     expect(stalled).not.toContain('문서를 다시 올려 주세요')
 
     const failed = drawWithRetry(failedWith('BUDGET_EXCEEDED'))
     expect(failed).toContain('올린 문서를 그대로 다시 읽습니다')
-    expect(failed).not.toContain('멈춘 일은 실패로 닫고')
+    expect(failed).not.toContain('멈춘 작업은 실패로 기록하고')
   })
 
   it('버튼 옆에 **무엇이 달라지는지**가 있고, 누르는 동안 잠긴다', () => {
@@ -195,14 +195,14 @@ describe('🔴 화면 3 의 job 칸 — 여섯 모양이 서로 다르게 보인
 
     const busy = drawWithRetry(failedWith('BUDGET_EXCEEDED'), true)
     expect(busy).toContain('disabled')
-    expect(busy).toContain('다시 굴리는 중')
+    expect(busy).toContain('다시 시도하는 중')
   })
 })
 
 describe('🔴 진행률 — 「모른다」와 「0 걸음」이 화면에서 갈린다 (FINDINGS 62)', () => {
   it('`progress:null` 은 회전이고 막대가 아니다', () => {
     const spin = draw({ progress: null })
-    expect(spin).toContain('몇 걸음짜리 일인지 아직 모릅니다')
+    expect(spin).toContain('얼마나 남았는지 아직 모릅니다')
     expect(spin).not.toContain('progressbar')
   })
 
@@ -213,7 +213,7 @@ describe('🔴 진행률 — 「모른다」와 「0 걸음」이 화면에서 �
     expect(bar).not.toContain('아직 모릅니다')
   })
 
-  it('🔴 걸음의 낱말은 값에서 온다 — 화면에 기능별 갈래가 없다', () => {
+  it('🔴 세는 낱말은 값에서 온다 — 화면에 기능별 갈래가 없다', () => {
     //  §7.2(충돌 탐지)의 job 을 같은 컴포넌트에 넣으면 낱말만 갈린다.
     expect(draw({ progress: { done: 1, total: 1, unit: '묶음' } })).toContain('1묶음 중 1')
   })

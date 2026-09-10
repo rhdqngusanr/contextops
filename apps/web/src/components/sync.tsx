@@ -4,7 +4,7 @@ import { SYNC_STATUSES, setupCommandLine, type SyncStatus } from '@contextops/sc
 
 import type { DeviceSyncRow, IssuedDevice, VersionRow } from '../lib/web/queries'
 import { dateText, sinceText } from '../lib/web/time'
-import { SYNC_CHIP, SYNC_MEANING, SyncChip } from './chips'
+import { SYNC_CHIP, SYNC_MEANING, SyncChip, Note } from './chips'
 import { FactLine, syncFact } from './fact-line'
 import { ErrorState, ReadOnlyNotice } from './states'
 
@@ -57,19 +57,22 @@ export const SYNC_ORDER: Record<SyncStatus, number> = {
 }
 
 /**
- * 「적용 방식」 칸 (DESIGN_BRIEF §4 화면 9 「적용 방식(플러그인/zip 수동)」).
+ * 「적용 방식」 칸 — 그 기기가 파일을 **어떻게 받았나**를 문장으로 (DESIGN_BRIEF §4 화면 9).
  *
+ * ★ 값이 낱말이 아니라 문장인 이유 (2026-09-11) — 「플러그인」「zip 수동」은 낱말 둘을 붙인
+ *   약어라 비개발자에게 무엇이 일어났는지 말하지 않았다. 「플러그인이 받음」「zip 을 손으로 풂」은
+ *   읽으면 그림이 그려진다.
  * 🔴 **없는 것을 지어내지 않는다.** 보고가 없는 기기(`unknown`)는 **어떻게 적용했는지도
- *   모른다** — 거기에 「플러그인」이라고 적으면 화면이 사실이 아닌 것을 말한다.
+ *   모른다** — 거기에 「플러그인이 받음」이라고 적으면 화면이 사실이 아닌 것을 말한다.
  * ★ 왜 별도의 DB 칸이 아닌가 — `manual` 이 곧 「zip 수동 적용」이다 (SPEC §6). 방식을
  *   따로 담는 칸을 만들면 상태와 방식이 갈릴 수 있고(=`applied` 인데 방식이 `manual`),
  *   그러면 어느 쪽이 참인지 정할 방법이 없다.
  */
 export const SYNC_APPLY: Record<SyncStatus, string> = {
-  applied: '플러그인',
-  outdated: '플러그인',
-  modified: '플러그인',
-  manual: 'zip 수동',
+  applied: '플러그인이 받음',
+  outdated: '플러그인이 받음',
+  modified: '플러그인이 받음',
+  manual: 'zip 을 손으로 풂',
   unknown: '—',
 }
 
@@ -81,7 +84,7 @@ export function sortDevices(devices: readonly DeviceSyncRow[]): DeviceSyncRow[] 
   })
 }
 
-/** 상태별 기기 수 — 화면 위쪽의 「applied 9 · outdated 2 · manual 1」이 이것이다. */
+/** 상태별 기기 수 — 요약의 사실 한 줄(「기기 14대 중 9대가 …」)과 다음 걸음이 이것을 읽는다. */
 export function countByStatus(devices: readonly DeviceSyncRow[]): Record<SyncStatus, number> {
   const counts = Object.fromEntries(SYNC_STATUSES.map((s) => [s, 0])) as Record<SyncStatus, number>
   for (const d of devices) counts[d.status] += 1
@@ -124,6 +127,18 @@ export function officialOf(versions: readonly VersionRow[]): VersionRow | null {
   return versions.find((v) => v.is_official) ?? null
 }
 
+/**
+ * 「그래서 어떻게 하면 고쳐지나」 — 요약의 사실 한 줄 바로 밑 (2026-09-11).
+ *
+ * ★ 왜 — 이 화면은 읽는 화면이라 버튼이 없는 것이 맞지만, 그러면 문장이 그 자리를 채워야
+ *   한다. 비개발자 팀장은 「옛 버전 2대」를 보고 자기가 뭘 눌러야 하는지, 팀원이 뭘 해야
+ *   하는지 모른다. 낱말은 칩 표에서 오고, 명령은 실재한다(`plugin/contextops/skills/sync`).
+ * 🔴 손으로 고친 파일을 말없이 덮지 않는다 — Skill 이 **먼저 묻고**, 덮어도 백업을 남긴다.
+ *   여기 문장이 그 순서와 달라지면 화면이 거짓말을 한다.
+ * ⚠ 볼 것이 없으면(옛 버전·손으로 고침·보고 없음이 전부 0) 그리지 않는다 — 0 은 안 적는 규칙.
+ */
+export const SYNC_NEXT_STEP = `「${SYNC_CHIP.outdated.label}」·「${SYNC_CHIP.modified.label}」 기기는 그 팀원이 Claude Code 에서 /contextops:sync 를 실행하면 공식 판으로 맞춰집니다 — 손으로 고친 파일은 덮을지 먼저 묻고, 덮어도 백업을 남깁니다. 「${SYNC_CHIP.unknown.label}」 기기는 처음 실행한 뒤부터 상태가 보입니다.`
+
 export function SyncSummary({
   devices,
   official,
@@ -133,10 +148,10 @@ export function SyncSummary({
   official?: VersionRow | null
 }) {
   const counts = countByStatus(devices)
-  //  ⚠ 0 인 상태를 칩으로 그리지 않는다 — 다섯 칩이 늘 서 있으면 사람은 어느 것이 지금
-  //    있는 일인지 못 고른다 (화면 8 의 「열린 충돌 0」과 다르다: 저건 **하나뿐인 수**라
-  //    0 도 「셌다」는 뜻이 되지만, 여기서는 다섯 칸 중 하나다).
-  const present = SYNC_STATUSES.filter((s) => counts[s] > 0)
+  //  ⚠ 상태별 칩 줄(「기기 14 · 적용됨 9 · …」)은 지웠다 (2026-09-11) — 바로 밑의 사실 한 줄이
+  //    같은 다섯 수를 이미 말해서, 두 줄이 겹치면 사람은 다른 것을 세는 줄인 줄 알고 차이를 찾는다.
+  //    0 인 상태를 안 적는 규칙은 `syncFact` 가 그대로 지킨다.
+  const needsStep = counts.outdated + counts.modified + counts.unknown > 0
   return (
     <div className="col-tight">
       <div className="row wrap">
@@ -145,16 +160,11 @@ export function SyncSummary({
           : official === null
             ? <span className="meta">{OFFICIAL_HINT.none}</span>
             : <span className="mono ink" title={official.snapshot_hash}>{OFFICIAL_HINT.of(official.semver)}</span>}
-        <span className="label">기기 {devices.length}</span>
-        {present.map((s) => (
-          <span key={s} className="row">
-            <SyncChip status={s} />
-            <span className="mono ink">{counts[s]}</span>
-          </span>
-        ))}
       </div>
-      {/* 사실 한 줄 (2026-09-11) — 표보다 먼저 「14대 중 9대가 최신 판」이 읽힌다. 문장의 정본은 `fact-line.tsx`. */}
+      {/* 사실 한 줄 (2026-09-11) — 표보다 먼저 「14대 중 9대가 「적용됨」」이 읽힌다. 문장의 정본은 `fact-line.tsx`. */}
       <FactLine parts={syncFact(devices.map((d) => d.status))} />
+      {/* 다음 걸음 — 볼 것이 있을 때만 (0 은 안 적는다). */}
+      {needsStep ? <p className="meta">{SYNC_NEXT_STEP}</p> : null}
     </div>
   )
 }
@@ -219,12 +229,21 @@ export function DeviceTable({
  * 표 아래 각주 — 칩의 뜻을 색이 아니라 **글자로** 한 번 더 적는다 (DESIGN_BRIEF §2-4
  * 「상태를 색만으로 구분하지 않는다」). 툴팁은 마우스가 있어야 보이고, 발표 영상에는
  * 안 나온다 — 그래서 같은 문장이 화면에도 한 번 있어야 한다.
+ *
+ * ★ 왜 `dl` 인가 (2026-09-11) — 한 문단에 다섯 정의를 `=` 로 이어 붙이면 「옛 버전」 하나만
+ *   찾아 읽을 수 없고, 표의 칩(색점+글자)과 모양이 달라 같은 것인지 눈으로 못 잇는다.
+ *   왼쪽에 표와 **같은 칩**, 오른쪽에 뜻 — 격자는 `globals.css` 의 `.legend` 다.
  */
 export function SyncLegend() {
   return (
-    <p className="meta">
-      {SYNC_STATUSES.map((s) => `${SYNC_CHIP[s].label} = ${SYNC_MEANING[s]}`).join(' · ')}
-    </p>
+    <dl className="legend">
+      {SYNC_STATUSES.map((s) => (
+        <div key={s}>
+          <dt><SyncChip status={s} /></dt>
+          <dd className="meta">{SYNC_MEANING[s]}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 
@@ -257,8 +276,9 @@ export const ADD_DEVICE = {
   section: '기기 추가',
   open: '기기 추가',
   cancel: '닫기',
-  /** 버튼 옆 한 줄 — **무엇을 발급하는지**를 누르기 전에 말한다. */
-  why: '이 프로젝트에 붙일 기기 토큰을 발급합니다.',
+  /** 버튼 옆 한 줄 — 누르면 **무슨 일이 일어나는지**를 누르기 전에 말한다. 게스트를 포함해 누구나
+   *  보는 자리라 「토큰」「발급」은 카드 안(개발자만 여는 자리)에만 둔다 (2026-09-11). */
+  why: '팀원의 새 기기를 이 프로젝트에 연결합니다 — 개발자가 Claude Code 에 붙여넣을 한 줄이 나옵니다.',
   nameLabel: '기기 이름',
   namePlaceholder: 'mac-노트북',
   nameHint: '나중에 Sync 표에서 이 이름으로 보입니다.',
@@ -402,11 +422,8 @@ export function IssuedDeviceCard({
   })
   return (
     <div className="card pad col" aria-label={ADD_DEVICE.issuedTitle}>
-      {/*  아이콘 + 글자 — 상태를 색만으로 말하지 않는다 (DESIGN_BRIEF §2-4). */}
-      <p className="row items-start">
-        <span aria-hidden="true" className="ink-warn">⚠</span>
-        <span className="ink">{ADD_DEVICE.once}</span>
-      </p>
+      {/*  색점 + 글자 — 상태를 색만으로 말하지 않는다 (DESIGN_BRIEF §2-4). */}
+      <Note tone="warn">{ADD_DEVICE.once}</Note>
 
       <div className="field">
         <span className="label">{ADD_DEVICE.tokenLabel}</span>

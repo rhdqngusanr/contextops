@@ -83,7 +83,8 @@ function render(props: {
 
 /** 화면 묶음만 놓고 검색해서 나온 경로들 — 옛 `matchScreens` 가 재던 것과 같은 것. */
 function screenHits(query: string, pathname = `${BASE}/import`): string[] {
-  return matchEntries(query, screensOf(pathname)).map((e) => e.hint)
+  //  힌트는 이제 설명 한 줄이다 — 경로는 key(`screen:<path>`)에서 읽는다 (2026-09-11).
+  return matchEntries(query, screensOf(pathname)).map((e) => e.key.replace('screen:', ''))
 }
 
 describe('🔴 ① 화면 목록의 정본은 `PROJECT_SCREENS` 표 하나다', () => {
@@ -174,10 +175,11 @@ describe('④ 검색 — 라벨·경로·keywords 셋 다에 걸린다', () => {
 })
 
 describe('🔴 ⑤ 고른 줄을 색만으로 표시하지 않는다 (DESIGN_BRIEF §3)', () => {
-  it('고른 줄에 `aria-selected` 와 화살표가 같이 있다', () => {
+  it('고른 줄에 `aria-selected` 와 왼쪽 막대가 같이 있다 (기호 › 는 없다 · 2026-09-11)', () => {
     const html = render({ index: 0 })
     expect(html).toContain('aria-selected="true"')
-    expect(html).toContain('›')
+    expect(html).toContain('class="palette-caret" data-active="true"')
+    expect(html).not.toContain('›')
     //  하나만 고를 수 있다.
     expect(html.match(/aria-selected="true"/g)?.length).toBe(1)
   })
@@ -259,7 +261,7 @@ describe('🔴 ⑥ 프로젝트 전환 — 서버가 준 목록만 그린다 (FI
     const all = [...screensOf(`${BASE}/import`), ...projectEntries(TEAMS, {
       team: 'paylab', project: 'api', pathname: `${BASE}/import`,
     })]
-    const hits = (q: string) => matchEntries(q, all).map((e) => e.hint)
+    const hits = (q: string) => matchEntries(q, all).map((e) => (e.group === 'screen' ? e.key.replace('screen:', '') : e.hint))
     expect(hits('정산 원장')).toEqual(['paylab/ledger'])
     expect(hits('ledger')).toEqual(['paylab/ledger'])
     expect(hits('사이드퀘스트')).toEqual(['sidequest/web'])

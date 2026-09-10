@@ -19,6 +19,7 @@ import {
 import { PROPOSAL_STATUS_CHIP } from '../src/components/chips'
 import { ScreenEmpty } from '../src/components/states'
 import { EMPTY_PLACES, MADE } from '../src/lib/web/screens'
+import { milestoneTitlesOf } from '../src/lib/web/milestone-titles'
 import { diffCounts, lineDiff } from '../src/lib/web/diff'
 import { dateText } from '../src/lib/web/time'
 import { proposals } from '../src/db/schema'
@@ -169,10 +170,16 @@ describe('줄 단위 diff (DESIGN_BRIEF §4 화면 6)', () => {
     expect(add).toMatchObject({ beforeNo: null, afterNo: 1 })
   })
 
-  it('바뀐 것이 없으면 화면이 그렇게 말한다', () => {
+  it('바뀐 것이 없으면 화면이 그렇게 말한다 — git 약어(+0 −0)가 아니라 사람 말이다', () => {
     const markup = html(createElement(DiffView, { before: '같다', after: '같다' }))
-    expect(markup).toContain('본문이 그대로다')
-    expect(markup).toContain('+0')
+    expect(markup).toContain('설명 글이 그대로입니다')
+    expect(markup).not.toContain('추가')
+    expect(markup).not.toContain('+0')
+
+    //  바뀐 줄이 있으면 「추가 n줄 · 삭제 n줄」 — 0인 쪽은 적지 않는다.
+    const changed = html(createElement(DiffView, { before: 'a\nb', after: 'a\nx\nb' }))
+    expect(changed).toContain('추가 1줄')
+    expect(changed).not.toContain('삭제')
   })
 
   it('🔴 추가·삭제를 색만으로 구분하지 않는다 — 기호와 라벨이 같이 나간다', () => {
@@ -588,6 +595,27 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
       proposals: [row({ relates_to: [] })], hrefOf: href, empty: null,
     }))
     expect(markup).toContain('—')
+  })
+
+  it('관련 마일스톤은 제목을 알면 id 옆에 붙이고, 모르면 id 만 — 지어내지 않는다', () => {
+    const titles = milestoneTitlesOf([
+      { ...target(), id: 'item_m1', type: 'roadmap', title: '재시도·타임아웃 정리', data: { milestone_id: 'PL-M1', done_when: ['a'] } } as ContextItemView,
+      //  roadmap 이 아닌 항목은 표에 안 들어간다.
+      target(),
+    ])
+    expect(titles).toEqual({ 'PL-M1': '재시도·타임아웃 정리' })
+
+    const withTitle = html(createElement(ProposalTable, { proposals: [row()], hrefOf: href, empty: null, titles }))
+    expect(withTitle).toContain('PL-M1')
+    expect(withTitle).toContain('재시도·타임아웃 정리')
+
+    const without = html(createElement(ProposalTable, { proposals: [row()], hrefOf: href, empty: null }))
+    expect(without).toContain('PL-M1')
+    expect(without).not.toContain('재시도·타임아웃 정리')
+
+    //  상세 머리도 같은 조각을 읽는다.
+    const head = html(createElement(ProposalHead, { proposal: detail(), base: VERSION, titles }))
+    expect(head).toContain('재시도·타임아웃 정리')
   })
 })
 

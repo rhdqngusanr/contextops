@@ -162,7 +162,7 @@ describe('🔴 비활성 색(`ink-4`)으로 읽어야 하는 글자를 그리지
 //    **0개**였고 헤드라인이 「같 / 은 방향으로」, 에러 카드가 「다시 시 / 도해주세요」로 그려졌다.
 //    시안(`design/*.dc.html`)의 `body` 에는 있었는데 구현으로 옮길 때 빠졌다 — 색 토큰처럼
 //    「문서 ↔ 코드」를 기계가 대조하지 않으면 이런 한 줄은 다시 빠진다.
-//  ⚠ 코드·경로·해시는 예외다 — `.tree-item`(break-all) · `.pack-linetext`·`.diff-text`(break-word).
+//  ⚠ 코드·경로·해시는 예외다 — `.tree-item`(overflow-wrap anywhere) · `.pack-linetext`·`.diff-text`(break-word).
 //    그 예외가 `keep-all` 로 바뀌면 해시가 한 줄에 못 들어가고 경로가 잘린다. 같이 잠근다.
 // ---------------------------------------------------------------------
 describe('🔴 한글은 낱말 중간에서 안 접는다 — `body` 의 keep-all', () => {
@@ -189,14 +189,15 @@ describe('🔴 한글은 낱말 중간에서 안 접는다 — `body` 의 keep-a
     expect(typo![1]).toContain('overflow-wrap: break-word')
   })
 
-  it('코드·경로·해시의 예외는 그대로다 — `.tree-item` break-all · `.pack-linetext`·`.diff-text` break-word', () => {
+  it('코드·경로·해시의 예외는 그대로다 — `.tree-item` overflow-wrap anywhere · `.pack-linetext`·`.diff-text` break-word', () => {
     const text = css()
     const ruleOf = (selector: string): string => {
       const m = new RegExp(`(?:^|\\n)${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`).exec(text)
       if (!m) throw new Error(`globals.css 에 \`${selector}\` 규칙이 없다`)
       return m[1] as string
     }
-    expect(ruleOf('.tree-item')).toMatch(/word-break:\s*break-all\s*;/)
+    //  break-all 이었다 — 경로 낱말 가운데를 잘라 `arch|itecture.md` 가 됐다 (2026-09-11). 안전망만 남긴다.
+    expect(ruleOf('.tree-item')).toMatch(/overflow-wrap:\s*anywhere\s*;/)
     expect(ruleOf('.pack-linetext')).toMatch(/word-break:\s*break-word\s*;/)
     expect(ruleOf('.diff-text')).toMatch(/word-break:\s*break-word\s*;/)
     //  ⚠ mono 규칙 안에 `keep-all` 이 들어오면 여기서 걸린다.
@@ -344,13 +345,16 @@ describe('🔴 움직임 줄이기 — `prefers-reduced-motion` 블록 한 곳',
 // ---------------------------------------------------------------------
 //  ⑧ 쓰는 법을 말하는 placeholder 는 잘리지 않는다 (FINDINGS 158 · DESIGN_BRIEF §3 「레이아웃」)
 //
-//  ★ 왜 이 시험이 생겼나 — 화면 5 의 `scope` 거르개는 placeholder 로 **문법**을 가르친다
+//  ★ 왜 이 시험이 생겼나 — 화면 5 의 `scope` 거르개는 placeholder 로 **문법**을 가르쳤다
 //    (`project · domain:billing` · SPEC §5 의 `?scope=`). 그런데 칸 안쪽이 195px 인데 문구가
 //    203.91px 이라 마지막 글자가 잘렸고, 화면에는 `domain:billin` 으로 보였다 —
 //    **가르치는 자리가 틀린 것을 가르쳤다.** 폭은 캡처로만 보면 다음에 문구가 한 자 늘 때 또 잘린다.
+//  ★ 2026-09-11 — 그 칸은 이제 **종류(select · 사람 말) + 값 칸** 둘이고, 값 칸은 값이 있는 종류에만 뜬다.
+//    placeholder 는 문법이 아니라 **예시**(`SCOPE_VALUE_EXAMPLE` · `lib/web/context-doc.ts` · 데모 씨앗에 있는 값)다.
+//    잘리지 않아야 하는 것은 그대로다 — 가장 긴 예시로 잰다.
 //  재는 것 둘:
-//    ① 그 칸이 `input-filter` 를 달고 있고, 그 클래스가 `--filter-input-w` 로 폭을 받는다 (좁으면 줄어든다)
-//    ② **문구의 글자 수 + 여유 2자 ≤ `--filter-input-ch`** — 문구를 늘리면 여기서 빨개진다
+//    ① 값 칸이 `input-filter` 를 달고 있고, 그 클래스가 `--filter-input-w` 로 폭을 받는다 (좁으면 줄어든다)
+//    ② **가장 긴 예시의 글자 수 + 여유 2자 ≤ `--filter-input-ch`** — 예시를 늘리면 여기서 빨개진다
 //  ⚠ 폭을 px 로 직접 적지 마라. mono 라 `ch` 로 재야 글꼴이 폴백으로 바뀌어도 같이 늘어난다.
 //  ⚠ 그리고 `min-width` 로 잠그지 마라 — 좁은 화면에서는 줄어드는 것이 위다.
 //    그래서 `width` + `max-width: 100%` 이고 시험이 **그 짝**을 센다.
@@ -361,27 +365,43 @@ describe('🔴 쓰는 법을 말하는 placeholder 가 칸 폭에서 잘리지 �
   /** 문구가 안 잘리려면 남겨 둘 여유 글자 수. 커서·글꼴 폴백의 반올림을 흡수한다. */
   const SPARE = 2
 
-  it('scope 거르개가 `input-filter` 를 달고, 그 클래스가 `--filter-input-w` 를 쓰되 100% 를 안 넘는다', () => {
+  it('범위 값 칸이 `input-filter` 를 달고, 그 클래스가 `--filter-input-w` 를 쓰되 100% 를 안 넘는다', () => {
     const tsx = readFileSync(contextPage, 'utf8')
-    expect(tsx, 'scope 칸이 `input-filter` 를 안 달았다').toMatch(/className="input mono input-filter"/)
+    expect(tsx, '범위 값 칸이 `input-filter` 를 안 달았다').toMatch(/className="input mono input-filter"/)
     const css = readFileSync(globalsCss, 'utf8')
     expect(css).toMatch(/\.input-filter\s*\{[^}]*width:\s*var\(--filter-input-w\)[^}]*max-width:\s*100%/)
     //  폭은 `ch` + 자기 padding·border 다 — px 를 직접 적으면 글꼴이 바뀔 때 다시 잘린다.
     expect(css).toMatch(/--filter-input-w:\s*calc\(var\(--filter-input-ch\)\s*\*\s*1ch/)
   })
 
-  it('placeholder 의 글자 수 + 여유 2자가 `--filter-input-ch` 를 넘지 않는다', () => {
+  it('범위는 종류(select · 사람 말)로 고르고, 값 칸은 예시가 있는 종류에만 뜨며 placeholder 는 그 표에서 온다', async () => {
     const tsx = readFileSync(contextPage, 'utf8')
-    const ph = /placeholder="([^"]*domain[^"]*)"/.exec(tsx)
-    expect(ph, 'scope 칸의 placeholder 를 찾지 못했다').not.toBeNull()
+    const { SCOPE_KINDS } = await import('@contextops/schema')
+    const { SCOPE_VALUE_EXAMPLE } = await import('../src/lib/web/context-doc')
+    //  선택지는 enum 을 돌되 보이는 글자는 사람 말이다 — 영어 값이 화면에 서지 않는다.
+    expect(tsx).toContain('{SCOPE_KINDS.map((k) => <option key={k} value={k}>{SCOPE_KIND_LABEL[k]}</option>)}')
+    expect(tsx).not.toMatch(/value=\{(t|s|k)\}>\{(t|s|k)\}<\/option>/)
+    //  문법을 가르치던 옛 placeholder 는 없다.
+    expect(tsx).not.toContain('domain:billing')
+    //  값 칸은 표가 비어 있지 않은 종류에만, placeholder 는 표에서 읽는다 — 화면이 예시를 지어내지 않는다.
+    expect(tsx).toMatch(/SCOPE_VALUE_EXAMPLE\[filter\.scopeKind\] !== ''/)
+    expect(tsx).toMatch(/placeholder=\{SCOPE_VALUE_EXAMPLE\[filter\.scopeKind\]\}/)
+    expect(Object.keys(SCOPE_VALUE_EXAMPLE).sort()).toEqual([...SCOPE_KINDS].sort())
+    //  「프로젝트 전체」에는 값이 없고, 값이 있는 종류는 적어도 하나다 (전부 비면 값 칸이 영영 안 뜬다).
+    expect(SCOPE_VALUE_EXAMPLE.project).toBe('')
+    expect(Object.values(SCOPE_VALUE_EXAMPLE).some((s) => s !== '')).toBe(true)
+  })
+
+  it('가장 긴 예시의 글자 수 + 여유 2자가 `--filter-input-ch` 를 넘지 않는다', async () => {
+    const { SCOPE_VALUE_EXAMPLE } = await import('../src/lib/web/context-doc')
     const css = readFileSync(globalsCss, 'utf8')
     const budget = /--filter-input-ch:\s*(\d+)\s*;/.exec(css)
     expect(budget, 'globals.css 에 `--filter-input-ch` 가 없다').not.toBeNull()
-    const text = (ph as RegExpExecArray)[1] as string
-    const need = [...text].length + SPARE
+    const longest = Object.values(SCOPE_VALUE_EXAMPLE).reduce((a, b) => ([...b].length > [...a].length ? b : a), '')
+    const need = [...longest].length + SPARE
     expect(
       Number((budget as RegExpExecArray)[1] as string),
-      `placeholder 가 ${text} (${need - SPARE}자) 라 --filter-input-ch 는 ${need} 이상이어야 한다`,
+      `가장 긴 예시가 ${longest} (${need - SPARE}자) 라 --filter-input-ch 는 ${need} 이상이어야 한다`,
     ).toBeGreaterThanOrEqual(need)
   })
 

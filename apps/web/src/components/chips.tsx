@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react'
 import { type ScopeKind, type ProgressStatus,
-  AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
+  AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KIND_RULES, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
   ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, PROPOSAL_OPERATIONS, PROPOSAL_STATUSES,
   SOURCE_DOCUMENT_KINDS, SYNC_STATUSES,
   type AiJobStatus, type Confidence, type ConflictKind, type ConflictSeverity, type ItemStatus,
@@ -41,7 +42,8 @@ export const SYNC_CHIP: Record<SyncStatus, ChipSpec> = {
   applied: { label: '적용됨', tone: 'ok' },
   outdated: { label: '옛 버전', tone: 'warn' },
   modified: { label: '손으로 고침', tone: 'warn' },
-  manual: { label: '수동 적용', tone: 'neutral' },
+  //  「수동」은 「손으로 고침」과 같은 낱말이라 둘 다 문제로 읽혔다 — 일어난 일을 적는다 (2026-09-11).
+  manual: { label: 'zip 으로 받음', tone: 'neutral' },
   //  보고가 없는 기기다 — 서버가 매긴다. 「offline」이라고 쓰지 않는다 (DESIGN_BRIEF §5).
   unknown: { label: '보고 없음', tone: 'neutral' },
 }
@@ -58,7 +60,7 @@ export const SYNC_CHIP: Record<SyncStatus, ChipSpec> = {
  */
 export const SYNC_MEANING: Record<SyncStatus, string> = {
   //  사람 말이다 (2026-09-10 저녁 · 「데모 텍스트도 이해되게」) — 「해시」·「manifest」·「로컬」을 쓰지 않는다.
-  applied: '마지막 보고 때 받은 파일이 공식 판과 전부 같음 (확인표로 대조)',
+  applied: '마지막 보고 때 받은 파일이 공식 판과 한 글자도 다르지 않음',
   outdated: '이 기기의 판이 공식 판보다 오래됨',
   modified: '판은 같지만 파일을 이 기기에서 손으로 고침',
   manual: '플러그인 없이 zip 을 내려받아 손으로 적용함',
@@ -79,6 +81,19 @@ export const CONFIDENCE_CHIP: Record<Confidence, ChipSpec> = {
   high: { label: '근거 확실', tone: 'ok' },
   medium: { label: '근거 보통', tone: 'neutral' },
   low: { label: '근거 약함', tone: 'warn' },
+}
+
+/** 완료 조건에 근거가 있나 — Roadmap 행(`roadmap.tsx`)과 랜딩의 축소판(`terminal-replay.tsx`)이 같은 이 표를 읽는다 (2026-09-11 · 둘이 다른 얼굴이었다). */
+export const EVIDENCE_CHIP: Record<'yes' | 'no', ChipSpec> = {
+  yes: { label: '근거 있음', tone: 'ok' },
+  no: { label: '근거 없음', tone: 'neutral' },
+}
+
+/** 그 확신이 **무슨 뜻이고 사람이 무엇을 해야 하나** — 툴팁 (2026-09-11 · SPEC §7.1 「확신 없으면 low」). `SYNC_MEANING` 과 같은 모양. */
+export const CONFIDENCE_MEANING: Record<Confidence, string> = {
+  high: '원문에 그대로 있는 내용입니다',
+  medium: '원문에서 읽어 냈지만 해석이 들어갔습니다',
+  low: 'AI 가 확신하지 못한 항목입니다 — 사람이 확인해야 합니다',
 }
 
 /**
@@ -159,7 +174,8 @@ export const MILESTONE_CHIP: Record<MilestoneStatus, ChipSpec> = {
 export const PROPOSAL_STATUS_CHIP: Record<ProposalStatus, ChipSpec> = {
   draft: { label: '초안', tone: 'neutral' },
   submitted: { label: '승인 대기', tone: 'warn' },
-  approved: { label: '승인됨 · 발행 대기', tone: 'ok' },
+  //  「승인됨 · 발행 대기」였다 — 사실 한 줄이 「 · 」로 상태를 잇기 때문에 두 상태로 읽혔다 (2026-09-11).
+  approved: { label: '승인됨 (발행 대기)', tone: 'ok' },
   rejected: { label: '거절됨', tone: 'bad' },
   published: { label: '발행됨', tone: 'ok' },
 }
@@ -176,6 +192,20 @@ export const PROPOSAL_OPERATION_CHIP: Record<ProposalOperation, ChipSpec> = {
   add: { label: '항목 추가', tone: 'ok' },
   update: { label: '항목 수정', tone: 'warn' },
   deprecate: { label: '항목 폐기', tone: 'bad' },
+}
+
+/** 툴팁 — 영어 값(`draft`·`update`)이 그대로 떴다 (2026-09-11). 뜻은 사람 말 한 줄. */
+export const PROPOSAL_STATUS_MEANING: Record<ProposalStatus, string> = {
+  draft: '아직 올리지 않은 초안',
+  submitted: '팀장의 결정을 기다림',
+  approved: '승인됐고 다음 발행을 기다림',
+  rejected: '사유와 함께 돌려보냄',
+  published: '이미 발행에 들어감',
+}
+export const PROPOSAL_OPERATION_MEANING: Record<ProposalOperation, string> = {
+  add: '새 항목을 올림',
+  update: '지금 항목을 고침',
+  deprecate: '항목을 뺌',
 }
 
 /**
@@ -195,7 +225,8 @@ export const SOURCE_DOCUMENT_KIND_LABEL: Record<SourceDocumentKind, string> = {
   goal: '목표',
   policy: '정책',
   roadmap: '로드맵',
-  adr: '결정 (ADR)',
+  //  항목 종류의 「기술 결정」과 같은 낱말 (2026-09-11) — 한 화면에서 「결정 (ADR)」과 「기술 결정」이 갈렸다.
+  adr: '기술 결정 기록',
   notes: '메모',
   wiki: '위키 문서',
 }
@@ -213,7 +244,8 @@ export const SOURCE_DOCUMENT_KIND_LABEL: Record<SourceDocumentKind, string> = {
 export const PROGRESS_SOURCE_LABEL: Record<ProgressSource, string> = {
   agent: 'Claude 가 보고',
   hook: '세션이 끝날 때 플러그인이 보고',
-  manual: '사람이 적음',
+  //  「사람이 적음」은 「사람 수가 적다」로도 읽혔다 — 근거 한 줄(`evidence.tsx`)과 같은 낱말로 (2026-09-11).
+  manual: '사람이 직접 적음',
 }
 
 /** 진행 보고의 상태 4종을 사람 말로 (2026-09-10 저녁 — 드로어에 `done_candidate` 가 그대로 찍혔다). enum 이 늘면 여기 한 줄 — `Record` 라 안 더하면 타입이 막는다. */
@@ -255,6 +287,19 @@ export function Chip({ spec, title, strong }: { spec: ChipSpec; title?: string; 
   )
 }
 
+/**
+ * 한 줄 알림 — 색점 + 글자 (2026-09-11 · ✓ ✕ ⚠ ◌ 기호를 전부 이것 하나로). 「됐다」는 ok · 「봐야 한다」는 warn · 「실패했다」는 bad.
+ * 🔴 색은 사실의 색이고 글자가 뜻을 말한다 — 색점만 있고 글자가 없는 알림은 없다. `<span>` 이라 `<p>`·`<span>` 어디에도 들어간다.
+ */
+export function Note({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return (
+    <span className={`note tone-${tone}`}>
+      <span className="chip-dot" aria-hidden="true" />
+      <span>{children}</span>
+    </span>
+  )
+}
+
 export function SyncChip({ status }: { status: SyncStatus }) {
   //  ⚠ 툴팁 문구는 DESIGN_BRIEF §4 화면 9 가 정한 문장이고, 정본은 `SYNC_MEANING` 이다.
   //    (56바퀴까지는 `applied` 하나만 문장이 있었다 — 나머지 넷은 칩만 보고 뜻을 짐작해야
@@ -267,7 +312,7 @@ export function ItemStatusChip({ status }: { status: ItemStatus }) {
 }
 
 export function ConfidenceChip({ confidence }: { confidence: Confidence }) {
-  return <Chip spec={CONFIDENCE_CHIP[confidence]} />
+  return <Chip spec={CONFIDENCE_CHIP[confidence]} title={CONFIDENCE_MEANING[confidence]} />
 }
 
 export function AiJobStatusChip({ status }: { status: AiJobStatus }) {
@@ -275,7 +320,9 @@ export function AiJobStatusChip({ status }: { status: AiJobStatus }) {
 }
 
 export function ConflictKindChip({ kind }: { kind: ConflictKind }) {
-  return <Chip spec={CONFLICT_KIND_CHIP[kind]} title={kind} />
+  //  툴팁은 계약의 사람 말(`CONFLICT_KIND_RULES[kind].hint`) — 영어 값이 떴다 (2026-09-11). 빈 힌트면 툴팁 없음.
+  const hint = CONFLICT_KIND_RULES[kind].hint.replace(/\*\*/g, '')
+  return <Chip spec={CONFLICT_KIND_CHIP[kind]} title={hint === '' ? undefined : hint} />
 }
 
 export function ConflictSeverityChip({ severity }: { severity: ConflictSeverity }) {
@@ -288,12 +335,12 @@ export function MilestoneChip({ status }: { status: MilestoneStatus }) {
 }
 
 export function ProposalStatusChip({ status }: { status: ProposalStatus }) {
-  return <Chip spec={PROPOSAL_STATUS_CHIP[status]} title={status} />
+  return <Chip spec={PROPOSAL_STATUS_CHIP[status]} title={PROPOSAL_STATUS_MEANING[status]} />
 }
 
 export function ProposalOperationChip({ operation }: { operation: ProposalOperation }) {
   //  진하다 — 항목 카드에서 「무엇을 하자는 것인가」가 제일 먼저 보여야 한다 (2026-09-11 · 「눈이 확 안 보여서」).
-  return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={operation} strong />
+  return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={PROPOSAL_OPERATION_MEANING[operation]} strong />
 }
 
 /**
@@ -302,7 +349,8 @@ export function ProposalOperationChip({ operation }: { operation: ProposalOperat
  * 이 저장소의 규칙이다 (`DECIDED_TEXT` 와 같은 판단). enum 이 늘면 여기 한 줄이고, 안 더하면 타입이 막는다.
  */
 export const ITEM_TYPE_LABEL: Record<ItemType, string> = {
-  mission: '미션',
+  //  「미션」과 한 줄 이름표의 「사명」이 한 항목을 두 낱말로 불렀다 — 하나로 (2026-09-11).
+  mission: '사명',
   goal: '목표',
   roadmap: '로드맵',
   //  2026-09-10 저녁 — 「아키텍처·도메인·ADR」은 비개발자에게 낱말이 아니다. 뜻으로 적는다.
@@ -322,13 +370,16 @@ export const SCOPE_KIND_LABEL: Record<ScopeKind, string> = {
   path: '경로',
 }
 
-/** `v1.2.0` 모노 + 해시 앞 8자 (DESIGN_BRIEF §3 「VersionPill」). */
+/** 해시 앞 8자 앞에 붙는 낱말 — 화면 7 머리·버전 표와 같은 「승인본」. 툴팁이 뜻을 푼다. */
+export const SNAPSHOT_HASH_MEANING = '승인본 번호 — 이 버전이 승인한 항목 묶음의 번호입니다. 같은 번호면 내용이 같습니다.'
+
+/** `v1.2.0` 모노 + 「승인본 8자」 (DESIGN_BRIEF §3 「VersionPill」) — 이름표 없는 8자 코드였다 (2026-09-11). */
 export function VersionPill({ semver, hash, official }: { semver: string; hash?: string; official?: boolean }) {
   return (
     <span className="row">
       {official ? <span className="chip tone-ok"><span className="chip-dot" aria-hidden="true" />공식</span> : null}
       <span className="mono ink">v{semver}</span>
-      {hash ? <span className="mono meta" title={hash}>{hash.slice(0, 8)}</span> : null}
+      {hash ? <span className="meta" title={`${SNAPSHOT_HASH_MEANING} (${hash})`}>승인본 <span className="mono">{hash.slice(0, 8)}</span></span> : null}
     </span>
   )
 }
@@ -337,9 +388,16 @@ export function VersionPill({ semver, hash, official }: { semver: string; hash?:
  * `item_bs_m2 개정 6` (DESIGN_BRIEF §3 「CtxTag」) — 「· rev」는 개발자 낱말이라 「개정」으로 (2026-09-10 저녁).
  * 🔴 P7 의 얼굴이다 — Pack 의 한 줄에서 이 칩까지 이어져야 역추적이 성립한다.
  */
-export function CtxTag({ itemId, revision }: { itemId: string; revision?: number }) {
+/** 꼬리표가 무엇인지 — 툴팁 한 줄 (2026-09-11 · 비개발자에게 `item_policy_retry` 는 낱말이 아니다). 항목 제목을 알면 앞에 붙인다. */
+export function ctxTagMeaning(revision?: number, title?: string): string {
+  const head = title === undefined ? '' : `「${title}」 — `
+  const rev = revision === undefined ? '' : ` 개정 ${revision} = 이 항목을 ${revision}번째 고친 판입니다.`
+  return `${head}이 항목의 꼬리표입니다. 발행된 CLAUDE.md 의 줄이 이 이름으로 이 항목을 가리킵니다.${rev}`
+}
+
+export function CtxTag({ itemId, revision, title }: { itemId: string; revision?: number; title?: string }) {
   return (
-    <span className="ctx-tag">
+    <span className="ctx-tag" title={ctxTagMeaning(revision, title)}>
       {itemId}
       {revision === undefined ? null : <span className="ctx-rev">개정 {revision}</span>}
     </span>

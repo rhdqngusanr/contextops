@@ -5,6 +5,7 @@ import { use, useState } from 'react'
 import type { ProposalStatus } from '@contextops/schema'
 
 import { fetchProposals, type ProjectRef } from '../../../../../../lib/web/queries'
+import { useMilestoneTitles } from '../../../../../../lib/web/milestone-titles'
 import { useAsync } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { ProposalFact,
@@ -42,6 +43,8 @@ function ProposalList({ base, project }: { base: string; project: ProjectRef }) 
     () => fetchProposals(project.id, status === null ? {} : { status }),
     [project.id, status],
   )
+  //  「관련 마일스톤」 칸의 제목 — id(`PL-M3`)만으로는 어느 마일스톤인지 모른다. 못 읽으면 id 만 선다.
+  const titles = useMilestoneTitles(project.id)
 
   return (
     <>
@@ -66,6 +69,7 @@ function ProposalList({ base, project }: { base: string; project: ProjectRef }) 
             proposals={result.data.proposals}
             hrefOf={(p) => `${base}/proposals/${p.id}`}
             empty={<ScreenEmpty slot="proposals.list" base={base} message={proposalEmptyMessage(status)} />}
+            titles={titles}
           />
         ) : null}
       </section>

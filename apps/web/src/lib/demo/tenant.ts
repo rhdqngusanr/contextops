@@ -57,7 +57,8 @@ export const DEMO_TENANT = {
    * 「누가 발행했나」·「누가 결정했나」 칸이 uuid → 이름으로 넓어지는 중이라
    * (FINDINGS 113·116), 이름이 없으면 데모가 `contextops-demo-owner` 를 사람으로 그린다.
    */
-  ownerName: '팀장 한지우',
+  //  「팀장 한지우 팀장」 — 이름 안의 직함이 등급 칸과 겹쳤다 (2026-09-11). 직함은 등급 칸(`ROLE_LABEL`)이 말한다.
+  ownerName: '한지우',
   /**
    * 매일 이 시각(**KST**)에 리셋한다 — `GET /cron/demo-reset` 을 Vercel Cron 이 부른다.
    * 배너가 이 문자열을 읽는다. ⚠ Cron 표기(`apps/web/vercel.json`)는 UTC 라 여기와 그
@@ -82,5 +83,6 @@ export const DEMO_ENTRY_PATH =
  *   `샘플 팀 "${name}"` 을 각자 조립하면 화면마다 따옴표와 조사가 갈린다.
  */
 export function demoBannerText(): string {
-  return `샘플 팀 "${DEMO_TENANT.teamName}"을 둘러보는 중입니다 · 읽기 전용 · 매일 ${DEMO_TENANT.resetAt} 초기화`
+  //  「샘플 팀 "Paylab (샘플 팀)"」은 한 문장에 같은 말이 두 번이었다 · 「초기화」는 무엇이 초기화되는지 안 읽혔다 (2026-09-11).
+  return `"${DEMO_TENANT.teamName}"을 둘러보는 중입니다 · 읽기 전용 · 매일 ${DEMO_TENANT.resetAt}(한국 시간)에 처음 상태로 되돌아갑니다`
 }

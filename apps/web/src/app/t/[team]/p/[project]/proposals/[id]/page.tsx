@@ -8,6 +8,7 @@ import {
   type ProjectRef, type VersionRow,
 } from '../../../../../../../lib/web/queries'
 import { writeDoor } from '../../../../../../../lib/web/actor'
+import { useMilestoneTitles } from '../../../../../../../lib/web/milestone-titles'
 import { useAsync } from '../../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../../components/project-gate'
 import { ProposalDecisions, ProposalHead, ProposalItemCard } from '../../../../../../../components/proposals'
@@ -61,6 +62,8 @@ function ProposalDetailView({
 }) {
   const detail = useAsync(() => fetchProposal(proposalId), [proposalId])
   const versions = useAsync(() => fetchVersions(project.id), [project.id])
+  //  「관련 마일스톤」의 제목 — 목록 화면과 같은 표를 읽는다 (`lib/web/milestone-titles.ts`).
+  const titles = useMilestoneTitles(project.id)
 
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState<ProposalAction | null>(null)
@@ -90,7 +93,8 @@ function ProposalDetailView({
   return (
     <>
       <header className="col-tight">
-        <a className="meta" href={`${base}/proposals`}>← 제안 목록</a>
+        {/* 화살표 기호를 쓰지 않는다 — 특수문자 아이콘은 이 저장소 어디에도 없다 (DESIGN_BRIEF §3 · 2026-09-11). */}
+        <a className="meta" href={`${base}/proposals`}>제안 목록으로 돌아가기</a>
         <h1 className="text-section">제안 상세</h1>
       </header>
 
@@ -101,7 +105,7 @@ function ProposalDetailView({
 
       {detail.result.state === 'ready' ? (
         <>
-          <ProposalHead proposal={detail.result.data} base={versionOf(detail.result.data.base_version_id)} />
+          <ProposalHead proposal={detail.result.data} base={versionOf(detail.result.data.base_version_id)} titles={titles} />
 
           {detail.result.data.items.map((item, i) => (
             <ProposalItemCard

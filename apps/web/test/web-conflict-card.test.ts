@@ -207,15 +207,16 @@ describe('🔴 답이 갈 자리를 사람이 고른다 (FINDINGS 105)', () => {
   })
 
   //  🔴 **없는 것을 약속하지 않는다** (FINDINGS 66 과 같은 금지).
-  it('고르기 전에는 「기록만」이라고 말하고, 고른 뒤에만 항목을 약속한다', () => {
+  it('고르기 전에는 「답만 저장」이라고 말하고, 고른 뒤에만 항목을 약속한다', () => {
     const before = text(draw({ conflict: row('open_question'), a: null, b: null, saveAs: '' }))
-    expect(before).toContain('기록으로만 남습니다')
+    //  낱말은 화면 3(`question-stack.tsx`)과 같다 — 두 화면이 같은 고르개에 다른 말을 하면 안 된다 (2026-09-11).
+    expect(before).toContain('답만 저장됩니다')
     expect(before).not.toContain('초안 항목 한 개가 됩니다')
 
     const after = text(draw({ conflict: row('open_question'), a: null, b: null, saveAs: 'goal' }))
     expect(after).toContain(ANSWER_SLOTS.goal.label)
     expect(after).toContain('초안 항목 한 개가 됩니다')
-    expect(after).not.toContain('기록으로만 남습니다')
+    expect(after).not.toContain('답만 저장됩니다')
   })
 
   //  ⚠ 씨앗 질문은 자리가 표에 있어서 물을 것이 없다 — 물으면 사람이 고른 자리와
@@ -223,7 +224,7 @@ describe('🔴 답이 갈 자리를 사람이 고른다 (FINDINGS 105)', () => {
   it('씨앗 질문 카드에는 고르는 칸도 약속 문장도 없다', () => {
     const t = text(draw({ conflict: row('seed_question'), a: null, b: null }))
     expect(t).not.toContain('이 답을 무엇으로 저장할까요')
-    expect(t).not.toContain('기록으로만 남습니다')
+    expect(t).not.toContain('답만 저장됩니다')
   })
 })
 
@@ -319,7 +320,7 @@ describe('🔴 종류마다 갈리는 것이 표에서만 온다', () => {
     expect(text(document)).toContain('120–480번째 글자')
     expect(text(document)).not.toContain('item_retry_policy')
     //  ③ 가리킬 것이 없는 카드는 **아무 근거도 지어내지 않는다.**
-    expect(text(none)).toContain('가리킬 문서도 항목도 없습니다')
+    expect(text(none)).toContain('답이 그대로 근거입니다')
     expect(text(none)).not.toContain('item_retry_policy')
     expect(text(none)).not.toContain('120–480번째 글자')
   })
@@ -437,13 +438,35 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
     expect(medium).not.toContain('chip-strong')
   })
 
-  it('🔴 owner 가 아니면 결정 버튼을 그리지 않는다 — 누르면 403 인 버튼을 두지 않는다', () => {
+  //  🔴 2026-09-11 — 버튼을 **숨기지 않고 잠근다** (DESIGN_BRIEF §5 「버튼을 숨기지는 않는다 — 막는 것은 서버다」).
+  //     못 누르는 사람에게도 선택지 넷과 「고르면 무슨 일이 나나」는 보여야 한다 — 그게 이 화면의 존재 이유다.
+  //     잠긴 버튼은 403 을 낼 수 없다. 누를 수 없으니까.
+  it('🔴 owner 가 아니면 결정 버튼을 전부 잠근다 — 누르면 403 인 **활성** 버튼을 두지 않는다', () => {
     const html = draw({ canDecide: false })
-    expect(html).not.toContain('<button')
+    const buttons = html.match(/<button[^>]*>/g) ?? []
+    expect(buttons.length, '버튼이 없다 — 숨기지 말고 잠가라').toBe(CONFLICT_CHOICES.length)
+    for (const b of buttons) expect(b, b).toContain('disabled=""')
+    expect(html).toMatch(/<input[^>]*disabled=""/)
     const t = text(html)
     expect(t).toContain('이 결정은 팀장이 합니다')
+    //  선택지와 그 결과가 보인다 — 잠겼을 뿐이다.
+    expect(t).toContain('둘 다 보류')
+    expect(t).toContain('코드 항목 → 「폐기」')
     //  🔴 그래도 **근거는 그대로 보인다** — owner 에게 보여 주려면 봐야 한다 (P7).
     expect(t).toContain('paylab-api/src/payment/retry.ts')
+    //  owner 에겐 잠긴 버튼이 없다.
+    expect(draw().match(/<button[^>]*disabled=""/g)).toBeNull()
+  })
+
+  it('🔴 특수문자 아이콘(⚠ ✓ ✕ ◌ ● § ¶)이 어느 모양에도 없다 — 색점과 글자뿐이다 (DESIGN_BRIEF §3)', () => {
+    for (const s of SHAPES) expect(draw(s.over), s.what).not.toMatch(/[⚠✓✕◌●§¶]/)
+  })
+
+  it('AI 의 질문은 빈 줄로 갈린 문단마다 한 단락이다 — 기록물 각주가 질문에 붙어 읽히지 않는다', () => {
+    const html = draw({ conflict: row('contradiction', { question: '어느 쪽이 맞습니까?\n\n그때의 기록입니다.' }) })
+    expect(html.match(/<p class="ink-2">/g)?.length).toBe(2)
+    expect(text(html)).toContain('어느 쪽이 맞습니까?')
+    expect(text(html)).toContain('그때의 기록입니다.')
   })
 
   it('member 도 질문에는 답할 수 있다 (`POST /questions` 는 member 다)', () => {

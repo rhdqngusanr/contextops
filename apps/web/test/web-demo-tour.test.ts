@@ -50,8 +50,8 @@ describe('② 문장의 숫자는 씨앗의 사실이다', () => {
     expect(text).toContain(`기기 ${seed.devices.length}대`)
   })
 
-  it(`근거 n / ${TERMINAL_REPLAY.milestone.done_when.length}`, () => {
-    expect(text).toContain(`근거 n / ${TERMINAL_REPLAY.milestone.done_when.length}`)
+  it(`완료 조건 ${TERMINAL_REPLAY.milestone.done_when.length}개`, () => {
+    expect(text).toContain(`완료 조건 ${TERMINAL_REPLAY.milestone.done_when.length}개`)
   })
 })
 

@@ -13,7 +13,7 @@ import { structureCandidates, type StructureCandidate } from '../src/lib/web/que
 // =====================================================================
 //  🔴 **AI 결과 카드가 사람의 선택 버튼으로 끝난다** (DESIGN_BRIEF §2-4 · FINDINGS 84)
 //
-//  ★ 왜 이 파일이 생겼나 — 구조화가 끝나면 화면이 「✓ 항목 후보 6개를 찾았습니다」라고
+//  ★ 왜 이 파일이 생겼나 — 정리가 끝나면 화면이 「항목 후보 6개를 찾았습니다」라고
 //    말하고 [Context 보기] 로 보냈는데, **Context 는 비어 있었다.** 후보를 받아들이는
 //    문이 서버에도 화면에도 0곳이었다.
 //
@@ -118,9 +118,12 @@ describe('🔴 후보에는 근거가 같이 나온다', () => {
     expect(structureCandidates({ items })[0]?.body).toBe('')
   })
 
+  //  글자 범위(`120–260번째 글자`)는 안 접히는 조각(`.evidence-range`)으로 싸이므로 태그를 벗기고 견준다 (2026-09-11).
+  const plain = (html: string) => html.replace(/<[^>]+>/g, '')
+
   it('🔴 근거가 카드 글자로 나온다 — `EvidenceLink` 와 **같은 표**를 쓴다', () => {
     const html = render()
-    expect(html).toContain(SRC_LABEL.source_document(REF))
+    expect(plain(html)).toContain(SRC_LABEL.source_document(REF))
   })
 
   it('🔴 근거 없는 후보는 그렇다고 말한다 — 빈 칸을 두면 근거가 있는 것처럼 읽힌다', () => {
@@ -134,8 +137,8 @@ describe('🔴 후보에는 근거가 같이 나온다', () => {
   it('🔴 근거 값이 바뀌면 화면 글자가 바뀐다 (2-B ②단계)', () => {
     const other = { ...REF, start_char: 900, end_char: 950, heading_path: ['환불'] }
     const html = render({ candidates: [{ ...CANDIDATES[0]!, evidence: other }] })
-    expect(html).toContain(SRC_LABEL.source_document(other))
-    expect(html).not.toContain(SRC_LABEL.source_document(REF))
+    expect(plain(html)).toContain(SRC_LABEL.source_document(other))
+    expect(plain(html)).not.toContain(SRC_LABEL.source_document(REF))
   })
 
   it('본문 한 줄이 제목 밑에 나온다 — 다섯 글자만 보고 고르지 않게', () => {

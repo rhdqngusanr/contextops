@@ -127,28 +127,49 @@ function card(over: Partial<ConflictCardState>): string {
   return html(createElement(ConflictCard, { state, on: NOOP }))
 }
 
-describe('G13 ② 충돌 카드 — 「owner 가 합니다」와 [답 저장하기] 는 문이 열린 사람에게만', () => {
-  it('탐지 카드 · 게스트 — owner 문장 대신 읽기 전용 이유, 버튼 없음, 근거는 그대로', () => {
+//  🔴 2026-09-11 — 게스트에게도 결정·답 칸을 **그린다.** 전부 `disabled` 이고 그 밑에 `ReadOnlyNotice`(읽기 전용 이유 +
+//     [내 팀으로 시작하기]) 가 선다 — DESIGN_BRIEF §5 「버튼을 숨기지는 않는다 — 막는 것은 서버다」. 심사위원이 3분 코스의
+//     첫 걸음에서 「결정이 무엇인지」(선택지 넷 · 고르면 진 쪽이 폐기)를 한 번은 봐야 한다. 잠긴 버튼은 403 을 낼 수 없다.
+/** 모든 `<button>`·`<textarea>` 가 잠겨 있나 — 하나라도 활성이면 그 태그를 돌려준다. */
+const liveControls = (markup: string): string[] =>
+  (markup.match(/<(button|textarea|select)[^>]*>/g) ?? []).filter((tag) => !tag.includes('disabled=""'))
+
+describe('G13 ② 충돌 카드 — 문이 닫힌 사람에겐 결정·답 칸이 잠기고 그 밑에 읽기 전용 이유가 선다', () => {
+  it('탐지 카드 · 게스트 — 버튼 넷이 있되 전부 잠김, owner 문장 대신 읽기 전용 이유, 근거는 그대로', () => {
     const guest = card({ door: CLOSED })
-    expect(guest).not.toContain('<button')
+    expect(guest.match(/<button[^>]*>/g)?.length, '버튼이 없다 — 숨기지 말고 잠가라').toBe(4)
+    expect(liveControls(guest)).toEqual([])
+    //  이유는 다른 쓰기 버튼과 같은 조각(`ReadOnlyNotice` · role="status" · [내 팀으로 시작하기]) 이다.
+    expect(guest).toContain('role="status"')
+    expect(guest).toContain('내 팀으로 시작하기')
     const t = text(guest)
     expect(t).toContain(CLOSED.reason)
     expect(t).not.toContain(OWNER_DECIDES)
+    //  선택지와 「고르면 무슨 일이 나나」가 보인다 — 잠겼을 뿐이다.
+    expect(t).toContain('둘 다 보류')
+    expect(t).toContain('→ 「폐기」')
     //  🔴 근거는 여전히 보인다 — 읽기 전용은 「못 바꾼다」지 「못 본다」가 아니다 (P7).
     expect(t).toContain('paylab-api/src/payment/retry.ts')
-    //  member(문 열림 · owner 아님)는 예전 문장 그대로다.
-    expect(text(card({ door: OPEN }))).toContain(OWNER_DECIDES)
+    //  member(문 열림 · owner 아님)는 예전 문장 그대로다 — 잠긴 버튼 밑에 owner 문장, `ReadOnlyNotice` 는 아니다.
+    const member = card({ door: OPEN })
+    expect(text(member)).toContain(OWNER_DECIDES)
+    expect(member).not.toContain('role="status"')
     expect(text(card({}))).toContain(OWNER_DECIDES)
   })
 
-  it('질문 카드 · 게스트 — 답 칸과 [답 저장하기] 가 없고 이유가 뜬다', () => {
+  it('질문 카드 · 게스트 — 답 칸과 [답 저장하기] 가 있되 잠겨 있고 이유가 뜬다', () => {
     const question = { conflict: row('seed_question'), a: null, b: null }
     const guest = card({ ...question, door: CLOSED })
-    expect(guest).not.toContain('<button')
-    expect(guest).not.toContain('<textarea')
+    expect(guest).toContain('<textarea')
+    expect(guest).toContain('답 저장하기')
+    expect(liveControls(guest)).toEqual([])
+    expect(guest).toContain('role="status"')
     expect(text(guest)).toContain(CLOSED.reason)
-    //  member 는 답할 수 있다 (`POST /questions` 는 member 다) — 문이 열려 있으면 예전 그대로.
-    expect(text(card({ ...question, door: OPEN }))).toContain('답 저장하기')
+    //  member 는 답할 수 있다 (`POST /questions` 는 member 다) — 문이 열려 있으면 답 칸이 살아 있다.
+    const member = card({ ...question, door: OPEN })
+    expect(text(member)).toContain('답 저장하기')
+    expect(member).toMatch(/<textarea(?![^>]*disabled="")[^>]*>/)
+    expect(member).not.toContain('role="status"')
   })
 
   it('문장을 고르는 함수 하나 — 닫힌 문이 owner 문장보다 먼저다', () => {
