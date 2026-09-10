@@ -7,7 +7,7 @@ import {
 } from '@contextops/schema'
 import type { WriteDoor } from '../lib/web/actor'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
-import { FALLBACK_NAMES, conflictSentence, sideNames, type SideNames } from '../lib/web/conflict-sides'
+import { CONFLICT_ASK, FALLBACK_NAMES, SOLO_NAME, sideNames, type SideName, type SideNames } from '../lib/web/conflict-sides'
 import { ITEM_GIST_KEY, itemGist } from '../lib/web/item-gist'
 import { dateText } from '../lib/web/time'
 import {
@@ -218,9 +218,7 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
       <h3 className="conflict-head">{CONFLICT_HEADLINE[conflict.kind]}</h3>
       {/* 사람 말 한 문장 — 두 쪽이 **무엇인지**와 **무엇을 정해 달라는지** (`conflictSentence`). 두 항목이 다 있을 때만. */}
       {rule.detected && state.a !== null && state.b !== null ? (
-        <p className="conflict-plain">
-          {conflictSentence(conflict.kind as DetectedConflictKind, sideNames(state.a, state.b), state.a.title, state.b.title)}
-        </p>
+        <ConflictSentence kind={conflict.kind as DetectedConflictKind} a={state.a} b={state.b} />
       ) : null}
       {rule.detected ? null : <p className="ink text-section">{conflict.question}</p>}
 
@@ -248,6 +246,19 @@ export function ConflictCard({ state, on }: { state: ConflictCardState; on: Conf
             : <p className="meta">{blockedText(state)}</p>))
         : <Decided state={state} />}
     </article>
+  )
+}
+
+/**
+ * 머리 밑의 사람 말 한 문장 — 두 쪽의 **이름이 굵다** (사용자: 「지금 문서 / 옛 문서 이런 걸 좀 강조하는 폰트였으면」).
+ * 글자는 `conflictSentence()` 와 같다 — 조각은 굵기만 더한다 (시험은 글자를 잰다).
+ */
+function ConflictSentence({ kind, a, b }: { kind: DetectedConflictKind; a: ContextItemView; b: ContextItemView }) {
+  const names = sideNames(a, b)
+  return (
+    <p className="conflict-plain">
+      <b className={`side-${names.a.tone}`}>{names.a.long}</b>은 「{a.title}」, <b className={`side-${names.b.tone}`}>{names.b.long}</b>은 「{b.title}」입니다. {CONFLICT_ASK[kind]}
+    </p>
   )
 }
 
@@ -283,8 +294,8 @@ const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNod
     const names = sideNames(state.a, state.b)
     return (
       <div className={two ? 'sides' : 'row items-start wrap'}>
-        <ItemSide label={two ? names.a.long : '근거'} itemId={state.conflict.a_item_id} item={state.a} />
-        {two ? <ItemSide label={names.b.long} itemId={state.conflict.b_item_id} item={state.b} /> : null}
+        <ItemSide name={two ? names.a : SOLO_NAME} itemId={state.conflict.a_item_id} item={state.a} />
+        {two ? <ItemSide name={names.b} itemId={state.conflict.b_item_id} item={state.b} /> : null}
       </div>
     )
   },
@@ -307,10 +318,11 @@ const ANCHOR_BODY: Record<ConflictAnchor, (state: ConflictCardState) => ReactNod
 }
 
 /** 어긋난 두 항목 중 한쪽. **근거를 제목 옆에 같이 낸다** (DESIGN_BRIEF §2-1 · P7). */
-function ItemSide({ label, itemId, item }: { label: string; itemId: string | null; item: ContextItemView | null }) {
+function ItemSide({ name, itemId, item }: { name: SideName; itemId: string | null; item: ContextItemView | null }) {
   return (
-    <div className="card pad-sm col-tight grow">
-      <span className="label">{label}</span>
+    //  이 쪽이 **무엇인지**가 제일 크고(표제체 `.side-name`), 색은 사실의 색이다 — 지금 = 초록 위 괘선, 옛 = 주황 위 괘선 + 회색 면 (`side-*`).
+    <div className={`card pad-sm col-tight grow side-card side-${name.tone}`}>
+      <span className={`side-name side-${name.tone}`}>{name.long}</span>
       {item === null ? (
         <>
           {itemId === null

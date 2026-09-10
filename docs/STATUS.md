@@ -141,6 +141,11 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 시험: `web-conflict-card` — 이름이 사실에서 오는지(문서 vs 코드 · stale · 첫째/둘째) · 「A」「B」 홀로 안 나감 · 틀 자리표 안 나감 · 심각도 표시. 전체 1043 초록. DESIGN_BRIEF §4 화면 4 · ⑩.
 `tools/ci.ps1`: 2026-09-10 23:52 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열넷째 판 — 두 쪽의 이름을 크게, 그리고 색으로** (사용자: 「지금 문서 / 옛 문서 이런 걸 좀 강조하는 폰트였으면 좋겠어」 · 「색깔이 다르게 하든지 뭔가 더 눈에 잘 보이면 좋겠네」 · 2026-09-11 새벽).
+크기: 카드 안에서 「지금 적용 중인 규칙」「옛 문서에 남은 규칙」이 제일 크다 — 표제체 600 21px(`.side-name`), 제목은 그 밑 16.5px. 머리 문장(`ConflictSentence` 조각 — 글자는 `conflictSentence()` 와 같다)에서도 두 이름이 굵다.
+색: `SideName.tone` — **사실의 색만** 쓴다. 지금 적용 중 = `ok` 초록(「적용 중」 칩과 같은 색 · 카드 위 괘선 3px + 이름) · 옛 문서 = `warn` 주황(「옛 버전」 칩과 같은 색) + 회색 면 · 코드 = 모노 · 나머지 = 잉크. 초록이 「맞는 쪽」을 뜻하지 않는다 — 결정은 사람 몫(DESIGN_BRIEF §2-4). 시험이 `.side-name side-ok/warn`·`<b class>`·stale 쌍의 색을 잰다.
+`tools/ci.ps1`: 2026-09-11 00:18 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

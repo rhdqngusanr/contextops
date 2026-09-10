@@ -10,19 +10,25 @@ import type { ContextItemView, DetectedConflictKind } from '@contextops/schema'
 //  ⚠ 버튼 문구는 `{a} 쪽이 맞음` 처럼 **「쪽」 뒤에 조사**를 붙인다 — 이름의 받침이 무엇이든 조사가 안 깨진다.
 // =====================================================================
 
-export type SideName = { readonly short: string; readonly long: string }
+/**
+ * `tone` — 이름의 **색** (2026-09-11 · 사용자: 「색깔이 다르게 하든지 뭔가 더 눈에 잘 보이면」). 제품의 칩과 같은 뜻의 색만 쓴다:
+ * 지금 적용 중 = `ok`(「적용 중」 칩) · 옛 문서 = `warn`(「옛 버전」 칩) · 코드 = `code`(모노) · 나머지 = `neutral`.
+ * ⚠ 색은 사실(적용 중인가 · 옛 문서인가)이지 판단(「맞다」)이 아니다 — 초록이 「맞는 쪽」을 뜻하지 않는다. 결정은 사람 몫이다.
+ */
+export type SideTone = 'ok' | 'warn' | 'code' | 'neutral'
+export type SideName = { readonly short: string; readonly long: string; readonly tone: SideTone }
 export type SideNames = { readonly a: SideName; readonly b: SideName }
 
-const CODE: SideName = { short: '코드', long: '코드가 말하는 것' }
-const DOC: SideName = { short: '문서', long: '문서가 말하는 것' }
-const OLD: SideName = { short: '옛 규칙', long: '옛 문서에 남은 규칙' }
-const NOW: SideName = { short: '지금 규칙', long: '지금 적용 중인 규칙' }
-const NEW: SideName = { short: '새 초안', long: '새로 올라온 초안' }
-const LATER: SideName = { short: '최근 것', long: '더 최근에 고친 규칙' }
-const EARLIER: SideName = { short: '이전 것', long: '먼저 있던 규칙' }
+const CODE: SideName = { short: '코드', long: '코드가 말하는 것', tone: 'code' }
+const DOC: SideName = { short: '문서', long: '문서가 말하는 것', tone: 'neutral' }
+const OLD: SideName = { short: '옛 규칙', long: '옛 문서에 남은 규칙', tone: 'warn' }
+const NOW: SideName = { short: '지금 규칙', long: '지금 적용 중인 규칙', tone: 'ok' }
+const NEW: SideName = { short: '새 초안', long: '새로 올라온 초안', tone: 'neutral' }
+const LATER: SideName = { short: '최근 것', long: '더 최근에 고친 규칙', tone: 'neutral' }
+const EARLIER: SideName = { short: '이전 것', long: '먼저 있던 규칙', tone: 'neutral' }
 
 /** 사실로 가를 수 없을 때 — 그리고 한쪽이 없을 때. */
-export const FALLBACK_NAMES: SideNames = { a: { short: '첫째', long: '첫째 규칙' }, b: { short: '둘째', long: '둘째 규칙' } }
+export const FALLBACK_NAMES: SideNames = { a: { short: '첫째', long: '첫째 규칙', tone: 'neutral' }, b: { short: '둘째', long: '둘째 규칙', tone: 'neutral' } }
 
 function sourceKind(item: ContextItemView): 'code' | 'doc' | 'other' {
   const refs = item.source_refs
@@ -39,6 +45,9 @@ function isOld(item: ContextItemView): boolean {
 function nowOrNew(item: ContextItemView): SideName {
   return item.status === 'active' ? NOW : NEW
 }
+
+/** 한쪽뿐인 카드(열린 질문)의 자리 이름 — 짝이 없으니 「근거」다. */
+export const SOLO_NAME: SideName = { short: '근거', long: '근거', tone: 'neutral' }
 
 export function sideNames(a: ContextItemView | null, b: ContextItemView | null): SideNames {
   if (a === null || b === null) return FALLBACK_NAMES

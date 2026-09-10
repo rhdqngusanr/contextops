@@ -406,6 +406,10 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
     expect(names.b.long).toBe('코드가 말하는 것')
     expect(two).toContain(names.a.long)
     expect(two).toContain(names.b.long)
+    //  이름은 카드 안에서 제일 크다(`.side-name`) — 그리고 머리 문장에서도 굵다 (2026-09-11 · 「강조하는 폰트」).
+    const html = draw()
+    expect(html).toContain(`<span class="side-name side-${names.a.tone}">${names.a.long}</span>`)
+    expect(html).toContain(`<b class="side-${names.a.tone}">${names.a.long}</b>`)
     expect(two).toContain(`「${base().a!.title}」`)
     expect(two).toContain('정해 주세요')
     expect(two).not.toMatch(/(^| )[AB]( |$)/)
@@ -413,6 +417,12 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
     const stale = sideNames(item(), item({ id: 'old', tags: ['stale'], status: 'draft', source_refs: [DOC_REF] }))
     expect(stale.a.long).toBe('지금 적용 중인 규칙')
     expect(stale.b.long).toBe('옛 문서에 남은 규칙')
+    //  색은 사실의 색 — 지금 = ok(「적용 중」 칩과 같다) · 옛 = warn(「옛 버전」 칩과 같다). 코드는 모노(code), 문서는 neutral.
+    expect([stale.a.tone, stale.b.tone]).toEqual(['ok', 'warn'])
+    expect([names.a.tone, names.b.tone]).toEqual(['neutral', 'code'])
+    const staleHtml = draw({ b: item({ id: 'old', tags: ['stale'], status: 'draft', source_refs: [DOC_REF] }) })
+    expect(staleHtml).toContain('side-card side-ok')
+    expect(staleHtml).toContain('side-card side-warn')
     //  가를 사실이 없으면 첫째·둘째 — 지어내지 않는다.
     const same = sideNames(item(), item({ id: 'twin' }))
     expect([same.a.short, same.b.short]).toEqual(['첫째', '둘째'])
