@@ -337,6 +337,11 @@ function Hero() {
         {/* 그림의 정본은 `lib/web/art.ts` — 사람이 고른 생성 이미지다 (코드로 그린 그림이 아니다 · DESIGN_BRIEF §3 「그림」).
             첫 화면이라 즉시 받는다. 폭·높이는 정본이 준다 — 늦게 떠도 자리가 안 튄다. */}
         <img src={ART.hero.src} width={ART.hero.width} height={ART.hero.height} alt={ART.hero.alt} loading="eager" />
+        {/* 스톱모션 프레임 — 바닥 그림(완성 장면) 위에 차례로 뜬다. 차례·박자는 CSS(`hero-stop` · nth-child 지연)가 정한다.
+            장식 반복이라 alt 없이 aria-hidden 이다. 움직임 줄이기에서는 전부 사라지고 바닥만 남는다. */}
+        {ART.heroFrames.map((f) => (
+          <img key={f.src} className={styles.heroFrame} src={f.src} width={f.width} height={f.height} alt="" aria-hidden="true" loading="eager" />
+        ))}
       </figure>
     </section>
   )

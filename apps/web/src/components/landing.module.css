@@ -99,13 +99,32 @@
 .ctaRow :global(.btn-primary)::after { content: '→'; margin-left: var(--sp-2); }
 
 /* 히어로 그림 — 사람이 고른 생성 이미지 (`lib/web/art.ts`). 옅은 회색 바탕이라 괘선 하나로 「액자」를 만든다. */
-.heroArt { margin: 0; }
+.heroArt { margin: 0; position: relative; }
 .heroArt img {
   width: 100%;
   height: auto;
   display: block;
   border-radius: var(--radius);
   border: 1px solid var(--line);
+}
+
+/* 스톱모션 — 실이 내려오는 프레임 넷이 바닥 그림(완성 장면) 위에 차례로 뜬다 (`ART.heroFrames`).
+   한 바퀴 6초: 프레임마다 0.8초, 완성 장면이 2.8초 쉰다. `steps(1)` 이라 페이드 없이 딱딱 바뀐다 — 클레이 스톱모션의 손맛.
+   ★ 움직임 줄이기 — 여기서 다루지 않는다. `globals.css` 의 한 블록이 duration 0.01ms·1회로 끝내면 프레임은 전부
+     기본값(opacity 0)으로 돌아가고 바닥 그림만 남는다. 그래서 완성 장면이 **바닥**이어야 한다 — 순서를 바꾸지 마라. */
+.heroFrame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: hero-stop 6s steps(1) infinite;
+}
+.heroFrame:nth-child(3) { animation-delay: 0.8s; }
+.heroFrame:nth-child(4) { animation-delay: 1.6s; }
+.heroFrame:nth-child(5) { animation-delay: 2.4s; }
+@keyframes hero-stop {
+  0% { opacity: 1; }
+  13.34% { opacity: 0; }
+  100% { opacity: 0; }
 }
 
 /* ── Before/After — 히어로 밑의 두 열 ── */

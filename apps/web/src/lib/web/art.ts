@@ -25,6 +25,18 @@ export const ART = {
     alt: '두꺼운 카드 한 장에서 검은 실 세 가닥이 갈라져 아래의 똑같은 카드 셋에 닿는 클레이 그림 — 승인된 Pack 하나가 모든 기기에 같은 버전으로 닿는다',
   },
   /**
+   * 히어로 스톱모션 — 같은 장면을 Codex 가 4장 더 뽑았다(실이 위 카드에서 세 기기로 내려오는 중간 장면 · 실 길이만 다르다).
+   * 완성 장면은 `hero` 자체다. 화면은 이 넷을 `hero` 위에 차례로 띄우고 완성 장면에서 쉰다 (`landing.module.css` 의 `hero-stop`).
+   * alt 는 비어 있다 — 장식 반복이라 `hero` 의 alt 하나면 된다. 비어 있으면 그림 한 장만 선다.
+   * 움직임 줄이기 설정에서는 `globals.css` 의 한 블록이 애니메이션을 끝내 완성 장면만 남는다.
+   */
+  heroFrames: [
+    { src: '/art/hero-frame-1.webp', width: 1536, height: 1024, alt: '' },
+    { src: '/art/hero-frame-2.webp', width: 1536, height: 1024, alt: '' },
+    { src: '/art/hero-frame-3.webp', width: 1536, height: 1024, alt: '' },
+    { src: '/art/hero-frame-4.webp', width: 1536, height: 1024, alt: '' },
+  ] as readonly Artwork[],
+  /**
    * 「어떻게 동작하나요」 세 단계 — 순서는 `HOW_IT_WORKS.steps`(만든다 · 배포한다 · 진행이 보인다)와 같다.
    * 히어로와 같은 시리즈다 — Codex 에 히어로 그림을 `-i` 로 참고로 주고 뽑았다. 단계 수와 다르면 화면은 글로만 선다.
    */
