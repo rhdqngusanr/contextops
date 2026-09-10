@@ -522,6 +522,8 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
 
 ### 7.5 예산 가드 `budget.ts`
 - 환경변수 `AI_DAILY_BUDGET_USD`(기본 3 · 전역), `AI_PROJECT_DAILY_BUDGET_USD`(기본 1 · **프로젝트 하나** — 전역 안에서 다시 가르는 이중 상한 · INBOX H11 · 2026-09-10), `AI_MAX_INPUT_TOKENS`(기본 60k/`withBudget` 한 번). 토큰 추정 = chars/2.5(ko) 보수적. ⚠ 「한 번」은 LLM 왕복이 아니라 **문 하나를 지나는 일 하나**다 — 문서 구조화는 문서 하나가 한 번이고 그 안에 chunk 호출이 여럿 있다 (§7.1).
+- 🔴 **한 달 천장** `AI_MONTHLY_BUDGET_USD`(기본 **10** · 전역 · 2026-09-11 사용자: 「AI API 한 달 요금 10달러 이상 안 나오게」) — UTC 달 창의 `ai_usage` 합계 + 이번 호출의 보수적 추정(출력 = 입력)이 넘으면 `BUDGET_EXCEEDED`. 하루 상한(3 × 30 = 90)만으로는 청구서를 못 막는다. 정본 `features.ts` 의 `DEFAULT_MONTHLY_BUDGET_USD` · 시험 `test/ai-budget.test.ts` 「한 달 천장」.
+- 🔴 **검사와 예약은 한 트랜잭션 · advisory lock 뒤** (2026-09-11) — 자물쇠 안에서 빈도·하루·달을 세고 **추정치(출력 = 입력) 한 줄을 먼저 넣은 뒤** 호출한다. 같은 순간의 다른 요청은 그 예약을 이미 세므로 천장 밑에서 두 배가 새지 않는다. 호출이 끝나면 실제 토큰으로 갱신, 실패하면 예약이 남는다. `AI_DISABLED=1` 은 비상 스위치(DB 도 안 본다). `GET /health` 의 `ai_budget { monthly_usd, spent_month_usd, disabled }` 가 보는 눈이고 `verify:prod` 가 「천장 아래인가」를 잰다.
 - 초과 시 `BUDGET_EXCEEDED` → **화면은 그 사실만 말한다** (문구 정본은 `docs/DESIGN_BRIEF.md` §5).
 - 🔴 **픽스처 결과로 떨어지는 갈래는 없다** (2026-09-09 INBOX G9 — §7.4 의 `/demo/ai-once` 도 없으므로 「게스트 데모에만」도 참이 아니었다. 키가 없는 배포는 job 이 `AI_NOT_CONFIGURED`(503)로 끝나고 화면이 「운영자에게」를 말한다 · `/health` 의 `ai` 칸). SPEC 은 원래 여기서도 「샘플 결과 표시」를 적었는데 **표시하는 코드가 0곳이었고** 화면만 그것을 약속하고 있었다 (FINDINGS 66). 안 만들기로 정한 이유 둘: ① 실제 프로젝트에 픽스처 항목을 넣으면 그 줄은 **사용자의 원문으로 역추적되지 않는다** — P7 이 끊기는 자리다 (§7.4 는 픽스처가 곧 원문이라 안 끊긴다). ② 그러려면 job 이 「실패」도 「성공」도 아닌 **셋째 수명 모양**을 가져야 하는데 (`AI_JOB_STATUS_RULES`), 예산이 없어서 못 한 일을 성공으로 적는 것이 그 표의 뜻과 어긋난다.
 - Rate limit: IP·사용자당 분당 3회(`/ask`, `/demo`), 문서 구조화는 프로젝트당 시간당 5회, **충돌 탐지는 프로젝트당 시간당 10회**. Claude Console 월 한도는 운영자가 $30 설정.

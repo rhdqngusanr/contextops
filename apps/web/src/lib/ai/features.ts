@@ -168,6 +168,13 @@ export const DEFAULT_DAILY_BUDGET_USD = 3
  *   문서 한 장이 약 $0.08(실측 · SUBMISSION 「실측」 표)이라 $1 이면 하루 열두 장이다.
  */
 export const DEFAULT_PROJECT_DAILY_BUDGET_USD = 1
+/**
+ * `AI_MONTHLY_BUDGET_USD` 의 기본값 — **한 달의 천장** (2026-09-11 · 사용자: 「AI API 한 달 요금 10달러 이상 안 나오게 제대로 처리해줘」).
+ * ★ 왜 따로인가 — 하루 $3 × 30일 = $90 이 될 수 있다. 하루 상한은 「하룻밤에 타는 것」을 막고, 달 상한은 **청구서**를 막는다.
+ *   달 창(UTC `YYYY-MM`)의 장부 합계 + 이번 호출의 보수적 추정(입력 = 출력)이 이 값을 넘으면 호출이 아예 안 나간다.
+ *   Google 쪽에는 지출 상한 API 가 없다 — 서버측 LLM 을 부르는 문은 `withBudget()` 하나뿐이라(P3) 이 천장이 곧 청구서의 천장이다.
+ */
+export const DEFAULT_MONTHLY_BUDGET_USD = 10
 /** `AI_MAX_INPUT_TOKENS` 의 기본값 — 호출 하나의 입력 상한 (SPEC §7.5). */
 export const DEFAULT_MAX_INPUT_TOKENS = 60_000
 

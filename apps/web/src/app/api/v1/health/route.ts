@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 
+import { budgetStatus } from '../../../../lib/ai/budget'
 import { aiConfigured } from '../../../../lib/ai/client'
 import { route } from '../../../../lib/api/route'
 
@@ -30,5 +31,10 @@ export const GET = route('GET /health', async (ctx) => {
   }
   //  SPEC §5 는 `{ok, db, ai, version}` 이다. `version` 은 Pack 이 아니라 **API 계약 버전**이라
   //  경로(`/api/v1`)와 같은 값이어야 한다 — 두 곳에 적히지 않게 여기 하나로 둔다.
-  return ctx.ok({ ok: db, db, ai: aiConfigured(), version: 'v1' }, db ? 200 : 503)
+  //  이번 달 AI 지출과 천장 — 배포 검사(`verify:prod`)가 「천장 아래인가」를 여기서 읽는다 (2026-09-11). 본문은 없다.
+  let aiBudget: Awaited<ReturnType<typeof budgetStatus>> | null = null
+  if (db) {
+    try { aiBudget = await budgetStatus(ctx.db) } catch { aiBudget = null }
+  }
+  return ctx.ok({ ok: db, db, ai: aiConfigured(), version: 'v1', ai_budget: aiBudget }, db ? 200 : 503)
 })

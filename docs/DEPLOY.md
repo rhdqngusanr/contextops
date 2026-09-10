@@ -141,6 +141,8 @@ Vercel → Project → Settings → Environment Variables → **Import `.env`** 
 | `SUPABASE_SERVICE_ROLE_KEY` | 코드에 소비처가 **0곳**이다 — 안 쓰는 최고 권한 키가 배포 환경에 남는다 (`.env.vercel` 의 마지막 절) |
 | `AI_MAX_INPUT_TOKENS` | 기본값이 있다 (`src/lib/ai/features.ts` 의 `DEFAULT_MAX_INPUT_TOKENS`). 바꿀 이유가 생기면 그때 넣는다 |
 | `AI_PROJECT_DAILY_BUDGET_USD` | 기본값이 있다 (`src/lib/ai/features.ts` 의 DEFAULT_PROJECT_DAILY_BUDGET_USD = $1 · 전역 $3 안의 프로젝트별 이중 상한 · INBOX H11). 심사 기간에 한 프로젝트가 하루 열두 장 넘게 구조화하면 그때 올린다 |
+| `AI_MONTHLY_BUDGET_USD` | 기본값이 있다 (`src/lib/ai/features.ts` 의 DEFAULT_MONTHLY_BUDGET_USD = **0** · 한 달 청구서의 천장 · 2026-09-11). 하루 $3 × 30 = $90 을 이 값이 막는다 — 낮추고 싶을 때만 넣는다, 올리는 건 사용자가 정한다 |
+| `AI_DISABLED` | 넣지 않는다 — **비상시에만** `1`. 서버측 LLM 을 한 번도 안 부른다 (배포 없이 환경변수만으로 즉시 · health 의 `ai_budget.disabled` 로 보인다). 검사와 예약이 advisory lock 안에서 한 트랜잭션이라 동시 요청도 천장을 못 뚫는다 |
 | `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` | 비우면 이메일 매직링크 문이 **숨겨진다** — 기본 SMTP 는 팀 멤버 주소로만 보내서 심사위원에게는 안 간다. 커스텀 SMTP(Resend 등)를 붙인 뒤에만 `1` 로 |
 
 ### ④ 🙋 배포한다
@@ -219,6 +221,7 @@ README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 �
 | `apps/web/src/lib/demo/reset.ts` (03:00 KST) | `demo-next` 옆자리에 끝까지 심은 뒤에야 옛 팀을 지우고 slug 를 바꾼다 — **심기가 죽으면 어제 데모가 그대로** | 실패 메일을 받으면 `GET /api/v1/cron/demo-reset`(`CRON_SECRET` Bearer)을 손으로 한 번 더 부른다 |
 | `verify:prod` | 배포 직후·릴리즈 뒤 한 번 — Supabase 공급자·JWKS·anon 거부·로그인 버튼·health.ai 까지 | 제출 전날(9/19) 한 번, 제출 뒤 코드가 바뀌면 그때마다 |
 | 동결 | `release` 브랜치를 Production Branch 로 · Preview 배포 끄기 · 루프 STOP | 9/18 저녁 (INBOX 블로커 6) — 심사 기간엔 main 에 push 해도 production 이 안 바뀐다 |
+| AI 청구서의 천장 (`withBudget()` · 2026-09-11) | 이번 달 장부 + 예약이 `AI_MONTHLY_BUDGET_USD`(기본 **$10**)를 넘으면 호출이 안 나간다 — 검사·예약이 advisory lock 안이라 동시 요청도 못 뚫는다. `/api/v1/health` 의 `ai_budget.spent_month_usd` 가 지금까지 쓴 값 | Google Cloud 결제 → 예산·알림에 **$10 알림** 하나 (우리 문 밖의 두 번째 눈) · 심사 기간에 지출이 튀면 Vercel env 에 `AI_DISABLED=1` 을 넣고 Redeploy 없이 확인(서버리스는 다음 요청부터 읽는다) · 천장을 올릴 일은 없다 |
 
 **메일이 왔을 때 3분 안에 보는 순서** — ① 브라우저로 `/demo` 를 연다 (감시가 틀렸을 수도 있다) ② `https://<production>/api/v1/health` — `db:false` 면 Supabase 대시보드(프로젝트가 잠들었나 · 무료 플랜은 7일 미사용 시 일시정지) · `ai:false` 면 Vercel env 의 `GEMINI_API_KEY` ③ `/demo/session` 이 404 면 리셋을 손으로 부른다 ④ 그래도 안 되면 Vercel 대시보드에서 마지막 성공 배포로 **Instant Rollback**.
 

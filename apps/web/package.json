@@ -29,6 +29,8 @@
     "postgres": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-markdown": "^9.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {

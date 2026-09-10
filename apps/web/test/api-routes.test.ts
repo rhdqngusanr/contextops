@@ -78,7 +78,9 @@ describe('health — 공개 · DB 를 실제로 두드린다', () => {
     expect(res.status).toBe(200)
     const data = await dataOf(res)
     //  `ai` 는 이 프로세스에 키가 있는지를 그대로 말한다 (INBOX G9) — 값도 길이도 아닌 boolean 하나다.
-    expect(data).toEqual({ ok: true, db: true, ai: Boolean(process.env.GEMINI_API_KEY), version: 'v1' })
+    expect(data).toMatchObject({ ok: true, db: true, ai: Boolean(process.env.GEMINI_API_KEY), version: 'v1' })
+    //  보는 눈 — 이번 달 AI 지출과 천장 (2026-09-11). 새 DB 라 0 이고, 천장은 기본 $10, 스위치는 꺼져 있다.
+    expect(data.ai_budget).toEqual({ monthly_usd: 10, spent_month_usd: 0, disabled: false })
   })
 
   it('AI 키가 없으면 `ai:false` 다 — 그래도 200 이다 (읽기·발행·sync 는 다 된다 · INBOX G9)', async () => {

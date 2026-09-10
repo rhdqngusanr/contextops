@@ -593,6 +593,35 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 /* 본문은 줄바꿈을 지킨다 — 잘린 문장이 없는지 눈으로 봐야 한다 (loop/PROMPT.md ⑦3층) */
 .pack-linetext { white-space: pre-wrap; word-break: break-word; }
 
+/* ── 화면 7 · 문서로 읽기 (2026-09-11 · 「md 문서로 제대로 볼 수 있게」) — 항목 블록마다 누를 수 있고, 고른 블록은 줄 보기와 같은 색. ── */
+.pack-doc { padding: 0 var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+.pack-block {
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.pack-block-plain { cursor: default; }
+.pack-block:not(.pack-block-plain):hover { background: var(--surface-hi); }
+.pack-block[aria-selected='true'] { background: var(--accent-soft); border-left-color: var(--accent-ink); }
+/* 렌더된 마크다운 — 토큰만. 절 머리는 표제체, 본문은 본문체. */
+.md h1 { font-size: var(--fs-section); margin: var(--sp-2) 0 0; }
+.md h2 { font-size: var(--fs-sub); margin: var(--sp-3) 0 0; }
+.md h3 { font-size: var(--fs-body); font-weight: 700; margin: var(--sp-2) 0 0; }
+.md p { margin: 0; font-size: var(--fs-body); line-height: 1.7; color: var(--ink); }
+.md ul, .md ol { margin: 0; padding-left: var(--sp-5); font-size: var(--fs-body); line-height: 1.7; color: var(--ink); }
+.md li + li { margin-top: var(--sp-1); }
+.md blockquote { margin: 0; padding-left: var(--sp-3); border-left: 3px solid var(--line-hi); color: var(--ink-2); }
+.md code { font-family: var(--font-mono); font-size: var(--fs-table); background: var(--surface-hi); border-radius: var(--radius); padding: 0 var(--sp-1); }
+.md strong { font-weight: 600; color: var(--ink); }
+.md table { border-collapse: collapse; font-size: var(--fs-table); }
+.md th, .md td { border: 1px solid var(--line); padding: var(--sp-1) var(--sp-2); text-align: left; }
+/* 보기 토글 — 눌린 쪽은 회색 면 + 잉크 글자 (내비의 지금 화면과 같은 결). */
+.btn[aria-pressed='true'] { background: var(--surface-hi); border-color: var(--ink-3); color: var(--ink); }
+
 /* ── 화면 6 · 제안 diff — 줄 단위 before/after (DESIGN_BRIEF §4 「화면 6」) ────
    ⚠ **기호(+/−)가 먼저고 색은 거들 뿐이다** — 색만으로 구분하면 발표 영상·인쇄물에서
      추가와 삭제가 같은 회색이 된다 (DESIGN_BRIEF §3 「상태를 색만으로 구분하지 않는다」).

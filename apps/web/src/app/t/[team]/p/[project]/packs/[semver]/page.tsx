@@ -5,6 +5,8 @@ import type { ContextItem, Manifest, ManifestFile } from '@contextops/schema'
 //  ⚠ `@contextops/compiler` 가 아니라 `/tag` 다. index 는 node:crypto 를 재수출해서
 //    브라우저 번들에 못 들어간다 — 이유는 그 패키지의 package.json 주석에 있다.
 import { traceLines, type TraceTag } from '@contextops/compiler/tag'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import { messageOf } from '../../../../../../../lib/web/api'
 import { downloadPackZip, fetchItems, fetchManifest, fetchPackFile, fetchSyncStatus, type ProjectRef } from '../../../../../../../lib/web/queries'
@@ -12,6 +14,7 @@ import { useAsync } from '../../../../../../../lib/web/use-async'
 import { ITEM_TYPE_LABEL, ConfidenceChip, CtxTag, ItemStatusChip } from '../../../../../../../components/chips'
 import { Jargon } from '../../../../../../../components/jargon'
 import { ITEM_GIST_KEY, itemGist } from '../../../../../../../lib/web/item-gist'
+import { packBlocks } from '../../../../../../../lib/web/pack-blocks'
 import { countReceived } from '../../../../../../../components/sync'
 import { EvidenceList } from '../../../../../../../components/evidence'
 import { ProjectGate } from '../../../../../../../components/project-gate'
@@ -29,7 +32,8 @@ import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../../componen
 //  ★ 태그를 읽는 것은 `@contextops/compiler` 의 `traceLines` 다 — **쓰는 코드와 같은 파일**에
 //    있어서 형식이 갈라질 수 없다.
 //
-//  ⚠ 내용은 렌더된 Markdown 이 아니라 **소스 그대로**다. 렌더하면 태그가 사라져서
+//  ★ 2026-09-11 — 기본은 **문서로 읽기**다 (`packBlocks` · 항목 블록 단위로 누른다, 꼬리표는 블록 끝의 칩). [원본 보기]가 옛 줄 보기다.
+//  ⚠ 원본 보기는 렌더된 Markdown 이 아니라 **소스 그대로**다. 렌더하면 태그가 사라져서
 //    「기기에 깔리는 것과 같은 것을 보고 있다」가 거짓이 된다.
 // =====================================================================
 
@@ -202,6 +206,8 @@ function FileView({
   //    영원히 같은 것을 가리킨다.
   //    ⚠ 서버 렌더에는 조각이 없다 — 마운트 뒤에 읽는다 (`useEffect`).
   const [line, setLine] = useState<number | null>(null)
+  //  문서로 읽기가 기본이다 — 원본(줄 번호 · 꼬리표 그대로)은 토글 (2026-09-11).
+  const [mode, setMode] = useState<'doc' | 'raw'>('doc')
   useEffect(() => {
     const m = /^#L(\d+)$/.exec(window.location.hash)
     if (m) setLine(Number(m[1]) - 1)
@@ -220,6 +226,7 @@ function FileView({
     [body.result],
   )
   const selectedTag = line === null ? undefined : trace.get(line)
+  const blocks = useMemo(() => (body.result.state === 'ready' ? packBlocks(body.result.data) : []), [body.result])
 
   if (body.result.state === 'loading') return <div className="card pad grow"><Skeleton rows={10} /></div>
   if (body.result.state === 'error') {
@@ -229,25 +236,56 @@ function FileView({
   return (
     <>
       <section className="card grow scroll-x">
-        <div className="pad-sm row-between">
+        <div className="pad-sm row-between wrap">
           <span className="mono ink">{file.path}</span>
-          <span className="meta mono" title={file.sha256}>sha256 {file.sha256.slice(0, 8)} · {file.size}B</span>
+          <span className="row wrap">
+            {/* 보기 토글 — 문서로(기본) / 원본(줄 번호·꼬리표). 둘 다 같은 줄 → 항목 표를 읽는다. */}
+            <button type="button" className="btn btn-sm" aria-pressed={mode === 'doc'} onClick={() => setMode('doc')}>문서로 보기</button>
+            <button type="button" className="btn btn-sm" aria-pressed={mode === 'raw'} onClick={() => setMode('raw')}>원본 보기</button>
+            <span className="meta mono" title={file.sha256}>sha256 {file.sha256.slice(0, 8)} · {file.size}B</span>
+          </span>
         </div>
-        {/* 소스 그대로. 렌더하지 않는다 — 태그가 보여야 역추적이 눈에 보인다. */}
-        <pre className="pack-body mono">
-          {lines.map((text, i) => (
-            <button
-              key={i}
-              type="button"
-              className="pack-line"
-              aria-selected={selectedTag !== undefined && trace.get(i) === selectedTag}
-              onClick={() => pick(i)}
-            >
-              <span className="pack-lineno ink-3">{i + 1}</span>
-              <span className="pack-linetext">{text === '' ? ' ' : text}</span>
-            </button>
-          ))}
-        </pre>
+        {mode === 'doc' ? (
+          //  문서로 — 항목 블록마다 누를 수 있다. 꼬리표(HTML 주석)는 렌더에서 빠지고 블록 끝의 칩이 대신 선다 (P7 은 그대로).
+          <div className="pack-doc md">
+            {blocks.map((b) => (
+              b.tag === null ? (
+                <div key={b.start} className="pack-block pack-block-plain">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{b.text}</ReactMarkdown>
+                </div>
+              ) : (
+                <div
+                  key={b.start}
+                  role="button"
+                  tabIndex={0}
+                  className="pack-block"
+                  aria-selected={selectedTag !== undefined && b.tag === selectedTag}
+                  onClick={() => pick(b.end)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(b.end) } }}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{b.text}</ReactMarkdown>
+                  <CtxTag itemId={b.tag.itemId} revision={b.tag.revision} />
+                </div>
+              )
+            ))}
+          </div>
+        ) : (
+          /* 원본 그대로. 렌더하지 않는다 — 태그가 보여야 역추적이 글자로 보인다. */
+          <pre className="pack-body mono">
+            {lines.map((text, i) => (
+              <button
+                key={i}
+                type="button"
+                className="pack-line"
+                aria-selected={selectedTag !== undefined && trace.get(i) === selectedTag}
+                onClick={() => pick(i)}
+              >
+                <span className="pack-lineno ink-3">{i + 1}</span>
+                <span className="pack-linetext">{text === '' ? ' ' : text}</span>
+              </button>
+            ))}
+          </pre>
+        )}
       </section>
 
       <aside className="card pad col pack-side">

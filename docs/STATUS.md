@@ -160,6 +160,12 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 시험: `web-diff-words.test.ts`(덧붙음/빠짐/합침/차례 · 상태 문장 5종). ⚠ 프로덕션 데모의 **씨앗 글자**(항목 제목·설명·제안 제목)는 매일 03:00 KST 리셋 때 새 빌드의 씨앗으로 바뀐다 — 그 전에는 옛 문장(「카드 원본이 우리 망에…」)이 보인다 (사용자 캡처가 그것이었다).
 `tools/ci.ps1`: 2026-09-11 01:29 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열일곱째 판 — 한 달 $10 천장 · Pack 을 문서로 읽기** (사용자: 「AI API 한 달 요금 10달러 이상 안 나오게 제대로 처리해줘」 · 「여기 md 문서로 제대로 볼 수 있게 하는 건 어려울까?」 · 2026-09-11).
+**돈의 천장**: `withBudget()` 에 ④ 이번 달(UTC `YYYY-MM` · `ai_usage.day` 앞 7자) 합계 + 이번 호출의 보수적 추정(**출력 = 입력**)이 `AI_MONTHLY_BUDGET_USD`(기본 **10** · `DEFAULT_MONTHLY_BUDGET_USD`)를 넘으면 `BUDGET_EXCEEDED`. 하루 $3 × 30 = $90 이 될 수 있어 하루 상한만으로는 청구서를 못 막았다. 서버측 LLM 을 부르는 문이 이것 하나(P3)라 이 천장이 곧 청구서의 천장 — Google 쪽엔 지출 상한 API 가 없다. 넘쳐도 호출 한 번의 실제 출력이 추정을 넘는 만큼(센트)뿐. 시험 4칸(기본값 · 천장에 닿으면 막고 올리면 지나감 · 지난달은 안 셈 · 출력 보수 추정). `.env.example`·SPEC §7.5 · 화면 문구 「AI 예산이 소진되었습니다. 하루 상한이면 내일, 한 달 상한이면 다음 달에」(DESIGN_BRIEF §5 거울).
+**문구가 아니라 구조로** (사용자: 「문구 말고도 진짜 제대로 구현해줘」): ⓪ `AI_DISABLED=1` 비상 스위치(DB 도 안 보고 전부 막는다 · 배포 없이 환경변수만으로) · 🔴 **검사와 예약이 한 트랜잭션, `pg_advisory_xact_lock` 뒤** — 자물쇠 안에서 빈도·하루·달을 세고 추정치(출력 = 입력) 한 줄을 **먼저** 넣은 뒤 호출, 끝나면 실제 토큰으로 갱신, 실패하면 예약이 남는다. 서버리스의 동시 요청이 천장 밑에서 두 배로 새던 자리를 막았다 — 시험이 「호출이 도는 동안 온 둘째 호출이 막힌다」를 실제로 잰다. **보는 눈**: `GET /health` 의 `ai_budget { monthly_usd, spent_month_usd, disabled }` · `verify:prod` 3칸(천장 ≤ 10 · 지출 < 천장 · 스위치 꺼짐) · DEPLOY.md 에 사람 몫 한 줄(Google Cloud 결제 알림).
+**Pack 을 문서로**: 화면 7 의 기본을 **문서로 읽기**로 — `react-markdown`(+`remark-gfm`)으로 렌더하되 `lib/web/pack-blocks.ts` 가 `traceLines` 가 칠한 같은 꼬리표의 줄들을 한 블록으로 묶어 **항목 블록 단위로 누른다**(블록 끝에 `CtxTag` 칩 — 꼬리표는 렌더에서 빠지지만 역추적은 그대로). [원본 보기] 토글이 옛 줄 보기. 절 머리·머리말은 누를 수 없는 블록으로 남긴다. `test/web-pack-blocks.test.ts` 가 골든 Pack 으로 「블록의 꼬리표 집합 = traceLines 의 집합 · 블록 끝 줄 = 꼬리표 줄 · 주석 없음 · 여러 줄 항목 = 한 블록」을 센다. 의존성 둘 추가(react-markdown 9 · remark-gfm 4).
+`tools/ci.ps1`: 2026-09-11 02:25 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

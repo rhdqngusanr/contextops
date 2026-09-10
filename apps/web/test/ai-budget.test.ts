@@ -11,13 +11,14 @@ import {
   DEFAULT_AI_MODEL,
   DEFAULT_DAILY_BUDGET_USD,
   DEFAULT_MAX_INPUT_TOKENS,
+  DEFAULT_MONTHLY_BUDGET_USD,
   DEFAULT_PROJECT_DAILY_BUDGET_USD,
   GEMINI_36_INTRO_PRICE_UNTIL,
   costMicros,
   estimateTokens,
 } from '../src/lib/ai/features'
 import { currentModel } from '../src/lib/ai/model'
-import { actorHash, dailyBudgetUsd, maxInputTokens, projectDailyBudgetUsd, utcDay, withBudget } from '../src/lib/ai/budget'
+import { actorHash, budgetStatus, dailyBudgetUsd, maxInputTokens, monthlyBudgetUsd, projectDailyBudgetUsd, utcDay, utcMonth, withBudget } from '../src/lib/ai/budget'
 import type { Db } from '../src/db/client'
 
 // =====================================================================
@@ -33,7 +34,7 @@ import type { Db } from '../src/db/client'
 
 let pg: PGlite | undefined
 let db: Db
-const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_PROJECT_DAILY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL'] as const
+const ENV_KEYS = ['AI_DAILY_BUDGET_USD', 'AI_PROJECT_DAILY_BUDGET_USD', 'AI_MONTHLY_BUDGET_USD', 'AI_MAX_INPUT_TOKENS', 'GEMINI_MODEL', 'AI_DISABLED'] as const
 const saved: Record<string, string | undefined> = {}
 
 const TEAM = '22222222-2222-4222-8222-222222222222'
@@ -203,12 +204,108 @@ describe('withBudget 이 실제로 막는다', () => {
       .rejects.toThrow('upstream 500')
     const rows = await db.select().from(aiUsage)
     expect(rows.length).toBe(1)
+    //  예약이 그대로 남는다 — 출력도 입력만큼(보수적). 실패한 호출을 적게 세는 쪽으로는 안 틀린다 (2026-09-11).
     expect(rows[0]!.inputTokens).toBe(estimateTokens(250))
-    expect(rows[0]!.outputTokens).toBe(0)
+    expect(rows[0]!.outputTokens).toBe(estimateTokens(250))
   })
 })
 
 // ---------------------------------------------------------------------
+describe('🔴 한 달 천장 — 청구서가 $10 을 넘지 않는다 (2026-09-11 · 「AI API 한 달 요금 10달러 이상 안 나오게」)', () => {
+  it('기본값은 $10 이고 하루 예산보다 크다 — 하루가 달을 넘길 수 없다', () => {
+    expect(DEFAULT_MONTHLY_BUDGET_USD).toBe(10)
+    expect(monthlyBudgetUsd()).toBe(DEFAULT_MONTHLY_BUDGET_USD)
+    expect(DEFAULT_MONTHLY_BUDGET_USD).toBeGreaterThanOrEqual(DEFAULT_DAILY_BUDGET_USD)
+    process.env.AI_MONTHLY_BUDGET_USD = '4.5'
+    expect(monthlyBudgetUsd()).toBe(4.5)
+  })
+
+  it('이번 달 장부가 천장에 닿으면 BUDGET_EXCEEDED — 오늘 예산이 남아 있어도 · 천장을 올리면 같은 호출이 지나간다', async () => {
+    process.env.AI_DAILY_BUDGET_USD = '100'
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '100'
+    process.env.AI_MONTHLY_BUDGET_USD = '2'
+    //  같은 달의 다른 날에 $2.1 어치를 썼다 (200k 입력 · 200k 출력 · 3.5 Flash 정가).
+    const earlier = new Date('2026-09-01T09:00:00.000Z')
+    expect(utcMonth(earlier)).toBe(utcMonth(NOW))
+    await withBudget('conflict', { projectId: PROJECT, inputChars: 1, now: earlier }, fakeCall(200_000, 200_000))
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall(1, 1)))
+      .rejects.toMatchObject({ code: 'BUDGET_EXCEEDED' })
+    process.env.AI_MONTHLY_BUDGET_USD = '10'
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall(1, 1))).resolves.toBe('ok')
+  })
+
+  it('지난달 쓴 값은 이번 달 천장을 먹지 않는다 (창은 UTC 달)', async () => {
+    process.env.AI_DAILY_BUDGET_USD = '100'
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '100'
+    process.env.AI_MONTHLY_BUDGET_USD = '0.01'
+    const lastMonth = new Date('2026-08-31T23:00:00.000Z')
+    expect(utcMonth(lastMonth)).toBe('2026-08')
+    await withBudget('conflict', { projectId: PROJECT, inputChars: 1, now: lastMonth }, fakeCall(200_000, 200_000))
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fakeCall(1, 1))).resolves.toBe('ok')
+  })
+
+  it('천장 앞에서는 출력도 입력만큼 나온다고 보수적으로 잰다 — 입력만 세면 마지막 호출이 천장을 넘긴다', async () => {
+    process.env.AI_DAILY_BUDGET_USD = '100'
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '100'
+    //  4,000자 → 1,600 토큰. 입력만이면 $0.0024, 입력+출력이면 $0.0168 — 천장을 그 사이에 둔다.
+    const est = estimateTokens(4_000)
+    const inputOnly = costMicros(currentModel(), est, 0) / 1_000_000
+    const both = costMicros(currentModel(), est, est) / 1_000_000
+    process.env.AI_MONTHLY_BUDGET_USD = String((inputOnly + both) / 2)
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 4_000, now: NOW }, fakeCall(1, 1)))
+      .rejects.toMatchObject({ code: 'BUDGET_EXCEEDED' })
+  })
+})
+
+describe('🔴 예약이 먼저다 — 검사와 기록이 한 자물쇠 안에 있다 (2026-09-11 · 「문구 말고 진짜 제대로」)', () => {
+  it('호출이 도는 동안 이미 장부에 예약 한 줄이 있고(추정치 · 출력 = 입력), 끝나면 실제 토큰으로 갱신된다', async () => {
+    let during: { input: number; output: number; cost: number }[] = []
+    const fn = async () => {
+      const rows = await db.select().from(aiUsage)
+      during = rows.map((r) => ({ input: r.inputTokens, output: r.outputTokens, cost: r.costMicros }))
+      return { value: 'ok', model: currentModel(), inputTokens: 7, outputTokens: 3 }
+    }
+    await withBudget('conflict', { projectId: PROJECT, inputChars: 250, now: NOW }, fn)
+    const est = estimateTokens(250)
+    expect(during).toEqual([{ input: est, output: est, cost: costMicros(currentModel(), est, est) }])
+    const after = await db.select().from(aiUsage)
+    expect(after).toHaveLength(1)
+    expect(after[0]).toMatchObject({ inputTokens: 7, outputTokens: 3, costMicros: costMicros(currentModel(), 7, 3) })
+  })
+
+  it('호출 중인 예약이 다음 요청의 천장 계산에 든다 — 동시 호출이 천장을 두 배로 못 뚫는다', async () => {
+    process.env.AI_DAILY_BUDGET_USD = '100'
+    process.env.AI_PROJECT_DAILY_BUDGET_USD = '100'
+    //  천장을 「호출 하나의 예약」보다 조금 크게 둔다 — 첫 호출은 지나가고, 그 호출이 도는 동안 온 둘째는 막혀야 한다.
+    const est = estimateTokens(4_000)
+    process.env.AI_MONTHLY_BUDGET_USD = String(costMicros(currentModel(), est, est) / 1_000_000 * 1.5)
+    let secondFailed: unknown = null
+    const fn = async () => {
+      //  첫 호출이 도는 동안 둘째 호출이 온다 — 첫 예약이 이미 장부에 있어 막혀야 한다.
+      try { await withBudget('conflict', { projectId: PROJECT, inputChars: 4_000, now: NOW }, fakeCall(1, 1)) } catch (e) { secondFailed = e }
+      return { value: 'ok', model: currentModel(), inputTokens: 1, outputTokens: 1 }
+    }
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 4_000, now: NOW }, fn)).resolves.toBe('ok')
+    expect(secondFailed).toMatchObject({ code: 'BUDGET_EXCEEDED' })
+  })
+
+  it('AI_DISABLED=1 이면 DB 도 안 보고 막는다 — 비상 스위치', async () => {
+    process.env.AI_DISABLED = '1'
+    let called = false
+    const fn = async () => { called = true; return { value: 'ok', model: currentModel(), inputTokens: 1, outputTokens: 1 } }
+    await expect(withBudget('conflict', { projectId: PROJECT, inputChars: 10, now: NOW }, fn)).rejects.toMatchObject({ code: 'BUDGET_EXCEEDED' })
+    expect(called).toBe(false)
+    expect((await db.select().from(aiUsage)).length).toBe(0)
+  })
+
+  it('보는 눈 — budgetStatus 가 이번 달 지출(USD)과 천장·스위치를 낸다', async () => {
+    expect(await budgetStatus(db, NOW)).toEqual({ monthly_usd: 10, spent_month_usd: 0, disabled: false })
+    await withBudget('conflict', { projectId: PROJECT, inputChars: 1, now: NOW }, fakeCall(200_000, 200_000))
+    const status = await budgetStatus(db, NOW)
+    expect(status.spent_month_usd).toBeCloseTo(costMicros(currentModel(), 200_000, 200_000) / 1_000_000, 3)
+  })
+})
+
 describe('빈도 제한 — AI_FEATURE_LIMITS 의 줄마다 결과가 갈린다', () => {
   it('ask 는 분당 3회에서 RATE_LIMITED (SPEC §7.5)', async () => {
     const ctx = { projectId: PROJECT, actor: 'user-a', inputChars: 10, now: NOW }

@@ -242,6 +242,11 @@ async function main(origin: string): Promise<void> {
   //  🔴 AI 키가 꽂힌 배포인가 (INBOX G9). 없으면 200 을 내고 멀쩡히 돌다가 심사위원이 [구조화하기] 를
   //     누른 순간 `AI_NOT_CONFIGURED` 다 — 그걸 배포 직후에 잡는 자리가 여기다.
   check('health 가 AI 를 부를 수 있다 (ai:true — GEMINI_API_KEY 가 Vercel env 에 있다)', healthData?.ai === true, JSON.stringify(healthData))
+  //  🔴 청구서의 천장 (2026-09-11 · 「한 달 요금 10달러 이상 안 나오게」) — 배포가 천장을 알고, 이번 달 지출이 그 아래이고, 비상 스위치가 안 켜져 있다.
+  const budget = (healthData as { ai_budget?: { monthly_usd?: number; spent_month_usd?: number; disabled?: boolean } } | null)?.ai_budget
+  check('health 가 이번 달 AI 천장을 낸다 (ai_budget.monthly_usd ≤ 10)', typeof budget?.monthly_usd === 'number' && budget.monthly_usd <= 10, JSON.stringify(budget))
+  check('이번 달 AI 지출이 천장 아래다', typeof budget?.spent_month_usd === 'number' && typeof budget?.monthly_usd === 'number' && budget.spent_month_usd < budget.monthly_usd, JSON.stringify(budget))
+  check('AI 비상 스위치가 꺼져 있다 (ai_budget.disabled:false)', budget?.disabled === false, JSON.stringify(budget))
 
   // ④⑤ Cron 자물쇠 — **변수를 안 넣은 배포는 여기서 빨개진다** (500 이거나 200 이다)
   const noAuth = await probe(origin, '/api/v1/cron/demo-reset')
