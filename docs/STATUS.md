@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-10 낮 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **프론트를 웜 화이트 한 벌로 리디자인**(Taste MCP anti-slop 지침 · 글꼴 저장소 안 · ci GREEN · 아직 push 전) · production <https://contextops-rosy.vercel.app> 은 아직 옛 다크 벌 · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄 + 이 세션의 🙋 셋._
+_마지막 갱신: 2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **프론트 리디자인 push·배포 완료** — 뉴트럴 모노크롬 · Codex 클레이 그림 + 스톱모션 · 한 줄 「팀의 기억과 AI의 기억을 한 방향으로」 · production <https://contextops-rosy.vercel.app> 이 새 벌 (`verify:prod` 44/0 · 15:0x) · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄 + 이 세션의 🙋 둘(Taste 영구 로그인 · Taste 샘플)._
 
 ---
 
@@ -70,6 +70,13 @@ AI 산출물의 통계적 기본값으로 짚는다. 배포돼 있던 화면이 
 ⚠ 훅 시험이 **두 번째로** 빨갰다(14:41 · 같은 자리) → 원인을 잡았다: `GIT_TIMEOUT_MS` 1000 이 바쁜 Windows 에서 모자라 `changedPaths` 가 비어
 「변경 없음」으로 조용히 끝났다. git 1400 · 네트워크 2000 (합 4800 < 5000 · 시험이 센다) · 고친 뒤 `hooks.test` 3회 연속 초록.
 `tools/ci.ps1`: 2026-09-10 14:51 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
+🔴 **다섯째 판 — push·배포, 그리고 클레이에 글씨** (사용자: 「클레이에 글씨들이 없잖아 · 문구 다 바꿨으면 push 배포도 해줘」).
+push: `375be95..504bb66` 일곱 커밋 → Vercel 이 새 벌을 냈다 — 랜딩 200 · `/art/hero-pack.webp` 200 · `/fonts/…` 200 · `verify:prod --url` **44/0** (`evidence/…/production/`).
+글씨: 여덟 장을 `-i` 참고로 주고 새겨진 글씨만 더해 Codex 로 다시 뽑았다 — 위 카드 `CLAUDE.md` · 아래 `A`·`B`·`C` · 단계 2 `v1.1.0` · 단계 3 `Roadmap`
+(전부 제품에 실제로 있는 이름·버전 · 없는 숫자·판정은 새기지 않았다). 다섯 프레임의 구도가 그대로였다(시트 `evidence/…/art/labeled/`). WebP 여덟 합 152KB · alt 갱신.
+⚠ 밟은 것: `art.ts` 머리 주석에 `//` 없는 줄을 끼워 넣어 typecheck·시험 셋이 빨갰다 — 주석 블록에 줄을 더할 때는 앞머리까지 같이.
+`tools/ci.ps1`: 2026-09-10 15:13 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
