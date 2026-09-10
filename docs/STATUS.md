@@ -127,6 +127,13 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 시험: 잠긴 낱말 8곳을 새 말로(owner만·다음 Pack·구조화하기·due·자) · 팔레트 시험 화면 fixture 에 `describe` · 전체 1037 초록. DESIGN_BRIEF §4 머리에 여덟 항목을 적었다.
 `tools/ci.ps1`: 2026-09-10 22:14 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열두째 판 — 특수문자를 걷어내고 카드를 사람 말로** (사용자가 정리 카드 A 쪽 글자를 통째로 붙이며: 「§ ¶ ✓ ● · rev 같은 특수문자들이 마음에 안 든다 · 여전히 비개발자가 봤을 때 하나도 모르겠다」).
+기호: 칩의 문자 아이콘(✓ ⚠ ✎ ⇩ ? ◷ ⊘ ● ◐ ○ ⚡ ⌛ ⧉ ⇄ ▲ ◆ ▽ + ± ✳)을 전부 뺐다 — `ChipSpec` 은 `{label, tone}` 이고 상태색은 CSS 원(`.chip-dot` 6px)이 진다. 타입 기호 표(`ITEM_TYPE_ICON`·`TypeIcon` § ◎ ▤ ⌗ ⬡ ⚖ ⇄ ▲ ◆)와 근거 기호(`SRC_ICON` ¶ ⌘ ↗ ✍) 삭제. 배너의 ◇ · 랜딩 04 의 ✳ → 색점. 꼬리표 `· rev 3` → `개정 3`. 근거 한 줄은 `문서 「제목」 / 절 · n–m번째 글자 · #판` · `코드 경로:줄`(› 와 § 없음).
+카드 A/B 의 차례: **제목 → 규칙(이름표) → 설명 → 낱말 풀이 → 상태·근거 확신·갱신·꼬리표 → 근거**. 이름표는 `ITEM_GIST_KEY`(규칙·제약·목표…) · `.key-line`. **낱말 풀이**의 정본은 `lib/web/jargon.ts`(PSP·지수 백오프·타임아웃·5xx·4xx·401·멱등키·웹훅·payload·PII·CVC·SLA·p95·배치·원장·토큰·서명 검증·에스컬레이션·인스턴스·부동소수 — 20개, 사람 말) 이고 `components/jargon.tsx` 가 글자 안에 나오는 것만 나오는 차례로 그린다. Context 드로어·Pack 출처 패널도 같은 세 줄.
+씨앗: 제목·설명을 사람 말로 (「PSP 재시도는 지수 백오프 5회」→「결제사 호출 재시도는 5번까지, 간격은 점점 늘려서」 · 「로그에 PII 를…」→「기록(로그)에 개인정보를…」 · 「정산은 하루 1회 배치다」→「정산은 하루 한 번 몰아서 한다」 · 폐기 문서 둘 · 제안 셋). 규칙 문장·근거 인용은 그대로 — 랜딩·시험이 잠근 문장이다. Context 표의 범위 `project`·`domain:refund` → 「프로젝트 전체」「업무 refund」(`SCOPE_KIND_LABEL`).
+시험: `web-jargon.test.ts`(모든 풀이가 데모 씨앗 글자에 실제로 나온다 · 차례·한 번씩 · 조각) · `web-tables` 는 아이콘 대신 「라벨이 사람 말 + `icon` 키 없음」 · 후보·Sync·제안 시험의 기호 기대 삭제 · 전체 1042 초록. DESIGN_BRIEF §3 칩·CtxTag·표 · §4 ⑨.
+`tools/ci.ps1`: 2026-09-10 22:59 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

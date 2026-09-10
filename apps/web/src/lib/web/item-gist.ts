@@ -26,6 +26,20 @@ export const ITEM_GIST: { [K in ItemType]: (data: DataOf<K>) => string } = {
   open_question: (d) => d.question,
 }
 
+/** 한 줄 앞의 이름표 — 그 줄이 무엇인지(「규칙」「제약」…). 카드·드로어가 `key-line` 의 모노 이름표로 그린다. */
+export const ITEM_GIST_KEY: Record<ItemType, string> = {
+  mission: '사명',
+  goal: '목표',
+  roadmap: '완료 조건',
+  architecture: '역할',
+  domain: '용어',
+  policy: '규칙',
+  adr: '결정',
+  workflow: '절차',
+  constraint: '제약',
+  open_question: '질문',
+}
+
 /** 항목 하나의 한 줄. 타입은 항목이 말하고, 모양은 위 표가 고른다 — 화면에 `switch` 가 없다. */
 export function itemGist(item: Pick<ContextItemView, 'type' | 'data'>): string {
   return (ITEM_GIST[item.type] as unknown as (data: unknown) => string)(item.data)

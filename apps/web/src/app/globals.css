@@ -335,18 +335,19 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   color: var(--ink-2);
   white-space: nowrap;
 }
-.chip-icon { font-family: var(--font-mono); }
+/* 색점 — 글자 앞의 6px 원. 특수문자가 아니라 CSS 다. */
+.chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); flex: 0 0 auto; }
 
-/* 🔴 칩에 색 배경이 없다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10) — 글자는 잉크, **점·기호(`.chip-icon`)만** 상태색이다.
+/* 🔴 칩에 색 배경이 없다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10) — 글자는 잉크, **색점(`.chip-dot` · CSS 원)만** 상태색이다. 특수문자 아이콘은 없다 (2026-09-10 저녁 · 사용자: 「이런 특수문자들이 마음에 안 든다」).
    ★ 왜 — 초록·노랑·주황 면이 표마다 수십 개 서면 그게 「관리자 템플릿」의 얼굴이었다 (사용자가 실제 화면으로 짚었다).
-   아이콘+라벨 병기 규칙은 그대로다 — 색이 점 하나로 줄었을 뿐 상태를 색만으로 말하지 않는다. */
-.tone-ok .chip-icon { color: var(--ok); }
-.tone-warn .chip-icon { color: var(--warn); }
-.tone-bad .chip-icon { color: var(--bad); }
-.tone-neutral .chip-icon { color: var(--ink-3); }
+   상태는 라벨 **글자**가 말하고 점은 거들 뿐이다 — 색만으로 말하지 않는다. */
+.tone-ok .chip-dot { background: var(--ok); }
+.tone-warn .chip-dot { background: var(--warn); }
+.tone-bad .chip-dot { background: var(--bad); }
+.tone-neutral .chip-dot { background: var(--ink-3); }
 /* llm 은 AI 산출물에만 붙는다 (DESIGN_BRIEF §3) — 유일하게 테두리가 있는 칩이다 (「AI 가 만든 것」은 경계가 보여야 한다). */
 .tone-llm { border-color: var(--line-hi); padding: var(--sp-1) var(--sp-2); }
-.tone-llm .chip-icon { color: var(--llm); }
+.tone-llm .chip-dot { background: var(--llm); }
 
 /* CtxTag — 역추적 칩. 작고 회색이고 모노다 (P7 의 얼굴). */
 .ctx-tag {
@@ -420,6 +421,12 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   align-items: start;
 }
 .side-title { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); line-height: 1.35; }
+/* 이름표 한 줄 — 「규칙」「설명」「낱말 풀이」 모노 이름표 + 문장 (2026-09-10 저녁 · 카드 A/B · Context 드로어 · Pack 출처 패널). */
+.key-line { font-size: var(--fs-body); color: var(--ink); line-height: 1.6; }
+.key-line .key { font-family: var(--font-mono); font-size: var(--fs-label); color: var(--ink-3); margin-right: var(--sp-2); white-space: nowrap; }
+.key-line.jargon { font-size: var(--fs-table); color: var(--ink-2); }
+.key-line.jargon b { font-weight: 600; color: var(--ink); }
+.ctx-rev { color: var(--ink-3); }
 
 /* 3분 코스 — 게스트 배너의 둘째 줄 (`components/demo-banner.tsx` · 정본 `lib/web/tour.ts`).
    걸음 넷이 알약으로 서고, 지금 걸음은 잉크로 채운다. 셋째 줄은 지금 걸음의 「볼 것」 한 문장. */

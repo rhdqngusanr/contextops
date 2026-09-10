@@ -15,11 +15,11 @@ import { toSlug } from '../src/lib/web/slug'
 import { readCallbackHash } from '../src/lib/web/auth'
 import {
   AI_JOB_STATUS_CHIP, CONFIDENCE_CHIP, CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP,
-  ITEM_STATUS_CHIP, ITEM_TYPE_ICON, ITEM_TYPE_LABEL, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
+  ITEM_STATUS_CHIP, ITEM_TYPE_LABEL, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL,
   PROPOSAL_OPERATION_CHIP, PROPOSAL_STATUS_CHIP, SOURCE_DOCUMENT_KIND_LABEL, SYNC_CHIP, SYNC_MEANING,
 } from '../src/components/chips'
 import { SYNC_APPLY, SYNC_ORDER } from '../src/components/sync'
-import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
+import { SRC_LABEL } from '../src/components/evidence'
 
 // =====================================================================
 //  🔴 화면의 표들이 **정의만 있고 아무 일도 안 하는 자리**가 되지 않게 잠근다
@@ -48,7 +48,7 @@ function assertLiveTable<K extends string>(
 
 describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게 보인다', () => {
   it('sync 5종 (SPEC §6)', () => {
-    assertLiveTable('SYNC_CHIP', SYNC_STATUSES, SYNC_CHIP, (k) => `${SYNC_CHIP[k].icon}${SYNC_CHIP[k].label}`)
+    assertLiveTable('SYNC_CHIP', SYNC_STATUSES, SYNC_CHIP, (k) => `${SYNC_CHIP[k].label}`)
   })
 
   it('sync 5종의 **뜻** (SPEC §6) — 툴팁과 화면 9 각주가 같이 읽는다', () => {
@@ -71,27 +71,27 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('항목 상태 4종 (SPEC §3)', () => {
     assertLiveTable('ITEM_STATUS_CHIP', ITEM_STATUSES, ITEM_STATUS_CHIP,
-      (k) => `${ITEM_STATUS_CHIP[k].icon}${ITEM_STATUS_CHIP[k].label}`)
+      (k) => `${ITEM_STATUS_CHIP[k].label}`)
   })
 
   it('confidence 3단계 (SPEC §3)', () => {
     assertLiveTable('CONFIDENCE_CHIP', CONFIDENCE_LEVELS, CONFIDENCE_CHIP,
-      (k) => `${CONFIDENCE_CHIP[k].icon}${CONFIDENCE_CHIP[k].label}`)
+      (k) => `${CONFIDENCE_CHIP[k].label}`)
   })
 
   it('AI job 수명 4종 (SPEC §9 화면 3)', () => {
     assertLiveTable('AI_JOB_STATUS_CHIP', AI_JOB_STATUSES, AI_JOB_STATUS_CHIP,
-      (k) => `${AI_JOB_STATUS_CHIP[k].icon}${AI_JOB_STATUS_CHIP[k].label}`)
+      (k) => `${AI_JOB_STATUS_CHIP[k].label}`)
   })
 
   it('충돌 종류 6종 (SPEC §7.2 · DESIGN_BRIEF §4 화면 4 필터 칩)', () => {
     assertLiveTable('CONFLICT_KIND_CHIP', CONFLICT_KINDS, CONFLICT_KIND_CHIP,
-      (k) => `${CONFLICT_KIND_CHIP[k].icon}${CONFLICT_KIND_CHIP[k].label}`)
+      (k) => `${CONFLICT_KIND_CHIP[k].label}`)
   })
 
   it('마일스톤 상태 4종 (SPEC §5 roadmap · DESIGN_BRIEF §4 화면 8)', () => {
     assertLiveTable('MILESTONE_CHIP', MILESTONE_STATUSES, MILESTONE_CHIP,
-      (k) => `${MILESTONE_CHIP[k].icon}${MILESTONE_CHIP[k].label}`)
+      (k) => `${MILESTONE_CHIP[k].label}`)
     //  🔴 `done_candidate` 와 `done` 의 차이가 이 제품의 약속 하나를 통째로 들고 있다 —
     //     「agent 는 스스로 완료를 선언하지 못한다」. 확정 전에는 사람이 할 일이 남았다.
     expect(MILESTONE_CHIP.done_candidate.tone, 'done_candidate 가 ok 로 보이면 확정이 끝난 것처럼 읽힌다')
@@ -101,7 +101,7 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('제안 수명 5종 (SPEC §2 · DESIGN_BRIEF §4 화면 6 상태 chip)', () => {
     assertLiveTable('PROPOSAL_STATUS_CHIP', PROPOSAL_STATUSES, PROPOSAL_STATUS_CHIP,
-      (k) => `${PROPOSAL_STATUS_CHIP[k].icon}${PROPOSAL_STATUS_CHIP[k].label}`)
+      (k) => `${PROPOSAL_STATUS_CHIP[k].label}`)
     //  🔴 승인은 「다음 발행에 들어간다」는 약속일 뿐이고, 팀에 배포된 것은 발행 뒤다
     //     (§2.1 7단계). 둘이 같아 보이면 승인만 하고 발행을 안 한 채 「배포됐다」로 읽는다.
     expect(PROPOSAL_STATUS_CHIP.approved.label, 'approved 와 published 가 같은 말로 보인다')
@@ -110,7 +110,7 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('제안 연산 3종 (SPEC §3 `PROPOSAL_OPERATIONS` · 화면 6 operation 배지)', () => {
     assertLiveTable('PROPOSAL_OPERATION_CHIP', PROPOSAL_OPERATIONS, PROPOSAL_OPERATION_CHIP,
-      (k) => `${PROPOSAL_OPERATION_CHIP[k].icon}${PROPOSAL_OPERATION_CHIP[k].label}`)
+      (k) => `${PROPOSAL_OPERATION_CHIP[k].label}`)
   })
 
   it('진행 보고 주체 3종 (SPEC §3 `PROGRESS_SOURCES` · 화면 8 드로어)', () => {
@@ -120,7 +120,7 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
 
   it('🔴 충돌 심각도 3단계가 confidence 3단계와 **다르게 보인다** (같은 화면에 같이 뜬다)', () => {
     assertLiveTable('CONFLICT_SEVERITY_CHIP', CONFLICT_SEVERITIES, CONFLICT_SEVERITY_CHIP,
-      (k) => `${CONFLICT_SEVERITY_CHIP[k].icon}${CONFLICT_SEVERITY_CHIP[k].label}`)
+      (k) => `${CONFLICT_SEVERITY_CHIP[k].label}`)
     //  ⚠ 두 표의 키가 같은 낱말(high/medium/low)이라, 라벨까지 같으면 화면 4 에서
     //    「confidence high」와 「심각도 high」가 한 종류로 보인다.
     for (const k of CONFLICT_SEVERITIES) {
@@ -129,20 +129,21 @@ describe('🔴 상태 칩 표 — 키가 enum 과 같고, 종류마다 다르게
     }
   })
 
-  it('🔴 상태를 색만으로 구분하지 않는다 — 아이콘과 라벨이 항상 있다 (DESIGN_BRIEF §3)', () => {
+  it('🔴 상태를 색만으로 구분하지 않는다 — 라벨 글자가 항상 있고 사람 말이다 (특수문자 아이콘은 없다 · 2026-09-10 저녁)', () => {
     for (const table of [
       SYNC_CHIP, ITEM_STATUS_CHIP, CONFIDENCE_CHIP, AI_JOB_STATUS_CHIP,
       CONFLICT_KIND_CHIP, CONFLICT_SEVERITY_CHIP, PROPOSAL_STATUS_CHIP, PROPOSAL_OPERATION_CHIP,
     ]) {
-      for (const [key, spec] of Object.entries(table) as [string, { icon: string; label: string }][]) {
-        expect(spec.icon.length, `${key}: 아이콘이 없다`).toBeGreaterThan(0)
+      for (const [key, spec] of Object.entries(table) as [string, { label: string; tone: string }][]) {
         expect(spec.label.length, `${key}: 라벨이 없다`).toBeGreaterThan(0)
+        expect(spec.label, `${key}: 라벨이 사람 말이 아니다`).toMatch(/[가-힣]/)
+        expect(spec.tone.length, `${key}: tone 이 없다`).toBeGreaterThan(0)
+        expect('icon' in spec, `${key}: 특수문자 아이콘은 없어야 한다`).toBe(false)
       }
     }
   })
 
-  it('항목 타입 10종의 아이콘이 서로 다르다 (SPEC §3)', () => {
-    assertLiveTable('ITEM_TYPE_ICON', ITEM_TYPES, ITEM_TYPE_ICON, (k) => ITEM_TYPE_ICON[k])
+  it('항목 타입 10종의 라벨이 서로 다르고 사람 말이다 (SPEC §3)', () => {
     assertLiveTable('ITEM_TYPE_LABEL', ITEM_TYPES, ITEM_TYPE_LABEL, (k) => ITEM_TYPE_LABEL[k])
     //  사람 말이다 — 영어 enum 값이 그대로 라벨인 줄이 없다.
     for (const t of ITEM_TYPES) expect(ITEM_TYPE_LABEL[t], t).toMatch(/[가-힣]/)
@@ -166,7 +167,6 @@ describe('🔴 근거 4종이 서로 다른 한 줄을 낸다 (SPEC §3 · DESIG
 
   it('표의 키가 enum 과 같고 라벨이 서로 다르다', () => {
     assertLiveTable('SRC_LABEL', SOURCE_REF_KINDS, SRC_LABEL, (k) => SRC_LABEL[k](SAMPLES[k]))
-    assertLiveTable('SRC_ICON', SOURCE_REF_KINDS, SRC_ICON, (k) => SRC_ICON[k])
   })
 
   it('값을 바꾸면 라벨이 갈린다 — 종류 이름만 찍는 게 아니다', () => {
@@ -178,7 +178,7 @@ describe('🔴 근거 4종이 서로 다른 한 줄을 낸다 (SPEC §3 · DESIG
     expect(a).not.toBe(b)
     //  줄 번호가 없으면 `:14-30` 을 지어내지 않는다.
     const bare: Extract<SourceRef, { kind: 'repository_path' }> = { kind: 'repository_path', repo: 'r', path: 'a.ts' }
-    expect(SRC_LABEL.repository_path(bare)).toBe('r/a.ts')
+    expect(SRC_LABEL.repository_path(bare)).toBe('코드 r/a.ts')
   })
 
   //  🔴 **어느 문서에서 왔는지 라벨이 말한다** (FINDINGS 87).

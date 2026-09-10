@@ -7,13 +7,14 @@ import {
 } from '@contextops/schema'
 import type { WriteDoor } from '../lib/web/actor'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
-import { itemGist } from '../lib/web/item-gist'
+import { ITEM_GIST_KEY, itemGist } from '../lib/web/item-gist'
 import { dateText } from '../lib/web/time'
 import {
   AiBadge, ConfidenceChip, ConflictKindChip, ConflictSeverityChip, CtxTag, ITEM_STATUS_CHIP,
-  ItemStatusChip, TypeIcon,
+  ItemStatusChip,
 } from './chips'
 import { EvidenceLink, EvidenceList } from './evidence'
+import { Jargon } from './jargon'
 import { ErrorState } from './states'
 
 // =====================================================================
@@ -315,26 +316,22 @@ function ItemSide({ label, itemId, item }: { label: string; itemId: string | nul
         </>
       ) : (
         <>
-          {/* 제목이 먼저, 크게 — 두 쪽을 나란히 놓고 견주는 자리라 제목이 곧 주장이다. */}
+          {/* 제목이 먼저, 크게 — 두 쪽을 나란히 놓고 견주는 자리라 제목이 곧 주장이다. 타입 기호(§ …)는 없다 (2026-09-10 저녁). */}
+          <span className="side-title">{item.title}</span>
+          {/* 🔴 **부딪히는 문장** — 타입별 한 줄(`lib/web/item-gist.ts`)에 이름표(규칙·제약…)를 달아서. 제목과 같으면 두 번 적지 않는다. */}
+          {itemGist(item) === item.title ? null : (
+            <p className="key-line"><span className="key">{ITEM_GIST_KEY[item.type]}</span>{itemGist(item)}</p>
+          )}
+          {item.body === '' ? null : <p className="key-line"><span className="key">설명</span>{item.body}</p>}
+          {/* 낱말 풀이 — 카드의 글자 안에 있는 개발자 낱말을 사람 말로. 없으면 안 그린다. */}
+          <Jargon text={`${item.title} ${itemGist(item)} ${item.body}`} />
           <div className="row wrap">
-            <TypeIcon type={item.type} />
-            <span className="side-title">{item.title}</span>
-          </div>
-          {/* 🔴 **부딪히는 문장** — 정책의 rule · 제약의 statement (`lib/web/item-gist.ts`). 제목만으로는 「5회 vs 3회」가 안 보였다
-              (2026-09-10 저녁). 제목과 같으면 두 번 적지 않는다. */}
-          {itemGist(item) === item.title ? null : <p className="ink">{itemGist(item)}</p>}
-          <div className="row wrap">
-            <CtxTag itemId={item.id} revision={item.revision} />
             <ItemStatusChip status={item.status} />
             <ConfidenceChip confidence={item.confidence} />
-            {/* 🔴 **언제 것인가** (DESIGN_BRIEF §4 화면 4 「A 갱신 2026-07-12 · B 갱신 2026-08-04」).
-                ★ 왜 이 칸이 있어야 하나 — `stale`(오래됨) 카드가 묻는 것이 정확히 이것이다.
-                  두 쪽의 날짜가 없으면 사람은 「어느 쪽이 최신」을 **화면 밖에서** 찾아야 한다.
-                ⚠ 「1달 전」이 아니라 날짜다 — 두 쪽을 나란히 놓고 비교하는 자리라
-                  반올림하면 비교가 흐려진다 (`lib/web/time.ts` 의 `dateText`). */}
+            {/* 🔴 **언제 것인가** — `stale`(오래됨) 카드가 묻는 것이 정확히 이것이다. 「1달 전」이 아니라 날짜다 (`dateText`). */}
             <span className="meta">갱신 {dateText(item.updated_at)}</span>
+            <CtxTag itemId={item.id} revision={item.revision} />
           </div>
-          <p className="meta">{item.body}</p>
           <EvidenceList refs={item.source_refs} />
         </>
       )}

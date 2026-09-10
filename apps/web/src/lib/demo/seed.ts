@@ -552,7 +552,7 @@ export const OPEN_QUESTIONS = [
  *   진술이라 인용 칸이 아니다 (`QUOTED_DATA.policy = []`).
  */
 export const STALE_RULES = [
-  ['item_stale_retry_fixed', '(폐기 문서) PSP 재시도는 3회 · 0.5초 고정',
+  ['item_stale_retry_fixed', '(폐기 문서) 결제사 재시도는 3번, 0.5초 간격 고정',
     'PSP 호출은 **3회까지** 재시도한다. 간격은 0.5초 고정.',
     'PSP 호출은 3회까지 재시도한다 — 간격은 0.5초 고정',
     '2025 하반기 로드맵의 운영 규칙이다 — 「트래픽이 아직 작아서 고정 간격으로 충분하다」고 적혀 있다.'],
@@ -560,7 +560,7 @@ export const STALE_RULES = [
     '환불은 담당자가 확인하는 대로 처리한다. 기한은 따로 두지 않는다.',
     '환불은 담당자가 확인하는 대로 처리한다 — 기한은 따로 두지 않는다',
     '2025 하반기 로드맵의 운영 규칙이다.'],
-  ['item_stale_webhook_payload_log', '(폐기 문서) 웹훅 원본 payload 를 로그에 7일 보관',
+  ['item_stale_webhook_payload_log', '(폐기 문서) 결제사 알림 원본을 기록에 7일 보관',
     '장애 조사를 위해 웹훅 원본 payload 를 로그에 남긴다. 보관 7일.',
     '웹훅 원본 payload 를 로그에 남긴다 — 보관 7일',
     '2025 하반기 로드맵의 운영 규칙이다.'],
@@ -618,7 +618,7 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     ...staleDrafts(roadmap),
     fromDoc('item_mission_paylab', 'mission', goals,
       '가맹점이 우리를 쓰는 이유는\n하나다 — **PSP 가 흔들려도 결제가 흔들리지 않는 것.**', {
-        title: 'PSP 가 흔들려도 결제는 흔들리지 않는다',
+        title: '결제사가 흔들려도 결제는 흔들리지 않는다',
         body: '가맹점이 우리를 쓰는 이유는 하나다 — 밖이 실패해도 결제가 선다.',
         data: { statement: 'PSP 장애가 가맹점 결제로 번지지 않게 한다.', rationale: '가맹점이 우리를 쓰는 유일한 이유다.' },
       }),
@@ -639,8 +639,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
       'PSP 호출이 실패하면 **최대 5회까지 재시도**한다. 재시도 간격은 **지수 백오프**로\n'
       + '1초 → 2초 → 4초 → 8초 → 16초로 늘리고, 각 간격에 ±20% 지터를 더한다.\n\n'
       + '**고정 간격 재시도는 금지한다.**', {
-        title: 'PSP 재시도는 지수 백오프 5회',
-        body: '고정 간격 재시도는 금지한다 — 모든 인스턴스가 같은 박자로 다시 때린다.',
+        title: '결제사 호출 재시도는 5번까지, 간격은 점점 늘려서',
+        body: '간격을 똑같이 두면 서버 여러 대(인스턴스)가 같은 순간에 다시 몰려 결제사가 더 막힙니다. 그래서 기다리는 시간을 점점 늘립니다.',
         data: { rule: 'PSP 호출 실패는 지수 백오프로 최대 5회 재시도한다', severity: 'must', enforcement: 'review' },
       }), retry,
       'export const MAX_RETRY = 3;\n\n'
@@ -657,8 +657,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     fromDoc('item_policy_pii_log', 'policy', goals,
       '다음은 **어떤 로그에도** 남기지 않는다. 애플리케이션 로그·접근 로그·에러 리포트·\n'
       + '웹훅 수신 덤프 전부 해당한다.', {
-        title: '로그에 PII 를 남기지 않는다',
-        body: '애플리케이션 로그·접근 로그·에러 리포트·웹훅 수신 덤프 전부 해당한다.',
+        title: '기록(로그)에 개인정보를 남기지 않는다',
+        body: '프로그램 기록, 접속 기록, 오류 보고, 결제사 알림(웹훅) 원본까지 전부 해당합니다.',
         data: {
           rule: '카드번호·CVC·개인정보를 어떤 로그에도 남기지 않는다 — 결제 ID 와 이벤트 ID 만 남긴다',
           severity: 'must',
@@ -668,7 +668,7 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     fromDoc('item_constraint_card', 'constraint', goals,
       '우리는 카드 정보를 저장하지 않는다. 토큰만 받는다.', {
         title: '카드 정보를 저장하지 않는다',
-        body: '카드 원본이 우리 망에 들어오는 경로 자체를 없앤다 — 결제창은 PSP 가 띄운다.',
+        body: '카드 번호가 우리 서버에 들어오는 길 자체를 없앱니다. 결제창은 결제사(PSP)가 띄웁니다.',
         data: { statement: '카드 원본 정보를 저장하지 않는다 — 토큰만 받는다.' },
       }),
     //  🔴 §3.1 의 뒷부분 — 「무엇을 재시도하나」. 앞 항목(`item_policy_retry`)이 「몇 번 · 어떤
@@ -678,8 +678,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     fromDoc('item_policy_retry_scope', 'policy', goals,
       '재시도 대상은 네트워크 오류와 5xx 뿐이다. 4xx 는 재시도하지 않는다.\n'
       + '멱등키(`Idempotency-Key`)가 없는 요청은 재시도하지 않는다.', {
-        title: '재시도는 네트워크 오류와 5xx 에만',
-        body: '멱등키가 없으면 서버가 같은 요청인지 못 알아본다 — 그 재시도는 곧 중복 결제다.',
+        title: '다시 시도는 통신 오류와 상대 서버 오류일 때만',
+        body: '같은 요청이라는 표시(멱등키)가 없으면 서버가 같은 결제인지 모릅니다. 그때 다시 시도하면 두 번 결제됩니다.',
         data: {
           rule: '네트워크 오류와 5xx 만 재시도한다 — 4xx 와 멱등키 없는 요청은 재시도하지 않는다',
           severity: 'must',
@@ -692,8 +692,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     fromDoc('item_policy_refund_escalation', 'policy', goals,
       '24시간이 지나도록 담당자가 손대지 않은 건은 **자동으로 승인 대기 큐에서 빠져\n'
       + '에스컬레이션**된다. 기한 없이 `pending` 으로 쌓아 두는 것은 금지다', {
-        title: '손대지 않은 환불은 자동으로 에스컬레이션된다',
-        body: '고객이 돈을 언제 받는지 모르는 상태가 CS 비용의 절반이다.',
+        title: '하루 넘게 손대지 않은 환불은 자동으로 윗선에 올라간다',
+        body: '고객이 돈을 언제 받는지 모르는 상태가 고객 문의의 절반을 만듭니다.',
         scope: { kind: 'domain', value: 'refund' },
         data: {
           rule: '24시간 동안 손대지 않은 환불 건은 자동으로 에스컬레이션한다 — 기한 없는 pending 은 금지다',
@@ -720,8 +720,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     //    원문은 그 낱말로 부정하지만, 종이에 서는 것은 진술이고 진술은 「하루 1회 배치」로 충분하다.
     fromDoc('item_constraint_settlement_batch', 'constraint', goals,
       '가맹점 정산은 하루 1회 배치이고 실시간이 아니다.', {
-        title: '정산은 하루 1회 배치다',
-        body: '원장(`ledger`)은 append only 라, 그날의 정산은 배치가 끝난 뒤에야 확정된다.',
+        title: '정산은 하루 한 번 몰아서 한다',
+        body: '장부(원장)는 한 줄씩 덧붙이기만 하므로, 그날 정산은 하루치 처리(배치)가 끝난 뒤에 확정됩니다.',
         data: { statement: '가맹점 정산은 하루 1회 배치로만 한다 — 즉시 정산은 없다.' },
       }),
     //  🔴 §4 마일스톤 M1~M3 — 재료는 `MILESTONES` 하나다 (위 주석). `dependencies` 는 우리
@@ -744,8 +744,8 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     fromDoc('item_policy_webhook_sig', 'policy', goals,
       '서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다. 검증 실패는 401 로 끊고,\n'
       + '재전송은 PSP 가 알아서 한다.', {
-        title: '웹훅은 서명 검증 후에만 처리한다',
-        body: '검증 실패는 401 로 끊는다 — 재전송은 PSP 가 알아서 한다.',
+        title: '결제사 알림(웹훅)은 서명을 확인한 뒤에만 처리한다',
+        body: '확인에 실패하면 거절(401)로 끊습니다. 다시 보내는 것은 결제사 몫입니다.',
         scope: { kind: 'path', value: 'src/webhook' },
         data: {
           rule: '웹훅 payload 는 서명 검증 후에만 파싱·저장한다',
@@ -756,7 +756,7 @@ export function paylabDrafts(goals: FixtureDoc, retry: FixtureCode, roadmap?: Fi
     fromDoc('item_policy_refund', 'policy', goals,
       '환불 요청은 **접수 후 24시간 안에 종결**한다.', {
         title: '환불은 24시간 안에 종결한다',
-        body: '승인률과 부딪히면 환불 속도가 우선이다.',
+        body: '결제 승인률과 부딪히면 환불 속도가 우선입니다.',
         scope: { kind: 'domain', value: 'refund' },
         data: { rule: '환불 접수→종결을 24시간 안에 끝낸다', severity: 'must', enforcement: 'review' },
       }),

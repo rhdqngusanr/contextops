@@ -134,7 +134,7 @@ export function PaletteDialog({
                     >
                       {/* ⚠ 고른 줄을 **색만으로** 표시하지 않는다 (DESIGN_BRIEF §3) —
                           화살표가 먼저고 배경색은 거들 뿐이다. */}
-                      <span aria-hidden="true" className="chip-icon palette-caret">
+                      <span aria-hidden="true" className="mono palette-caret">
                         {entry === active ? '›' : ' '}
                       </span>
                       <span className="grow">{entry.label}</span>

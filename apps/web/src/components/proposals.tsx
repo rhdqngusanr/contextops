@@ -12,7 +12,7 @@ import type { ProposalDetail, ProposalRow, VersionRow } from '../lib/web/queries
 //     같은 하나를 읽어야 세 자리가 안 갈라진다 (FINDINGS 167). 여기서 다시 적지 마라.
 import { MADE } from '../lib/web/screens'
 import { dateText } from '../lib/web/time'
-import { PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, TypeIcon, VersionPill } from './chips'
+import { ITEM_TYPE_LABEL, PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, VersionPill } from './chips'
 import { EvidenceList } from './evidence'
 
 // =====================================================================
@@ -382,7 +382,7 @@ export function ProposalItemCard({
             : <CtxTag itemId={item.target_item_id} revision={target?.revision} />}
           {draftType === undefined
             ? null
-            : <span className="row"><TypeIcon type={draftType} />{' '}<span className="meta">{draftType}</span></span>}
+            : <span className="meta">{ITEM_TYPE_LABEL[draftType]}</span>}
         </div>
         {item.target_item_id !== undefined && target === undefined
           ? (

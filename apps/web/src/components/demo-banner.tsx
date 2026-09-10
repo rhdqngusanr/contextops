@@ -41,7 +41,6 @@ export function DemoBanner() {
   return (
     <div className="banner col-tight" role="status">
       <div className="row wrap">
-        <span aria-hidden="true" className="chip-icon">◇</span>
         <span className="grow">{demoBannerText()}</span>
         <a className="btn btn-sm" href="/login">내 팀으로 시작하기</a>
       </div>

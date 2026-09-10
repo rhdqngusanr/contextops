@@ -1,7 +1,7 @@
 'use client'
 
 import type { StructureCandidate } from '../lib/web/queries'
-import { TypeIcon, ITEM_TYPE_LABEL } from './chips'
+import { ITEM_TYPE_LABEL } from './chips'
 import { EvidenceList } from './evidence'
 
 // =====================================================================
@@ -106,8 +106,6 @@ export function StructureCandidates({
                 onChange={() => onToggle(c.id)}
                 disabled={state.saving}
               />
-              {/* 아이콘만으로 타입을 말하지 않는다 — 이름을 같이 낸다 (DESIGN_BRIEF §3). */}
-              <TypeIcon type={c.type} />
               {/* ⚠ `div` 다 — `EvidenceList` 가 `div` 를 내므로 `span` 안에 두면 잘못된 중첩이다. */}
               <div className="grow col-tight">
                 <span className="row items-start">

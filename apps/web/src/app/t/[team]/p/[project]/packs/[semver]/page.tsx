@@ -9,7 +9,9 @@ import { traceLines, type TraceTag } from '@contextops/compiler/tag'
 import { messageOf } from '../../../../../../../lib/web/api'
 import { downloadPackZip, fetchItems, fetchManifest, fetchPackFile, fetchSyncStatus, type ProjectRef } from '../../../../../../../lib/web/queries'
 import { useAsync } from '../../../../../../../lib/web/use-async'
-import { ITEM_TYPE_LABEL, ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon } from '../../../../../../../components/chips'
+import { ITEM_TYPE_LABEL, ConfidenceChip, CtxTag, ItemStatusChip } from '../../../../../../../components/chips'
+import { Jargon } from '../../../../../../../components/jargon'
+import { ITEM_GIST_KEY, itemGist } from '../../../../../../../lib/web/item-gist'
 import { countReceived } from '../../../../../../../components/sync'
 import { EvidenceList } from '../../../../../../../components/evidence'
 import { ProjectGate } from '../../../../../../../components/project-gate'
@@ -288,14 +290,17 @@ function TracePanel({
       {item ? (
         <>
           <div className="row wrap">
-            <TypeIcon type={item.type} />
-            {/* 타입은 사람 말로 — `policy` 가 그대로 찍혀 있었다 (2026-09-10 저녁). */}
+            {/* 타입은 사람 말로 — `policy` 가 그대로 찍혀 있었다 (2026-09-10 저녁). 기호는 없다. */}
             <span className="meta">{ITEM_TYPE_LABEL[item.type]}</span>
             <ItemStatusChip status={item.status} />
             <ConfidenceChip confidence={item.confidence} />
           </div>
           <h3>{item.title}</h3>
+          {itemGist(item) === item.title ? null : (
+            <p className="key-line"><span className="key">{ITEM_GIST_KEY[item.type]}</span>{itemGist(item)}</p>
+          )}
           <p className="ink-3">{item.body}</p>
+          <Jargon text={`${item.title} ${itemGist(item)} ${item.body}`} />
           <span className="label">근거</span>
           <EvidenceList refs={item.source_refs} />
         </>

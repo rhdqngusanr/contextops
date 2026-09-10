@@ -700,7 +700,7 @@ function AiUse({ index }: { index: string }) {
                     {/* 화살표는 다음 걸음의 일부다 — 접힐 때 같이 내려간다. */}
                     {j > 0 ? <span className={styles.handArrow} aria-hidden="true">→</span> : null}
                     <span className={styles.handWho}>
-                      {h.who === 'ai' ? <span className={styles.handGlyph} aria-hidden="true">✳</span> : null}
+                      {h.who === 'ai' ? <span className={styles.handDot} aria-hidden="true" /> : null}
                       {AI_USE.who[h.who]}
                     </span>
                     <span>{h.does}</span>

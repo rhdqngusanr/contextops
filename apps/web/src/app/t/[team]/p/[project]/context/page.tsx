@@ -13,10 +13,11 @@ import {
 } from '../../../../../../lib/web/queries'
 import { OWNER_LABEL } from '../../../../../../lib/web/screens'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver, type SemverBump } from '../../../../../../lib/web/semver'
-import { itemGist } from '../../../../../../lib/web/item-gist'
+import { ITEM_GIST_KEY, itemGist } from '../../../../../../lib/web/item-gist'
 import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
-import { ConfidenceChip, CtxTag, ITEM_STATUS_CHIP, ITEM_TYPE_LABEL, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
+import { ConfidenceChip, CtxTag, ITEM_STATUS_CHIP, ITEM_TYPE_LABEL, ItemStatusChip, SCOPE_KIND_LABEL, VersionPill } from '../../../../../../components/chips'
+import { Jargon } from '../../../../../../components/jargon'
 import { EvidenceList } from '../../../../../../components/evidence'
 import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
@@ -284,14 +285,15 @@ function ItemTable({
             aria-selected={selected?.id === item.id}
             onClick={() => onSelect(item)}
           >
-            <td className="row"><TypeIcon type={item.type} /><span className="meta">{ITEM_TYPE_LABEL[item.type]}</span></td>
+            <td><span className="meta">{ITEM_TYPE_LABEL[item.type]}</span></td>
             <td>
               <div className="col-tight">
                 <span className="ink">{item.title}</span>
                 <CtxTag itemId={item.id} revision={item.revision} />
               </div>
             </td>
-            <td className="mono meta">{item.scope.kind}{item.scope.value ? `:${item.scope.value}` : ''}</td>
+            {/* 범위는 사람 말 + 값 (`SCOPE_KIND_LABEL`) — `project`·`domain:refund` 가 그대로 찍혀 있었다 (2026-09-10 저녁). */}
+            <td className="meta">{SCOPE_KIND_LABEL[item.scope.kind]}{item.scope.value ? <span className="mono"> {item.scope.value}</span> : null}</td>
             <td><ItemStatusChip status={item.status} /></td>
             <td><ConfidenceChip confidence={item.confidence} /></td>
             {/* 🔴 근거 수는 숫자만 두지 않는다 — 0 이면 색과 아이콘으로 같이 말한다. */}
@@ -355,7 +357,8 @@ function ItemDrawer({
         <span className="label">내용</span>
         {/* 한 줄은 타입별 표(`lib/web/item-gist.ts`)가 고른다 — 화면에 분기가 없다. 값 전체는 접어 둔다 (2026-09-10 저녁 —
             JSON 이 「타입별 값」이라는 이름으로 그대로 서 있었다). */}
-        <p className="ink">{itemGist(item)}</p>
+        <p className="key-line"><span className="key">{ITEM_GIST_KEY[item.type]}</span>{itemGist(item)}</p>
+        <Jargon text={`${item.title} ${itemGist(item)} ${item.body}`} />
         <details>
           <summary className="meta">값 전체 보기</summary>
           <pre className="scroll-x mono meta">{JSON.stringify(item.data, null, 2)}</pre>

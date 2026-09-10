@@ -382,7 +382,7 @@
   color: var(--ink-2);
 }
 
-/* 「AI → 사람」 손바뀜 줄 — 누가 무엇을 하는지, 화살표 하나로. AI 는 제품의 AI 칩과 같은 ✳ 이고 색은 그 기호뿐이다. */
+/* 「AI → 사람」 손바뀜 줄 — 누가 무엇을 하는지, 화살표 하나로. AI 는 제품의 AI 칩과 같은 색점이다 (특수문자 없음). */
 .hand { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-body); color: var(--ink); line-height: 1.5; }
 .handStep { display: inline-flex; align-items: center; gap: var(--sp-2); }
 .handWho {
@@ -397,7 +397,7 @@
   color: var(--ink);
   white-space: nowrap;
 }
-.handGlyph { font-family: var(--font-mono); color: var(--llm); }
+.handDot { width: 6px; height: 6px; border-radius: 50%; background: var(--llm); }
 .handArrow { font-family: var(--font-mono); color: var(--ink-3); }
 
 /* 「쉬운 말로」·「예를 들면」 — 모노 이름표(`.plainKey`) + 문장. Before/After 의 `.plain` 과 같은 줄이다. */

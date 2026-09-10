@@ -170,8 +170,8 @@ type DemoProposal = {
 export const DEMO_PROPOSALS: DemoProposal[] = [
   {
     author: 'demo-member-junho',
-    title: '재시도 간격을 지수 백오프로',
-    summary: '고정 500ms 는 PSP 가 밀릴 때 같은 순간에 다시 몰린다.',
+    title: '재시도 간격을 점점 늘리는 방식으로',
+    summary: '0.5초 고정이면 결제사(PSP)가 밀릴 때 같은 순간에 다시 몰립니다.',
     target: 'item_policy_retry',
     data: {
       rule: 'PSP 호출은 최대 5회까지 재시도한다. 간격은 지수 백오프(0.5s·1s·2s·4s·8s)이고, '
@@ -198,8 +198,8 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
   },
   {
     author: 'demo-member-doyun',
-    title: '웹훅 서명 검증을 훅으로 강제',
-    summary: '리뷰에서 두 번 놓쳤다. 훅으로 막자는 제안.',
+    title: '결제사 알림(웹훅)의 서명 확인을 자동 검사로 강제',
+    summary: '코드 리뷰에서 두 번 놓쳤습니다. 자동 검사로 막자는 제안입니다.',
     target: 'item_policy_webhook_sig',
     data: {
       rule: '서명 검증 전에는 payload 를 파싱하지도 저장하지도 않는다. 검증 실패는 401 로 끊는다.',
@@ -213,8 +213,8 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
   },
   {
     author: 'demo-member-haeun',
-    title: '환불 SLA 를 24시간으로 명시',
-    summary: '문서에는 있는데 항목에는 시간이 안 적혀 있다.',
+    title: '환불 처리 기한(SLA)을 24시간으로 못 박는다',
+    summary: '문서에는 있는데 항목에는 시간이 적혀 있지 않습니다.',
     target: 'item_policy_refund',
     data: {
       rule: '환불 요청은 접수 후 24시간 안에 처리한다. 외부 호출에는 타임아웃을 건다.',

@@ -19,21 +19,25 @@ import { SOURCE_REF_KINDS, type SourceRef, type SourceRefKind } from '@contextop
 export const SRC_LABEL: Record<SourceRefKind, (ref: SourceRef) => string> = {
   source_document: (ref) => {
     const r = ref as Extract<SourceRef, { kind: 'source_document' }>
-    const head = r.heading_path.length > 0 ? ` §${r.heading_path.join(' › ')}` : ''
+    //  사람이 읽는 차례 (2026-09-10 저녁): 문서 제목(첫 제목) / 마지막 절 · 글자 범위 · #문서판 앞 8자 — 같은 제목의 다른 판을 가른다 (FINDINGS 87).
+    const heads = r.heading_path
+    const where = heads.length === 0
+      ? ''
+      : heads.length === 1 ? ` 「${heads[0] ?? ''}」` : ` 「${heads[0] ?? ''}」 / ${heads[heads.length - 1] ?? ''}`
     //  🔴 **어느 문서인지 말한다** (FINDINGS 87). 예전엔 「문서 §보안 · 2100–2260자」였고,
     //     화면 5·7 처럼 **다른 문서에서 온 근거가 나란히 놓이는 자리**에서 둘이 구별되지
     //     않았다 — P7 은 「항목 ID → 원문」인데 그 사슬이 사람 눈앞에서 끊긴다.
     //  ⚠ 문서 **제목**이 아니라 버전 id 앞 8자다. 제목까지 가려면 화면이 그 이름을 알아야
     //    하는데 응답에 없다 (문서 목록을 내는 문이 아직 없다 — 지어내지 않는다).
     //    `proposal` 이 이미 같은 모양이다 (`제안 c0ffee00`).
-    return `문서 ${r.document_version_id.slice(0, 8)}${head} · ${r.start_char}–${r.end_char}번째 글자`
+    return `문서${where} · ${r.start_char}–${r.end_char}번째 글자 · #${r.document_version_id.slice(0, 8)}`
   },
   repository_path: (ref) => {
     const r = ref as Extract<SourceRef, { kind: 'repository_path' }>
     //  줄 범위와 커밋은 있을 때만 붙인다 — 없는 것을 `?` 로 채우면 근거가 있는 척이 된다.
     const lines = r.start_line === undefined ? '' : `:${r.start_line}${r.end_line === undefined ? '' : `–${r.end_line}`}`
     const commit = r.commit_sha === undefined ? '' : ` · ${r.commit_sha.slice(0, 7)}`
-    return `${r.repo}/${r.path}${lines}${commit}`
+    return `코드 ${r.repo}/${r.path}${lines}${commit}`
   },
   proposal: (ref) => {
     const r = ref as Extract<SourceRef, { kind: 'proposal' }>
@@ -47,18 +51,9 @@ export const SRC_LABEL: Record<SourceRefKind, (ref: SourceRef) => string> = {
 
 export const SOURCE_REF_KEYS = SOURCE_REF_KINDS
 
-/** 종류별 앞머리 글자. 라벨만으로 구별이 안 되는 자리(좁은 칸)에서 쓴다. */
-export const SRC_ICON: Record<SourceRefKind, string> = {
-  source_document: '¶',
-  repository_path: '⌘',
-  proposal: '↗',
-  manual: '✍',
-}
-
 export function EvidenceLink({ ref: sourceRef }: { ref: SourceRef }) {
   return (
     <span className="mono meta scroll-x" title={sourceRef.kind}>
-      <span aria-hidden="true">{SRC_ICON[sourceRef.kind]}</span>{' '}
       {SRC_LABEL[sourceRef.kind](sourceRef)}
     </span>
   )

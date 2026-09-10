@@ -77,7 +77,6 @@ describe('🔴 상태 5종이 전부 화면에 나온다 (FINDINGS 110 · ④2-B
     const html = table(oneOfEach())
     for (const status of SYNC_STATUSES) {
       expect(html, `${status} 칩이 표에 없다`).toContain(SYNC_CHIP[status].label)
-      expect(html, `${status} 아이콘이 표에 없다`).toContain(SYNC_CHIP[status].icon)
     }
   })
 

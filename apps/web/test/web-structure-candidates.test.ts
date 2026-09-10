@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { ITEM_TYPES, type SourceRef } from '@contextops/schema'
 
-import { ITEM_TYPE_ICON, ITEM_TYPE_LABEL } from '../src/components/chips'
-import { SRC_ICON, SRC_LABEL } from '../src/components/evidence'
+import { ITEM_TYPE_LABEL } from '../src/components/chips'
+import { SRC_LABEL } from '../src/components/evidence'
 import {
   bodyPreview, CANDIDATE_BODY_CHARS, StructureCandidates, type StructureCandidatesState,
 } from '../src/components/structure-candidates'
@@ -121,7 +121,6 @@ describe('🔴 후보에는 근거가 같이 나온다', () => {
   it('🔴 근거가 카드 글자로 나온다 — `EvidenceLink` 와 **같은 표**를 쓴다', () => {
     const html = render()
     expect(html).toContain(SRC_LABEL.source_document(REF))
-    expect(html).toContain(SRC_ICON.source_document)
   })
 
   it('🔴 근거 없는 후보는 그렇다고 말한다 — 빈 칸을 두면 근거가 있는 것처럼 읽힌다', () => {
@@ -184,10 +183,9 @@ describe('🔴 고른 수가 버튼에 따라온다', () => {
     expect(html).toContain('disabled')
   })
 
-  it('타입 아이콘과 **타입 이름**이 같이 나간다 — 색·기호만으로 말하지 않는다', () => {
+  it('**타입 이름**이 사람 말로 나간다 — 기호로 말하지 않는다 (2026-09-10 저녁)', () => {
     const html = render()
     for (const c of CANDIDATES) {
-      expect(html).toContain(ITEM_TYPE_ICON[c.type])
       expect(html).toContain(c.title)
       //  타입은 사람 말로 나간다 (`ITEM_TYPE_LABEL` · INBOX H7) — enum 값이 화면에 그대로 뜨지 않는다.
       expect(html).toContain(`>${ITEM_TYPE_LABEL[c.type]}<`)

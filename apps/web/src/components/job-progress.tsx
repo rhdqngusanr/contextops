@@ -54,7 +54,7 @@ export function JobProgress({
             서버가 이미 낸 값이다 — 화면이 초를 재지 않는다 (잣대는 서버 전용 표에 있고
             브라우저의 시계는 서버와 어긋난다). */}
         {job.stalled ? (
-          <span className="chip tone-warn"><span className="chip-icon" aria-hidden="true">⚠</span>멈춘 것 같음</span>
+          <span className="chip tone-warn"><span className="chip-dot" aria-hidden="true" />멈춘 것 같음</span>
         ) : null}
       </div>
 

@@ -1,7 +1,7 @@
 import { ITEM_TYPES, type ItemType } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 
-import { ITEM_GIST, itemGist } from '../src/lib/web/item-gist'
+import { ITEM_GIST, ITEM_GIST_KEY, itemGist } from '../src/lib/web/item-gist'
 
 // =====================================================================
 //  항목 타입 10종의 「한 줄」이 전부 실제로 무언가를 낸다 (2026-09-10 저녁)
@@ -29,6 +29,11 @@ describe('항목 타입 10종의 한 줄', () => {
       const gist = itemGist({ type, data: SAMPLE[type] } as Parameters<typeof itemGist>[0])
       expect(gist.trim().length, type).toBeGreaterThan(0)
     }
+  })
+
+  it('이름표도 10종 전부 사람 말이다', () => {
+    expect(Object.keys(ITEM_GIST_KEY).sort()).toEqual([...ITEM_TYPES].sort())
+    for (const type of ITEM_TYPES) expect(ITEM_GIST_KEY[type], type).toMatch(/[가-힣]/)
   })
 
   it('정책은 rule 그대로 · 제약은 statement 그대로 — 부딪히는 문장이 곧 한 줄이다', () => {
