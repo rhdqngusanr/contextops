@@ -10,39 +10,39 @@
    ★ 여기에 화면별 규칙을 쌓지 마라. 여기 있는 것은 **토큰 + 모든 화면이 공유하는 것**
      뿐이다. 한 화면에만 필요한 모양은 그 화면 옆의 `*.module.css` 로 간다.
 
-   ⚠ 웜 화이트 한 벌 · 라이트 고정이다. 다크 모드는 만들지 않는다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10).
-     오프화이트 바탕 · 검정 알약 버튼 하나 · 표제체(IBM Plex Sans KR) + 본문체(Pretendard) · 기계가 보증한
-     값은 모노 · 터미널만 검은 상자(`term-*`). 색은 상태와 AI 산출물에만 쓴다 (Taste anti-slop 지침).
+   ⚠ 뉴트럴 모노크롬 한 벌 · 라이트 고정이다. 다크 모드는 만들지 않는다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10).
+     순백 바탕 · 회색 괘선 · 검정 알약 버튼 하나 · 표제체(IBM Plex Sans KR) + 본문체(Pretendard) · 기계가 보증한
+     값은 모노 · 터미널만 검은 상자(`term-*`). 색은 **상태의 점·기호**에만 있다 — 칩에 색 배경이 없다 (Taste anti-slop 지침).
    ===================================================================== */
 
 :root {
   /* ── 색 — DESIGN_BRIEF §3 「색」 표와 한 줄씩 대응한다 (시험이 대조한다) ── */
-  --bg: #F7F5F0;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
-  --surface-hi: #EFEDE7;
-  --sand: #EAE3D3;
-  --line: #E6E2DA;
-  --line-soft: #EFECE6;
-  --line-hi: #D3CEC4;
-  --ink: #111110;
-  --ink-2: #4A4843;
-  --ink-3: #6F6B64;
-  --ink-4: #BDB9B1;
-  --accent: #111110;
+  --surface-hi: #F4F4F5;
+  --sand: #F4F4F5;
+  --line: #E4E4E7;
+  --line-soft: #F0F0F1;
+  --line-hi: #D4D4D8;
+  --ink: #09090B;
+  --ink-2: #3F3F46;
+  --ink-3: #6B6B73;
+  --ink-4: #C4C4C9;
+  --accent: #09090B;
   --accent-hi: #000000;
-  --accent-ink: #22306B;
-  --accent-soft: #EAE7E0;
+  --accent-ink: #09090B;
+  --accent-soft: #F0F0F1;
   --on-accent: #FFFFFF;
-  --ok: #2A7448;
-  --ok-bg: #E6F3EA;
-  --warn: #8F5F00;
-  --warn-bg: #FAEEC8;
-  --bad: #B03A2E;
-  --bad-bg: #F9E3DF;
-  --llm: #B85E14;
-  --term-bg: #111110;
-  --term-ink: #F3F1EC;
-  --term-ink-2: #A8A49C;
+  --ok: #15803D;
+  --ok-bg: #EAF7EE;
+  --warn: #B45309;
+  --warn-bg: #FDF6E3;
+  --bad: #B91C1C;
+  --bad-bg: #FDEDEC;
+  --llm: #C2410C;
+  --term-bg: #09090B;
+  --term-ink: #FAFAFA;
+  --term-ink-2: #A1A1AA;
 
   /* ── 간격 — DESIGN_BRIEF §3 「레이아웃」 의 4/8/12/16/24/32/48 ──
      ⚠ padding·margin·gap 은 이 변수로만 적는다. 시험이 px 리터럴을 막는다. */
@@ -328,19 +328,25 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   gap: var(--sp-1);
   font-size: var(--fs-label);
   font-weight: 500;
-  padding: var(--sp-1) var(--sp-2);
+  /* 배경·테두리가 없어서 좌우 여백도 없다 — 표 칸 안에서 글자처럼 선다. */
+  padding: var(--sp-1) 0;
   border-radius: var(--radius-pill);
   border: 1px solid transparent;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 .chip-icon { font-family: var(--font-mono); }
 
-.tone-ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
-.tone-warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
-.tone-bad { background: var(--bad-bg); color: var(--bad); border-color: var(--bad); }
-.tone-neutral { background: var(--surface-hi); color: var(--ink-3); border-color: var(--line-hi); }
-/* llm 은 AI 산출물에만 붙는다 (DESIGN_BRIEF §3). */
-.tone-llm { background: transparent; color: var(--llm); border-color: var(--llm); }
+/* 🔴 칩에 색 배경이 없다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10) — 글자는 잉크, **점·기호(`.chip-icon`)만** 상태색이다.
+   ★ 왜 — 초록·노랑·주황 면이 표마다 수십 개 서면 그게 「관리자 템플릿」의 얼굴이었다 (사용자가 실제 화면으로 짚었다).
+   아이콘+라벨 병기 규칙은 그대로다 — 색이 점 하나로 줄었을 뿐 상태를 색만으로 말하지 않는다. */
+.tone-ok .chip-icon { color: var(--ok); }
+.tone-warn .chip-icon { color: var(--warn); }
+.tone-bad .chip-icon { color: var(--bad); }
+.tone-neutral .chip-icon { color: var(--ink-3); }
+/* llm 은 AI 산출물에만 붙는다 (DESIGN_BRIEF §3) — 유일하게 테두리가 있는 칩이다 (「AI 가 만든 것」은 경계가 보여야 한다). */
+.tone-llm { border-color: var(--line-hi); padding: var(--sp-1) var(--sp-2); }
+.tone-llm .chip-icon { color: var(--llm); }
 
 /* CtxTag — 역추적 칩. 작고 회색이고 모노다 (P7 의 얼굴). */
 .ctx-tag {

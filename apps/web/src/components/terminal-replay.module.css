@@ -9,7 +9,7 @@
   align-items: start;
 }
 
-/* 오프화이트 위의 검은 상자 — 기계가 말하는 자리 (DESIGN_BRIEF §3 `term-*`). `.card` 의 바탕색을 여기서 덮는다. */
+/* 흰 종이 위의 검은 상자 — 기계가 말하는 자리 (DESIGN_BRIEF §3 `term-*`). `.card` 의 바탕색을 여기서 덮는다. */
 .term {
   padding: var(--sp-4) var(--sp-5);
   background: var(--term-bg);

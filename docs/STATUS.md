@@ -42,6 +42,15 @@ AI 산출물의 통계적 기본값으로 짚는다. 배포돼 있던 화면이 
 머리글의 그 글자를 절로 세어 빨개졌다 → 닻은 절을 감싸는 `<div id="why">` 로, h2 의 id 는 머리글에 안 쓴다.
 ② python heredoc 의 `'\\n'` 이 파일에 진짜 개행으로 들어가 esbuild 가 죽었다(세 번째) — `.py` 를 Write 로 쓰고 돌렸다.
 
+🔴 **같은 날 둘째 판 — 웜 화이트를 뉴트럴 모노크롬으로** (사용자: 「색이 여전히 이상하고 AI 냄새가 심하다」). 원인은 크림 바탕 + 남색 링크·막대 +
+흙빛 초록·노랑·주황 칩 면이 한 화면에 섞인 것. 같은 실제 화면(랜딩·Context·정리)에 색 처리만 다른 셋(뉴트럴 · 웜+점 · 쿨그레이+주황)을
+덮어 찍어 보였고(`evidence/…/variants/`) 사용자가 **뉴트럴**을 골랐다. 잰 것: 토큰 26개 교체(순백 바탕 · 회색 괘선 · 잉크 링크) · **칩에 색 배경 0** —
+`tone-*` 는 `.chip-icon` 만 칠한다 · 대비 흰 바탕 ink-3 5.3 / surface-hi 위 4.8 · 상태 글자 ok 5.0 · warn 5.0 · bad 6.5 · llm 5.2 ·
+`tools/ci.ps1` **GREEN** (14:03 · 관통 1426). ⚠ 첫 재실행은 `plugin/contextops` 의 `hooks.test` 「stop 이 바꾼 경로」가 0 으로 빨갰다 — 코드 변경과 무관한
+시간 민감 시험(훅 4.5s 예산)이고, `CLAUDE_CODE_SESSION_ID` 를 뺀 재실행은 초록. 세 번째 나면 게이트로 올려라.
+이미지: 사용자가 「코드로 그린 그림 금지 · Higgsfield 금지 · 로컬 Codex CLI 로」 — `codex exec`(imagegen 스킬)로 히어로 후보 4장을 뽑아 보였고
+④ 클레이 카드(한 Pack → 세 기기)를 골랐다 (`public/art/hero-pack.webp` 16KB · 다음 커밋).
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

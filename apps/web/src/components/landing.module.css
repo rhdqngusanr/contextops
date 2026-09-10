@@ -2,8 +2,8 @@
    화면 1 · 랜딩 — 이 화면에만 필요한 모양 (globals.css 의 「한 화면에만 필요한 모양은
    그 화면 옆의 *.module.css 로 간다」).
 
-   한 벌은 웜 화이트다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10 · Taste anti-slop 지침):
-   오프화이트 바탕 · 검정 알약 하나 · 표제체(Plex) 600 큰 글자 · 비대칭 격자 · 절마다 다른 여백 ·
+   한 벌은 뉴트럴 모노크롬이다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10 · Taste anti-slop 지침):
+   순백 바탕 · 회색 괘선 · 검정 알약 하나 · 표제체(Plex) 600 큰 글자 · 비대칭 격자 · 절마다 다른 여백 ·
    아이콘 없음 · 그림자·그라데이션 없음 · 움직이는 것은 녹화 재생뿐.
 
    ⚠ 색·간격·글꼴은 전부 `globals.css` 의 토큰이다. 여기에 숫자를 찍지 마라 —
@@ -111,8 +111,8 @@
   gap: var(--sp-3);
   padding: var(--sp-4) var(--sp-5);
 }
-/* Before 는 바탕색 그대로 · After 만 흰 카드 — 「깨끗한 한 장」이 After 다. */
-.slipBefore { background: var(--bg); }
+/* Before 는 옅은 회색 면 · After 만 흰 카드 — 「깨끗한 한 장」이 After 다. */
+.slipBefore { background: var(--surface-hi); border-color: transparent; }
 .slipAfter { border-color: var(--line-hi); }
 
 .slipLabel {
@@ -121,7 +121,7 @@
   letter-spacing: 0.3px;
 }
 
-/* 프롬프트 줄 — 모래색 띠 위의 남색 모노. */
+/* 프롬프트 줄 — 옅은 회색 띠 위의 잉크 모노. */
 .prompt {
   display: block;
   font-size: var(--fs-table);
@@ -277,7 +277,7 @@
 }
 .trust :global(.table) td { padding: var(--sp-3); border-bottom: 1px solid var(--line-hi); font-size: var(--fs-body); }
 
-/* ── 설치 명령 — 오프화이트 위의 검은 상자 (터미널 재생과 같은 `term-*`) ── */
+/* ── 설치 명령 — 흰 종이 위의 검은 상자 (터미널 재생과 같은 `term-*`) ── */
 .codeBlock {
   background: var(--term-bg);
   border-radius: var(--radius);

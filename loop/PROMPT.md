@@ -307,7 +307,7 @@ powershell -ExecutionPolicy Bypass -File tools/ci.ps1
 
 **화면 (만든 게 UI 면)** — `docs/DESIGN_BRIEF.md` 가 정본. 합격선 8, **6개 미만이면 미완성**
 
-- [ ] `DESIGN_BRIEF` §3 의 **토큰만** 썼는가 — 임의 색·간격 금지 (웜 화이트 한 벌 · 라이트 고정, 다크 없음)
+- [ ] `DESIGN_BRIEF` §3 의 **토큰만** 썼는가 — 임의 색·간격 금지 (뉴트럴 모노크롬 한 벌 · 라이트 고정, 다크 없음)
 - [ ] accent 는 **화면당 주요 액션 하나**
 - [ ] 상태를 **색만으로** 구분하지 않았는가 — 아이콘 + 라벨 병기
 - [ ] **loading / empty / error** 세 상태를 전부 찍었는가
