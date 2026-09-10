@@ -5,9 +5,46 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-10 밤 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **production 첫 배포 <https://contextops-rosy.vercel.app> · verify:prod 44/0** · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄._
+_마지막 갱신: 2026-09-10 낮 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **프론트를 웜 화이트 한 벌로 리디자인**(Taste MCP anti-slop 지침 · 글꼴 저장소 안 · ci GREEN · 아직 push 전) · production <https://contextops-rosy.vercel.app> 은 아직 옛 다크 벌 · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄 + 이 세션의 🙋 셋._
 
 ---
+
+## 🧑 사람 세션 (2026-09-10 낮 · 루프 밖) — **프론트 리디자인: 웜 화이트 한 벌 · Taste MCP 연결**
+
+> 사용자 지시(차례대로): 「배포된 디자인이 너무 AI 느낌이고 개성이 없다 — buildwithtaste.com/product/mcp 를 연결해서 매력적인 프론트로」 →
+> (내가 「종이·잉크·인장」 컨셉으로 짓기 시작하자) 「그 컨셉 아닌데, 제대로 후보군을 정해서 알려줘」 → 「추천해줘」 →
+> 「Taste MCP 연결해줘」 → 「Taste 써서 AI 냄새 안 나는 프론트로 바꿔줘」.
+> 방향은 **후보 넷을 렌더해 보여 준 뒤** 골랐다 (`docs/evidence/2026-09-10-redesign/candidates/`). 결정의 정본은 `docs/DESIGN_BRIEF.md` §3 「테마」.
+
+🔴 **Taste MCP 는 붙었지만 계정이 비어 있었다** — 잰 것:
+`claude mcp add --transport http --scope local taste https://mcp.buildwithtaste.com/mcp` 로 등록 · `claude mcp login taste` 는 이 세션에서
+「stdin isn't a terminal」로 끝남 → 표준 OAuth(동적 등록 `/oauth/register` · PKCE · 콜백 `localhost:8791`)를 스크래치 스크립트로 밟고
+사용자가 브라우저에서 로그인해 세션 토큰(scope `taste.read` · 1h)을 받았다. 도구 24개 중 읽어 본 것: `list_collections` 0 ·
+`search_samples` 0 · `get_taste_profile` 「아직 생성 안 됨」 · `list_portfolio_projects` 0 · `get_design_judgment_profile` 「MCP 에 공개 안 됨」.
+**실제로 쓸 수 있던 것은 `get_anti_slop_guardrails` 한 벌** — 원문 `docs/evidence/2026-09-10-redesign/taste-anti-slop.md`. 그 지침이 이번 벌의 근거다.
+
+🔴 **한 벌을 다크에서 웜 화이트로 바꿨다** (토큰 표 교체 · 화면 코드는 토큰만 읽어서 앱 7화면이 그대로 따라왔다):
+
+| 무엇 | 잰 것 |
+|---|---|
+| 토큰 | 26개 (새로 `sand`·`on-accent`·`term-bg`·`term-ink`·`term-ink-2`) · 대비 전부 AA — 본문 9.1 · 메타 5.3 · 링크 12.3 · 칩 ok 5.0/warn 4.8/bad 4.9 · 버튼 18.9 (`design-tokens.test` 가 표↔`:root` 대조) |
+| 글꼴 | 저장소 안 4.1MB — Pretendard Variable 92조각 2.9MB · IBM Plex Sans KR 600 94조각 1.2MB · JetBrains Mono 12조각 0.13MB (`pnpm --filter web fonts:vendor` · `public/fonts/LICENSES.md`) · 빌드·런타임 네트워크 0 |
+| 표제체 | 넷(Pretendard 800 · Plex 600 · Plex 700 · Gothic A1 800)을 같은 문장으로 렌더해 눈으로 골랐다 (`candidates/heading-font-compare.png`) — h1·h2 Plex 600, h3·h4 Pretendard 700 |
+| 랜딩 | 히어로 7/5 · 절 머리 4/8 · 「왜 git」 정의 목록 5/7 · 「어떻게」 번호 목록 · 제품 캡처 큰 1 + 작은 2 · 절 위 여백이 서로 다르다 · 머리글에 절 링크 셋(`/#why` …) · 아이콘·그라데이션·그림자 0 |
+| 앱 화면 | e2e 61/0 (context·import·review·proposals·packs·roadmap·sync 전부 skeleton 0 · 가로 밀림 0) · 눈으로 본 것 6장 · 고친 곳 셋 — 폭 100% 행 버튼(`.tree-item`)은 알약이 아니라 10px · 입력 칸 바탕 `surface` · 내비 바탕 `bg` |
+| 미리보기 | `og.png` 다시 그림(Plex · `file://` 로 저장소 글꼴을 읽는다) · `icon.svg` 검정 둥근 사각 + 확인 표시 (색 둘 다 표의 값) |
+| 시험 | vitest 1014/1014 · typecheck OK · `tools/ci.ps1` **GREEN** (2026-09-10 12:51 · principles 9 · typecheck · test · build 25초 · walkthrough 검사 1426개 · docs) |
+
+★ 왜 검정 버튼·남색 링크인가 — anti-slop 지침이 「blue-500/indigo 주요색 · gray-50 바탕 · Inter 단독 · 3열 같은 카드 · 눈썹칩+표제+부제+버튼 둘」을
+AI 산출물의 통계적 기본값으로 짚는다. 배포돼 있던 화면이 정확히 그 다섯이었다. 지침 → 우리 자리 대응표는 DESIGN_BRIEF §3 「테마」에 있다.
+
+⚠ **밟은 함정 둘** — ① 머리글 링크를 `href="/#landing-why"` 로 적자 「제품 화면이 왜 git 보다 먼저」 시험(`web-landing-shots` ⑤)이
+머리글의 그 글자를 절로 세어 빨개졌다 → 닻은 절을 감싸는 `<div id="why">` 로, h2 의 id 는 머리글에 안 쓴다.
+② python heredoc 의 `'\\n'` 이 파일에 진짜 개행으로 들어가 esbuild 가 죽었다(세 번째) — `.py` 를 Write 로 쓰고 돌렸다.
+
+🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
+「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
+(글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).
 
 ## 🧑 사람 세션 (2026-09-09 · 루프 밖) — **대회 감사 · 배포를 막던 코드 4건 · 일감을 INBOX 로**
 

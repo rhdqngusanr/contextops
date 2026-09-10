@@ -10,32 +10,39 @@
    ★ 여기에 화면별 규칙을 쌓지 마라. 여기 있는 것은 **토큰 + 모든 화면이 공유하는 것**
      뿐이다. 한 화면에만 필요한 모양은 그 화면 옆의 `*.module.css` 로 간다.
 
-   ⚠ 다크 고정이다. 라이트 모드는 만들지 않는다 (DESIGN_BRIEF §3 「테마」).
+   ⚠ 웜 화이트 한 벌 · 라이트 고정이다. 다크 모드는 만들지 않는다 (DESIGN_BRIEF §3 「테마」 · 2026-09-10).
+     오프화이트 바탕 · 검정 알약 버튼 하나 · 표제체(IBM Plex Sans KR) + 본문체(Pretendard) · 기계가 보증한
+     값은 모노 · 터미널만 검은 상자(`term-*`). 색은 상태와 AI 산출물에만 쓴다 (Taste anti-slop 지침).
    ===================================================================== */
 
 :root {
   /* ── 색 — DESIGN_BRIEF §3 「색」 표와 한 줄씩 대응한다 (시험이 대조한다) ── */
-  --bg: #08090B;
-  --surface: #0C0E12;
-  --surface-hi: #0A0E1A;
-  --line: #1B1E24;
-  --line-soft: #16181D;
-  --line-hi: #22262E;
-  --ink: #EDEFF3;
-  --ink-2: #D5DAE2;
-  --ink-3: #A7AEB9;
-  --ink-4: #3A404A;
-  --accent: #1F4EE0;
-  --accent-hi: #3D66F0;
-  --accent-ink: #7B9CFF;
-  --accent-soft: #24304F;
-  --ok: #5FC48F;
-  --ok-bg: #1E3B2C;
-  --warn: #E2B04A;
-  --warn-bg: #4A3B20;
-  --bad: #EF7D72;
-  --bad-bg: #402322;
-  --llm: #E9A25A;
+  --bg: #F7F5F0;
+  --surface: #FFFFFF;
+  --surface-hi: #EFEDE7;
+  --sand: #EAE3D3;
+  --line: #E6E2DA;
+  --line-soft: #EFECE6;
+  --line-hi: #D3CEC4;
+  --ink: #111110;
+  --ink-2: #4A4843;
+  --ink-3: #6F6B64;
+  --ink-4: #BDB9B1;
+  --accent: #111110;
+  --accent-hi: #000000;
+  --accent-ink: #22306B;
+  --accent-soft: #EAE7E0;
+  --on-accent: #FFFFFF;
+  --ok: #2A7448;
+  --ok-bg: #E6F3EA;
+  --warn: #8F5F00;
+  --warn-bg: #FAEEC8;
+  --bad: #B03A2E;
+  --bad-bg: #F9E3DF;
+  --llm: #B85E14;
+  --term-bg: #111110;
+  --term-ink: #F3F1EC;
+  --term-ink-2: #A8A49C;
 
   /* ── 간격 — DESIGN_BRIEF §3 「레이아웃」 의 4/8/12/16/24/32/48 ──
      ⚠ padding·margin·gap 은 이 변수로만 적는다. 시험이 px 리터럴을 막는다. */
@@ -47,9 +54,12 @@
   --sp-6: 32px;
   --sp-7: 48px;
 
-  /* ── 글꼴 ──
-     ⚠ 웹폰트를 받아 오지 않는다. 빌드가 네트워크에 기대면 오프라인에서 못 짓고,
-       Pretendard 는 Google Fonts 에 없다. 설치돼 있으면 쓰고 아니면 폴백이다. */
+  /* ── 글꼴 (DESIGN_BRIEF §3 「타이포」) ──
+     🔴 세 벌 다 저장소 안이다 — `src/app/fonts.css` 가 `public/fonts/` 의 조각을 가리킨다
+       (`scripts/vendor-fonts.ts` 가 만든다 · SIL OFL). 빌드도 런타임도 네트워크를 안 탄다.
+     ★ 왜 표제체가 따로인가 — Pretendard(한국판 Inter)만 쓰면 「AI 기본값」의 얼굴이다 (Taste anti-slop).
+       IBM Plex Sans KR 600 을 h1·h2 에만 짝지어 층마다 서체·굵기가 다르게 한다. */
+  --font-display: 'IBM Plex Sans KR', 'Pretendard Variable', 'Apple SD Gothic Neo', sans-serif;
   --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, 'Segoe UI', 'Malgun Gothic', sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'D2Coding', monospace;
@@ -61,11 +71,14 @@
   --fs-sub: 16.5px;
   --fs-section: 21px;
   --fs-page: 32px;
-  /* 랜딩 헤드라인 — 스케일의 「32–74(페이지·랜딩)」 구간. 화면 1 만 쓴다. */
-  --fs-hero: 44px;
+  /* 랜딩 헤드라인 — 스케일의 「32–74(페이지·랜딩)」 구간. 화면 1 만 쓴다. 좁은 폭은 둘째 값. */
+  --fs-hero: 64px;
+  --fs-hero-narrow: 40px;
 
   /* 레이아웃 상수 — 숫자를 화면마다 적으면 조용히 갈라진다 */
   --radius: 10px;
+  /* 버튼·칩은 알약이다 — 종이 위에서 모서리 10px 사각형은 「입력 칸」으로 읽힌다. */
+  --radius-pill: 999px;
   --nav-w: 220px;
   --content-max: 1200px;
   /* 🔴 **좁은 폭의 경계 — 이 저장소의 breakpoint 는 이 한 자리가 전부다** (FINDINGS 160).
@@ -130,14 +143,21 @@ html, body {
   overflow-wrap: break-word;
 }
 
-h1, h2, h3, h4 { color: var(--ink); margin: 0; font-weight: 600; line-height: 1.3; }
-h1 { font-size: var(--fs-page); letter-spacing: -0.4px; }
+/* 표제 — h1·h2 는 표제체 600, h3·h4 는 본문체 700 (DESIGN_BRIEF §3 「타이포」: 층마다 서체·굵기가 다르다).
+   큰 글자일수록 자간을 좁힌다. 크기는 각 자리의 클래스가 정한다. `text-wrap: balance` 는 두 줄 표제의 끝을 고르게 한다. */
+h1, h2, h3, h4 { color: var(--ink); margin: 0; line-height: 1.2; text-wrap: balance; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; }
+h3, h4 { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.01em; }
+h1 { font-size: var(--fs-page); }
 h2 { font-size: var(--fs-section); }
 h3 { font-size: var(--fs-sub); }
 p { margin: 0; }
 
 a { color: var(--accent-ink); text-decoration: none; }
-a:hover { text-decoration: underline; }
+/* 밑줄은 글자에서 조금 띄워 얇게 — 브라우저 기본 밑줄은 「기본값」의 얼굴이다 (Taste anti-slop). */
+a:hover { text-decoration: underline; text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+/* 드래그 선택도 우리 색이다 (같은 이유). */
+::selection { background: var(--sand); color: var(--ink); }
 
 /* ── 키보드 포커스 — 탭으로 훑을 때 「지금 어디인가」 (DESIGN_BRIEF §3 「접근성」 · FINDINGS 130) ──
    🔴 여기가 **유일한** 포커스 링이다. 버튼·링크·입력·행(.pack-line)·탭이 전부 이 한 줄을 읽는다 —
@@ -185,6 +205,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 }
 
 .label {
+  /* 라벨은 본문체다 — `<h2 class="label">` 처럼 표제 태그에 달려도 명조로 커지지 않게. */
+  font-family: var(--font-sans);
   font-size: var(--fs-label);
   color: var(--ink-3);
   letter-spacing: 0.3px;
@@ -230,20 +252,21 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   font-size: var(--fs-body);
   font-weight: 500;
   padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line-hi);
-  background: transparent;
-  color: var(--ink-2);
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
   /* ⚠ 좁은 자리에서 「보내 기」로 접혔다 (.ci/shots/s2-login.png 첫 판). 버튼 글자는 안 접는다. */
   white-space: nowrap;
 }
-.btn:hover { background: var(--surface-hi); color: var(--ink); }
+.btn:hover { background: var(--surface-hi); border-color: var(--ink-3); color: var(--ink); }
 .btn:disabled { color: var(--ink-4); border-color: var(--line); cursor: not-allowed; }
-.btn:disabled:hover { background: transparent; color: var(--ink-4); }
+.btn:disabled:hover { background: var(--surface); border-color: var(--line); color: var(--ink-4); }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--ink); }
-.btn-primary:hover { background: var(--accent-hi); border-color: var(--accent-hi); color: var(--ink); }
+/* 글자는 `on-accent` 다 — `ink` 는 이제 검정이라 인주색 위에서 안 보인다 (DESIGN_BRIEF §3). */
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hi); border-color: var(--accent-hi); color: var(--on-accent); }
 .btn-primary:disabled { background: var(--surface); border-color: var(--line); }
 
 .btn-sm { font-size: var(--fs-table); padding: var(--sp-1) var(--sp-3); }
@@ -256,7 +279,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   font-family: inherit;
   font-size: var(--fs-body);
   color: var(--ink);
-  background: var(--bg);
+  /* 입력 칸은 카드와 같은 `surface` 다 — 종이(bg) 위에서 더 밝은 칸이 「쓸 수 있는 자리」로 읽힌다. */
+  background: var(--surface);
   border: 1px solid var(--line-hi);
   border-radius: var(--radius);
   padding: var(--sp-2) var(--sp-3);
@@ -305,7 +329,7 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   font-size: var(--fs-label);
   font-weight: 500;
   padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -342,7 +366,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   width: var(--nav-w);
   flex: 0 0 var(--nav-w);
   border-right: 1px solid var(--line);
-  background: var(--surface);
+  /* 내비도 종이(bg)다 — 본문과 같은 면이고 괘선 하나로만 갈린다. 카드(surface)만 뜬다. */
+  background: var(--bg);
   padding: var(--sp-5) var(--sp-4);
   display: flex;
   flex-direction: column;
@@ -515,6 +540,8 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
   word-break: break-all;
   text-align: left;
   gap: var(--sp-2);
+  /* 행처럼 넓게 서는 버튼(로드맵 행 · 파일 트리)은 알약이 아니다 — 폭 100% 알약은 캡슐로 읽힌다 (눈으로 봤다). */
+  border-radius: var(--radius);
 }
 /* ⚠ sha 4자는 안 접는다 — `.tree-item` 의 break-all 이 `4175` 를 `41`/`75` 로 쪼갰다. */
 .tree-sha { white-space: nowrap; word-break: normal; flex: 0 0 auto; }

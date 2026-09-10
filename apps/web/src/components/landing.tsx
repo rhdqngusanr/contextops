@@ -291,20 +291,46 @@ export function skillNamesIn(text: string): string[] {
 }
 
 // ---------------------------------------------------------------------
+//  아래는 모양이다 — 문구는 위 표에서만 온다. 절의 번호(01…06)는 `Landing` 이 차례대로 매긴다.
+//  ★ 왜 이 모양인가 — DESIGN_BRIEF §3 「테마」(2026-09-10 · Taste anti-slop 지침): 비대칭 격자 · 정의 목록 ·
+//    번호 목록 · 아이콘 없음 · 왼쪽 정렬 · 검정 알약 하나. 「눈썹 칩 + 표제 + 부제 + 버튼 둘」 틀을 쓰지 않는다.
+// ---------------------------------------------------------------------
+
+/** 브랜드 마크 — `public/icon.svg` 와 같은 그림(검정 둥근 사각 + 확인 표시). 색은 토큰이라 SVG 속성에도 var 로 적는다. */
+function BrandMark() {
+  return (
+    <svg className={styles.mark} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <rect x="2" y="2" width="60" height="60" rx="16" fill="var(--ink)" />
+      <path d="M19 33.5l8.5 8.5L45 24" fill="none" stroke="var(--on-accent)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** 절 머리 — 작은 모노 번호 · 표제체 제목 · (있으면) 한 줄 설명. id 는 `aria-labelledby` 가 읽는다. */
+function SectionHead({ id, index, title, lead }: { id: string; index: string; title: string; lead?: string }) {
+  return (
+    <div className={styles.sectionHead}>
+      <span className={styles.index} aria-hidden="true">{index}</span>
+      <h2 id={id}>{title}</h2>
+      {lead ? <p className={styles.lead}>{lead}</p> : null}
+    </div>
+  )
+}
 
 function Hero() {
   return (
     <section className={styles.hero} aria-labelledby="landing-title">
       <div className={styles.heroCopy}>
-        <span className="label">{LANDING_HEAD.eyebrow}</span>
+        <span className={styles.eyebrow}>{LANDING_HEAD.eyebrow}</span>
         <h1 id="landing-title" className={styles.title}>{LANDING_HEAD.title}</h1>
         <p className={styles.subtitle}>{LANDING_HEAD.subtitle}</p>
         {/* ⚠ 버튼은 하나다. [2분 영상 보기] 는 영상이 생기면 여기 outline 한 줄이고,
-            [로그인] 은 머리글에 이미 있다 — 덤프에서 「로그인 로그인」으로 겹쳐 보였다. */}
-        <div className="row wrap">
+            [로그인] 은 머리글에 이미 있다 — 덤프에서 「로그인 로그인」으로 겹쳐 보였다.
+            ⚠ 마크업은 시험이 글자 그대로 잰다 — 클래스도 안의 글자도 더하지 마라. 화살표는 CSS 다. */}
+        <div className={styles.ctaRow}>
           <a className="btn btn-primary" href={LANDING_HEAD.cta.href}>{LANDING_HEAD.cta.label}</a>
+          <span className={styles.note}>{LANDING_HEAD.note}</span>
         </div>
-        <p className="meta">{LANDING_HEAD.note}</p>
       </div>
       <BeforeAfter />
     </section>
@@ -315,27 +341,30 @@ function BeforeAfter() {
   const { prompt, before, after } = BEFORE_AFTER
   return (
     <div className={styles.compare} aria-label="Before/After">
-      <div className={`card ${styles.compareCol}`}>
-        <span className="label ink-bad">{before.title}</span>
+      <div className={`card ${styles.slip} ${styles.slipBefore}`}>
+        <span className={`${styles.slipLabel} ink-bad`}>{before.title}</span>
         <code className={styles.prompt}>$ {prompt}</code>
-        {before.answers.map((a) => (
-          <div key={a.who} className="col-tight">
-            <span className="meta mono">{a.who} · {a.source}</span>
-            <p>{a.text}</p>
-          </div>
-        ))}
-        <span className="meta">{before.foot}</span>
-      </div>
-      <div className={`card ${styles.compareCol}`}>
-        <span className="label ink-ok">{after.title}</span>
-        <code className={styles.prompt}>$ {prompt}</code>
-        <div className="col-tight">
-          <p className="ink">{after.text}</p>
-          <span className="meta">{after.detail}</span>
-          <span className="meta mono">근거: {after.evidence.join(' · ')}</span>
+        <div className={styles.answers}>
+          {before.answers.map((a) => (
+            <div key={a.who} className={styles.answer}>
+              <span className={styles.who}>{a.who}</span>
+              <div className="col-tight">
+                <span className="meta mono">{a.source}</span>
+                <p>{a.text}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="row wrap">
-          <span className="meta">{after.foot}</span>
+        <span className={styles.slipFoot}>{before.foot}</span>
+      </div>
+      <div className={`card ${styles.slip} ${styles.slipAfter}`}>
+        <span className={`${styles.slipLabel} ink-ok`}>{after.title}</span>
+        <code className={styles.prompt}>$ {prompt}</code>
+        <p className={styles.answerText}>{after.text}</p>
+        <span className="meta">{after.detail}</span>
+        <span className="meta mono">근거: {after.evidence.join(' · ')}</span>
+        <div className={`row wrap ${styles.slipFootRow}`}>
+          <span className={styles.slipFoot}>{after.foot}</span>
           <span className="ctx-tag">ctx:{after.itemId}</span>
         </div>
       </div>
@@ -343,18 +372,17 @@ function BeforeAfter() {
   )
 }
 
-function ProductShots() {
+function ProductShots({ index }: { index: string }) {
   return (
-    <section className={styles.section} aria-labelledby="landing-shots">
-      <h2 id="landing-shots">{PRODUCT_TOUR.title}</h2>
-      <p className="ink">{PRODUCT_TOUR.lead}</p>
+    <section className={`${styles.section} ${styles.sectionShots}`} aria-labelledby="landing-shots">
+      <SectionHead id="landing-shots" index={index} title={PRODUCT_TOUR.title} lead={PRODUCT_TOUR.lead} />
       <div className={styles.shotRow}>
         {PRODUCT_SHOTS.map((shot, i) => (
           <figure key={shot.file} className={`card ${styles.shot}`}>
             {/*  ⚠ `<img>` 다 — Next 의 `<Image>` 는 최적화 서버를 타는데, 이 세 장은 이미
                 관통이 낸 고정 파일이고 랜딩은 정적이어야 한다 (①).
                 🔴 폭·높이는 manifest 가 준다 — 그림이 늦게 떠도 자리가 안 튄다.
-                첫 장만 즉시 받는다 (첫 스크롤 안에 있다). */}
+                첫 장만 즉시 받는다 (첫 스크롤 안에 있고 제일 크다). */}
             <img
               className={styles.shotImg}
               src={shot.file}
@@ -363,7 +391,7 @@ function ProductShots() {
               height={shot.height}
               loading={i === 0 ? 'eager' : 'lazy'}
             />
-            <figcaption className="col-tight">
+            <figcaption className={`col-tight ${styles.shotCap}`}>
               <span className="ink">{shot.alt}</span>
               {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
               <span className="meta mono">{shot.src}</span>
@@ -371,138 +399,173 @@ function ProductShots() {
           </figure>
         ))}
       </div>
-      <p className="meta">{PRODUCT_TOUR.foot}</p>
+      <p className={styles.foot}>{PRODUCT_TOUR.foot}</p>
     </section>
   )
 }
 
-function WhyNotGit() {
+function WhyNotGit({ index }: { index: string }) {
   return (
-    <section className={styles.section} aria-labelledby="landing-why">
-      <h2 id="landing-why">{WHY_NOT_GIT.title}</h2>
-      <div className={styles.threeUp}>
+    <section className={`${styles.section} ${styles.sectionWhy}`} aria-labelledby="landing-why">
+      <SectionHead id="landing-why" index={index} title={WHY_NOT_GIT.title} />
+      {/* 카드 셋이 아니라 정의 목록이다 — 주장 | 설명 (anti-slop: 「아이콘-원-제목-문단」 카드 금지). */}
+      <dl className={styles.defs}>
         {WHY_NOT_GIT.cards.map((c) => (
-          <div key={c.head} className={`card ${styles.tile}`}>
-            <h3>{c.head}</h3>
-            <p>{c.body}</p>
+          <div key={c.head} className={styles.def}>
+            <dt>{c.head}</dt>
+            <dd>{c.body}</dd>
           </div>
         ))}
-      </div>
-      <p className="ink">{WHY_NOT_GIT.line}</p>
+      </dl>
+      <p className={styles.statement}>{WHY_NOT_GIT.line}</p>
     </section>
   )
 }
 
-function HowItWorks() {
+function HowItWorks({ index }: { index: string }) {
   return (
     <section className={styles.section} aria-labelledby="landing-how">
-      <h2 id="landing-how">{HOW_IT_WORKS.title}</h2>
-      <ol className={styles.steps}>
-        {HOW_IT_WORKS.steps.map((s, i) => (
-          <li key={s.head} className={`card ${styles.tile}`}>
-            <span className="label mono">{i + 1}</span>
-            <h3>{s.head}</h3>
-            <p>{s.body}</p>
-          </li>
-        ))}
-      </ol>
+      <div className={styles.split}>
+        <div className={styles.splitHead}>
+          <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} />
+        </div>
+        <ol className={styles.steps}>
+          {HOW_IT_WORKS.steps.map((s, i) => (
+            <li key={s.head} className={styles.step}>
+              {/* 번호는 `<ol>` 이 이미 말한다 — 모노 숫자는 그림이다. */}
+              <span className={styles.stepNo} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <div className={styles.stepBody}>
+                <h3>{s.head}</h3>
+                <p>{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   )
 }
 
-function Replay() {
+function Replay({ index }: { index: string }) {
   return (
     <section className={styles.section} aria-labelledby="landing-replay">
-      <h2 id="landing-replay">{TERMINAL_REPLAY.title}</h2>
-      <p className="ink">{TERMINAL_REPLAY.lead}</p>
+      <SectionHead id="landing-replay" index={index} title={TERMINAL_REPLAY.title} lead={TERMINAL_REPLAY.lead} />
       <TerminalReplay frames={REPLAY_FRAMES} milestone={TERMINAL_REPLAY.milestone} />
-      <p className="meta">{TERMINAL_REPLAY.source}</p>
+      <p className={styles.foot}>{TERMINAL_REPLAY.source}</p>
     </section>
   )
 }
 
-function TrustBoundary() {
+function TrustBoundary({ index }: { index: string }) {
   const { knows, unknown } = TRUST_BOUNDARY
   const rows = Math.max(knows.rows.length, unknown.rows.length)
   return (
-    <section className={styles.section} aria-labelledby="landing-trust">
-      <h2 id="landing-trust">{TRUST_BOUNDARY.title}</h2>
-      <div className="scroll-x">
-        <table className="table">
-          <thead>
-            <tr>
-              <th><span className="ink-ok">✓</span> {knows.head}</th>
-              <th><span className="ink-bad">✕</span> {unknown.head}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: rows }, (_, i) => (
-              <tr key={i}>
-                <td>{knows.rows[i] ?? ''}</td>
-                <td>{unknown.rows[i] ?? ''}</td>
+    <section className={`${styles.section} ${styles.trust}`} aria-labelledby="landing-trust">
+      <div className={styles.split}>
+        <div className={styles.splitHead}>
+          <SectionHead id="landing-trust" index={index} title={TRUST_BOUNDARY.title} />
+          <p className={styles.foot}>{TRUST_BOUNDARY.foot}</p>
+        </div>
+        <div className="scroll-x">
+          <table className="table">
+            <thead>
+              <tr>
+                <th><span className="ink-ok">✓</span> {knows.head}</th>
+                <th><span className="ink-bad">✕</span> {unknown.head}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Array.from({ length: rows }, (_, i) => (
+                <tr key={i}>
+                  <td>{knows.rows[i] ?? ''}</td>
+                  <td>{unknown.rows[i] ?? ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <p className="meta">{TRUST_BOUNDARY.foot}</p>
     </section>
   )
 }
 
-function Install() {
+function Install({ index }: { index: string }) {
   return (
     <section className={styles.section} aria-labelledby="landing-install">
-      <h2 id="landing-install">{INSTALL_STEPS.title}</h2>
-      <p className="meta">{INSTALL_STEPS.requires}</p>
-      <div className={`card scroll-x ${styles.codeBlock}`}>
+      {/* 이 절만 전폭이다 — 명령 넉 줄이 길어서 4/8 로 나누면 접힌 줄이 셋이 된다 (눈으로 봤다). */}
+      <SectionHead id="landing-install" index={index} title={INSTALL_STEPS.title} lead={INSTALL_STEPS.requires} />
+      <div className={`scroll-x ${styles.codeBlock}`}>
         {/* 줄 사이는 진짜 개행이다 — `<pre>` 라서 그대로 서고, 글자로 뽑아 읽어도 네 줄이다. */}
         <pre className={styles.pre}>
           {INSTALL_STEPS.lines.map((l, i) => (
             <span key={l.cmd}>
               {i > 0 ? '\n' : ''}
-              <span className="ink">{l.cmd}</span>
-              <span className="meta">  # {l.note}</span>
+              <span className={styles.cmd}>{l.cmd}</span>
+              <span className={styles.cmdNote}>  # {l.note}</span>
             </span>
           ))}
         </pre>
       </div>
-      <p className="meta">{INSTALL_STEPS.foot}</p>
+      <p className={styles.foot}>{INSTALL_STEPS.foot}</p>
     </section>
   )
 }
 
 function Foot() {
   return (
-    <footer className={styles.foot}>
-      <span className="ink">{LANDING_FOOT.brand}</span>
-      <span className="meta">{LANDING_FOOT.event}</span>
-      <span className="meta">{LANDING_FOOT.team.label} {LANDING_FOOT.team.name}</span>
-      <a className="meta" href={LANDING_FOOT.github.href} rel="noreferrer">{LANDING_FOOT.github.label}</a>
-      <a className="meta" href={LANDING_FOOT.limits.href} rel="noreferrer">{LANDING_FOOT.limits.label}</a>
-      <a className="meta" href={LANDING_FOOT.health.href}>{LANDING_FOOT.health.label}</a>
-      <a className="meta" href={LANDING_FOOT.privacy.href}>{LANDING_FOOT.privacy.label}</a>
+    <footer className={styles.footer}>
+      <span className={styles.footBrand}>{LANDING_FOOT.brand}</span>
+      <span>{LANDING_FOOT.event}</span>
+      <span>{LANDING_FOOT.team.label} {LANDING_FOOT.team.name}</span>
+      <a className={styles.footLink} href={LANDING_FOOT.github.href} rel="noreferrer">{LANDING_FOOT.github.label}</a>
+      <a className={styles.footLink} href={LANDING_FOOT.limits.href} rel="noreferrer">{LANDING_FOOT.limits.label}</a>
+      <a className={styles.footLink} href={LANDING_FOOT.health.href}>{LANDING_FOOT.health.label}</a>
+      <a className={styles.footLink} href={LANDING_FOOT.privacy.href}>{LANDING_FOOT.privacy.label}</a>
     </footer>
   )
+}
+
+/**
+ * 절의 차례 — 번호는 여기서 한 번만 매긴다. 절을 넣고 빼면 번호가 따라온다.
+ * ⚠ 머리글의 링크 셋도 이 표를 읽는다 (`nav` 가 있는 줄만). `href` 는 `/#<anchor>` 다 — 시험이 「앱 안 주소(`/`로 시작)」만
+ *   허용하고, `/` 위에서는 그냥 그 절로 스크롤한다. 닻은 절을 감싸는 `<div id>` 에 있다 — h2 의 id(`landing-*`)를
+ *   머리글에서 먼저 언급하면 「제품 화면이 왜 git 보다 먼저」를 재는 시험이 머리글의 링크를 절로 오해한다.
+ */
+const SECTIONS = [
+  { render: ProductShots, id: 'landing-shots', nav: null },
+  { render: WhyNotGit, id: 'landing-why', nav: WHY_NOT_GIT.title },
+  { render: HowItWorks, id: 'landing-how', nav: HOW_IT_WORKS.title },
+  { render: Replay, id: 'landing-replay', nav: null },
+  { render: TrustBoundary, id: 'landing-trust', nav: null },
+  { render: Install, id: 'landing-install', nav: INSTALL_STEPS.title },
+] as const
+
+/** 머리글 링크의 닻 — h2 의 id 에서 `landing-` 을 뗀 것 (`/#why` · `/#install`). */
+function anchorOf(sectionId: string): string {
+  return sectionId.replace(/^landing-/, '')
 }
 
 export function Landing() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <span className={`ink ${styles.brand}`}>{LANDING_FOOT.brand}</span>
-        <a className="btn btn-sm" href={LANDING_HEAD.login.href}>{LANDING_HEAD.login.label}</a>
+        <a className={styles.brand} href="/"><BrandMark />{LANDING_FOOT.brand}</a>
+        <nav className={styles.headerNav} aria-label="절로 가기">
+          {SECTIONS.filter((s) => s.nav !== null).map((s) => (
+            <a key={s.id} className={styles.navLink} href={`/#${anchorOf(s.id)}`}>{s.nav}</a>
+          ))}
+          <a className="btn btn-sm" href={LANDING_HEAD.login.href}>{LANDING_HEAD.login.label}</a>
+        </nav>
       </header>
       <main className={styles.main}>
         <Hero />
-        {/* 🔴 히어로 **바로 아래**다 — 심사위원은 10초 안에 판단하고, 그때 제품 화면이
-            첫 스크롤 안에 있어야 한다 (FINDINGS 131 의 증상이 그것이었다). */}
-        <ProductShots />
-        <WhyNotGit />
-        <HowItWorks />
-        <Replay />
-        <TrustBoundary />
-        <Install />
+        {/* 🔴 제품 화면이 히어로 **바로 아래**다 — 심사위원은 10초 안에 판단하고, 그때 제품 화면이
+            첫 스크롤 안에 있어야 한다 (FINDINGS 131 의 증상이 그것이었다). 차례는 `SECTIONS` 하나다. */}
+        {SECTIONS.map((s, i) => (
+          <div key={s.id} id={anchorOf(s.id)}>
+            <s.render index={String(i + 1).padStart(2, '0')} />
+          </div>
+        ))}
       </main>
       <Foot />
     </div>

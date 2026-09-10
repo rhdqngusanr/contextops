@@ -18,7 +18,8 @@
     "dev:db": "tsx scripts/dev-server.ts",
     "demo:db": "tsx scripts/demo-server.ts",
     "ai:smoke": "tsx scripts/ai-smoke.ts",
-    "p3:measure": "tsx scripts/p3-measure.ts"
+    "p3:measure": "tsx scripts/p3-measure.ts",
+    "fonts:vendor": "tsx scripts/vendor-fonts.ts"
   },
   "dependencies": {
     "@contextops/compiler": "workspace:*",

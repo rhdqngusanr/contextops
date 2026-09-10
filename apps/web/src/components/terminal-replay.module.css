@@ -9,10 +9,14 @@
   align-items: start;
 }
 
+/* 오프화이트 위의 검은 상자 — 기계가 말하는 자리 (DESIGN_BRIEF §3 `term-*`). `.card` 의 바탕색을 여기서 덮는다. */
 .term {
-  padding: var(--sp-4);
-  /* 재생 중 줄이 늘어도 아래 절이 튀지 않게 — 녹화 17줄이 서는 높이다. */
-  min-height: 26em;
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--term-bg);
+  border-color: var(--term-bg);
+  color: var(--term-ink-2);
+  /* 재생 중 줄이 늘어도 아래 절이 튀지 않게 — 녹화 9줄이 서는 높이다 (26em 이었을 때 검은 상자의 절반이 비었다 · 눈으로 봤다). */
+  min-height: 17em;
 }
 
 .pre {
@@ -24,15 +28,15 @@
   word-break: break-word;
 }
 
-.cmd { color: var(--ink); }
-.out { color: var(--ink-2); }
+.cmd { color: var(--term-ink); }
+.out { color: var(--term-ink-2); }
 
 .caret {
   display: inline-block;
   width: 0.55em;
   height: 1em;
   vertical-align: text-bottom;
-  background: var(--accent-ink);
+  background: var(--term-ink);
   animation: replay-caret 1s steps(1) infinite;
 }
 @keyframes replay-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
