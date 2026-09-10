@@ -76,29 +76,48 @@ export const BEFORE_AFTER = {
   caption: '같은 질문을 같은 팀 두 사람의 Claude Code 에 던졌습니다.',
   //  PSP = 결제사. 심사위원이 결제 개발자가 아니어도 읽히게 괄호로 푼다 (2026-09-10).
   prompt: '결제사(PSP) 호출이 실패하면 몇 번까지 재시도해?',
+  //  작은 이름표들 — 모양이 아니라 낱말이라 표에 산다 (질문 줄 · 「쉬운 말로」 줄 · 근거 목록).
+  askKey: '질문',
+  plainKey: '쉬운 말로',
+  //  ★ 2026-09-10 저녁 — 「이런 것들의 디자인이 너무 부족하고 대충 만든 것 같다」. 답은 대화의 한 줄이 됐다:
+  //    누가(머리글자) · 무엇을 읽고(`read`) · 어디서(`source`) · 답(`text`) · 「쉬운 말로」(`plain` — **횟수가 먼저, 굵게**).
+  //    `plain` 은 README 「실제로 이렇게 달라집니다」의 같은 줄과 같은 말이다 — 비개발자가 A·B·After 를 숫자로 견준다.
   before: {
-    title: '지금 — 사람마다 다른 답',
+    tag: '지금',
+    title: '사람마다 다른 답',
     answers: [
       {
         who: 'A',
+        name: 'A 의 Claude Code',
+        read: '팀 문서를 읽었습니다',
         source: 'paylab-docs/goals.md §3.1',
         text: '문서에는 최대 5회, 지수 백오프로 재시도하라고 되어 있습니다. 고정 간격은 금지입니다.',
+        plain: { count: '5번까지', how: '기다리는 시간을 점점 늘려 가며' },
       },
       {
         who: 'B',
+        name: 'B 의 Claude Code',
+        read: '실제 코드를 읽었습니다',
         source: 'paylab-api/src/payment/retry.ts:11',
         text: '코드에는 MAX_RETRY = 3, 간격은 500ms 고정으로 되어 있습니다.',
+        plain: { count: '3번까지', how: '0.5초 간격으로 똑같이' },
       },
     ],
     foot: 'A 는 문서를, B 는 코드를 읽었습니다. 둘 다 틀리지 않았는데 팀은 둘로 갈립니다.',
   },
   after: {
-    title: 'ContextOps — Team Context v1.1.0',
+    tag: 'ContextOps',
+    /** 버전은 데모가 실제로 발행하는 판이다 — 시험이 `seed-demo.ts` 와 대조한다. */
+    title: 'Team Context v1.1.0',
+    name: 'A · B · C 의 Claude Code',
+    read: '팀장이 승인한 규칙을 읽었습니다',
     /** 씨앗 초안의 id — Pack 의 역추적 태그(`<!-- ctx:… -->`)에 그대로 실리는 값이다. */
     itemId: 'item_policy_retry',
     text: 'PSP 호출은 최대 5회까지 재시도한다. 간격은 지수 백오프(0.5s·1s·2s·4s·8s)이고, '
       + '재시도 대상은 타임아웃과 5xx 뿐이다.',
+    plain: { count: '5번까지', how: '기다리는 시간은 0.5초 → 8초로 늘리고, 응답이 없거나(타임아웃) 상대 서버가 고장 났을 때(5xx)만' },
     detail: 'must · 강제: 리뷰에서 본다',
+    evidenceKey: '근거',
     evidence: ['paylab-docs/goals.md §3.1', 'paylab-api/src/payment/retry.ts:11–14', '팀장 승인'],
     foot: '팀장이 승인한 이 한 문장을 A·B·C 모두 같은 버전으로 받습니다.',
   },
@@ -383,40 +402,90 @@ function Hero() {
 }
 
 function BeforeAfter() {
-  const { caption, prompt, before, after } = BEFORE_AFTER
+  const { caption, prompt, askKey, before, after } = BEFORE_AFTER
   return (
-    <section className={styles.compareBand} aria-label="Before/After">
-      <p className={styles.compareCaption}>{caption}</p>
+    <section className={styles.compareBand} aria-labelledby="landing-compare">
+      <h2 id="landing-compare" className={styles.compareCaption}>{caption}</h2>
+
+      {/* 질문은 한 줄, **한 번** — 두 세계가 같은 질문을 받았다는 것이 이 그림의 전제다 (시험이 한 번을 센다).
+          한글 질문이라 모노가 아니다 — 모노는 왼쪽의 작은 이름표뿐. */}
+      <div className={styles.ask}>
+        <span className={styles.askKey}>{askKey}</span>
+        <p className={styles.askText}>{prompt}</p>
+      </div>
+
       <div className={styles.compare}>
-      <div className={`card ${styles.slip} ${styles.slipBefore}`}>
-        <span className={`${styles.slipLabel} ink-bad`}>{before.title}</span>
-        <code className={styles.prompt}>$ {prompt}</code>
-        <div className={styles.answers}>
-          {before.answers.map((a) => (
-            <div key={a.who} className={styles.answer}>
-              <span className={styles.who}>{a.who}</span>
-              <div className="col-tight">
-                <span className="meta mono">{a.source}</span>
-                <p>{a.text}</p>
+        <article className={`${styles.pane} ${styles.paneBefore}`} aria-label={`${before.tag} — ${before.title}`}>
+          <header className={styles.paneHead}>
+            <span className={styles.paneTag}>{before.tag}</span>
+            <h3 className={styles.paneTitle}>{before.title}</h3>
+          </header>
+          <div className={styles.thread}>
+            {before.answers.map((a) => (
+              <div key={a.who} className={styles.reply}>
+                <span className={styles.who} aria-hidden="true">{a.who}</span>
+                <div className={styles.replyBody}>
+                  <div className={styles.replyMeta}>
+                    <span className={styles.replyName}>{a.name}</span>
+                    <span className={styles.replyRead}>{a.read}</span>
+                    <code className={styles.replySource}>{a.source}</code>
+                  </div>
+                  <p className={styles.replyText}>{a.text}</p>
+                  <Plain plain={a.plain} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={styles.paneFoot}><span>{before.foot}</span></div>
+        </article>
+
+        {/* 읽는 방향 — 좁은 폭에서는 CSS 가 돌려 「↓」가 된다. 장식이라 읽지 않는다. */}
+        <span className={styles.turn} aria-hidden="true">→</span>
+
+        <article className={`${styles.pane} ${styles.paneAfter}`} aria-label={`${after.tag} — ${after.title}`}>
+          <header className={styles.paneHead}>
+            <span className={styles.paneTag}>{after.tag}</span>
+            <h3 className={styles.paneTitle}>{after.title}</h3>
+          </header>
+          <div className={styles.thread}>
+            <div className={styles.reply}>
+              <span className={`${styles.who} ${styles.whoAll}`} aria-hidden="true">✓</span>
+              <div className={styles.replyBody}>
+                <div className={styles.replyMeta}>
+                  <span className={styles.replyName}>{after.name}</span>
+                  <span className={styles.replyRead}>{after.read}</span>
+                </div>
+                <p className={`${styles.replyText} ${styles.replyTextBig}`}>{after.text}</p>
+                <Plain plain={after.plain} />
+                <span className={styles.severity}>{after.detail}</span>
               </div>
             </div>
-          ))}
-        </div>
-        <span className={styles.slipFoot}>{before.foot}</span>
-      </div>
-      <div className={`card ${styles.slip} ${styles.slipAfter}`}>
-        <span className={`${styles.slipLabel} ink-ok`}>{after.title}</span>
-        <code className={styles.prompt}>$ {prompt}</code>
-        <p className={styles.answerText}>{after.text}</p>
-        <span className="meta">{after.detail}</span>
-        <span className="meta mono">근거: {after.evidence.join(' · ')}</span>
-        <div className={`row wrap ${styles.slipFootRow}`}>
-          <span className={styles.slipFoot}>{after.foot}</span>
-          <span className="ctx-tag">ctx:{after.itemId}</span>
-        </div>
-      </div>
+          </div>
+          {/* 근거는 작아도 전부 적는다 — P7 의 얼굴이다. */}
+          <div className={styles.evidence}>
+            <span className={styles.evidenceKey}>{after.evidenceKey}</span>
+            <ul className={styles.evidenceList}>
+              {after.evidence.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          </div>
+          <div className={styles.paneFoot}>
+            <span>{after.foot}</span>
+            <span className="ctx-tag">ctx:{after.itemId}</span>
+          </div>
+        </article>
       </div>
     </section>
+  )
+}
+
+/** 「쉬운 말로」 한 줄 — 횟수가 먼저, 굵게. A·B·After 를 견주는 눈은 이 숫자만 본다 (README 의 같은 줄과 같은 말). */
+function Plain({ plain }: { plain: { count: string; how: string } }) {
+  return (
+    <p className={styles.plain}>
+      <span className={styles.plainKey}>{BEFORE_AFTER.plainKey}</span>
+      <strong className={styles.plainCount}>{plain.count}</strong>
+      <span>{plain.how}</span>
+    </p>
   )
 }
 
@@ -424,34 +493,37 @@ function ProductShots({ index }: { index: string }) {
   return (
     <section className={`${styles.section} ${styles.sectionShots}`} aria-labelledby="landing-shots">
       <SectionHead id="landing-shots" index={index} title={PRODUCT_TOUR.title} lead={PRODUCT_TOUR.lead} />
+      {/* 2×2 — 코스의 네 걸음이 네 칸이다 (2026-09-10 저녁 · 「큰 한 장 + 작은 장들」은 첫 장 밑이 비고 넷째 장이 홀로 남았다).
+          카드 안의 카드가 아니다 — 그림 한 장 + 그 밑에 번호 동그라미·제목·볼 것·주소. */}
       <div className={styles.shotRow}>
-        {PRODUCT_SHOTS.map((shot, i) => (
-          <figure key={shot.file} className={`card ${styles.shot}`}>
-            {/*  ⚠ `<img>` 다 — Next 의 `<Image>` 는 최적화 서버를 타는데, 이 세 장은 이미
-                관통이 낸 고정 파일이고 랜딩은 정적이어야 한다 (①).
-                🔴 폭·높이는 manifest 가 준다 — 그림이 늦게 떠도 자리가 안 튄다.
-                첫 장만 즉시 받는다 (첫 스크롤 안에 있고 제일 크다). */}
-            <img
-              className={styles.shotImg}
-              src={shot.file}
-              alt={shot.alt}
-              width={shot.width}
-              height={shot.height}
-              loading={i === 0 ? 'eager' : 'lazy'}
-            />
-            <figcaption className={`col-tight ${styles.shotCap}`}>
-              <span className="ink">{shot.alt}</span>
-              {/* 코스의 「볼 것」 — 이 캡처가 코스의 몇째 걸음이고 무엇을 봐야 하는지 (정본 `lib/web/tour.ts`). */}
-              {(() => {
-                const at = DEMO_TOUR.stops.findIndex((t) => shot.src.endsWith(`/${t.path}`))
-                const stop = DEMO_TOUR.stops[at]
-                return stop ? <span className={styles.shotSee}><span className="mono">{at + 1}</span> {stop.see}</span> : null
-              })()}
-              {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
-              <span className="meta mono">{shot.src}</span>
-            </figcaption>
-          </figure>
-        ))}
+        {PRODUCT_SHOTS.map((shot, i) => {
+          //  코스의 「볼 것」 — 이 캡처가 코스의 몇째 걸음이고 무엇을 봐야 하는지 (정본 `lib/web/tour.ts`).
+          const at = DEMO_TOUR.stops.findIndex((t) => shot.src.endsWith(`/${t.path}`))
+          const stop = DEMO_TOUR.stops[at]
+          return (
+            <figure key={shot.file} className={styles.shot}>
+              {/*  ⚠ `<img>` 다 — Next 의 `<Image>` 는 최적화 서버를 타는데, 이 장들은 이미
+                  관통이 낸 고정 파일이고 랜딩은 정적이어야 한다 (①).
+                  🔴 폭·높이는 manifest 가 준다 — 그림이 늦게 떠도 자리가 안 튄다.
+                  첫 장만 즉시 받는다 (첫 스크롤 안에 있다). */}
+              <img
+                className={styles.shotImg}
+                src={shot.file}
+                alt={shot.alt}
+                width={shot.width}
+                height={shot.height}
+                loading={i === 0 ? 'eager' : 'lazy'}
+              />
+              <figcaption className={styles.shotCap}>
+                {stop ? <span className={styles.shotNo} aria-hidden="true">{at + 1}</span> : <span />}
+                <span className={styles.shotTitle}>{shot.alt}</span>
+                {stop ? <span className={styles.shotSee}>{stop.see}</span> : null}
+                {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
+                <span className={`meta mono ${styles.shotSrc}`}>{shot.src}</span>
+              </figcaption>
+            </figure>
+          )
+        })}
       </div>
       <p className={styles.foot}>{PRODUCT_TOUR.foot}</p>
     </section>

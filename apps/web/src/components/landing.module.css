@@ -128,57 +128,97 @@
   100% { opacity: 0; }
 }
 
-/* ── Before/After — 히어로 밑의 두 열. 위에 「무엇을 보고 있는지」 한 줄. ── */
+/* ── Before/After — 한 질문 · 두 답 → 한 답 (2026-09-10 저녁 · 사용자: 「이런 것들의 디자인이 너무 부족하고 대충 만든 것 같다」).
+   표제 한 줄 → 질문 한 줄(**한 번만** — 두 세계가 같은 질문을 받았다) → 두 판. 왼쪽은 회색 면 위의 대화 둘,
+   오른쪽은 흰 종이 위의 답 하나. 사이의 검정 동그라미 「→」 가 읽는 방향이다 (좁은 폭에서는 「↓」로 돈다).
+   답마다 「쉬운 말로」 줄이 붙고 **횟수가 흰 알약에 굵다** — 5번 · 3번 · 5번을 견주는 눈은 그 숫자만 본다.
+   색 라벨(bad/ok)은 없다 — 회색 면 ↔ 흰 종이의 대비와 화살표가 방향을 말한다 (anti-slop: 색으로 판정하지 않는다). ── */
 
-.compareBand { display: flex; flex-direction: column; gap: var(--sp-3); }
-.compareCaption { font-size: var(--fs-body); color: var(--ink-2); }
+.compareBand { display: flex; flex-direction: column; gap: var(--sp-5); }
+.compareCaption {
+  font-size: var(--fs-section);
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  max-width: 30em;
+}
 
+/* 질문 줄 — 흰 칸에 괘선. 한글 질문이라 본문체 600 이고, 왼쪽의 작은 이름표만 모노다. */
+.ask {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.askKey { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.4px; color: var(--ink-3); }
+.askText { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); line-height: 1.5; letter-spacing: -0.01em; }
+
+/* 두 판과 사이의 화살표 — 가운데 열은 화살표 폭만큼만. 두 판은 같은 키다 (바닥 줄이 같은 높이에 선다). */
 .compare {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: var(--sp-4);
+  align-items: stretch;
+}
+.turn {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-table);
+  line-height: 1;
 }
 
-.slip {
+.pane {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-4) var(--sp-5);
-}
-/* Before 는 옅은 회색 면 · After 만 흰 카드 — 「깨끗한 한 장」이 After 다. */
-.slipBefore { background: var(--surface-hi); border-color: transparent; }
-.slipAfter { border-color: var(--line-hi); }
-
-.slipLabel {
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
-/* 프롬프트 줄 — 옅은 회색 띠 위의 잉크 모노. */
-.prompt {
-  display: block;
-  font-size: var(--fs-table);
-  color: var(--accent-ink);
-  background: var(--sand);
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
   border-radius: var(--radius);
-  padding: var(--sp-2) var(--sp-3);
-  /* 프롬프트는 한 줄 명령이다 — 잘리면 질문이 무엇인지 모른다. 접어서 다 보여 준다. */
-  white-space: pre-wrap;
-  word-break: break-word;
+  min-width: 0;
+}
+/* 왼쪽은 회색 면(괘선 없음) · 오른쪽만 흰 종이에 괘선 — 「깨끗한 한 장」이 After 다. */
+.paneBefore { background: var(--surface-hi); }
+.paneAfter { background: var(--surface); border: 1px solid var(--line-hi); }
+
+.paneHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--line-hi);
+}
+.paneTag { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.4px; color: var(--ink-3); }
+.paneTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-section);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--ink);
 }
 
-.answers { display: flex; flex-direction: column; gap: var(--sp-3); }
-.answer {
+/* 대화 — 답 하나가 한 줄(머리글자 + 본문). 둘째 답부터는 점선으로 나뉜다. */
+.thread { display: flex; flex-direction: column; gap: var(--sp-4); }
+.reply {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: var(--sp-3);
   align-items: start;
 }
-/* 답한 사람의 머리글자 — 같은 팀의 두 Claude 가 다른 답을 낸다는 그림. */
+.reply + .reply { padding-top: var(--sp-4); border-top: 1px dashed var(--line-hi); }
 .who {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid var(--line-hi);
   background: var(--surface);
@@ -187,11 +227,80 @@
   justify-content: center;
   font-family: var(--font-mono);
   font-size: var(--fs-label);
-  color: var(--ink-3);
+  font-weight: 500;
+  color: var(--ink-2);
 }
-.answerText { color: var(--ink); font-size: var(--fs-sub); line-height: 1.6; letter-spacing: -0.01em; }
-.slipFoot { font-size: var(--fs-table); color: var(--ink-3); }
-.slipFootRow { justify-content: space-between; }
+/* After 의 머리글자는 검정 동그라미의 확인 표시 — 이 판의 유일한 검정이다. */
+.whoAll { background: var(--ink); border-color: var(--ink); color: var(--on-accent); }
+
+.replyBody { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.replyMeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-2); }
+.replyName { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.replyRead { font-size: var(--fs-table); color: var(--ink-2); }
+.replySource { font-size: var(--fs-label); color: var(--ink-3); word-break: break-all; }
+.replyText { color: var(--ink); font-size: var(--fs-body); line-height: 1.65; }
+.replyTextBig { font-size: var(--fs-sub); font-weight: 500; letter-spacing: -0.01em; line-height: 1.6; }
+
+/* 「쉬운 말로」 — 횟수는 흰 알약에 굵게, 나머지는 보조 글자. */
+.plain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-table);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.plainKey { font-family: var(--font-mono); font-size: var(--fs-label); color: var(--ink-3); }
+.plainCount {
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--sp-2);
+  white-space: nowrap;
+}
+
+.severity { font-family: var(--font-mono); font-size: var(--fs-label); color: var(--ink-2); }
+
+/* 근거 — 작은 모노 목록. P7 의 얼굴이라 작아도 전부 적는다. */
+.evidence {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sp-1) var(--sp-3);
+  align-items: baseline;
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line);
+}
+.evidenceKey { font-family: var(--font-mono); font-size: var(--fs-label); letter-spacing: 0.4px; color: var(--ink-3); }
+.evidenceList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--ink-2);
+  word-break: break-all;
+}
+
+/* 판의 마지막 줄 — 바닥에 붙는다 (두 판의 키가 같아 같은 높이에 선다). */
+.paneFoot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--line-hi);
+  font-size: var(--fs-table);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
 
 /* ── 절 — 위에 괘선, 작은 모노 번호, 표제체 제목. 절마다 위 여백이 다르다. ── */
 
@@ -296,23 +405,21 @@
 .step h3 { font-size: var(--fs-sub); }
 .step p { color: var(--ink-2); line-height: 1.65; }
 
-/* ── B-2 제품 화면 — 큰 한 장 + 작은 장들 (FINDINGS 131).
-   ⚠ 장수는 `e2e/plan.ts` 의 `PUBLISHED` 가 정한다. 첫 장이 2×2 를 차지하고 나머지는 한 칸씩 흐른다 —
-     계획에 한 줄이 늘어도 CSS 를 안 고친다. */
+/* ── B-2 제품 화면 — 2×2 (2026-09-10 저녁). 코스의 네 걸음이 네 칸이다.
+   ⚠ 장수는 `e2e/plan.ts` 의 `PUBLISHED` 가 정한다 — 두 열 격자라 한 줄이 늘면 다음 줄로 흐른다. CSS 를 안 고친다.
+   카드 안의 카드가 아니다 — 그림에만 괘선, 그 밑에 번호 동그라미(대화의 머리글자와 같은 동그라미) · 제목 · 볼 것 · 주소. */
 .shotRow {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--sp-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-6) var(--sp-5);
 }
 .shot {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  padding: var(--sp-3);
   margin: 0; /* figure 의 기본 여백을 지운다 */
   min-width: 0; /* 1440px 캡처가 격자 칸을 밀지 않게 (FINDINGS 160 이 잰 자리) */
 }
-.shot:first-child { grid-column: span 2; grid-row: span 2; }
 
 /* 캡처는 1440×900 이다 — 칸 폭에 맞춰 줄이되 비율은 `width`/`height` 속성이 지킨다. */
 .shotImg {
@@ -322,8 +429,29 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.shotCap { padding: 0 var(--sp-2) var(--sp-1); }
-.shotSee { color: var(--ink-2); line-height: 1.6; }
+.shotCap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sp-1) var(--sp-3);
+  align-items: start;
+}
+.shotNo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--line-hi);
+  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.shotTitle { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); line-height: 1.4; letter-spacing: -0.01em; }
+.shotSee { grid-column: 2; color: var(--ink-2); line-height: 1.6; }
+.shotSrc { grid-column: 2; }
 
 /* ── 신뢰 경계 표 — 머리는 표제체, 아래 굵은 잉크 줄 ── */
 .trust :global(.table) th {
@@ -367,7 +495,7 @@
 
 /* 좁은 폭 — 비대칭 격자가 전부 한 열로. */
 @media (max-width: 900px) {
-  .hero, .split, .def, .shotRow, .compare, .stepsArt { grid-template-columns: 1fr; }
+  .hero, .split, .def, .compare, .stepsArt { grid-template-columns: 1fr; }
   .hero { gap: var(--sp-6); padding-top: var(--sp-6); }
   .title { font-size: var(--fs-hero-narrow); }
   .main { padding: var(--sp-5) var(--sp-4) var(--sp-6); gap: var(--sp-7); }
@@ -375,6 +503,10 @@
   .headerNav .navLink { display: none; }
   .sectionHead { grid-template-columns: 1fr; }
   .lead { grid-column: 1; }
-  .shot:first-child { grid-column: auto; grid-row: auto; }
+  .shotRow { grid-template-columns: 1fr; }
+  /* Before/After — 한 열로 서면 화살표가 아래를 본다. 판의 여백은 한 눈금 줄인다. */
+  .turn { transform: rotate(90deg); justify-self: center; }
+  .pane { padding: var(--sp-4); }
+  .ask { grid-template-columns: 1fr; row-gap: var(--sp-1); padding: var(--sp-3) var(--sp-4); }
   .sectionWhy { padding-top: var(--sp-6); }
 }

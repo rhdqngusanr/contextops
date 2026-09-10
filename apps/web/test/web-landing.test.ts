@@ -83,6 +83,23 @@ describe('② 첫 화면에 A·B·C 가 있다', () => {
     //  After 에는 역추적 태그가 보인다 — 「이 답은 어디서 왔나」가 첫 화면에 있다 (P7).
     expect(out).toContain(`ctx:${BEFORE_AFTER.after.itemId}`)
   })
+
+  it('답마다 「무엇을 읽었나」와 「쉬운 말로」 줄이 붙고, 질문은 한 번만 그려진다 (2026-09-10 저녁)', () => {
+    //  ★ 왜 — 비개발자는 답의 문장이 아니라 「5번 · 3번 · 5번」을 견준다. 그 줄이 빠지면 이 그림은 다시 개발자 전용이다.
+    const out = html()
+    for (const a of BEFORE_AFTER.before.answers) {
+      expect(out).toContain(a.name)
+      expect(out).toContain(a.read)
+      expect(out).toContain(a.plain.count)
+      expect(out).toContain(a.plain.how)
+    }
+    expect(out).toContain(BEFORE_AFTER.after.name)
+    expect(out).toContain(BEFORE_AFTER.after.read)
+    expect(out).toContain(BEFORE_AFTER.after.plain.how)
+    for (const e of BEFORE_AFTER.after.evidence) expect(out).toContain(e)
+    //  질문은 한 번 — 두 세계가 같은 질문을 받았다는 그림이라 두 번 찍지 않는다.
+    expect(out.split(BEFORE_AFTER.prompt).length - 1).toBe(1)
+  })
 })
 
 describe('🔴 ③ accent 는 하나 — [샘플 팀으로 둘러보기] → /demo', () => {

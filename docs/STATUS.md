@@ -104,6 +104,15 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 코스 Sync 문장. README·SUBMISSION 거울(readme.test ①) 동기. 남긴 것: 근거 줄(문서 해시·글자 offset·코드 줄)은 P7 의 얼굴이라 그대로 — 대신 작게 선다.
 `tools/ci.ps1`: 2026-09-10 17:56 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **아홉째 판 — Before/After 를 대화로** (사용자: 「이런 것들의 디자인이 너무 부족하고 대충 만든 것 같다」 — 회색 카드 둘에 작은 색 라벨 · `$` 모노 한글 질문 · 회색 문단이 전부였다).
+모양: 표제 한 줄(`h2`) → **질문 한 줄을 한 번만**(흰 칸 · 본문체 600 · 모노는 「질문」 이름표뿐) → 두 판 사이에 검정 동그라미 「→」(좁은 폭 「↓」).
+왼쪽 「지금」은 회색 면 위의 대화 둘 — 머리글자 A/B · `A 의 Claude Code` · 「팀 문서를/실제 코드를 읽었습니다」 · 출처 모노 · 답 · **「쉬운 말로」 5번까지/3번까지**(흰 알약에 굵게).
+오른쪽 「ContextOps」는 흰 종이에 괘선 — 검정 ✓ · `A · B · C 의 Claude Code` · 답 하나 크게 · 「쉬운 말로」 · must · 근거 목록 · 바닥에 ctx 태그. 두 판은 같은 키라 바닥 줄이 나란하다.
+표에 `tag`·`name`·`read`·`plain{count,how}`·`askKey`·`plainKey`·`evidenceKey` 가 늘었다 — 「쉬운 말로」는 README 「실제로 이렇게 달라집니다」의 같은 줄과 같은 말. 색 라벨(bad/ok)은 뺐다.
+같은 눈으로 **제품 화면(01)도** — 「큰 한 장 + 작은 장들」은 첫 장 밑이 비고 넷째 장(Sync)이 홀로 남았다. 지금은 **2×2**(코스의 네 걸음 = 네 칸) · 카드 없이 그림 + 번호 동그라미(머리글자와 같은 24px) · 제목 · 볼 것 · 주소.
+시험: `web-landing.test.ts` ② 에 한 칸 — 이름·읽은 것·쉬운 말·근거가 전부 그려지고 **질문은 한 번**. DESIGN_BRIEF §3 anti-slop 표 · §4 화면 1 B·B-2 에 모양을 적었다. 1440·375 캡처로 눈 판정.
+`tools/ci.ps1`: 2026-09-10 18:40 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).
