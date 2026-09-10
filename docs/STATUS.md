@@ -59,6 +59,18 @@ AI 산출물의 통계적 기본값으로 짚는다. 배포돼 있던 화면이 
 가로 밀림 0(1440·375) · DESIGN_BRIEF §3 「그림」 절 신설 · 원본 PNG·프롬프트는 `evidence/…/art/`.
 `tools/ci.ps1`: 2026-09-10 14:18 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **넷째 판 — 문구와 움직임** (사용자: 「정적 이미지 한 장뿐이야? 애니메이션은?」 · 「문구도 팀의 기억과 AI 기억을 한 방향으로 이런 식으로」).
+문구: 한 줄의 정본 `lib/web/site.ts` 를 「팀의 기억과 AI의 기억을 한 방향으로」로, 부제를 「…같은 버전으로 닿고, 진행은 근거와 함께 보입니다」로 —
+랜딩·로그인(글자 대신 `SITE.tagline` 을 읽게 고침)·`<head>`·og.png·README·SUBMISSION·SPEC·DESIGN_BRIEF·PITCH·`loop/env.ps1` 이 같은 문장.
+움직임: Codex 의 이미지 도구는 정지 이미지만 만든다 → 셋(스톱모션 · mp4 · Lottie)을 보였고 사용자가 **클레이 스톱모션**을 골랐다.
+`codex exec -i hero-4.png` 로 같은 장면 5장(실이 위 카드에서 세 기기로 내려오는 중간 장면)을 뽑았고 카드 위치가 전부 같았다(sheet 로 봄).
+잰 것: 완성 장면(5번)이 바닥 `hero-pack.webp`, 1~4번이 `hero-frame-*.webp`(13~17KB · 넷 합 62KB) · `ART.heroFrames` · `landing.module.css` 의
+`hero-stop`(6초 한 바퀴 = 0.8초 × 4 + 완성 장면 2.8초 · `steps(1)` · nth-child 지연) · 움직임 줄이기는 `globals.css` 한 블록이 끝내 바닥만 남는다 ·
+가로 밀림 0(1440·375) · 원본 PNG·프롬프트 `evidence/…/art/hero-frame-*.png`.
+⚠ 훅 시험이 **두 번째로** 빨갰다(14:41 · 같은 자리) → 원인을 잡았다: `GIT_TIMEOUT_MS` 1000 이 바쁜 Windows 에서 모자라 `changedPaths` 가 비어
+「변경 없음」으로 조용히 끝났다. git 1400 · 네트워크 2000 (합 4800 < 5000 · 시험이 센다) · 고친 뒤 `hooks.test` 3회 연속 초록.
+`tools/ci.ps1`: 2026-09-10 14:51 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

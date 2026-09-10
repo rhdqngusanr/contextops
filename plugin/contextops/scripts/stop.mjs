@@ -40,12 +40,16 @@ import { dirname, join } from 'node:path'
  * 🔴 **최악의 경우 이 훅이 기다리는 시간의 합이 hooks.json 의 timeout(5초)보다 짧아야 한다.**
  *    턴의 끝을 막는 훅이 제일 나쁘다 — 그리고 timeout 에 걸리면 그냥 죽는 것이 아니라
  *    **매 턴** 죽는다. git 두 번(`changedPaths`) + 네트워크 한 번이 이 훅의 전부다:
- *    2 × 1000 + 2500 = 4500ms < 5000ms. 예전엔 1500 × 2 + 2500 = 5500 으로 timeout 을
+ *    2 × 1400 + 2000 = 4800ms < 5000ms. 예전엔 1500 × 2 + 2500 = 5500 으로 timeout 을
  *    넘고 있었다 (INBOX G7). 합을 재는 시험은 `test/hooks.test.ts` 「timeout 이 …」다.
+ *    ⚠ 2026-09-10: git 1000 은 Windows 에서 **모자랐다** — 바쁜 기계에서 git 의 첫 기동이 1초를 넘겨
+ *      `changedPaths` 가 빈 채로 돌아오고, 훅이 「변경 없음」으로 조용히 끝났다 (CI 의 `hooks.test`
+ *      「stop 이 바꾼 경로」가 하루에 두 번 0 으로 빨갰다 · 코드는 그대로였다). 네트워크에서 500 을 떼어
+ *      git 에 주었다 — API 는 icn1 이라 2초면 충분하고, git 이 못 끝나면 보고 자체가 없다.
  */
-const NETWORK_TIMEOUT_MS = 2500
-/** git 한 번에 주는 시간. 큰 저장소에서도 이 안에 끝난다. 두 번 부른다 (`changedPaths`). */
-const GIT_TIMEOUT_MS = 1000
+const NETWORK_TIMEOUT_MS = 2000
+/** git 한 번에 주는 시간. 큰 저장소·바쁜 Windows 에서도 이 안에 끝난다. 두 번 부른다 (`changedPaths`). */
+const GIT_TIMEOUT_MS = 1400
 /** 한 번에 볼 변경 경로 수 (`PendingProposalFile.changed_paths` 상한과 같다). */
 const MAX_PATHS = 50
 
