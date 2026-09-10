@@ -373,7 +373,7 @@ describe('🔴 버튼은 `PROPOSAL_DECISIONS` 표가 정한다 (화면이 조건
       onNote: () => {}, onDecide: () => {},
     }))
     expect(markup).not.toContain('<button')
-    expect(markup).toContain('owner만')
+    expect(markup).toContain('팀장만')
   })
 
   it('🔴 거절은 사유가 없으면 못 누른다 (`noteRequired` — 서버도 같은 표로 막는다)', () => {

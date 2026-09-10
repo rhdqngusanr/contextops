@@ -1,4 +1,4 @@
-import {
+import { type ProgressStatus,
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
   ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, PROPOSAL_OPERATIONS, PROPOSAL_STATUSES,
   SOURCE_DOCUMENT_KINDS, SYNC_STATUSES,
@@ -57,11 +57,12 @@ export const SYNC_CHIP: Record<SyncStatus, ChipSpec> = {
  *   각주가 갈리면, 같은 칩이 자리마다 다른 뜻으로 읽힌다.
  */
 export const SYNC_MEANING: Record<SyncStatus, string> = {
-  applied: '마지막 보고 시점의 파일 해시가 공식 manifest와 모두 일치',
-  outdated: '로컬 버전이 공식보다 낮다',
-  modified: '버전은 같으나 파일이 로컬에서 고쳐졌다',
-  manual: 'zip을 손으로 풀어 적용했다',
-  unknown: '이 기기에서 아직 보고가 오지 않았다',
+  //  사람 말이다 (2026-09-10 저녁 · 「데모 텍스트도 이해되게」) — 「해시」·「manifest」·「로컬」을 쓰지 않는다.
+  applied: '마지막 보고 때 받은 파일이 공식 판과 전부 같음 (확인표로 대조)',
+  outdated: '이 기기의 판이 공식 판보다 오래됨',
+  modified: '판은 같지만 파일을 이 기기에서 손으로 고침',
+  manual: '플러그인 없이 zip 을 내려받아 손으로 적용함',
+  unknown: '이 기기에서 아직 보고가 오지 않음',
 }
 
 /** 항목 수명 4종 (SPEC §3). `active` 만 Pack 에 들어간다 — 그래서 ok 는 하나뿐이다. */
@@ -112,8 +113,9 @@ export const CONFLICT_KIND_CHIP: Record<ConflictKind, ChipSpec> = {
   stale: { icon: '⌛', label: '오래됨', tone: 'warn' },
   duplicate: { icon: '⧉', label: '중복', tone: 'neutral' },
   doc_vs_code: { icon: '⇄', label: '문서↔코드', tone: 'warn' },
-  open_question: { icon: '?', label: '열린 질문', tone: 'neutral' },
-  seed_question: { icon: '✎', label: '씨앗 질문', tone: 'neutral' },
+  //  라벨은 사람 말이다 (2026-09-10 저녁) — 「열린」·「씨앗」은 개발자 낱말이었다. 값(kind)은 그대로다.
+  open_question: { icon: '?', label: '답이 필요한 질문', tone: 'neutral' },
+  seed_question: { icon: '✎', label: '팀에게 묻는 질문', tone: 'neutral' },
 }
 
 /**
@@ -224,8 +226,16 @@ export const SOURCE_DOCUMENT_KIND_LABEL: Record<SourceDocumentKind, string> = {
  */
 export const PROGRESS_SOURCE_LABEL: Record<ProgressSource, string> = {
   agent: 'Claude 가 보고',
-  hook: '세션 종료 훅이 보고',
+  hook: '세션이 끝날 때 플러그인이 보고',
   manual: '사람이 적음',
+}
+
+/** 진행 보고의 상태 4종을 사람 말로 (2026-09-10 저녁 — 드로어에 `done_candidate` 가 그대로 찍혔다). enum 이 늘면 여기 한 줄 — `Record` 라 안 더하면 타입이 막는다. */
+export const PROGRESS_STATUS_LABEL: Record<ProgressStatus, string> = {
+  in_progress: '진행 중',
+  criterion_done: '완료 조건 하나를 채움',
+  done_candidate: '완료 후보 — 사람 확인 대기',
+  none: '진행 없음',
 }
 
 /** 표를 늘릴 때 빠진 키를 시험이 셀 수 있게 목록도 같이 내보낸다. */
@@ -306,13 +316,14 @@ export const ITEM_TYPE_LABEL: Record<ItemType, string> = {
   mission: '미션',
   goal: '목표',
   roadmap: '로드맵',
-  architecture: '아키텍처',
-  domain: '도메인',
+  //  2026-09-10 저녁 — 「아키텍처·도메인·ADR」은 비개발자에게 낱말이 아니다. 뜻으로 적는다.
+  architecture: '구조',
+  domain: '업무 용어',
   policy: '정책',
-  adr: '결정(ADR)',
+  adr: '기술 결정',
   workflow: '작업 절차',
   constraint: '제약',
-  open_question: '열린 질문',
+  open_question: '답이 필요한 질문',
 }
 
 export function TypeIcon({ type }: { type: ItemType }) {

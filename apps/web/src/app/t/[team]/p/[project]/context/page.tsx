@@ -13,9 +13,10 @@ import {
 } from '../../../../../../lib/web/queries'
 import { OWNER_LABEL } from '../../../../../../lib/web/screens'
 import { SEMVER_BUMPS, SEMVER_RULE, nextSemver, type SemverBump } from '../../../../../../lib/web/semver'
+import { itemGist } from '../../../../../../lib/web/item-gist'
 import { dateText } from '../../../../../../lib/web/time'
 import { useAsync } from '../../../../../../lib/web/use-async'
-import { ConfidenceChip, CtxTag, ITEM_TYPE_LABEL, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
+import { ConfidenceChip, CtxTag, ITEM_STATUS_CHIP, ITEM_TYPE_LABEL, ItemStatusChip, TypeIcon, VersionPill } from '../../../../../../components/chips'
 import { EvidenceList } from '../../../../../../components/evidence'
 import { ItemStatusActions } from '../../../../../../components/item-status-actions'
 import { ProjectGate } from '../../../../../../components/project-gate'
@@ -139,6 +140,8 @@ function ContextView({ base, project, canEdit }: { base: string; project: Projec
           발행하기
         </button>
       </header>
+      {/* 사람 말 한 줄 (2026-09-10 저녁) — 이 표가 무엇인지, 무엇이 발행에 들어가는지. */}
+      <p className="ink-2">팀이 승인한 목표·규칙·결정의 목록입니다. 「{ITEM_STATUS_CHIP.active.label}」인 항목만 발행에 들어갑니다.</p>
 
       {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
 
@@ -349,10 +352,14 @@ function ItemDrawer({
       </div>
 
       <div className="col-tight">
-        <span className="label">타입별 값</span>
-        {/* 타입마다 모양이 다르다 (`ITEM_DATA`). 화면이 타입별 분기를 갖는 대신
-            계약의 값을 그대로 보여 준다 — 잘못 보여 주는 것보다 낫다. */}
-        <pre className="scroll-x mono meta">{JSON.stringify(item.data, null, 2)}</pre>
+        <span className="label">내용</span>
+        {/* 한 줄은 타입별 표(`lib/web/item-gist.ts`)가 고른다 — 화면에 분기가 없다. 값 전체는 접어 둔다 (2026-09-10 저녁 —
+            JSON 이 「타입별 값」이라는 이름으로 그대로 서 있었다). */}
+        <p className="ink">{itemGist(item)}</p>
+        <details>
+          <summary className="meta">값 전체 보기</summary>
+          <pre className="scroll-x mono meta">{JSON.stringify(item.data, null, 2)}</pre>
+        </details>
       </div>
 
       {item.tags.length > 0 ? (
@@ -381,7 +388,7 @@ function ItemDrawer({
 /** 드로어에 문이 없을 때 적는 한 줄 — 읽기 전용 주체면 그 이유, 아니면 등급. */
 function editCaption(): string {
   const door = writeDoor()
-  return door.open ? '상태를 바꾸는 것은 팀 owner 만 할 수 있습니다.' : door.reason
+  return door.open ? '상태를 바꾸는 것은 팀장만 할 수 있습니다.' : door.reason
 }
 
 // ---------------------------------------------------------------------

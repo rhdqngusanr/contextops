@@ -31,7 +31,7 @@ export function VersionHistory({
         <thead>
           <tr>
             <th>버전</th>
-            <th>snapshot</th>
+            <th>승인본(해시)</th>
             <th>발행 시각</th>
             <th>변경 요약</th>
             <th />

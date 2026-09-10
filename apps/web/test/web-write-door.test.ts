@@ -134,7 +134,7 @@ describe('🔴 FINDINGS 135 — 쓰기 문은 누르기 전에 표를 읽는다'
     expect(fn).toContain('writeDoor()')
     expect(page).toContain('<ReadOnlyNotice')
     //  드로어의 「owner 만」 캡션도 같은 문을 읽는다 — 게스트에게 그 문장을 그대로 내지 않는다.
-    expect(page).not.toMatch(/<span className="meta">상태를 바꾸는 것은 팀 owner 만/)
+    expect(page).not.toMatch(/<span className="meta">상태를 바꾸는 것은 팀장만/)
   })
 })
 

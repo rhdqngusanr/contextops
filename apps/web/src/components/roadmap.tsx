@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { ProgressEventView, Roadmap, RoadmapMilestone } from '../lib/web/queries'
 import { STALE_REPORT_DAYS, isStaleReport, sinceText } from '../lib/web/time'
-import { MilestoneChip, PROGRESS_SOURCE_LABEL } from './chips'
+import { PROGRESS_STATUS_LABEL, MilestoneChip, PROGRESS_SOURCE_LABEL } from './chips'
 
 // =====================================================================
 //  화면 8 — Roadmap 이 그리는 조각들 (SPEC §9 화면 8 · DESIGN_BRIEF §4 「화면 8」)
@@ -71,15 +71,15 @@ export function RoadmapSummary({ roadmap, now }: { roadmap: Roadmap; now?: Date 
     <div className="row wrap items-start">
       <Tile label="마일스톤" value={roadmap.milestones.length} hint={`공식 v${roadmap.context_version ?? '—'} 기준`} />
       <Tile
-        label="근거 있는 기준"
+        label="근거가 붙은 완료 조건"
         value={`${cover.with} / ${cover.total}`}
-        hint={cover.total === 0 ? '완료 조건이 없습니다' : '보고에 경로·줄이 붙은 기준'}
+        hint={cover.total === 0 ? '완료 조건이 없습니다' : '어떤 파일 몇 번째 줄인지 근거가 붙은 것'}
       />
       {/* 🔴 0 도 그린다 — 「충돌 없음」을 안 보여 주면 사람은 아직 안 센 줄 안다. */}
       <Tile
         label="열린 충돌"
         value={conflicts}
-        hint={conflicts === 0 ? '정리할 것이 없습니다' : '정리 화면에서 결정합니다'}
+        hint={conflicts === 0 ? '정리할 것이 없습니다' : '결정을 기다리는 카드 · 정리 화면에서 정합니다'}
       />
       <Tile
         label={`${STALE_REPORT_DAYS}일 이상 보고 없음`}
@@ -105,6 +105,8 @@ export function RoadmapSummary({ roadmap, now }: { roadmap: Roadmap; now?: Date 
 
 export type MilestoneRowState = {
   milestone: RoadmapMilestone
+  /** 마일스톤 **제목** — 로드맵 응답에는 id(`PL-M1`)뿐이라 화면이 roadmap 항목에서 찾아 준다. 못 찾으면 id 만 선다 (지어내지 않는다). */
+  title?: string | null
   expanded: boolean
   /** owner 인가 — `POST /progress/{id}/confirm` 은 owner 전용이다. */
   canConfirm: boolean
@@ -138,12 +140,14 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
         >
           <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
           <span className="mono ink">{m.milestone}</span>
+          {/* 제목이 있으면 id 옆에 — 「PL-M1」만으로는 무엇을 하는 일인지 아무도 모른다 (2026-09-10 저녁). */}
+          {state.title ? <span className="ink" style={{ marginLeft: 'var(--sp-2)' }}>{state.title}</span> : null}
         </button>
         <div className="row wrap">
           {/* 기한은 Manifest 가 나른 날짜 **그대로**(`YYYY-MM-DD`) — Pack 본문의 `due:` 와 같은 글자다.
               없으면 칸이 없다 — 「기한 없음」도 「-」도 적지 않는다 (없는 것을 지어내지 않는다 · FINDINGS 111).
               ⚠ 「지났다」를 여기서 판정하지 않는다 — 지났는지는 서버도 화면도 아직 안 잰다. */}
-          {m.due === null ? null : <span className="meta mono">due {m.due}</span>}
+          {m.due === null ? null : <span className="meta mono">기한 {m.due}</span>}
           <MilestoneChip status={m.status} />
           {/* 🔴 「마지막 보고」는 늘 경과다 — 「지금 이렇다」를 말할 수 있는 값이 없다. */}
           <span className={stale ? 'meta mono ink-warn' : 'meta mono'}>
@@ -185,7 +189,7 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
           </span>
         </div>
       ) : (
-        <span className="meta">완료 확인은 owner 만 할 수 있습니다 — 보고: {confirmable.summary}</span>
+        <span className="meta">완료 확인은 팀장만 할 수 있습니다 — 보고: {confirmable.summary}</span>
       )}
       {error === null || error === undefined ? null : (
         <span className="meta ink-bad">✕ 확인하지 못했습니다. 다시 시도해주세요.</span>
@@ -286,8 +290,9 @@ export function ProgressDrawer({
         <span className="label">보고</span>
         {/* 🔴 P5 — 「누가」가 아니라 「무엇이」다. 사람 이름은 이 응답에 실리지 않는다. */}
         <span className="meta">{PROGRESS_SOURCE_LABEL[event.source]} · {sinceText(event.at, now)}</span>
-        <span className="meta mono">그때 받은 Pack: v{event.context_version}</span>
-        <span className="meta mono">보고 상태: {event.status}</span>
+        <span className="meta mono">그때 받은 판: v{event.context_version}</span>
+        {/* 상태는 사람 말로 (`PROGRESS_STATUS_LABEL`) — `done_candidate` 가 그대로 찍혀 있었다. */}
+        <span className="meta">보고 상태: {PROGRESS_STATUS_LABEL[event.status]}</span>
         {event.confirmed_at === null
           ? null
           : <span className="meta ink-ok">✓ 확정됨 · {sinceText(event.confirmed_at, now)}</span>}

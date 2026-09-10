@@ -311,12 +311,12 @@ describe('🔴 종류마다 갈리는 것이 표에서만 온다', () => {
     expect(text(items)).toContain('item_retry_policy')
     expect(text(items)).toContain('paylab-api/src/payment/retry.ts')
     //  ② 원문을 가리키는 카드는 **문서 구간**을 그린다 (항목 태그가 아니다).
-    expect(text(document)).toContain('120–480자')
+    expect(text(document)).toContain('120–480번째 글자')
     expect(text(document)).not.toContain('item_retry_policy')
     //  ③ 가리킬 것이 없는 카드는 **아무 근거도 지어내지 않는다.**
     expect(text(none)).toContain('가리킬 문서도 항목도 없습니다')
     expect(text(none)).not.toContain('item_retry_policy')
-    expect(text(none)).not.toContain('120–480자')
+    expect(text(none)).not.toContain('120–480번째 글자')
   })
 
   it('🔴 `byAi` 가 배지를 가른다 — 열린 질문에는 붙고 씨앗 질문에는 안 붙는다', () => {
@@ -404,7 +404,7 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
     const html = draw({ canDecide: false })
     expect(html).not.toContain('<button')
     const t = text(html)
-    expect(t).toContain('이 결정은 팀 owner 가 합니다')
+    expect(t).toContain('이 결정은 팀장이 합니다')
     //  🔴 그래도 **근거는 그대로 보인다** — owner 에게 보여 주려면 봐야 한다 (P7).
     expect(t).toContain('paylab-api/src/payment/retry.ts')
   })
@@ -412,7 +412,7 @@ describe('🔴 없는 것을 지어내지 않는다', () => {
   it('member 도 질문에는 답할 수 있다 (`POST /questions` 는 member 다)', () => {
     const t = text(draw({ conflict: row('seed_question'), canDecide: false, a: null, b: null }))
     expect(t).toContain('답 저장하기')
-    expect(t).not.toContain('이 결정은 팀 owner 가 합니다')
+    expect(t).not.toContain('이 결정은 팀장이 합니다')
   })
 
   it('🔴 결정 문구에 조사를 붙이지 않는다 — 버튼 문구마다 받침이 다르다', () => {
@@ -454,7 +454,7 @@ describe('🔴 결정이 항목에 무엇을 하는지 카드가 말한다 (FIND
   it('🔴 폐기가 일어나는 카드에서만 「되돌릴 수 없다」를 말한다', () => {
     //  ⚠ 지금은 사실이다 — `:resolve` 가 「이미 처리된 충돌」을 400 으로 막는다.
     expect(text(draw())).toContain('되돌릴 수 없습니다')
-    expect(text(draw())).toContain('다음 Pack 에 들어가지 않습니다')
+    expect(text(draw())).toContain('다음 발행에 들어가지 않습니다')
     //  가리키는 항목이 행에 안 적혀 있으면 아무것도 안 없어진다 — 겁주지 않는다.
     const empty = text(draw({ conflict: row('contradiction', { a_item_id: null, b_item_id: null }) }))
     expect(empty).not.toContain('되돌릴 수 없습니다')

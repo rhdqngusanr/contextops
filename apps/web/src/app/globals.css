@@ -388,6 +388,10 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 }
 .nav-link:hover { background: var(--surface-hi); color: var(--ink-2); text-decoration: none; }
 .nav-link[aria-current='page'] { background: var(--accent-soft); color: var(--ink); }
+/* 내비 한 칸 — 링크(라벨) 밑에 「무엇을 하는 화면인가」 한 줄 (2026-09-10 저녁 · 「데모 텍스트도 이해되게」 · `PROJECT_SCREENS.describe`).
+   ⚠ 설명은 <a> 밖의 형제다 — 프로덕션 검사(GATE 3)가 링크의 글자와 표의 라벨을 글자 그대로 대조한다. */
+.nav-item { display: flex; flex-direction: column; }
+.nav-link-hint { padding: 0 var(--sp-3) var(--sp-2); font-size: var(--fs-label); color: var(--ink-3); line-height: 1.4; }
 
 .main { flex: 1 1 auto; min-width: 0; padding: var(--sp-6); }
 .main-inner { max-width: var(--content-max); display: flex; flex-direction: column; gap: var(--sp-5); }

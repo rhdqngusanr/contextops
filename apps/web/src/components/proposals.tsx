@@ -129,10 +129,14 @@ export const PROPOSAL_DATE_COLUMN = {
  */
 export function ProposalListIntro() {
   return (
-    <p className="meta">
-      Claude Code에서 <span className="mono ink">contextops propose</span> 로 {MADE} 변경 제안입니다.
-      올린 것만 승인 대기로 가고, 승인된 제안만 다음 발행에 들어갑니다.
-    </p>
+    <>
+      {/* 사람 말이 먼저 (2026-09-10 저녁) — 아래 문장은 낱말이 시험에 잠겨 있어 그대로 둔다. */}
+      <p className="ink-2">개발자가 「이 규칙을 이렇게 바꾸자」고 올린 것입니다. 팀장이 승인하면 다음 발행에 들어갑니다.</p>
+      <p className="meta">
+        Claude Code에서 <span className="mono ink">contextops propose</span> 로 {MADE} 변경 제안입니다.
+        올린 것만 승인 대기로 가고, 승인된 제안만 다음 발행에 들어갑니다.
+      </p>
+    </>
   )
 }
 
@@ -462,7 +466,7 @@ export const ACTION_LABEL: Record<ProposalAction, string> = {
 export const DECIDED_TEXT: Record<'approved' | 'rejected' | 'published', string> = {
   approved: '승인된 제안입니다. 다음 발행 때 항목에 적용됩니다.',
   rejected: '거절된 제안입니다. 사유를 반영해 새 제안으로 올려주세요.',
-  published: '이미 발행된 제안입니다. 팀의 공식 Pack에 들어가 있습니다.',
+  published: '이미 발행된 제안입니다. 팀의 공식 판(Pack)에 들어가 있습니다.',
 }
 
 /** 누를 것이 없을 때 **왜 없는지**. 빈 칸으로 두면 사람은 화면이 덜 그려졌다고 읽는다. */
@@ -470,7 +474,7 @@ export function noActionText(status: ProposalRow['status'], door?: WriteDoor): s
   //  🔴 문이 닫힌 주체(게스트)에겐 등급 문장이 전부 거짓이다 — 서버가 낼 문구(`GUEST_HINT`)가 먼저다 (INBOX G13).
   if (door !== undefined && !door.open && (status === 'submitted' || status === 'draft')) return door.reason
   //  ⚠ `submitted` 인데 누를 것이 없다 = 등급이 모자란 것뿐이다 (표의 `role`).
-  if (status === 'submitted') return '승인·거절은 owner만 할 수 있습니다.'
+  if (status === 'submitted') return '승인·거절은 팀장만 할 수 있습니다.'
   //  ⚠ `draft` 는 오늘은 여기까지 오지 않는다 — `submit` 이 member 부터라 늘 버튼이 있다.
   //    표의 `role` 이 owner 로 올라가면 그때 이 줄이 쓰인다 (없으면 빈 칸이 된다).
   if (status === 'draft') return '승인 요청을 할 수 있는 등급이 아닙니다.'

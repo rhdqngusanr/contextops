@@ -152,7 +152,7 @@ describe('없는 문을 그리지 않는다 — [완료 확인]', () => {
       canConfirm: false,
       milestone: milestone({ status: 'done_candidate', confirmable: event({ status: 'done_candidate' }) }),
     })
-    expect(html).toContain('owner 만')
+    expect(html).toContain('팀장만')
     expect(html).not.toContain('<button type="button" class="btn btn-sm" >완료 확인')
     expect(html).not.toContain('>완료 확인<')
   })
@@ -167,14 +167,14 @@ describe('없는 문을 그리지 않는다 — [완료 확인]', () => {
 describe('기한(due) — Manifest 가 나른 날짜 그대로, 없으면 칸이 없다 (FINDINGS 111)', () => {
   it('due 가 있으면 행 머리에 `due YYYY-MM-DD` 가 선다', () => {
     const html = row()
-    expect(html).toContain('due 2026-09-20')
+    expect(html).toContain('기한 2026-09-20')
   })
 
   it('🔴 값을 뒤집으면 글자가 갈린다 — 표시용이 아니라 실제로 읽는 칸이다', () => {
     const a = row({ milestone: milestone({ due: '2026-09-20' }) })
     const b = row({ milestone: milestone({ due: '2026-10-01' }) })
     expect(a).not.toBe(b)
-    expect(b).toContain('due 2026-10-01')
+    expect(b).toContain('기한 2026-10-01')
     expect(b).not.toContain('2026-09-20')
   })
 

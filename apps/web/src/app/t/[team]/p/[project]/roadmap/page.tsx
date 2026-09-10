@@ -3,11 +3,11 @@
 import { use, useState } from 'react'
 
 import {
-  REALTIME_POLL_MS, confirmProgress, fetchRoadmap,
+  REALTIME_POLL_MS, confirmProgress, fetchItems, fetchRoadmap,
   type ProgressEventView, type ProjectRef,
 } from '../../../../../../lib/web/queries'
 import { writeDoor } from '../../../../../../lib/web/actor'
-import { usePolling } from '../../../../../../lib/web/use-async'
+import { useAsync, usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { MilestoneRow, OffRoadmap, ProgressDrawer, RoadmapSummary } from '../../../../../../components/roadmap'
 import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
@@ -59,6 +59,15 @@ function RoadmapView({
   canConfirm: boolean
 }) {
   const road = usePolling(() => fetchRoadmap(project.id), [project.id], () => REALTIME_POLL_MS)
+  //  마일스톤 **제목** — 로드맵 응답은 id(`PL-M1`)만 나른다 (정본은 Manifest). 제목은 그 id 를 가진 roadmap 항목에 있다.
+  //  못 읽으면 id 만 선다 — 지어내지 않는다 (2026-09-10 저녁 · 「데모 텍스트도 이해되게」).
+  const roadmapItems = useAsync(() => fetchItems(project.id, { type: 'roadmap' }), [project.id])
+  const titles: Record<string, string> = {}
+  if (roadmapItems.result.state === 'ready') {
+    for (const it of roadmapItems.result.data.items) {
+      if (it.type === 'roadmap') titles[it.data.milestone_id] = it.title
+    }
+  }
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [offOpen, setOffOpen] = useState(false)
@@ -88,6 +97,8 @@ function RoadmapView({
     <>
       <header className="col-tight">
         <h1 className="text-section">Roadmap</h1>
+        {/* 사람 말 한 줄이 먼저 (2026-09-10 저녁) — 그 밑의 문장은 「이 화면이 무엇을 모르는가」다. */}
+        <p className="ink-2">팀의 계획(마일스톤)이 어디까지 왔는지, 개발자의 AI 가 보낸 보고와 근거로 봅니다. 완료 확인은 사람이 합니다.</p>
         {/* 🔴 「지금 이렇다」고 말하지 않는다 (DESIGN_BRIEF §2-3). 이 화면이 아는 것은
             언제나 **마지막 보고**이고, 다시 읽는 간격을 같이 말해야 사람이 무엇을 보고
             있는지 안다. */}
@@ -120,6 +131,7 @@ function RoadmapView({
                     key={m.milestone}
                     state={{
                       milestone: m,
+                      title: titles[m.milestone] ?? null,
                       expanded: expanded[m.milestone] ?? false,
                       canConfirm,
                       busy: busy === m.milestone,

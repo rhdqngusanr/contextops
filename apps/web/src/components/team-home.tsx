@@ -28,7 +28,7 @@ export const TEAM_HOME_TEXT = {
   owner: 'owner',
   member: 'member',
   noProjects: '아직 프로젝트가 없습니다.',
-  onlyOwnerInvites: '팀원 초대는 owner 가 합니다.',
+  onlyOwnerInvites: '팀원 초대는 팀장이 합니다.',
 } as const
 
 /** 등급 낱말 — enum 값을 화면에 그대로 내지 않는다 (`ITEM_TYPE_LABEL` 과 같은 판단). */

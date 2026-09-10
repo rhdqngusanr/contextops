@@ -34,6 +34,8 @@ function PackList({ base, project }: { base: string; project: ProjectRef }) {
     <>
       <header className="col-tight">
         <h1 className="text-section">Pack Explorer</h1>
+        {/* 낱말 풀이가 먼저 (2026-09-10 저녁) — 「Pack」은 이 화면에서 처음 만나는 낱말이다. */}
+        <p className="ink-2">Pack 은 팀이 승인한 규칙을 AI 가 읽는 파일 묶음(CLAUDE.md 등)입니다.</p>
         <p className="meta">발행된 버전을 골라 열면, 파일의 모든 줄이 어느 항목에서 왔는지 볼 수 있습니다.</p>
       </header>
       <section className="card">

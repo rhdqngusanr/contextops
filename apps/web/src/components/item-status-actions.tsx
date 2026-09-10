@@ -65,8 +65,8 @@ export const ITEM_STATUS_ACTIONS = {
  */
 export function packEffectOf(status: ItemStatus): string {
   return ITEM_STATUS_EXCLUDE_REASON[status] === null
-    ? '다음 Pack 에 나갑니다'
-    : '다음 Pack 에서 빠집니다'
+    ? '다음 발행에 들어갑니다'
+    : '다음 발행에서 빠집니다'
 }
 
 /**

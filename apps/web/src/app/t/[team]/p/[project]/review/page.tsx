@@ -157,6 +157,8 @@ function ReviewView({
     <>
       <header className="col-tight">
         <h1 className="text-section">정리</h1>
+        {/* 사람 말 한 줄이 먼저 (2026-09-10 저녁). */}
+        <p className="ink-2">문서끼리, 문서와 코드가 서로 다르게 말하는 자리를 AI 가 찾아 카드로 올렸습니다. 어느 쪽이 맞는지는 사람이 정합니다.</p>
         {/* 🔴 두 수를 **따로** 낸다. 합치면 「AI 가 찾았다」가 씨앗 질문까지 삼킨다. */}
         <p className="meta">
           {cards.result.state === 'ready'

@@ -44,14 +44,18 @@ export default function ProjectLayout({
             접힌 뒤 갈 곳은 바로 위 ⌘K 팔레트다 (같은 `PROJECT_SCREENS` 표를 읽는다). */}
         <div className="col-tight nav-links">
           {PROJECT_SCREENS.map((screen) => (
-            <a
-              key={screen.path}
-              className="nav-link"
-              href={screenHref(base, screen)}
-              aria-current={isActiveScreen(screen, path) ? 'page' : undefined}
-            >
-              {screen.label}
-            </a>
+            <div key={screen.path} className="nav-item">
+              <a
+                className="nav-link"
+                href={screenHref(base, screen)}
+                aria-current={isActiveScreen(screen, path) ? 'page' : undefined}
+              >
+                {screen.label}
+              </a>
+              {/* 라벨 밑의 한 줄 — 무엇을 하는 화면인가 (`PROJECT_SCREENS.describe`). ⚠ `<a>` 밖이다 — 프로덕션 검사가
+                  링크의 글자와 표의 라벨을 글자 그대로 대조한다 (GATE 3). */}
+              <span className="nav-link-hint">{screen.describe}</span>
+            </div>
           ))}
         </div>
         {/* ⚠ 여기에 「상태는 마지막 보고 기준입니다」 같은 안내를 두지 마라 — 그 문장은

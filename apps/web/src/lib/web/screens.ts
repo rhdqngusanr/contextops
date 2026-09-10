@@ -21,6 +21,12 @@ export type ProjectScreen = {
   readonly path: string
   /** 내비의 탭 이름이자 팔레트의 줄 이름. **한 낱말이 두 곳에 있으면 갈라진다.** */
   readonly label: string
+  /**
+   * 라벨 밑의 한 줄 — 이 화면이 **무엇을 하는 화면인가** (2026-09-10 저녁 · 사용자: 「데모 사이트들도 알아듣기 어려운 텍스트」).
+   * 라벨은 짧은 이름(「Context」·「Sync」)이라 처음 온 사람은 무엇인지 모른다. 내비가 이 줄을 라벨 밑에 그린다.
+   * ⚠ 링크(`<a>`)의 글자는 여전히 라벨뿐이다 — 프로덕션 검사가 링크 글자와 이 표의 라벨을 글자 그대로 대조한다.
+   */
+  readonly describe: string
   /** 지금 이 화면인가 (내비의 `aria-current` · 팔레트의 「지금 여기」). */
   readonly match: RegExp
   /**
@@ -33,22 +39,22 @@ export type ProjectScreen = {
 /** 이 프로젝트에서 **지금 열 수 있는** 화면. 순서가 곧 왼쪽 차례이자 팔레트의 차례다. */
 export const PROJECT_SCREENS: readonly ProjectScreen[] = [
   //  ⚠ 차례가 일의 차례다 — 문서를 넣는 화면이 먼저고, 그 결과를 보는 화면이 뒤다.
-  { path: 'import', label: '가져오기', match: /\/import$/, keywords: ['import', '문서', '업로드'] },
+  { path: 'import', label: '가져오기', describe: '문서를 넣으면 AI 가 후보를 뽑습니다', match: /\/import$/, keywords: ['import', '문서', '업로드'] },
   //  ⚠ 정리가 Context 앞이다 — 결정을 끝낸 것만 발행으로 간다 (SPEC §9 화면 4 → 5).
-  { path: 'review', label: '정리', match: /\/review$/, keywords: ['review', '충돌', '질문'] },
-  { path: 'context', label: 'Context', match: /\/context$/, keywords: ['항목', 'item', '컨텍스트'] },
+  { path: 'review', label: '정리', describe: '어긋난 것을 사람이 결정합니다', match: /\/review$/, keywords: ['review', '충돌', '질문'] },
+  { path: 'context', label: 'Context', describe: '팀이 승인한 규칙 목록 · 발행', match: /\/context$/, keywords: ['항목', 'item', '컨텍스트'] },
   //  ⚠ 제안은 Context 뒤다 — 승인된 제안은 **발행 트랜잭션 안에서** 항목이 되므로
   //    (SPEC §2.1 2단계), 사람은 지금 항목을 본 다음에 「무엇이 바뀌나」를 읽는다.
-  { path: 'proposals', label: '제안', match: /\/proposals(\/|$)/, keywords: ['proposal', '승인', '거절'] },
+  { path: 'proposals', label: '제안', describe: '개발자가 올린 변경 제안', match: /\/proposals(\/|$)/, keywords: ['proposal', '승인', '거절'] },
   //  ⚠ Pack Explorer 는 버전 하나를 가리켜야 열린다. 목록에서는 「최신」으로 보낸다 —
   //    `latest` 는 semver 가 아니라 화면이 versions 를 읽어 고르는 자리다.
-  { path: 'packs', label: 'Pack Explorer', match: /\/packs(\/|$)/, keywords: ['pack', '발행', '버전', 'claude.md'] },
+  { path: 'packs', label: 'Pack Explorer', describe: '발행된 파일과 줄마다의 출처', match: /\/packs(\/|$)/, keywords: ['pack', '발행', '버전', 'claude.md'] },
   //  ⚠ Roadmap 은 **발행된 Pack 이 있어야** 행이 생긴다 (마일스톤의 정본이 Manifest 다).
   //    그래서 Pack Explorer 뒤다 — 차례가 일의 차례라는 위 규칙 그대로다.
-  { path: 'roadmap', label: 'Roadmap', match: /\/roadmap$/, keywords: ['로드맵', '마일스톤', 'milestone'] },
+  { path: 'roadmap', label: 'Roadmap', describe: '계획이 어디까지 왔나', match: /\/roadmap$/, keywords: ['로드맵', '마일스톤', 'milestone'] },
   //  ⚠ Sync 가 마지막이다 — 발행한 Pack 이 **각 기기에 실제로 닿았나**를 보는 자리라
   //    일의 차례에서 제일 끝이다 (발행 → 로드맵이 움직임 → 기기가 받아 감).
-  { path: 'sync', label: 'Sync', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
+  { path: 'sync', label: 'Sync', describe: '기기마다 어느 판을 받았나', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
 ]
 
 /** `/t/{team}/p/{project}` + 화면 한 줄 → 실제 주소. 링크를 화면마다 적지 않는다. */
@@ -264,7 +270,7 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
   //     화면이 사실이 아닌 것을 말하고 있었다. 이름도 `import.jobs` 로 바꿈 — 자리 이름이
   //     세는 것과 다르면 다음 사람이 같은 문구를 다시 쓴다.
   'import.jobs': {
-    message: '구조화 중인 문서가 없습니다. 왼쪽에 문서를 붙여넣고 [구조화하기] 를 눌러 보세요.',
+    message: 'AI 가 정리하는 중인 문서가 없습니다. 왼쪽에 문서를 붙여넣고 [AI 로 정리하기] 를 눌러 보세요.',
     noNext: '다음 행동이 같은 화면 왼쪽 칸이다 — 옮길 곳이 없다.',
   },
   'context.items': {
@@ -296,7 +302,7 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
     next: { label: 'Pack 목록으로', to: 'packs', tone: 'plain' },
   },
   'roadmap.versions': {
-    message: '아직 발행된 버전이 없습니다. 로드맵은 발행된 Pack의 마일스톤에서 옵니다.',
+    message: '아직 발행된 버전이 없습니다. 로드맵은 발행된 판(Pack)의 마일스톤에서 옵니다.',
     next: { label: 'Context로 이동', to: 'context', tone: 'accent' },
   },
   'roadmap.milestones': {

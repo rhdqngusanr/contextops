@@ -55,15 +55,15 @@ describe('G13 ① 제안 결정 칸 — 문이 닫힌 주체에겐 등급 문장
     const guest = decisions('submitted', CLOSED)
     expect(guest).not.toContain('<button')
     expect(text(guest)).toContain(CLOSED.reason)
-    expect(guest).not.toContain('owner만')
-    expect(decisions('submitted', OPEN)).toContain('owner만')
+    expect(guest).not.toContain('팀장만')
+    expect(decisions('submitted', OPEN)).toContain('팀장만')
   })
 
   it('문장을 고르는 함수 하나 — 닫힌 문이 등급 문장보다 먼저다', () => {
     expect(noActionText('submitted', CLOSED)).toBe(CLOSED.reason)
     expect(noActionText('draft', CLOSED)).toBe(CLOSED.reason)
-    expect(noActionText('submitted', OPEN)).toContain('owner만')
-    expect(noActionText('submitted')).toContain('owner만')
+    expect(noActionText('submitted', OPEN)).toContain('팀장만')
+    expect(noActionText('submitted')).toContain('팀장만')
     //  결정이 끝난 제안은 문과 무관하다 — 「이제 무슨 일이 일어나나」는 누구에게나 같은 참말이다.
     expect(noActionText('approved', CLOSED)).toBe(noActionText('approved', OPEN))
   })

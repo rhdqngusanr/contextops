@@ -7,6 +7,7 @@ import {
 } from '@contextops/schema'
 import type { WriteDoor } from '../lib/web/actor'
 import type { ConflictCard as ConflictRow } from '../lib/web/queries'
+import { itemGist } from '../lib/web/item-gist'
 import { dateText } from '../lib/web/time'
 import {
   AiBadge, ConfidenceChip, ConflictKindChip, ConflictSeverityChip, CtxTag, ITEM_STATUS_CHIP,
@@ -237,7 +238,7 @@ function doorOpen(state: Pick<ConflictCardState, 'door'>): boolean {
 }
 
 /** 「이 결정은 팀 owner 가 합니다」의 정본 — 게스트가 아닌 member 에게만 참이다. */
-export const OWNER_DECIDES = '이 결정은 팀 owner 가 합니다. 아래 근거를 owner 에게 보여 주세요.'
+export const OWNER_DECIDES = '이 결정은 팀장이 합니다. 아래 근거를 팀장에게 보여 주세요.'
 
 /**
  * 결정·답 칸 대신 뜨는 한 문장. 문이 닫혔으면(게스트) 서버가 낼 문구(`writeDoor().reason` · `GUEST_HINT`)이고,
@@ -319,6 +320,9 @@ function ItemSide({ label, itemId, item }: { label: string; itemId: string | nul
             <TypeIcon type={item.type} />
             <span className="side-title">{item.title}</span>
           </div>
+          {/* 🔴 **부딪히는 문장** — 정책의 rule · 제약의 statement (`lib/web/item-gist.ts`). 제목만으로는 「5회 vs 3회」가 안 보였다
+              (2026-09-10 저녁). 제목과 같으면 두 번 적지 않는다. */}
+          {itemGist(item) === item.title ? null : <p className="ink">{itemGist(item)}</p>}
           <div className="row wrap">
             <CtxTag itemId={item.id} revision={item.revision} />
             <ItemStatusChip status={item.status} />
@@ -398,7 +402,7 @@ function Decision({ state, on }: { state: ConflictCardState; on: ConflictCardHan
           이 줄을 붙이면 사람은 누르지 않아도 될 것을 무서워한다. */}
       {retires ? (
         <p className="meta ink-warn">
-          ⚠ 「{ITEM_STATUS_CHIP.deprecated.label}」 항목은 다음 Pack 에 들어가지 않습니다.
+          ⚠ 「{ITEM_STATUS_CHIP.deprecated.label}」 항목은 다음 발행에 들어가지 않습니다.
           결정은 이 화면에서 되돌릴 수 없습니다.
         </p>
       ) : null}

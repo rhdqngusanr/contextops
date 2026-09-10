@@ -191,7 +191,7 @@ function PasteCard({ projectId, onCreated, door }: { projectId: string; onCreate
       {error ? <ErrorState error={error} /> : null}
 
       <div className="row">
-        <button type="submit" className="btn btn-primary" disabled={!ready || busy}>구조화하기</button>
+        <button type="submit" className="btn btn-primary" disabled={!ready || busy}>AI 로 정리하기</button>
         <span className="meta">
           {busy ? '올리는 중입니다…' : 'AI 가 항목 후보와 질문을 만듭니다. 결정은 사람이 합니다.'}
         </span>
@@ -334,7 +334,7 @@ function StructureCard({
   return (
     <section className="card pad col drawer">
       <div className="row-between">
-        <h2 className="text-section">구조화 진행</h2>
+        <h2 className="text-section">AI 정리 진행</h2>
         <AiBadge />
       </div>
 

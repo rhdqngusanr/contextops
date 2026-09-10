@@ -120,6 +120,13 @@ Context 표 머리 scope/confidence/rev → 범위/근거 확신/개정 · 랜�
 시험 ⑨(6칸): 풀이·예·쉬운 말·알약·손바뀜(사람 자리 필수)·넷의 숫자 = 녹화·표 칸 수·어디서(Skill 줄 = Claude Code 안). DESIGN_BRIEF §4 화면 1 에 장치 여섯을 적었다. 1440·375 캡처로 눈 판정.
 `tools/ci.ps1`: 2026-09-10 20:57 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
 
+🔴 **열한째 판 — 앱(데모) 화면의 말** (사용자: 「데모 사이트들도 여전히 알아듣기 어려운 텍스트들이 존재하는데 그것들도 다듬으면 좋겠네」). 일곱 화면을 전체 높이로 찍어 글자를 전부 읽고, 값·상태·시험은 그대로 둔 채 **낱말만** 사람 말로.
+내비: 라벨 밑에 한 줄(`PROJECT_SCREENS.describe` — 「어긋난 것을 사람이 결정합니다」…). 링크 밖의 형제라 GATE 3(링크 글자 = 표 라벨) 그대로. 화면마다 머리에 사람 말 한 줄(정리·Context·Pack Explorer·Roadmap·Sync·제안).
+낱말: `owner` → 「팀장」(카드·드로어·로드맵·제안·팀 홈) · 「다음 Pack」 → 「다음 발행」 · 「역추적」 → 「이 줄의 출처」 · 「구조화하기」 → 「AI 로 정리하기」 · 「due」 → 「기한」 · 「n–m자」 → 「n–m번째 글자」 · 항목 타입(아키텍처→구조 · 도메인→업무 용어 · ADR→기술 결정 · 열린 질문→답이 필요한 질문) · 충돌 종류(씨앗 질문→팀에게 묻는 질문) · Sync 각주를 해시·manifest 없이 · Pack 머리(파일 수 → 확인표 → 승인본 → 도구) · 진행 보고 상태 `done_candidate` → 「완료 후보 — 사람 확인 대기」(`PROGRESS_STATUS_LABEL`).
+보이는 것: Roadmap 행에 마일스톤 **제목**(응답엔 id 뿐 — roadmap 항목에서 찾는다 · 못 찾으면 id 만) · 충돌 카드 A/B 에 **부딪히는 문장**(정책의 rule) · Context 드로어의 「타입별 값」 JSON 대신 **한 줄 요약**(`lib/web/item-gist.ts` — 타입당 한 줄, `test/web-item-gist.test.ts` 가 10종을 센다 · JSON 은 접어 둠).
+시험: 잠긴 낱말 8곳을 새 말로(owner만·다음 Pack·구조화하기·due·자) · 팔레트 시험 화면 fixture 에 `describe` · 전체 1037 초록. DESIGN_BRIEF §4 머리에 여덟 항목을 적었다.
+`tools/ci.ps1`: 2026-09-10 22:14 | principles OK | typecheck OK | test OK | build OK | walkthrough OK | docs OK => GREEN
+
 🙋 **사람이 할 것**: ① 터미널에서 `claude mcp login taste` 한 번 (이 세션의 토큰은 1시간짜리 스크래치다) ② Taste 앱에서 샘플을 저장하고
 「Generate profile」 — 그래야 `get_design_context` 가 내용을 준다 ③ Vercel 이 이 커밋을 배포한 뒤 production 을 눈으로 본다
 (글꼴 4.1MB 가 저장소에 들어갔다 — 첫 화면은 조각 30~40개 · 수백 KB 만 받는다).

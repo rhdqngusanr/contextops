@@ -88,6 +88,8 @@ function SyncView({ base, project }: { base: string; project: ProjectRef }) {
     <>
       <header className="col-tight">
         <h1 className="text-section">Sync</h1>
+        {/* 사람 말 한 줄이 먼저 (2026-09-10 저녁). 그 밑의 문장은 그대로다. */}
+        <p className="ink-2">팀원 기기마다 어느 판(버전)의 규칙을 받았는지 보는 표입니다.</p>
         {/* 🔴 DESIGN_BRIEF §4 화면 9 가 그대로 적어 둔 문장이다. 바꾸지 마라 —
             이 한 줄이 「이 표가 무엇을 모르는가」를 말한다. */}
         <p className="meta">

@@ -114,7 +114,7 @@ describe('🔴 ① 화면 목록의 정본은 `PROJECT_SCREENS` 표 하나다', 
 describe('🔴 ② 표에 한 줄을 더하면 팔레트에 저절로 나온다', () => {
   it('표에 없던 화면을 넣으면 링크가 그려진다 — 팔레트를 안 고쳐도 된다', () => {
     const extra: ProjectScreen = {
-      path: 'devices', label: '기기', match: /\/devices$/, keywords: ['device'],
+      path: 'devices', label: '기기', describe: '기기 목록', match: /\/devices$/, keywords: ['device'],
     }
     const html = render({ screens: [...PROJECT_SCREENS, extra] })
     expect(html).toContain(`href="${BASE}/devices"`)

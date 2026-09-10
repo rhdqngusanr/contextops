@@ -63,7 +63,7 @@ describe('② 세 자리가 표를 읽는다', () => {
     const importPage = read('src/app/t/[team]/p/[project]/import/page.tsx')
     expect(importPage).toContain('AI_TRANSFER_NOTICE_NOW')
     //  고지가 제출 버튼보다 위에 있다 — 누른 뒤에 읽는 고지는 고지가 아니다.
-    expect(importPage.indexOf('AI_TRANSFER_NOTICE_NOW}')).toBeLessThan(importPage.indexOf('구조화하기</button>'))
+    expect(importPage.indexOf('AI_TRANSFER_NOTICE_NOW}')).toBeLessThan(importPage.indexOf('AI 로 정리하기</button>'))
     expect(importPage).toContain(`href={PRIVACY_PATH}`)
   })
 

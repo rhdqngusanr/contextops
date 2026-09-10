@@ -9,7 +9,7 @@ import { traceLines, type TraceTag } from '@contextops/compiler/tag'
 import { messageOf } from '../../../../../../../lib/web/api'
 import { downloadPackZip, fetchItems, fetchManifest, fetchPackFile, fetchSyncStatus, type ProjectRef } from '../../../../../../../lib/web/queries'
 import { useAsync } from '../../../../../../../lib/web/use-async'
-import { ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon } from '../../../../../../../components/chips'
+import { ITEM_TYPE_LABEL, ConfidenceChip, CtxTag, ItemStatusChip, TypeIcon } from '../../../../../../../components/chips'
 import { countReceived } from '../../../../../../../components/sync'
 import { EvidenceList } from '../../../../../../../components/evidence'
 import { ProjectGate } from '../../../../../../../components/project-gate'
@@ -83,12 +83,12 @@ function PackHeader({ project, manifest, semver }: { project: ProjectRef; manife
     <header className="row-between wrap">
       <div className="col-tight">
         <h1 className="text-section">Pack v{semver}</h1>
+        {/* 파일 수가 먼저, 해시는 「확인표」「승인본」이라는 이름을 달고, 도구 버전은 맨 뒤 (2026-09-10 저녁). 값은 전부 그대로다. */}
         <div className="row wrap meta mono">
-          <span title={manifest.manifest_hash}>manifest {manifest.manifest_hash.slice(0, 8)}</span>
-          <span title={manifest.snapshot_hash}>snapshot {manifest.snapshot_hash.slice(0, 8)}</span>
-          <span>compiler {manifest.compiler_version}</span>
-          <span>template {manifest.template_version}</span>
           <span>파일 {manifest.files.length}</span>
+          <span title={manifest.manifest_hash}>확인표(manifest) {manifest.manifest_hash.slice(0, 8)}</span>
+          <span title={manifest.snapshot_hash}>승인본(snapshot) {manifest.snapshot_hash.slice(0, 8)}</span>
+          <span>도구 compiler {manifest.compiler_version} · template {manifest.template_version}</span>
         </div>
       </div>
       {/* DESIGN_BRIEF §4 화면 7 「상단 우측: [Pack 다운로드 (.zip)] · 이 Pack을 받은 기기 9 / 12」 */}
@@ -109,7 +109,7 @@ function ReceivedBy({ project, manifest }: { project: ProjectRef; manifest: Mani
   if (sync.result.state !== 'ready') return null
   const devices = sync.result.data.devices
   return (
-    <span className="meta" title="마지막 보고의 manifest 해시가 이 Pack 과 같은 기기">
+    <span className="meta" title="마지막 보고 때 받은 파일이 이 판과 똑같은 기기 — 확인표(해시)로 대조">
       이 Pack을 받은 기기 <span className="mono ink">{countReceived(devices, manifest.manifest_hash)} / {devices.length}</span>
     </span>
   )
@@ -267,7 +267,7 @@ function TracePanel({
   if (!picked) {
     return (
       <div className="col-tight">
-        <span className="label">역추적</span>
+        <span className="label">이 줄의 출처</span>
         <p className="meta">줄을 누르면 그 줄이 어느 항목에서 왔는지 보여줍니다.</p>
       </div>
     )
@@ -276,20 +276,21 @@ function TracePanel({
     //  🔴 감추지 않는다. 태그 없는 줄이 있다는 것 자체가 P7 의 판정 재료다.
     return (
       <div className="col-tight">
-        <span className="label">역추적</span>
+        <span className="label">이 줄의 출처</span>
         <p className="ink-warn">⚠ 이 줄은 어느 항목에도 속하지 않습니다 (머리말·빈 줄).</p>
       </div>
     )
   }
   return (
     <div className="col-tight">
-      <span className="label">역추적</span>
+      <span className="label">이 줄의 출처</span>
       <CtxTag itemId={tag.itemId} revision={tag.revision} />
       {item ? (
         <>
           <div className="row wrap">
             <TypeIcon type={item.type} />
-            <span className="meta mono">{item.type}</span>
+            {/* 타입은 사람 말로 — `policy` 가 그대로 찍혀 있었다 (2026-09-10 저녁). */}
+            <span className="meta">{ITEM_TYPE_LABEL[item.type]}</span>
             <ItemStatusChip status={item.status} />
             <ConfidenceChip confidence={item.confidence} />
           </div>
@@ -316,7 +317,7 @@ function Excluded({ manifest }: { manifest: Manifest }) {
   if (manifest.excluded.length === 0) return null
   return (
     <details>
-      <summary className="label">제외된 항목 {manifest.excluded.length}</summary>
+      <summary className="label">이 판에 안 들어간 항목 {manifest.excluded.length}</summary>
       <div className="col-tight">
         {manifest.excluded.map((e) => (
           <div key={e.item_id} className="col-tight">

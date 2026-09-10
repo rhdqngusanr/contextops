@@ -110,10 +110,10 @@ describe('🔴 캡션이 컴파일러가 하는 일과 같다 (표를 베껴 적
     return result.files.map((f) => f.text).join('\n')
   }
 
-  it('「다음 Pack 에 나갑니다」라고 적은 상태만 실제로 나간다', () => {
+  it('「다음 발행에 들어갑니다」라고 적은 상태만 실제로 나간다', () => {
     for (const status of ITEM_STATUSES) {
       const inPack = packOf(status).includes(RULE.rule)
-      expect(packEffectOf(status) === '다음 Pack 에 나갑니다', `${status}: 캡션과 Pack 이 다르다`)
+      expect(packEffectOf(status) === '다음 발행에 들어갑니다', `${status}: 캡션과 Pack 이 다르다`)
         .toBe(inPack)
     }
   })
@@ -121,7 +121,7 @@ describe('🔴 캡션이 컴파일러가 하는 일과 같다 (표를 베껴 적
   it('캡션의 정본이 `ITEM_STATUS_EXCLUDE_REASON` 이다 — 화면이 따로 세지 않는다', () => {
     for (const status of ITEM_STATUSES) {
       expect(packEffectOf(status), status).toBe(
-        ITEM_STATUS_EXCLUDE_REASON[status] === null ? '다음 Pack 에 나갑니다' : '다음 Pack 에서 빠집니다',
+        ITEM_STATUS_EXCLUDE_REASON[status] === null ? '다음 발행에 들어갑니다' : '다음 발행에서 빠집니다',
       )
     }
   })
@@ -150,7 +150,7 @@ describe('버튼 밑에 「무엇이 되나」가 상태 이름과 Pack 둘 다�
     }
     //  ⚠ 「나갑니다」는 딱 한 번이어야 한다 — 초안에서 갈 수 있는 곳 중 Pack 에 나가는
     //     것은 `active` 하나다. 두 번 나오면 표나 캡션 중 하나가 거짓말한다.
-    expect(html.split('다음 Pack 에 나갑니다').length - 1).toBe(1)
+    expect(html.split('다음 발행에 들어갑니다').length - 1).toBe(1)
   })
 
   it('저장하는 중에는 버튼이 전부 잠긴다 — 두 번 누르면 409 다', () => {
