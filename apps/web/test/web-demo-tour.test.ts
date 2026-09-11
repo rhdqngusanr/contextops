@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { PUBLISHED_SHOTS } from '../e2e/plan'
 import { Landing, TERMINAL_REPLAY } from '../src/components/landing'
 import { RECORDED_CONFLICTS } from '../src/lib/demo/seed'
-import { DEMO_ENTRY_PATH } from '../src/lib/demo/tenant'
+import { DEMO_ENTRY_PATH, DEMO_TENANT, demoBarText, demoResetText } from '../src/lib/demo/tenant'
 import { PROJECT_SCREENS } from '../src/lib/web/screens'
 import { DEMO_TOUR, tourIndexOf } from '../src/lib/web/tour'
 
@@ -76,5 +76,50 @@ describe('④ 랜딩과 주소', () => {
     expect(tourIndexOf('/t/demo/p/paylab-api/review')).toBe(0)
     expect(tourIndexOf('/t/demo/p/paylab-api/packs/1.1.0')).toBe(1)
     expect(tourIndexOf('/t/demo/p/paylab-api/context')).toBe(-1)
+  })
+})
+
+// ---------------------------------------------------------------------
+//  ⑤ 게스트 첫 화면 — 안내가 제품을 밀어내지 않는다 (2026-09-11)
+//
+//  ★ 왜 게이트인가 — 이건 **조용히 되돌아간다.** 안내를 한 줄 더할 곳으로 배너 위가
+//    제일 자연스럽고, 한 줄씩 쌓이면 아무 시험도 안 빨개진 채로 휴대폰 첫 화면이 다시
+//    설명으로 가득 찬다. 실제로 그렇게 됐다 — 375×812 에서 첫 카드 제목이 y≈1280 이었고
+//    (내비 250 + 배너·투어 690 + 화면 머리글 250), 즉 **첫 화면에 제품이 0픽셀**이었다.
+//    사용자 지적: 「demo 로 좀 더 사용자 친화적으로 해야 할 것 같아」.
+//  재는 것: 자리(위/아래)가 갈려 있나 · 위 한 줄이 짧게 유지되나.
+// ---------------------------------------------------------------------
+describe('⑤ 게스트 안내는 본문 위 한 줄과 본문 아래 코스로 갈린다', () => {
+  const layout = readFileSync(
+    join(webRoot, 'src', 'app', 't', '[team]', 'p', '[project]', 'layout.tsx'), 'utf8',
+  )
+
+  it('뼈대가 <DemoBar/> 를 children 앞에, <DemoTour/> 를 뒤에 둔다', () => {
+    const bar = layout.indexOf('<DemoBar />')
+    const kids = layout.indexOf('{children}')
+    const tour = layout.indexOf('<DemoTour />')
+    //  ⚠ 셋 다 있어야 한다 — 하나라도 -1 이면 아래 대소 비교가 조용히 통과한다.
+    expect(bar, '<DemoBar />').toBeGreaterThan(-1)
+    expect(tour, '<DemoTour />').toBeGreaterThan(-1)
+    expect(bar).toBeLessThan(kids)
+    expect(tour).toBeGreaterThan(kids)
+  })
+
+  it('본문 위 한 줄은 375px 에서 한 줄이도록 짧다 — 팀 이름과 「읽기 전용」뿐', () => {
+    const bar = demoBarText()
+    expect(bar).toContain(DEMO_TENANT.teamName)
+    expect(bar).toContain('읽기 전용')
+    //  🔴 길이 상한이 이 시험의 전부다. 이 줄에 문장을 더하려거든 **아래 코스로 내려라.**
+    //  ⚠ 이 수는 「한 줄에 들어가는 폭」이 아니다 — 그건 글꼴·폭이 정하고 **눈으로** 본다
+    //    (`.ci/shots/` 의 375px 캡처). 여기서 막는 것은 **문장이 쌓이는 것**이다.
+    //    지금 문구가 30자이고, 한 문장이 더 붙으면 반드시 이 수를 넘는다.
+    expect(bar.length, bar).toBeLessThanOrEqual(36)
+    //  코스·리셋 시각은 위에 오지 않는다 — 그 둘이 690px 을 먹던 장본인이다.
+    expect(bar).not.toContain(DEMO_TOUR.title)
+    expect(bar).not.toContain(DEMO_TENANT.resetAt)
+  })
+
+  it('리셋 안내는 아래 코스가 말한다 (사라지지는 않는다)', () => {
+    expect(demoResetText()).toContain(DEMO_TENANT.resetAt)
   })
 })

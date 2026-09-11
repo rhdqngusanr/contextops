@@ -140,8 +140,11 @@ describe('④ 로그인 뒤의 기본 목적지는 홈이다', () => {
     const home = readFileSync(join(webRoot, 'src', 'app', 't', 'page.tsx'), 'utf8')
     expect(home).toContain("window.location.replace('/t/new')")
     expect(home).toContain('writeDoor()')
-    //  게스트가 주소로 `/t` 에 와도 다른 앱 화면과 같은 배너를 본다 (2026-09-11).
-    expect(home).toContain('<DemoBanner />')
+    //  게스트가 주소로 `/t` 에 와도 다른 앱 화면과 같은 안내를 본다 (2026-09-11).
+    //  ⚠ **둘 다** 본다 — 위는 「읽기 전용」 한 줄, 아래는 코스다. 위만 두면 게스트에게
+    //    이 화면이 막다른 길이 된다 (돌아갈 문이 뒤로가기뿐).
+    expect(home).toContain('<DemoBar />')
+    expect(home).toContain('<DemoTour />')
   })
 })
 

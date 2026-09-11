@@ -421,19 +421,37 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .main { flex: 1 1 auto; min-width: 0; padding: var(--sp-6); }
 .main-inner { max-width: var(--content-max); display: flex; flex-direction: column; gap: var(--sp-5); }
 
-/* 게스트 데모 배너 — 앱 화면 맨 위 한 줄 (DESIGN_BRIEF §4).
-   ⚠ accent 를 쓰지 않는다. 화면당 accent 는 **주요 액션 하나**이고, 배너는 액션이
-   아니라 「지금 무엇을 보고 있나」다 — accent 를 주면 화면의 진짜 액션과 다툰다. */
-.banner {
+/* 게스트 데모 — 본문 **위** 한 줄 (DESIGN_BRIEF §4 · `components/demo-banner.tsx`).
+   🔴 **여기엔 「읽기 전용」이라는 사실 하나만 선다.** 코스·볼 것·리셋은 `.demo-tour`(본문 아래)다 —
+     전부 위에 쌓았더니 휴대폰 첫 화면에 제품이 0픽셀이었다 (2026-09-11 · 실측 y≈1280).
+   ⚠ accent 를 쓰지 않는다. 화면당 accent 는 **주요 액션 하나**이고, 이 줄은 액션이
+   아니라 「지금 무엇을 보고 있나」다 — accent 를 주면 화면의 진짜 액션과 다툰다.
+   ⚠ 옛 이름은 `.banner` 였다. 쓰는 곳이 0이 되어 지웠다 — 이름이 「배너」면 다음 사람이
+     여기에 또 안내를 쌓는다. 이름이 자리를 말하게 뒀다. */
+.demo-bar {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
-  border: 1px solid var(--line-hi);
+  flex-wrap: wrap;
+  /* 줄이 넘칠 때 붙지 않게. 한 줄일 때는 `grow` 가 밀어낸다. */
+  gap: var(--sp-1) var(--sp-3);
+  /* 위쪽은 얇다 — 이 줄은 읽히기만 하면 되고, 자리를 먹으면 안 된다. */
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-hi);
   color: var(--ink-3);
-  font-size: var(--fs-table);
+  font-size: var(--fs-label);
+}
+.demo-bar-link { color: var(--ink-2); text-decoration: underline; white-space: nowrap; }
+.demo-bar-link:hover { color: var(--ink); }
+
+/* 게스트 데모 — 본문 **아래** 코스 블록. 화면을 다 본 다음에 찾는 것들만 (코스 · 볼 것 · 리셋).
+   ★ 왜 괘선 하나로 떼어 놓나 — 카드로 만들면 화면의 마지막 내용과 같은 무게로 읽혀서
+     「이것도 봐야 하는 것」이 된다. 이 블록은 **끝났다는 표시**다. */
+.demo-tour {
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-4);
+  color: var(--ink-3);
 }
 
 /* 충돌 카드 (`components/conflict-card.tsx`) — 첫 줄 한 문장 · A/B 두 쪽을 나란히 · 제목이 주장이다 (2026-09-10). */
@@ -809,8 +827,19 @@ ul.col-tight, ol.col-tight { list-style: none; margin: 0; padding: 0; }
   }
   /* 탭 줄은 팔레트가 받는다 (위 ★). */
   .nav .nav-links { display: none; }
-  /* 이름은 줄어들 수 있어야 한다 — flex 항목의 기본 `min-width: auto` 는 안 줄어든다. */
-  .nav > .col-tight { min-width: 0; overflow-wrap: anywhere; }
+  /* 이름은 줄어들 수 있어야 한다 — flex 항목의 기본 `min-width: auto` 는 안 줄어든다.
+     🔴 좁은 폭에서는 **가로로 눕는다** (2026-09-11) — 세로 4줄(프로젝트 / paylab-api / 팀 demo / 내 팀)이
+       375px 에서 약 **250px** 을 먹었고, 그 250px 이 첫 화면에서 제품을 밀어냈다.
+       `프로젝트` 이름표는 바로 밑에 이름이 표제체로 서 있어 좁은 폭에서는 없어도 읽힌다. */
+  .nav > .col-tight {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-1) var(--sp-3);
+  }
+  .nav > .col-tight > .label { display: none; }
   /* 옆 칸(드로어 360 · Pack 3열 240/320)은 고정 폭(`flex: 0 0 …`)이라 **안 줄어든다** —
      좁은 폭에서는 한 줄을 통째로 쓰고, 줄이 넘치면 세로로 쌓인다.
      ⚠ 이 두 줄이 없으면 껍데기를 접어도 가로로 민다 — 내비를 접은 뒤에도 화면 3 의

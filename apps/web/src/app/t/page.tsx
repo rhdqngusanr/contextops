@@ -8,7 +8,7 @@ import { ApiClientError, messageOf } from '../../lib/web/api'
 import { fetchMembers, fetchTeams, inviteMember, type TeamMemberView } from '../../lib/web/queries'
 import { readSession } from '../../lib/web/session'
 import { useAsync } from '../../lib/web/use-async'
-import { DemoBanner } from '../../components/demo-banner'
+import { DemoBar, DemoTour } from '../../components/demo-banner'
 import { ErrorState, NeedsLogin, Skeleton } from '../../components/states'
 import { TeamHome, type TeamHomeState } from '../../components/team-home'
 
@@ -85,8 +85,10 @@ function TeamsView() {
     <div className="shell">
       <main className="main">
         <div className="main-inner">
-          {/* 게스트가 주소·뒤로가기로 여기 오면 다른 앱 화면과 같은 배너를 본다 — 게스트가 아니면 null 이다. */}
-          <DemoBanner />
+          {/* 게스트가 주소·뒤로가기로 여기 오면 다른 앱 화면과 같은 안내를 본다 — 게스트가 아니면 null 이다.
+              ⚠ 이 화면은 코스의 걸음이 아니다(`tourIndexOf` = -1). 그래도 아래에 코스를 두는 이유는
+                 **여기가 게스트에게는 막다른 길**이기 때문이다 — 돌아갈 문이 없으면 뒤로가기밖에 없다. */}
+          <DemoBar />
           <TeamHome
             state={state}
             on={{
@@ -98,6 +100,7 @@ function TeamsView() {
           />
           {/* 초대 절차 문장은 초대 폼 안(`team-home.tsx` 의 이메일 칸 바로 위) 한 곳이 정본이다 — 여기 한 번 더 두면
               초대할 수 없는 팀원·게스트에게도 떠서 「내가 뭘 해야 하나」로 읽혔다 (2026-09-11 삭제). */}
+          <DemoTour />
         </div>
       </main>
     </div>

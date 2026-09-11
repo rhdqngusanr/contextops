@@ -78,11 +78,32 @@ export const DEMO_ENTRY_PATH =
   `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug}/review`
 
 /**
- * 배너 문구 (DESIGN_BRIEF §4 「게스트 데모 배너」).
+ * 🔴 **게스트 안내는 두 조각이다** (2026-09-11 · DESIGN_BRIEF §4).
+ *
+ * ★ 왜 갈랐나 — 한 문장이던 배너가 휴대폰에서 두 줄을 먹었고, 그 아래 투어 칩 넷이
+ *   또 네 줄이라 **375×812 첫 화면에 제품이 0픽셀**이었다 (실측 · 첫 카드 제목이 y≈1280).
+ *   둘 중 **지금 당장 필요한 것은 「읽기 전용」 하나**다 — 그게 없으면 게스트가 받는 403 이
+ *   고장으로 읽힌다. 리셋 시각은 그 자리에서 아무도 안 찾는다.
+ *   그래서 위에는 `demoBarText()` 한 줄만 서고, 리셋은 본문 아래 코스 블록으로 내려갔다.
+ *
  * ★ 왜 함수인가 — 팀 이름이 여기 한 곳에서만 문장에 들어가게 하려고. 화면이
  *   `샘플 팀 "${name}"` 을 각자 조립하면 화면마다 따옴표와 조사가 갈린다.
  */
+//  「샘플 팀 "Paylab (샘플 팀)"」은 한 문장에 같은 말이 두 번이었다 · 따옴표는 이름이 이미 괄호를
+//  달고 있어 겹쳤다 (2026-09-11). ⚠ 짧게 유지해라 — 375px 에서 **한 줄**이어야 한다.
+export function demoBarText(): string {
+  return `${DEMO_TENANT.teamName} · 읽기 전용으로 둘러보는 중`
+}
+
+/** 리셋 안내 — 본문 **아래** 코스 블록의 꼬리. 「초기화」는 무엇이 초기화되는지 안 읽혔다 (2026-09-11). */
+export function demoResetText(): string {
+  return `매일 ${DEMO_TENANT.resetAt}(한국 시간)에 처음 상태로 되돌아갑니다`
+}
+
+/**
+ * 둘을 이은 전문 — 화면이 아니라 **글로 한 번에 봐야 하는 자리**가 쓴다
+ * (`scripts/dump-demo.tsx`). ⚠ 여기서 문장을 새로 짓지 마라. 위 둘을 잇기만 한다.
+ */
 export function demoBannerText(): string {
-  //  「샘플 팀 "Paylab (샘플 팀)"」은 한 문장에 같은 말이 두 번이었다 · 「초기화」는 무엇이 초기화되는지 안 읽혔다 (2026-09-11).
-  return `"${DEMO_TENANT.teamName}"을 둘러보는 중입니다 · 읽기 전용 · 매일 ${DEMO_TENANT.resetAt}(한국 시간)에 처음 상태로 되돌아갑니다`
+  return `${demoBarText()} · ${demoResetText()}`
 }

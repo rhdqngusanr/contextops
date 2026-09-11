@@ -4,7 +4,7 @@ import { use, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 
 import { CommandPalette } from '../../../../../components/command-palette'
-import { DemoBanner } from '../../../../../components/demo-banner'
+import { DemoBar, DemoTour } from '../../../../../components/demo-banner'
 import { PROJECT_SCREENS, isActiveScreen, screenHref } from '../../../../../lib/web/screens'
 
 // =====================================================================
@@ -69,10 +69,14 @@ export default function ProjectLayout({
       <main className="main">
         <div className="main-inner">
           {/* ⚠ 게스트일 때만 그려진다 — 로그인한 사람에게는 아무것도 안 나온다.
-              앱 화면 **전부** 위에 있어야 해서 화면이 아니라 이 뼈대가 그린다
-              (화면마다 적으면 한 화면이 빠지고, 빠진 화면에서 403 이 고장으로 읽힌다). */}
-          <DemoBanner />
+              앱 화면 **전부** 에 있어야 해서 화면이 아니라 이 뼈대가 그린다
+              (화면마다 적으면 한 화면이 빠지고, 빠진 화면에서 403 이 고장으로 읽힌다).
+              🔴 **위는 「읽기 전용」 한 줄뿐이고 코스는 `children` 뒤다** (2026-09-11) —
+                 안내를 전부 위에 쌓았더니 휴대폰 첫 화면에 제품이 0픽셀이었다.
+                 가른 기준은 `components/demo-banner.tsx` 머리 주석에 있다. */}
+          <DemoBar />
           {children}
+          <DemoTour />
         </div>
       </main>
     </div>
