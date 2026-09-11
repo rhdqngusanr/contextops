@@ -56,7 +56,9 @@ html,body{margin:0;width:${width}px;height:${height}px;background:var(--bg);colo
 .card{box-sizing:border-box;width:${width}px;height:${height}px;padding:56px 80px 52px;display:flex;flex-direction:column;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:14px;font-family:var(--font-display);font-weight:600;font-size:28px;letter-spacing:-.02em;color:var(--ink)}
 .brand svg{width:40px;height:40px;display:block}
-.eyebrow{font-family:var(--font-mono);font-size:21px;letter-spacing:.04em;color:var(--ink-3)}
+/* 눈썹이 한글이 되면서 모노·자간을 뺐다 (2026-09-11) — 랜딩의 .eyebrow 와 같은 이유·같은 모양.
+   ⚠ 이 CSS 는 템플릿 리터럴 안이다. 주석에 백틱을 쓰면 문자열이 거기서 끊긴다. */
+.eyebrow{font-size:21px;color:var(--ink-3)}
 h1{margin:16px 0 0;font-family:var(--font-display);font-size:74px;line-height:1.08;font-weight:600;letter-spacing:-.03em;color:var(--ink);max-width:12em;text-wrap:balance}
 p{margin:26px 0 0;font-size:27px;line-height:1.55;color:var(--ink-2);max-width:880px}
 .foot{display:flex;justify-content:space-between;align-items:center;font-size:22px;color:var(--ink-3);border-top:1px solid var(--line-hi);padding-top:22px}

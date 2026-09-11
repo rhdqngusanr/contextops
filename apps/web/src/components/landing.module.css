@@ -75,10 +75,11 @@
   gap: var(--sp-5);
 }
 
+/* 🔴 모노가 아니다 (2026-09-11). 이 줄이 한글이 되면서 바꿨다 — **모노로 짠 한글**은
+   자간이 억지로 벌어져 「대충 만든 화면」의 대표적인 모양이다 (Taste anti-slop 지침과 같은 결).
+   자간(letter-spacing)도 뺐다 — 영문 소문자 눈썹을 벌리는 기법이라 한글에는 해가 된다. */
 .eyebrow {
-  font-family: var(--font-mono);
   font-size: var(--fs-label);
-  letter-spacing: 0.4px;
   color: var(--ink-3);
 }
 

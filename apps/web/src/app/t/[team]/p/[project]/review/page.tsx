@@ -2,7 +2,9 @@
 
 import { use, useState } from 'react'
 import {
-  CONFLICT_KIND_RULES, CONFLICT_SEVERITY_RANK, itemOutcomeOf,
+  //  ⚠ `CONFLICT_KIND_RULES` 는 이 화면이 더는 직접 읽지 않는다 (2026-09-11) — 종류를 가르는
+  //    일이 거르개의 `ConflictKindChip` 한 곳으로 갔다 (위 🔴).
+  CONFLICT_SEVERITY_RANK, itemOutcomeOf,
   type AnswerSlotKey, type ConflictChoice, type ConflictKind, type ContextItemView,
 } from '@contextops/schema'
 
@@ -24,10 +26,19 @@ import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/
 //  ★ 이 화면이 **결정이 일어나는 자리**다. 화면 3 이 넣은 것과 플러그인이 훑어 온 것이
 //    여기서 사람의 판단을 받고, 그 판단이 화면 5 의 발행으로 간다.
 //
-//  🔴 **머리의 숫자를 `kind` 로 가른다.** `GET /conflicts` 는 §7.2 탐지가 만든 카드와
+//  🔴 **수를 `kind` 로 가른다.** `GET /conflicts` 는 §7.2 탐지가 만든 카드와
 //     **프로젝트를 만들 때 심어 둔 씨앗 질문 10장**을 같이 낸다. 한 수로 합쳐 「AI 가 찾은
 //     결정이 필요한 것 14건」이라고 쓰면 그 문장은 거짓이다 — 열 장은 AI 가 찾은 것이
 //     아니다. 가르는 기준은 `CONFLICT_KIND_RULES[kind].byAi` 하나다 (배지도 같은 축).
+//
+//     ⚠ **그 일을 하는 자리는 이제 거르개(`KindFilter`) 하나다** (2026-09-11).
+//       예전엔 머리글에 `AI가 찾은 … 3건 · … 기본 질문 9개` 한 줄이 더 있었는데, 바로 밑
+//       거르개가 **같은 두 수**(충돌 3 · 팀에게 묻는 질문 9)를 다시 말했고 출처도 카드 표제
+//       (`CONFLICT_HEADLINE.seed_question` = 「프로젝트를 만들 때 심어 둔 기본 질문입니다」)가
+//       이미 말하고 있었다 — 한 화면이 같은 사실을 세 번 했다. 그 줄을 지웠다.
+//       ★ 거짓이 안 되는 이유 — 거르개는 `kind` 마다 따로 세고 라벨을 `ConflictKindChip`
+//         (= 같은 표)에서 읽는다. 「전체 12」는 합친 수지만 **AI 가 찾았다고 말하지 않는다.**
+//       ⚠ 그러니 머리글에 「AI 가 찾은 N건」 꼴의 **합계**를 다시 만들지 마라. 그 순간 거짓이 된다.
 //
 //  🔴 **결정한 카드를 목록에서 지우지 않는다.** 응답으로 온 행을 손에 든 목록에 갈아
 //     끼운다 — 지우면 방금 누른 사람이 자기가 무엇을 골랐는지 확인할 자리를 잃는다.
@@ -149,8 +160,6 @@ function ReviewView({
     })
   }
 
-  const byAi = all.filter((c) => CONFLICT_KIND_RULES[c.kind].byAi)
-  const asked = all.filter((c) => !CONFLICT_KIND_RULES[c.kind].byAi)
   const shown = (filter === null ? all : all.filter((c) => c.kind === filter)).slice().sort(bySeverity)
 
   return (
@@ -159,13 +168,6 @@ function ReviewView({
         <h1 className="text-section">정리</h1>
         {/* 사람 말 한 줄이 먼저 (2026-09-10 저녁). */}
         <p className="ink-2">문서끼리, 문서와 코드가 서로 다르게 말하는 자리를 AI 가 찾아 카드로 올렸습니다. 어느 쪽이 맞는지는 사람이 정합니다.</p>
-        {/* 🔴 두 수를 **따로** 낸다. 합치면 「AI 가 찾았다」가 씨앗 질문까지 삼킨다.
-            뒤 절은 카드의 표제(`CONFLICT_HEADLINE.seed_question`)와 같은 낱말 — 「사람이 미리 물어 둔」의 사람이 누구인지 안 읽혔다 (2026-09-11). */}
-        <p className="meta">
-          {cards.result.state === 'ready'
-            ? `AI가 찾은 결정이 필요한 것 ${byAi.length}건 · 프로젝트를 만들 때 심어 둔 기본 질문 ${asked.length}개`
-            : '결정을 기다리는 것을 세는 중입니다.'}
-        </p>
       </header>
 
       <DetectionPanel jobs={jobs} />

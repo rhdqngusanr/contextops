@@ -74,11 +74,17 @@ export function RoadmapSummary({ roadmap, now, base }: { roadmap: Roadmap; now?:
   const stale = roadmap.milestones.filter((m) => isStaleReport(m.last_report_at, now))
   const never = roadmap.milestones.filter((m) => m.last_report_at === null)
 
+  //  🔴 **조각을 감싸지 않고 둘로 내보낸다** (2026-09-11). 한 `<div>` 로 묶으면 좁은 폭에서
+  //     타일 넷이 통째로 마일스톤 앞을 막는데, 그때 떼어 놓을 방법이 없다.
+  //     둘이 화면(`.main-inner`)의 형제가 되면 **타일만** 마일스톤 뒤로 보낼 수 있다 (`globals.css` 폭 질의).
+  //  ★ 왜 숨기지 않고 옮기나 — 타일이 말하는 것은 전부 참이고 (「0 이 좋은 소식일 때는 그렇다고 말한다」),
+  //    숨기면 화면이 폭에 따라 **다른 말**을 하게 된다. 순서만 바꾸면 잃는 것이 없다.
+  //  ⚠ 사실 한 줄은 **위에 남는다** — 「3개 중 무엇이 어디까지」는 타일이 아니라 이 문장이 말한다.
   return (
-    <div className="col-tight">
+    <>
       {/* 사실 한 줄 (2026-09-11) — 타일보다 먼저 「3개 중 무엇이 어디까지」가 읽힌다. 문장의 정본은 `fact-line.tsx`. */}
       <FactLine parts={roadmapFact(roadmap.milestones.map((m) => m.status), cover)} />
-      <div className="row wrap items-start">
+      <div className="row wrap items-start roadmap-tiles">
         <Tile label="마일스톤" value={roadmap.milestones.length} hint={`공식 v${roadmap.context_version ?? '—'} 기준`} />
         <Tile
           label="근거가 붙은 완료 조건"
@@ -113,7 +119,7 @@ export function RoadmapSummary({ roadmap, now, base }: { roadmap: Roadmap; now?:
           }
         />
       </div>
-    </div>
+    </>
   )
 }
 
