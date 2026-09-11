@@ -239,7 +239,9 @@ export function CommandPalette({ base, pathname, team, project }: {
         onClick={() => { setQuery(''); setIndex(0); setOpen(true) }}
       >
         <span className="grow">{PALETTE_TITLE}</span>
-        <span className="meta mono" aria-hidden="true">{PALETTE_HINT}</span>
+        {/* ⚠ 좁은 폭에서는 CSS 가 숨긴다 — 휴대폰에는 누를 키가 없어서 「Ctrl+K」가
+            **지킬 수 없는 약속**이다 (2026-09-11). 버튼 자체는 남는다 (거기서 갈 곳을 찾는다). */}
+        <span className="meta mono palette-hint" aria-hidden="true">{PALETTE_HINT}</span>
       </button>
       {open
         ? (

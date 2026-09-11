@@ -16,7 +16,7 @@ import { POST as approveProposal } from '../../app/api/v1/proposals/[id]/approve
 import { POST as rejectProposal } from '../../app/api/v1/proposals/[id]/reject/route'
 import { POST as submitProposal } from '../../app/api/v1/proposals/[id]/submit/route'
 import { getDb } from '../../db/client'
-import { progressEvents, syncReports, teamMembers, users } from '../../db/schema'
+import { contextVersions, progressEvents, syncReports, teamMembers, users } from '../../db/schema'
 import { fixtureJson } from './fixtures'
 import { dataOf, params, req } from './inproc'
 import { MILESTONES, seedEmail, seedPaylab, seedSession, type SeedResult } from './seed'
@@ -286,6 +286,20 @@ function hoursAgo(now: Date, hours: number): Date {
 }
 
 /**
+ * 🔴 **첫 판(v1.0.0)이 며칠 전에 나왔나** — 발행 뒤 그 행의 `published_at` 을 이만큼 뒤로 民다.
+ *
+ * ★ 왜 필요한가 — `published_at` 은 `defaultNow()` 다. 씨앗은 두 판을 몇 초 안에 연달아
+ *   발행하므로 화면에는 **같은 분**으로 둘 다 찍힌다. 「두 판이 같은 순간에 나왔다」는
+ *   버전 목록은 처음 보는 사람에게 **지어낸 데이터**로 읽힌다 (2026-09-11 · 375px 캡처에서 봤다).
+ *
+ * 🔴 **기기의 가장 오래된 보고보다 앞서야 한다.** 픽스처의 최대 `hours_ago` 는 120(5일)이고,
+ *    「5일 전에 v1.0.0 을 받았다」가 성립하려면 v1.0.0 은 그 전에 있어야 한다. 168 = 7일.
+ *    ⚠ 픽스처의 `hours_ago` 를 이 값보다 크게 늘리면 「받기 전에 받은 기기」가 생긴다 —
+ *      `test/demo-guest.test.ts` 가 그 짝을 잰다.
+ */
+export const DEMO_FIRST_VERSION_HOURS_AGO = 168
+
+/**
  * 🔴 **팀원의 세션 JWT — 이름과 이메일을 claims 에 실어서** 만든다.
  *
  * ★ 왜 이 함수가 있나 — 덤프를 눈으로 읽다가 잡았다: 화면 9 의 「팀원」 칸과 화면 6 의
@@ -470,6 +484,16 @@ export async function seedDemo(now: Date = new Date(), into: { teamSlug?: string
 
   //  ── 발행 ②: v1.1.0 (승인된 제안이 여기서 항목이 된다 — SPEC §2.1 2단계) ──
   const v11 = await publish(seed, owner, '1.1.0', v1.id, '승인된 제안 1건 반영 — 재시도 정책')
+
+  //  🔴 **v1.0.0 의 발행 시각을 뒤로 民다** (2026-09-11). `versions.published_at` 은 `defaultNow()` 라
+  //    씨앗이 두 판을 몇 초 안에 연달아 발행하면 화면에 **같은 분**(예: 12:50)으로 둘 다 찍힌다.
+  //    그러면 버전 목록이 「두 판이 같은 순간에 나왔다」고 말하는 셈이라, 처음 보는 사람 눈에는
+  //    버전 이야기 전체가 지어낸 것으로 읽힌다 — 실제로 375px 캡처에서 그렇게 보였다.
+  //  ★ 왜 3일인가 — 기기 보고의 「며칠 전」(`hours_ago`)과 같은 시간축에 있고, 가장 오래된
+  //    보고보다 앞서야 「옛 버전을 쓰는 기기」가 말이 된다. 값은 `now` 하나에서 온다.
+  await getDb().update(contextVersions)
+    .set({ publishedAt: hoursAgo(now, DEMO_FIRST_VERSION_HOURS_AGO) })
+    .where(eq(contextVersions.id, v1.id))
 
   //  발행 **뒤에** 승인한 것 — 「다음 발행을 기다리는 제안」이 화면에 하나 선다.
   for (const later of decideLater) {

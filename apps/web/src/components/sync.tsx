@@ -6,6 +6,7 @@ import type { DeviceSyncRow, IssuedDevice, VersionRow } from '../lib/web/queries
 import { dateText, sinceText } from '../lib/web/time'
 import { SYNC_CHIP, SYNC_MEANING, SyncChip, Note } from './chips'
 import { FactLine, syncFact } from './fact-line'
+import { ScrollTable } from './scroll-table'
 import { ErrorState, ReadOnlyNotice } from './states'
 
 // =====================================================================
@@ -186,7 +187,7 @@ export function DeviceTable({
 }) {
   if (devices.length === 0) return <>{empty}</>
   return (
-    <div className="scroll-x">
+    <ScrollTable>
       <table className="table">
         <thead>
           <tr>
@@ -221,7 +222,7 @@ export function DeviceTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollTable>
   )
 }
 

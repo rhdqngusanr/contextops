@@ -16,7 +16,9 @@ import { GET as listJobs } from '../src/app/api/v1/projects/[id]/jobs/route'
 import { GET as readJob } from '../src/app/api/v1/projects/[id]/jobs/[jobId]/route'
 import { POST as createToken } from '../src/app/api/v1/projects/[id]/tokens/route'
 import { POST as publish } from '../src/app/api/v1/projects/[id]/versions/publish/route'
-import { seedDemo, readDemoSeedFile, demoGuestMembership, type DemoSeedResult } from '../src/lib/demo/seed-demo'
+import {
+  seedDemo, readDemoSeedFile, demoGuestMembership, DEMO_FIRST_VERSION_HOURS_AGO, type DemoSeedResult,
+} from '../src/lib/demo/seed-demo'
 import { MILESTONES, seedSession, UNFINISHED_JOB_STATUSES } from '../src/lib/demo/seed'
 import { AI_JOB_STATUS_RULES } from '../src/db/schema'
 import { structureCounts } from '../src/lib/web/queries'
@@ -425,5 +427,26 @@ describe('배너 문구', () => {
     expect(text).toContain(DEMO_TENANT.resetAt)
     //  ⚠ 「실시간」이라는 낱말을 쓰지 않는다 (SPEC §6).
     expect(text).not.toContain('실시간')
+  })
+})
+
+// ---------------------------------------------------------------------
+//  첫 판의 발행 시각 — 「받기 전에 받은 기기」가 생기지 않게 (2026-09-11)
+//
+//  ★ 왜 게이트인가 — `published_at` 은 `defaultNow()` 라 씨앗이 두 판을 몇 초 안에 발행하면
+//    화면에 **같은 분**으로 둘 다 찍힌다. 그걸 고치려고 v1.0.0 만 뒤로 民었는데(`DEMO_FIRST_VERSION_HOURS_AGO`),
+//    이번엔 **픽스처의 `hours_ago` 를 늘리면** 기기가 v1.0.0 보다 먼저 그것을 받은 셈이 된다.
+//    둘 다 화면은 멀쩡히 뜨고 숫자만 거짓말을 한다 — 그래서 기계가 잰다.
+// ---------------------------------------------------------------------
+describe('데모 버전의 시간축', () => {
+  it('첫 판은 기기의 가장 오래된 보고보다 먼저 발행됐다', () => {
+    const file = readDemoSeedFile()
+    const oldest = Math.max(...file.devices.flatMap((d) => (d.report ? [d.report.hours_ago] : [])))
+    expect(DEMO_FIRST_VERSION_HOURS_AGO).toBeGreaterThan(oldest)
+  })
+
+  it('두 판의 발행 시각이 갈린다 — 같은 분에 둘 다 찍히지 않는다', () => {
+    //  0 이면 뒤로 民지 않는다는 뜻이고, 그때가 바로 고치기 전 상태다.
+    expect(DEMO_FIRST_VERSION_HOURS_AGO).toBeGreaterThan(0)
   })
 })

@@ -15,6 +15,7 @@ import { dateText } from '../lib/web/time'
 import { PROPOSAL_STATUS_CHIP, CtxTag, ProposalOperationChip, ProposalStatusChip, VersionPill, Note } from './chips'
 import { EvidenceList } from './evidence'
 import { FactLine, proposalFact } from './fact-line'
+import { ScrollTable } from './scroll-table'
 import { ITEM_GIST_KEY, itemGist } from '../lib/web/item-gist'
 
 // =====================================================================
@@ -177,7 +178,7 @@ export function ProposalTable({
 }) {
   if (proposals.length === 0) return <>{empty}</>
   return (
-    <div className="scroll-x">
+    <ScrollTable>
       <table className="table">
         <thead>
           <tr>
@@ -219,7 +220,7 @@ export function ProposalTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollTable>
   )
 }
 

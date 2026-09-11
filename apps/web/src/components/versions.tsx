@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { VersionRow } from '../lib/web/queries'
 import { VersionPill } from './chips'
+import { ScrollTable } from './scroll-table'
 
 // =====================================================================
 //  버전 히스토리 — 세로 타임라인 (DESIGN_BRIEF §4 화면 5 마지막 줄)
@@ -26,7 +27,7 @@ export function VersionHistory({
 }) {
   if (versions.length === 0) return <>{empty}</>
   return (
-    <div className="scroll-x">
+    <ScrollTable>
       <table className="table">
         <thead>
           <tr>
@@ -44,12 +45,15 @@ export function VersionHistory({
               <td className="mono">{v.published_at.replace('T', ' ').slice(0, 16)}</td>
               {/* 빈 칸의 `—` 는 **장식이다** — `aria-hidden` 이라야 `ink-4`(비활성 색)를
                   쓸 수 있다. 읽어야 하는 글자에 그 색을 쓰면 design-tokens.test.ts 가 막는다. */}
-              <td>{v.change_summary ?? <span aria-hidden="true" className="ink-4">—</span>}</td>
+              {/* `cell-prose` = 줄바꿈해도 되는 **문장** 칸. 좁은 폭에서 최소 폭이 없으면
+                  「승인된 / 제안 1건 / 반영 — / 재시도 / 정책」처럼 두세 낱말씩 다섯 줄로
+                  쪼개진다 (2026-09-11 · 375px 에서 봤다). */}
+              <td className="cell-prose">{v.change_summary ?? <span aria-hidden="true" className="ink-4">—</span>}</td>
               <td><a className="btn btn-sm" href={packHref(v.semver)}>Pack 보기</a></td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollTable>
   )
 }
