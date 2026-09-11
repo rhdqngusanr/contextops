@@ -479,12 +479,40 @@ describe('hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1)', () => 
       expect(networkMs).toBeGreaterThan(0)
       //  🔴 네트워크 한도만 재면 안 된다 — Stop 훅은 git 을 **두 번** 부르고 그 시간도 timeout 안이다.
       //    1500 × 2 + 2500 = 5500 > 5000 으로 **최악의 경우 매 턴 강제 종료**되던 자리다 (INBOX G7).
+      //
+      //  🔴 **마감을 선언한 훅은 그 하나가 최악이다** (2026-09-12). 단계마다 고정 한도를 두던 때는
+      //     합을 여기서 세야 했고(`네트워크 + git × 호출 수`), 그 합이 git 의 한도를 1500 위로 못 가게
+      //     묶어서 **부하에서 git 이 조용히 시간 초과되는 자리**가 됐다 (실측 최악 1235ms · stop.mjs 머리말 표).
+      //     이제 `HOOK_BUDGET_MS` 를 선언한 훅은 어떤 단계도 그 마감을 못 넘으므로 **그 수 하나가 곧 최악**이다.
+      //     ⚠ 그래서 단계를 하나 더해도 이 시험은 안 고친다 — 마감이 이미 그것을 덮는다.
+      //  ⚠ 마감을 선언하지 않은 훅(`session-start.mjs`)은 예전 셈을 그대로 쓴다.
       //    git 호출 수는 소스에서 센다 — 호출을 하나 더하면 이 합이 저절로 는다.
+      const budgetMs = Number(/HOOK_BUDGET_MS = (\d+)/.exec(source)?.[1] ?? 0)
       const gitMs = Number(/GIT_TIMEOUT_MS = (\d+)/.exec(source)?.[1] ?? 0)
       const gitCalls = (source.match(/\bgit\(root, \[/g) ?? []).length
-      const worstMs = networkMs + gitMs * gitCalls
-      expect((entry.timeout ?? 0) * 1000, `${name}: 최악 ${worstMs}ms (git ${gitCalls}×${gitMs} + 네트워크 ${networkMs})`)
+      const worstMs = budgetMs > 0 ? budgetMs : networkMs + gitMs * gitCalls
+      const how = budgetMs > 0
+        ? `마감 ${budgetMs}`
+        : `git ${gitCalls}×${gitMs} + 네트워크 ${networkMs}`
+      expect((entry.timeout ?? 0) * 1000, `${name}: 최악 ${worstMs}ms (${how})`)
         .toBeGreaterThan(worstMs)
+
+      //  🔴 마감을 선언했으면 **단계 상한이 마감보다 작아야** 뜻이 있다. 상한이 마감보다 크면
+      //     그 상한은 한 번도 안 걸리는 죽은 수이고, 다음 사람은 그것을 살아 있는 값으로 읽는다.
+      if (budgetMs > 0) {
+        for (const [label, capMs] of [['git', gitMs], ['네트워크', networkMs]] as const) {
+          expect(capMs, `${name}: ${label} 상한 ${capMs}ms 가 마감 ${budgetMs}ms 보다 크다 — 걸릴 일이 없는 수다`)
+            .toBeLessThan(budgetMs)
+        }
+        //  ⚠ 모든 단계가 마감을 거치는가. 상한 상수를 `withinBudget()` 없이 그대로 넘기면
+        //    그 단계만 마감 밖에 서고, 합이 조용히 5초를 넘는다.
+        for (const constant of ['GIT_TIMEOUT_MS', 'NETWORK_TIMEOUT_MS']) {
+          //  선언(`const X = 1`)은 `(?!\s*=)` 가, 올바른 사용(`withinBudget(X)`)은 lookbehind 가 뺀다.
+          const bare = new RegExp(`(?<!withinBudget\\()\\b${constant}\\b(?!\\s*=)`, 'g')
+          const uses = [...source.matchAll(bare)]
+          expect(uses.length, `${name}: ${constant} 를 withinBudget() 없이 쓴 자리가 있다`).toBe(0)
+        }
+      }
     },
   )
 })

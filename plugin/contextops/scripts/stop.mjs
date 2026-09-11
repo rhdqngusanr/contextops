@@ -37,19 +37,53 @@ import { dirname, join } from 'node:path'
 // =====================================================================
 
 /**
- * 🔴 **최악의 경우 이 훅이 기다리는 시간의 합이 hooks.json 의 timeout(5초)보다 짧아야 한다.**
+ * 🔴 **이 훅이 기다리는 시간의 합이 hooks.json 의 timeout(5초)보다 짧아야 한다.**
  *    턴의 끝을 막는 훅이 제일 나쁘다 — 그리고 timeout 에 걸리면 그냥 죽는 것이 아니라
- *    **매 턴** 죽는다. git 두 번(`changedPaths`) + 네트워크 한 번이 이 훅의 전부다:
- *    2 × 1400 + 2000 = 4800ms < 5000ms. 예전엔 1500 × 2 + 2500 = 5500 으로 timeout 을
- *    넘고 있었다 (INBOX G7). 합을 재는 시험은 `test/hooks.test.ts` 「timeout 이 …」다.
- *    ⚠ 2026-09-10: git 1000 은 Windows 에서 **모자랐다** — 바쁜 기계에서 git 의 첫 기동이 1초를 넘겨
- *      `changedPaths` 가 빈 채로 돌아오고, 훅이 「변경 없음」으로 조용히 끝났다 (CI 의 `hooks.test`
- *      「stop 이 바꾼 경로」가 하루에 두 번 0 으로 빨갰다 · 코드는 그대로였다). 네트워크에서 500 을 떼어
- *      git 에 주었다 — API 는 icn1 이라 2초면 충분하고, git 이 못 끝나면 보고 자체가 없다.
+ *    **매 턴** 죽는다. git 두 번(`changedPaths`) + 네트워크 한 번이 이 훅의 전부다.
+ *
+ * 🔴 **한도를 단계마다 따로 주지 않고 「마감」 하나로 나눠 쓴다** (2026-09-12).
+ *    ★ 왜 바꿨나 — 단계마다 고정 한도를 주면 합이 먼저 정해지고, 그 합 안에서 git 에 줄 수 있는
+ *      최대가 `(5000 − 네트워크) / 2` 로 못 박힌다. 그런데 **실측 최악이 그 선에 붙어 있었다**:
+ *
+ *      | 조건 | git 두 번 합 | 한 번 최악 |
+ *      |---|---|---|
+ *      | 한가할 때 (12회) | 62–92ms | 39ms |
+ *      | CPU 16개 부하 (12회) | 154–420ms | — |
+ *      | **실제 `pnpm -r test` 가 도는 중 (25회)** | 68–**1393ms** | **1235ms** |
+ *
+ *      즉 부하에서 git 한 번이 한가할 때의 **약 32배**(39 → 1235ms)가 된다. 옛 한도 1400ms 는
+ *      그 최악의 **1.13배**뿐이라 여유가 없었고, 넘는 순간 `git()` 이 `''` 를 돌려줘
+ *      훅이 「변경 없음」으로 **조용히** 끝났다 (증상은 `hooks.test` 「stop 이 바꾼 경로」가
+ *      0 으로 빨개지는 것 · 2026-09-10 에 1000→1400 으로 올렸지만 09-11 에 또 났다).
+ *      한도를 더 올리려 해도 `2 × git + 네트워크 < 5000` 이 git 을 1500 위로 못 가게 막는다 —
+ *      **튜닝으로 못 여는 자리였다.**
+ *    ★ 그래서 마감이다 — 단계는 「자기 상한」과 「마감까지 남은 시간」 중 **작은 쪽**을 쓴다.
+ *      보통 git 은 60ms 에 끝나므로 남은 예산이 거의 그대로 네트워크로 간다. 느린 날에는
+ *      git 이 **안 쓰인 예산을 빌려** 최대 2800ms 까지 버틴다 — 실측 최악의 2.3배다.
+ *      합은 어떤 경우에도 `HOOK_BUDGET_MS` 를 못 넘는다.
+ *    ⚠ 그러니 단계를 하나 더할 때 **합을 손으로 다시 세지 마라.** `withinBudget()` 을 거치면 된다.
+ *      합을 재는 시험은 `test/hooks.test.ts` 「timeout 이 …」이고, 그 시험은 이제 이 상수를 본다.
  */
+const HOOK_BUDGET_MS = 4800
+/**
+ * 한 번의 git 에 줄 수 있는 **상한**. 마감이 더 가까우면 그쪽이 이긴다.
+ * ★ 왜 2800 인가 — 실측 최악 1235ms(위 표)의 2.3배. 상한을 아예 없애지 않는 이유는
+ *   **멈춰 버린 git 하나가 네트워크 몫까지 다 먹지 않게** 하기 위해서다.
+ */
+const GIT_TIMEOUT_MS = 2800
+/** 네트워크 한 번의 상한. API 는 icn1 이라 2초면 충분하다. 마감이 더 가까우면 그쪽이 이긴다. */
 const NETWORK_TIMEOUT_MS = 2000
-/** git 한 번에 주는 시간. 큰 저장소·바쁜 Windows 에서도 이 안에 끝난다. 두 번 부른다 (`changedPaths`). */
-const GIT_TIMEOUT_MS = 1400
+
+/** 훅이 시작한 시각 — 마감은 여기서부터 잰다. */
+const STARTED_AT = Date.now()
+
+/**
+ * 이 단계에 실제로 줄 시간 — 자기 상한과 마감까지 남은 시간 중 작은 쪽.
+ * ⚠ 최소 1ms 는 준다. 0 이나 음수를 `timeout` 에 넘기면 「무한 대기」로 읽는 API 가 있다.
+ */
+function withinBudget(capMs) {
+  return Math.max(1, Math.min(capMs, HOOK_BUDGET_MS - (Date.now() - STARTED_AT)))
+}
 /** 한 번에 볼 변경 경로 수 (`PendingProposalFile.changed_paths` 상한과 같다). */
 const MAX_PATHS = 50
 
@@ -102,7 +136,8 @@ const MATCHERS = POLICY_GLOBS.map(globToRegExp)
 
 function git(root, args) {
   try {
-    return execFileSync('git', args, { cwd: root, encoding: 'utf8', timeout: GIT_TIMEOUT_MS, stdio: ['ignore', 'pipe', 'ignore'] })
+    //  ⚠ 마감을 거친다 — 상한을 그대로 쓰지 마라 (머리말 🔴 「마감 하나로 나눠 쓴다」).
+    return execFileSync('git', args, { cwd: root, encoding: 'utf8', timeout: withinBudget(GIT_TIMEOUT_MS), stdio: ['ignore', 'pipe', 'ignore'] })
   } catch {
     //  git 이 없거나 저장소가 아니다 — 조용히 「변경 없음」이다.
     return ''
@@ -143,7 +178,8 @@ async function postProgress(config, token, body) {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(NETWORK_TIMEOUT_MS),
+      //  ⚠ 마감을 거친다 — git 이 오래 걸린 날에는 네트워크 몫이 그만큼 줄어든다.
+      signal: AbortSignal.timeout(withinBudget(NETWORK_TIMEOUT_MS)),
     })
     return response.ok
   } catch {
