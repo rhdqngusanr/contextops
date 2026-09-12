@@ -4,9 +4,11 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { fetchTeams } from '../lib/web/queries'
 import {
-  PALETTE_GROUP_ORDER, PALETTE_GROUP_TITLES, matchEntries, projectEntries, screenEntries,
-  type PaletteEntry,
+  PALETTE_GROUP_ORDER, PALETTE_GROUP_WORDS, matchEntries, projectEntries,
+  screenEntries, screensIn, type PaletteEntry,
 } from '../lib/web/screens'
+import { localized, pick } from '../lib/i18n/localized'
+import { useLocale } from '../lib/i18n/provider'
 import { useAsync } from '../lib/web/use-async'
 
 // =====================================================================
@@ -41,6 +43,30 @@ export const PALETTE_PROJECTS_LOADING = '프로젝트 목록을 불러오는 중
 export const PALETTE_PROJECTS_ERROR = '프로젝트 목록을 불러오지 못했습니다'
 /** 검색이 아무것도 못 찾았을 때. 빈 상태에도 할 말이 있어야 한다 (DESIGN_BRIEF §5). */
 export const PALETTE_EMPTY = '그런 화면도 프로젝트도 없습니다'
+
+/**
+ * 🔴 **언어별 한 벌** (2026-09-12). 위 상수들이 한국어 쪽이고, 시험이 그 이름으로 붙잡고 있어서
+ *    그대로 둔 채 여기서 읽는다 — 같은 문장을 두 번 적지 않는다.
+ * ⚠ `PALETTE_HINT`(Ctrl+K)는 언어가 없다 — 키 이름이다.
+ */
+export const PALETTE_WORDS = localized({
+  ko: {
+    title: PALETTE_TITLE,
+    placeholder: `${PALETTE_TITLE} — 화면·프로젝트 이름을 치세요`,
+    loading: PALETTE_PROJECTS_LOADING,
+    error: PALETTE_PROJECTS_ERROR,
+    empty: PALETTE_EMPTY,
+    close: 'Esc 닫기',
+  },
+  en: {
+    title: 'Go to',
+    placeholder: 'Go to — type a screen or project name',
+    loading: 'Loading your projects',
+    error: 'Could not load your projects',
+    empty: 'No screen or project by that name',
+    close: 'Esc to close',
+  },
+})
 
 /** `⌘K`(mac) 또는 `Ctrl+K`(win/linux) 인가. 창 전역 핸들러와 시험이 같은 함수를 쓴다. */
 export function isPaletteKey(e: { key: string; metaKey: boolean; ctrlKey: boolean }): boolean {
@@ -77,6 +103,9 @@ type DialogProps = {
 export function PaletteDialog({
   entries, projectsNote = null, query, index, onQuery, onIndex, onClose,
 }: DialogProps) {
+  //  🔴 문구는 이 언어의 한 벌에서 온다 — 모듈 상수를 직접 그리면 이 조각만 한국어로 남는다.
+  const words = pick(PALETTE_WORDS, useLocale())
+  const groupTitles = pick(PALETTE_GROUP_WORDS, useLocale())
   const hits = matchEntries(query, entries)
   const active = hits[moveIndex(index, 0, hits.length)]
   //  묶음의 차례는 `PALETTE_GROUP_ORDER` 가 정한다 — 그리는 자리에서 정하면
@@ -99,7 +128,7 @@ export function PaletteDialog({
         className="card modal palette"
         role="dialog"
         aria-modal="true"
-        aria-label={PALETTE_TITLE}
+        aria-label={words.title}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
@@ -108,21 +137,21 @@ export function PaletteDialog({
             className="input grow"
             autoFocus
             value={query}
-            placeholder={`${PALETTE_TITLE} — 화면·프로젝트 이름을 치세요`}
-            aria-label={PALETTE_TITLE}
+            placeholder={words.placeholder}
+            aria-label={words.title}
             onChange={(e) => { onQuery(e.target.value); onIndex(0) }}
           />
-          <span className="meta" aria-hidden="true">Esc 닫기</span>
+          <span className="meta" aria-hidden="true">{words.close}</span>
         </div>
         {groups.length === 0
-          ? <p className="meta">{PALETTE_EMPTY}</p>
+          ? <p className="meta">{words.empty}</p>
           : (
-            <div className="palette-list" role="listbox" aria-label={PALETTE_TITLE}>
+            <div className="palette-list" role="listbox" aria-label={words.title}>
               {groups.map(({ group, rows }) => (
                 <Fragment key={group}>
                   {/* ⚠ 제목은 고를 수 없는 줄이다 — listbox 의 option 이 아니다. */}
                   <div className="palette-group label" role="presentation">
-                    {PALETTE_GROUP_TITLES[group]}
+                    {groupTitles[group]}
                   </div>
                   {rows.map((entry) => (
                     <a
@@ -172,17 +201,19 @@ function PaletteBody({
   onIndex: (i: number) => void
   onClose: () => void
 }) {
+  const locale = useLocale()
+  const words = pick(PALETTE_WORDS, locale)
   const { result } = useAsync(() => fetchTeams(), [])
   const entries: PaletteEntry[] = [
-    ...screenEntries(base, pathname),
+    ...screenEntries(base, pathname, screensIn(locale)),
     ...(result.state === 'ready'
       ? projectEntries(result.data.teams, { team, project, pathname })
       : []),
   ]
   //  ⚠ 401(로그인 없음)도 여기서는 한 문장이다 — 팔레트는 로그인 화면이 아니다.
   const note = result.state === 'loading'
-    ? PALETTE_PROJECTS_LOADING
-    : result.state === 'error' ? PALETTE_PROJECTS_ERROR : null
+    ? words.loading
+    : result.state === 'error' ? words.error : null
 
   return (
     <PaletteDialog
@@ -204,6 +235,7 @@ export function CommandPalette({ base, pathname, team, project }: {
   team: string
   project: string
 }) {
+  const triggerWords = pick(PALETTE_WORDS, useLocale())
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -238,7 +270,7 @@ export function CommandPalette({ base, pathname, team, project }: {
         className="btn btn-sm palette-trigger"
         onClick={() => { setQuery(''); setIndex(0); setOpen(true) }}
       >
-        <span className="grow">{PALETTE_TITLE}</span>
+        <span className="grow">{triggerWords.title}</span>
         {/* ⚠ 좁은 폭에서는 CSS 가 숨긴다 — 휴대폰에는 누를 키가 없어서 「Ctrl+K」가
             **지킬 수 없는 약속**이다 (2026-09-11). 버튼 자체는 남는다 (거기서 갈 곳을 찾는다). */}
         <span className="meta mono palette-hint" aria-hidden="true">{PALETTE_HINT}</span>

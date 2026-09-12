@@ -1,9 +1,35 @@
+'use client'
+
 import type { ReactNode } from 'react'
 
-import { ApiClientError, ERROR_HINT, messageOf } from '../lib/web/api'
+import { ApiClientError, ERROR_HINT_WORDS, messageOf } from '../lib/web/api'
 import { NO_ACCOUNT_HINT } from '../lib/web/auth'
-import { EMPTY_PLACES, emptyNextHref, type EmptySlot } from '../lib/web/screens'
+import { APP_CHROME } from '../lib/web/chrome'
+import { EMPTY_PLACES, EMPTY_WORDS, emptyNextHref, type EmptySlot } from '../lib/web/screens'
+import { localized, pick } from '../lib/i18n/localized'
+import { useLocale } from '../lib/i18n/provider'
 import { Note } from './chips'
+
+/**
+ * 세 상태가 같이 쓰는 낱말. 문장이 아니라 **버튼과 이름표**라 여기 있다.
+ * ⚠ 화면별 문구는 `EMPTY_WORDS`(자리별)다 — 여기 쌓지 마라.
+ */
+export const STATE_WORDS = localized({
+  ko: {
+    retry: '다시 시도',
+    requestId: '문의할 때 이 번호를 알려 주세요 · 요청 번호',
+    goSignIn: '로그인하러 가기',
+    startMyTeam: '내 팀으로 시작하기',
+    close: '닫기',
+  },
+  en: {
+    retry: 'Try again',
+    requestId: 'Quote this number when you contact us · request id',
+    goSignIn: 'Go to sign-in',
+    startMyTeam: 'Start with my own team',
+    close: 'Close',
+  },
+})
 
 // =====================================================================
 //  loading / empty / error — **세 상태를 전부** 그리는 자리 (DESIGN_BRIEF §5)
@@ -17,8 +43,10 @@ import { Note } from './chips'
 // =====================================================================
 
 export function Skeleton({ rows = 3 }: { rows?: number }) {
+  //  ⚠ 보이는 글자가 아니라 화면 낭독기가 읽는 이름이다 — 그래도 언어를 탄다.
+  const chrome = pick(APP_CHROME, useLocale())
   return (
-    <div className="col-tight" aria-busy="true" aria-label="불러오는 중">
+    <div className="col-tight" aria-busy="true" aria-label={chrome.loading}>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="skeleton" style={{ width: `${100 - i * 12}%` }} />
       ))}
@@ -45,17 +73,20 @@ export function EmptyState({ message, action }: { message: string; action?: Reac
  *   화면의 기본 문구를 여기서 덮어쓰면 표가 정본이 아니게 된다.
  */
 export function ScreenEmpty({ slot, base, message }: { slot: EmptySlot; base: string; message?: string }) {
+  //  🔴 **구조는 표에서 · 글자는 이 언어의 한 벌에서** (`screens.ts` 의 두 표).
+  //     버튼이 어디로 가는지(`next.to`)는 언어가 없고, 문장만 언어를 탄다.
   const place = EMPTY_PLACES[slot]
+  const words = pick(EMPTY_WORDS, useLocale())[slot]
   const next = place.next
   return (
     <EmptyState
-      message={message ?? place.message}
+      message={message ?? words.message}
       action={next ? (
         <a
           className={next.tone === 'accent' ? 'btn btn-primary' : 'btn'}
           href={emptyNextHref(base, next)}
         >
-          {next.label}
+          {words.nextLabel ?? next.label}
         </a>
       ) : undefined}
     />
@@ -68,13 +99,14 @@ export function ScreenEmpty({ slot, base, message }: { slot: EmptySlot; base: st
  *   (SPEC §11 은 로그에 `request_id` 만 남긴다).
  */
 export function ErrorState({ error, retry }: { error: unknown; retry?: () => void }) {
+  const words = pick(STATE_WORDS, useLocale())
   const requestId = error instanceof ApiClientError ? error.requestId : undefined
   return (
     <div className="state-box">
       <Note tone="bad">{messageOf(error)}</Note>
-      {retry ? <button type="button" className="btn btn-sm" onClick={retry}>다시 시도</button> : null}
+      {retry ? <button type="button" className="btn btn-sm" onClick={retry}>{words.retry}</button> : null}
       {/* `request_id` 는 로그의 열 이름이다 — 왜 보여 주는지(문의용)를 같이 말한다 (2026-09-11). 값은 그대로. */}
-      {requestId ? <span className="meta">문의할 때 이 번호를 알려 주세요 · 요청 번호 <span className="mono">{requestId}</span></span> : null}
+      {requestId ? <span className="meta">{words.requestId} <span className="mono">{requestId}</span></span> : null}
     </div>
   )
 }
@@ -85,11 +117,13 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
  *   계정이 없는 사람은 막다른 길이다. 문구·주소의 정본은 로그인 화면과 같은 `NO_ACCOUNT_HINT` 다.
  */
 export function NeedsLogin({ next }: { next: string }) {
+  const words = pick(STATE_WORDS, useLocale())
+  const hint = pick(ERROR_HINT_WORDS, useLocale())
   return (
     <div className="state-box">
-      <p className="ink">{ERROR_HINT.UNAUTHORIZED}</p>
+      <p className="ink">{hint.UNAUTHORIZED}</p>
       <span className="row">
-        <a className="btn btn-sm" href={`/login?next=${encodeURIComponent(next)}`}>로그인하러 가기</a>
+        <a className="btn btn-sm" href={`/login?next=${encodeURIComponent(next)}`}>{words.goSignIn}</a>
         <a className="btn btn-sm" href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
       </span>
     </div>
@@ -104,12 +138,13 @@ export function NeedsLogin({ next }: { next: string }) {
  * ⚠ 문장은 여기서 짓지 않는다 — `reason` 은 `writeDoor()` 가 `GUEST_HINT` 에서 읽어 온 것이다.
  */
 export function ReadOnlyNotice({ reason, onClose }: { reason: string; onClose?: () => void }) {
+  const words = pick(STATE_WORDS, useLocale())
   return (
     <div className="card pad-sm row-between" role="status">
       <Note tone="warn">{reason}</Note>
       <span className="row">
-        <a className="btn btn-sm" href="/login">내 팀으로 시작하기</a>
-        {onClose ? <button type="button" className="btn btn-sm" onClick={onClose}>닫기</button> : null}
+        <a className="btn btn-sm" href="/login">{words.startMyTeam}</a>
+        {onClose ? <button type="button" className="btn btn-sm" onClick={onClose}>{words.close}</button> : null}
       </span>
     </div>
   )

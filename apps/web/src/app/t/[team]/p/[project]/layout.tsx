@@ -5,7 +5,10 @@ import { usePathname } from 'next/navigation'
 
 import { CommandPalette } from '../../../../../components/command-palette'
 import { DemoBar, DemoTour } from '../../../../../components/demo-banner'
-import { PROJECT_SCREENS, isActiveScreen, screenHref } from '../../../../../lib/web/screens'
+import { isActiveScreen, screenHref, screensIn } from '../../../../../lib/web/screens'
+import { useLocale } from '../../../../../lib/i18n/provider'
+import { APP_CHROME } from '../../../../../lib/web/chrome'
+import { pick } from '../../../../../lib/i18n/localized'
 
 // =====================================================================
 //  앱 화면의 뼈대 — 좌측 220px 내비 + 본문 최대 1200px (DESIGN_BRIEF §3 「레이아웃」)
@@ -27,24 +30,28 @@ export default function ProjectLayout({
   const { team, project } = use(params)
   const path = usePathname()
   const base = `/t/${team}/p/${project}`
+  //  🔴 화면 표를 **이 언어로** 읽는다 — `PROJECT_SCREENS` 를 직접 그리면 이 내비만 한국어로 남는다.
+  const locale = useLocale()
+  const screens = screensIn(locale)
+  const chrome = pick(APP_CHROME, locale)
 
   return (
     <div className="shell">
       <nav className="nav">
         <div className="col-tight">
           {/* 프로젝트 이름이 머리다 (표제체) — 팀은 그 밑에 작게. `demo/paylab-api` 한 줄 모노는 처음 온 사람에게 주소로 읽혔다 (2026-09-11). */}
-          <span className="label">프로젝트</span>
+          <span className="label">{chrome.project}</span>
           <span className="nav-project">{project}</span>
           {/* 「demo」가 이름표 없이 모노로 혼자 서서 「데모 모드」 표시로 읽혔다 (2026-09-11). */}
-          <span className="meta">팀 <span className="mono">{team}</span></span>
+          <span className="meta">{chrome.team} <span className="mono">{team}</span></span>
           {/* 「내 팀」 홈 — 다른 프로젝트·팀원 초대는 거기 있다 (INBOX H9). */}
-          <a className="meta" href="/t">내 팀</a>
+          <a className="meta" href="/t">{chrome.myTeams}</a>
         </div>
         {/* ⚠ `nav-links` 는 **좁은 폭에서 접히는 것**을 가리키는 이름이다 (FINDINGS 160) —
             접는 규칙은 `globals.css` 의 유일한 폭 질의 한 곳에 있다. 여기에 px 를 적지 마라.
             접힌 뒤 갈 곳은 바로 위 ⌘K 팔레트다 (같은 `PROJECT_SCREENS` 표를 읽는다). */}
         <div className="col-tight nav-links">
-          {PROJECT_SCREENS.map((screen) => (
+          {screens.map((screen) => (
             //  지금 화면은 칸 전체가 말한다 — 왼쪽 검정 괘선 + 회색 면 (`data-current` · globals.css). 링크의 글자는 여전히 라벨뿐이다 (GATE 3).
             <div key={screen.path} className="nav-item" data-current={isActiveScreen(screen, path) ? 'true' : undefined}>
               <a

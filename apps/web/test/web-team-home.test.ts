@@ -8,7 +8,8 @@ import { LIST_LIMIT_MAX, TEAM_ROLES } from '@contextops/schema'
 
 import { CREATION_LIMITS } from '../src/lib/api/limits'
 import { GUEST_HINT, REASON_HINT, ApiClientError } from '../src/lib/web/api'
-import { CALLBACK_CODE_HINT } from '../src/lib/web/auth'
+import { CALLBACK_CODE_HINT, CALLBACK_WORDS } from '../src/lib/web/auth'
+import { LOCALES } from '../src/lib/i18n/locale'
 import type { TeamMemberView, TeamRef } from '../src/lib/web/queries'
 import { ROLE_LABEL, TEAM_HOME_TEXT, TeamHome, type TeamHomeHandlers, type TeamHomeState } from '../src/components/team-home'
 
@@ -151,7 +152,15 @@ describe('④ 로그인 뒤의 기본 목적지는 홈이다', () => {
 describe('⑤ 로그인이 튕겼을 때 원인은 사람 말이다 (`CALLBACK_CODE_HINT` · 2026-09-11)', () => {
   it('Supabase 가 주는 두 코드가 문장을 갖고, 되돌아오는 화면이 그 표를 읽는다', () => {
     for (const code of ['access_denied', 'validation_failed']) expect(CALLBACK_CODE_HINT[code]).toMatch(/(습니다|하세요|해주세요)/)
+    //  ⚠ 화면은 이제 **이 언어의 한 벌**에서 같은 표를 읽는다 (2026-09-12 · 영어 모드) —
+    //    `CALLBACK_WORDS.<locale>.codeHint` 의 한국어 쪽이 위 `CALLBACK_CODE_HINT` 그대로다.
+    for (const locale of LOCALES) {
+      for (const code of ['access_denied', 'validation_failed']) {
+        expect(CALLBACK_WORDS[locale].codeHint[code], `${locale}/${code}`).toBeTruthy()
+      }
+    }
+    expect(CALLBACK_WORDS.ko.codeHint).toBe(CALLBACK_CODE_HINT)
     const callback = readFileSync(join(webRoot, 'src', 'app', 'auth', 'callback', 'page.tsx'), 'utf8')
-    expect(callback).toContain('CALLBACK_CODE_HINT[error.code]')
+    expect(callback).toContain('words.codeHint[error.code]')
   })
 })

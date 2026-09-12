@@ -36,7 +36,8 @@ describe('GATE 3 걸음표 (e2e/gate3.ts)', () => {
   })
 
   it('차례가 화면 표의 차례와 같다 — 일의 차례를 거꾸로 밟지 않는다', () => {
-    const order = PROJECT_SCREENS.map((s) => s.path)
+    //  ⚠ 표가 리터럴 튜플이라 그대로 두면 이 줄이 「그 일곱 중 하나」만 받는다 — 문자열로 넓힌다.
+    const order: string[] = PROJECT_SCREENS.map((s) => s.path)
     const seen = GATE3_SCREENS.map((p) => order.indexOf(p))
     expect(seen).toEqual([...seen].sort((a, b) => a - b))
   })

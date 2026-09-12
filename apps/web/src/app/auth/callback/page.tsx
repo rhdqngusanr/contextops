@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useState } from 'react'
 
 import { Note } from '../../../components/chips'
-import { CALLBACK_CODE_HINT, NO_ACCOUNT_HINT, readCallbackHash } from '../../../lib/web/auth'
+import { CALLBACK_WORDS, NO_ACCOUNT_HINT, NO_ACCOUNT_WORDS, readCallbackHash } from '../../../lib/web/auth'
+import { pick } from '../../../lib/i18n/localized'
+import { useLocale } from '../../../lib/i18n/provider'
 import { writeSession } from '../../../lib/web/session'
 
 // =====================================================================
@@ -17,12 +19,16 @@ import { writeSession } from '../../../lib/web/session'
 // =====================================================================
 
 function Callback() {
-  const [error, setError] = useState<{ message: string; code?: string } | null>(null)
+  //  ⚠ 문장이 아니라 **갈래**(`reason`)를 들고 있는다 — 문장은 그리는 자리에서 이 언어로 고른다.
+  const [error, setError] = useState<{ reason: 'incomplete' | 'no_token'; code?: string } | null>(null)
+  const locale = useLocale()
+  const words = pick(CALLBACK_WORDS, locale)
+  const guest = pick(NO_ACCOUNT_WORDS, locale)
 
   useEffect(() => {
     const result = readCallbackHash(window.location.hash, new Date())
     if (!result.ok) {
-      setError({ message: result.message, code: result.code })
+      setError({ reason: result.reason, code: result.code })
       return
     }
     writeSession({ access_token: result.access_token, expires_at: result.expires_at })
@@ -41,11 +47,11 @@ function Callback() {
     return (
       <div className="center">
         <div className="card center-card">
-          <Note tone="bad">{error.message}</Note>
-          {error.code ? <p className="meta">{CALLBACK_CODE_HINT[error.code] ?? '원인을 알 수 없습니다.'} <span className="mono">{error.code}</span></p> : null}
+          <Note tone="bad">{words[error.reason]}</Note>
+          {error.code ? <p className="meta">{words.codeHint[error.code] ?? words.unknownCause} <span className="mono">{error.code}</span></p> : null}
           <div className="row">
-            <a className="btn" href="/login">로그인으로 돌아가기</a>
-            <a className="btn" href={NO_ACCOUNT_HINT.href}>{NO_ACCOUNT_HINT.link}</a>
+            <a className="btn" href="/login">{words.backToLogin}</a>
+            <a className="btn" href={NO_ACCOUNT_HINT.href}>{guest.link}</a>
           </div>
         </div>
       </div>

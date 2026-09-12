@@ -20,6 +20,8 @@
 //     닫아 두고 `/demo` 를 안내한다 — 눌러도 아무 일 없는 문은 「고장」으로 읽힌다.
 // =====================================================================
 
+import { localized } from '../i18n/localized'
+
 export type AuthConfig = {
   url: string
   anonKey: string
@@ -71,6 +73,12 @@ export const NO_ACCOUNT_HINT = {
   href: '/demo',
 } as const
 
+/** 같은 안내의 언어별 한 벌. 주소는 언어를 타지 않는다 — 게스트 입구는 하나다. */
+export const NO_ACCOUNT_WORDS = localized({
+  ko: { text: NO_ACCOUNT_HINT.text, link: NO_ACCOUNT_HINT.link },
+  en: { text: 'No GitHub account, or here as a judge?', link: 'Explore the sample team' },
+})
+
 /**
  * 이메일 매직 링크. 성공해도 세션은 **아직 없다** — 메일을 열어야 ①③ 이 일어난다.
  * ⚠ 응답 본문을 화면에 그대로 띄우지 마라. Supabase 의 오류 문구는 「그 이메일이
@@ -92,7 +100,10 @@ export async function sendMagicLink(config: AuthConfig, email: string, next: str
 export type CallbackResult =
   | { ok: true; access_token: string; expires_at: number }
   /** `code` 는 Supabase 가 조각에 실어 준 `error_code`(없으면 `error`) — 화면이 mono 로 보여 준다 */
-  | { ok: false; message: string; code?: string }
+  //  🔴 `reason` 은 **문구가 아니라 갈래**다 (2026-09-12). `message` 는 이 함수가 도는 자리에서
+  //     지어지는데 거기서는 화면의 언어를 모른다 — 그래서 갈래를 들고 나가고, 그리는 자리가
+  //     `CALLBACK_WORDS` 에서 이 언어의 문장을 고른다. `message` 는 한국어 그대로 남는다(시험·로그).
+  | { ok: false; message: string; reason: CallbackReason; code?: string }
 
 /**
  * 실패 원인 코드 → 사람 말. 코드는 그대로 mono 로 옆에 붙고, 여기 없는 코드는 「원인을 알 수 없습니다」가 된다.
@@ -103,6 +114,30 @@ export const CALLBACK_CODE_HINT: Partial<Record<string, string>> = {
   access_denied: 'GitHub 에서 허용을 취소했습니다. 다시 누르면 됩니다.',
   validation_failed: '로그인 제공자가 꺼져 있습니다. 운영자에게 알려주세요.',
 }
+
+/** 콜백이 실패한 **갈래**. 문장이 아니라 이것이 함수 밖으로 나간다. */
+export type CallbackReason = 'incomplete' | 'no_token'
+
+/** 위 두 표의 언어별 한 벌. 화면(`app/auth/callback`)이 여기서 문장을 고른다. */
+export const CALLBACK_WORDS = localized({
+  ko: {
+    incomplete: '로그인이 완료되지 않았습니다. 다시 시도해주세요.',
+    no_token: '로그인 정보를 찾을 수 없습니다. 다시 시도해주세요.',
+    codeHint: CALLBACK_CODE_HINT as Record<string, string>,
+    unknownCause: '원인을 알 수 없습니다.',
+    backToLogin: '로그인으로 돌아가기',
+  },
+  en: {
+    incomplete: 'Sign-in did not complete. Please try again.',
+    no_token: 'We could not find your sign-in details. Please try again.',
+    codeHint: {
+      access_denied: 'You cancelled the permission on GitHub. Press it again to retry.',
+      validation_failed: 'The sign-in provider is switched off. Please let the operator know.',
+    } as Record<string, string>,
+    unknownCause: 'We could not tell what went wrong.',
+    backToLogin: 'Back to sign-in',
+  },
+})
 
 /**
  * ③ URL 조각을 세션으로 바꾼다. **여기만 조각을 읽는다.**
@@ -119,13 +154,14 @@ export function readCallbackHash(hash: string, now: Date): CallbackResult {
   if (error) {
     return {
       ok: false,
-      message: '로그인이 완료되지 않았습니다. 다시 시도해주세요.',
+      message: CALLBACK_WORDS.ko.incomplete,
+      reason: 'incomplete',
       code: q.get('error_code') ?? q.get('error') ?? undefined,
     }
   }
 
   const token = q.get('access_token')
-  if (!token) return { ok: false, message: '로그인 정보를 찾을 수 없습니다. 다시 시도해주세요.' }
+  if (!token) return { ok: false, message: CALLBACK_WORDS.ko.no_token, reason: 'no_token' }
 
   const expiresIn = Number(q.get('expires_in') ?? '3600')
   const expiresAt = Number(q.get('expires_at') ?? '0')
@@ -135,3 +171,34 @@ export function readCallbackHash(hash: string, now: Date): CallbackResult {
     expires_at: expiresAt > 0 ? expiresAt : Math.floor(now.getTime() / 1000) + expiresIn,
   }
 }
+
+/**
+ * 화면 2(로그인) 카드의 낱말. 문구의 정본이 화면 파일이 아니라 여기인 이유는
+ * `PRIVACY_PAGE_WORDS` 와 같다 — 전체 게이트의 등록 목록에 화면 파일이 줄줄이 들어가지 않게.
+ */
+export const LOGIN_WORDS = localized({
+  ko: {
+    lead: 'GitHub 계정으로 로그인하면 내 팀을 만들고 팀원을 초대할 수 있습니다.',
+    notConnected: '로그인 서버가 아직 연결되지 않았습니다.',
+    envAnd: '과',
+    needsEnv: '가 필요합니다',
+    github: 'GitHub로 계속',
+    emailLabel: '이메일 링크 받기',
+    sending: '보내는 중',
+    send: '보내기',
+    sent: '메일을 보냈습니다. 링크를 열면 로그인됩니다.',
+    sendFailed: '메일을 보내지 못했습니다.',
+  },
+  en: {
+    lead: 'Sign in with GitHub to create your team and invite your teammates.',
+    notConnected: 'The sign-in server is not connected yet.',
+    envAnd: 'and',
+    needsEnv: 'are required',
+    github: 'Continue with GitHub',
+    emailLabel: 'Get a link by email',
+    sending: 'Sending',
+    send: 'Send',
+    sent: 'Email sent. Open the link to sign in.',
+    sendFailed: 'We could not send that email.',
+  },
+})

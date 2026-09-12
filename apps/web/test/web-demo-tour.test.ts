@@ -67,7 +67,7 @@ describe('③ 문과 캡처가 코스를 따른다', () => {
 
 describe('④ 랜딩과 주소', () => {
   it('랜딩이 걸음의 「볼 것」을 캡처 밑에 그대로 적는다', () => {
-    const out = renderToStaticMarkup(createElement(Landing))
+    const out = renderToStaticMarkup(createElement(Landing, { locale: 'ko' }))
     for (const stop of DEMO_TOUR.stops) expect(out).toContain(stop.see)
     expect(out).toContain(DEMO_TOUR.title)
   })

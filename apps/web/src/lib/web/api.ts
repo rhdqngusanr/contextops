@@ -4,6 +4,8 @@ import type { CompileErrorCode } from '@contextops/compiler'
 import { CREATION_LIMITS, type LimitReason } from '../api/limits'
 
 import type { ActorKind } from '../api/actor-rules'
+import type { Locale } from '../i18n/locale'
+import { localized } from '../i18n/localized'
 import { actorKindOf, clearSession, readSession } from './session'
 
 // =====================================================================
@@ -108,12 +110,80 @@ export function reasonOf(details: unknown): ReasonCode | undefined {
   return typeof code === 'string' && Object.hasOwn(REASON_HINT, code) ? (code as ReasonCode) : undefined
 }
 
+/**
+ * 🔴 **언어별 한 벌** (2026-09-12). 한국어 쪽은 위 표들 그대로다 — 문장을 두 번 적지 않는다.
+ * ⚠ 영어 문장도 **무엇을 해야 하는지**로 끝난다 (위 표의 규칙 그대로). 원인만 말하고 끝내면
+ *   사람은 화면 앞에서 멈춘다.
+ */
+export const ERROR_HINT_WORDS = localized<Record<ErrorCode, string>>({
+  ko: ERROR_HINT,
+  en: {
+    UNAUTHORIZED: 'You need to sign in. Please sign in again.',
+    FORBIDDEN: 'Only the team lead can do this.',
+    NOT_FOUND: 'Not found. The address may have changed, or it was deleted.',
+    VALIDATION_FAILED: 'Please check what you entered.',
+    STALE_BASE: 'A newer version was published in the meantime. We loaded the latest — please publish again.',
+    REVISION_CONFLICT: 'Someone edited this first. We loaded the latest — please save again.',
+    BUDGET_EXCEEDED: 'The AI budget is used up. If it was the daily cap, try tomorrow; if the monthly cap, next month.',
+    RATE_LIMITED: 'Too many requests. Please try again in a moment.',
+    COMPILE_FAILED: 'Publishing was cancelled. Nothing was changed.',
+    INTERNAL: 'The server could not handle that. Please try again in a moment.',
+    AI_OUTPUT_INVALID: 'We could not read what the AI produced. Please try again.',
+    AI_NOT_CONFIGURED: 'The AI features are not set up yet. Please let the operator know.',
+  },
+})
+
+/** 게스트일 때만 덮는 문구의 언어별 한 벌. 열쇠가 없는 코드는 위 표 그대로다. */
+export const GUEST_HINT_WORDS = localized<Partial<Record<ErrorCode, string>>>({
+  ko: GUEST_HINT,
+  en: {
+    FORBIDDEN: 'You are browsing the sample team read-only. Start your own team to make changes.',
+  },
+})
+
+/** `details.code` 가 말하는 **진짜 원인**의 언어별 한 벌. */
+export const REASON_HINT_WORDS = localized<Partial<Record<ReasonCode, string>>>({
+  ko: REASON_HINT,
+  en: {
+    EMPTY_SNAPSHOT: 'No items are approved yet. Approve the drafts in Context, then publish.',
+    TEAM_LIMIT: `You can create up to ${CREATION_LIMITS.TEAM_LIMIT.max} teams per account. Add a project to an existing team instead.`,
+    PROJECT_LIMIT: `A team can hold up to ${CREATION_LIMITS.PROJECT_LIMIT.max} projects.`,
+  },
+})
+
+/**
+ * 🔴 **이 언어로 된 한 문장.** 화면은 `err.message` 대신 이것을 그린다.
+ * ★ 고르는 차례는 던질 때와 같다: `details` 의 원인 → 게스트 덮어쓰기 → 코드의 일반 문장.
+ *   차례를 여기서 다시 적는 대신 같은 모양으로 두었다 — 두 곳이 갈리면 한국어와 영어가 다른 말을 한다.
+ */
+export function messageIn(err: unknown, locale: Locale): string {
+  if (!(err instanceof ApiClientError)) return ERROR_HINT_WORDS[locale].INTERNAL
+  const reason = reasonOf(err.details)
+  const reasonText = reason === undefined ? undefined : REASON_HINT_WORDS[locale][reason]
+  if (reasonText !== undefined) return reasonText
+  const guest = err.actor === 'guest' ? GUEST_HINT_WORDS[locale][err.code] : undefined
+  return guest ?? ERROR_HINT_WORDS[locale][err.code]
+}
+
+/** 실패한 job 의 코드를 이 언어의 한 문장으로. `jobErrorText` 의 언어판이다. */
+export function jobErrorIn(code: string | null | undefined, locale: Locale): string {
+  return isErrorCode(code) ? ERROR_HINT_WORDS[locale][code] : ERROR_HINT_WORDS[locale].INTERNAL
+}
+
 /** 서버가 낸 실패 봉투를 그대로 들고 다닌다 — 화면이 `code` 로 갈래를 탄다. */
 export class ApiClientError extends Error {
   readonly code: ErrorCode
   readonly status: number
   readonly details: unknown
   readonly requestId: string | undefined
+  /**
+   * 🔴 문구를 **나중에 다시 고를 수 있게** 들고 있는다 (2026-09-12 · 영어 모드).
+   * ★ 왜 — `message` 는 던져질 때 한 번 지어진다. 그때 화면의 언어를 알 방법이 없다
+   *   (예외는 `queries.ts` 에서 나고 언어는 React 문맥에 있다). 그래서 **재료**(주체 종류)를
+   *   들고 다니고, 그리는 자리(`messageIn`)가 그 언어의 표에서 고른다.
+   * ⚠ `message` 는 그대로 한국어다 — 로그·시험이 읽는 값이라 바꾸지 않는다.
+   */
+  readonly actor: ActorKind
 
   /**
    * @param actor 이 응답을 받은 **주체 종류** — 문구를 고르는 데만 쓴다 (`GUEST_HINT`).
@@ -128,6 +198,7 @@ export class ApiClientError extends Error {
     this.status = status
     this.details = details
     this.requestId = requestId
+    this.actor = actor
   }
 }
 

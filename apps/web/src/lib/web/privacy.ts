@@ -1,3 +1,5 @@
+import type { Locale } from '../i18n/locale'
+import { localized } from '../i18n/localized'
 import { SITE } from './site'
 
 // =====================================================================
@@ -81,3 +83,85 @@ export const PRIVACY: { readonly title: string; readonly updated: string; readon
     },
   ],
 }
+
+// =====================================================================
+//  🔴 **언어별 한 벌** (2026-09-12 · 영어 모드)
+//
+//  ⚠ 이 절은 **법적 고지**다. 번역이 원문보다 약하거나 강하면 안 된다 — 「받을 수 없습니다」는
+//    `cannot`(못 한다)이지 `do not`(안 한다)이다. 그 차이가 이 문서의 주장 전부다.
+//  ⚠ 티어 문장(`AI_TRANSFER_NOTICE`)도 같이 언어를 탄다 — 붙여넣기 칸 밑에 뜨는 그 줄이다.
+// =====================================================================
+
+export const AI_TRANSFER_NOTICE_WORDS = localized<Record<GeminiDataTier, string>>({
+  ko: AI_TRANSFER_NOTICE,
+  en: {
+    free: 'What you paste is sent to Google’s AI (Gemini, on servers outside Korea) so it can be sorted. We are on the free plan right now, which means Google may use that content to improve their products. Do not paste secrets or personal data.',
+    paid: 'What you paste is sent to Google’s AI (Gemini, on servers outside Korea) so it can be sorted. We are on a paid plan, so Google does not use that content to improve their products. Even so, do not paste secrets or personal data.',
+  },
+})
+
+/** 지금 배포가 이 언어로 하는 말. 티어를 읽는 자리는 여전히 하나다. */
+export function aiTransferNoticeIn(locale: Locale): string {
+  return AI_TRANSFER_NOTICE_WORDS[locale][GEMINI_DATA_TIER]
+}
+
+export const PRIVACY_WORDS = localized<typeof PRIVACY & { readonly label: string }>({
+  ko: { ...PRIVACY, label: PRIVACY_LABEL },
+  en: {
+    label: 'Privacy policy',
+    title: `${SITE.name} privacy policy`,
+    updated: PRIVACY.updated,
+    sections: [
+      {
+        heading: 'What we receive',
+        lines: [
+          'Team and project names, the document text a team lead pasted in themselves, the items sorted out of it (titles, rules, milestones), file paths, line numbers and commit hashes, and version and manifest checksums.',
+          'We cannot receive the source code in your repository, environment variables or secrets, a personal CLAUDE.local.md, Auto Memory, or your conversations with Claude — the list of accepted item shapes is fixed (an allowlist), and anything not on it is refused at the door (see “What the server receives / never receives” on the home page).',
+          'Sign-in is GitHub OAuth (Supabase Auth). All we keep is the account identifier and the email address; we never receive a password.',
+        ],
+      },
+      {
+        heading: 'What the AI processes',
+        lines: [
+          AI_TRANSFER_NOTICE_WORDS.en[GEMINI_DATA_TIER],
+          'What goes to Gemini is only the documents a team lead pasted and the item sentences already sorted from them. Your teammates’ repository code is not on our server, so it cannot go anywhere.',
+          'There is no AI in building or delivering files after approval. A teammate’s Claude Code runs under their own account, on their own machine — our server never calls it on their behalf.',
+        ],
+      },
+      {
+        heading: 'Logs and retention',
+        lines: [
+          'A request record holds only the request id, the route, the result, how long it took, and team/project/user ids. No bodies, no tokens, no document content.',
+          'The AI usage ledger (used for budgeting) holds only the feature name, token counts, cost, and a hashed identifier (sha256) of who asked. Neither prompts nor responses are stored.',
+          'The sample team (/demo) is wiped and re-seeded every day at 03:00 KST. A guest session expires after a day. A guest cannot leave anything behind — it is read-only.',
+          'To have a team’s data deleted, write to the contact below. The deployment for the competition will be cleaned up after judging ends.',
+        ],
+      },
+      {
+        heading: 'Contact',
+        lines: [
+          'Reach us through Issues on the public repository. This document and the code live in the same repository — if the words and the code disagree, that is a bug.',
+        ],
+      },
+    ],
+  },
+})
+
+/**
+ * `/privacy` **화면**이 쓰는 낱말 셋 — 본문이 아니라 머리·발의 글자다.
+ * ★ 왜 화면 파일이 아니라 여기인가 — 화면(`app/privacy/page.tsx`)은 `localized()` 표를 갖지 않는 편이
+ *   낫다. 표가 화면 안에 있으면 전체 게이트(`test/i18n.test.ts`)의 등록 목록에 **화면 파일**이 줄줄이
+ *   들어가고, 그 목록은 「문구의 정본이 어디인가」를 말하는 목록이 아니게 된다.
+ */
+export const PRIVACY_PAGE_WORDS = localized({
+  ko: {
+    updated: '마지막 갱신 {on} · 이 문장은 코드와 같은 저장소에 있어 코드가 바뀌면 같이 바뀝니다.',
+    toLanding: '랜딩으로',
+    contact: 'Issues 로 연락하기',
+  },
+  en: {
+    updated: 'Last updated {on} · these words live in the same repository as the code, so they change when the code does.',
+    toLanding: 'Back to home',
+    contact: 'Reach us through Issues',
+  },
+})

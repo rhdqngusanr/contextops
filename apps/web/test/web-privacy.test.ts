@@ -5,7 +5,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import PrivacyPage from '../src/app/privacy/page'
+import { PrivacyView } from '../src/app/privacy/page'
 import { LANDING_FOOT, Landing } from '../src/components/landing'
 import { DEMO_SESSION_TTL_SEC } from '../src/lib/demo/tenant'
 import {
@@ -48,7 +48,7 @@ describe('① 표가 하나이고 티어가 문장을 고른다', () => {
 
 describe('② 세 자리가 표를 읽는다', () => {
   it('`/privacy` 가 네 절을 다 그리고 전송 고지를 담는다 — 세션을 읽지 않는 정적 화면이다', () => {
-    const html = renderToStaticMarkup(createElement(PrivacyPage))
+    const html = renderToStaticMarkup(createElement(PrivacyView, { locale: 'ko' }))
     for (const section of PRIVACY.sections) {
       expect(html).toContain(section.heading)
       for (const line of section.lines) expect(html).toContain(line.replace(/'/g, '&#x27;'))
@@ -69,7 +69,7 @@ describe('② 세 자리가 표를 읽는다', () => {
 
   it('랜딩 푸터와 로그인 카드가 `/privacy` 로 잇는다', () => {
     expect(LANDING_FOOT.privacy.href).toBe(PRIVACY_PATH)
-    const landing = renderToStaticMarkup(createElement(Landing))
+    const landing = renderToStaticMarkup(createElement(Landing, { locale: 'ko' }))
     const foot = landing.slice(landing.indexOf('<footer'))
     expect(foot).toContain(`href="${PRIVACY_PATH}"`)
     expect(foot).toContain(PRIVACY_LABEL)

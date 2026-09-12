@@ -5,6 +5,7 @@ import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 import replayRecording from '../../../../fixtures/replay/sync.json'
 import shotsManifest from '../../public/shots/manifest.json'
 import type { Locale } from '../lib/i18n/locale'
+import { localized, pick } from '../lib/i18n/localized'
 import { SUBMISSION_IDENTITY } from '../lib/web/submission'
 import { ART } from '../lib/web/art'
 import { DEMO_TOUR } from '../lib/web/tour'
@@ -459,6 +460,16 @@ type Widen<T> = T extends string ? string
 
 export type LandingText = Widen<typeof LANDING_KO>
 
+/**
+ * 🔴 **언어별 한 벌** — 저장소의 다른 문구 표와 **같은 모양**이다 (`localized()`).
+ *
+ * ★ 왜 굳이 감싸나 — 이 파일은 한동안 「한국어 표 + 영어 파일」이라는 저만 다른 모양이었다.
+ *   모양이 둘이면 다음 사람이 새 표를 만들 때 어느 쪽을 따라야 할지 모르고, 무엇보다
+ *   **전체 게이트(`test/i18n.test.ts`)가 이 표를 못 본다.** 감싸니 둘 다 풀린다.
+ * ⚠ `LANDING_KO`·`LANDING_EN` 은 그대로 내보낸다 — 시험 11개가 그 이름으로 붙잡고 있다.
+ */
+export const LANDING = localized<LandingText>({ ko: LANDING_KO, en: LANDING_EN })
+
 /** 모양 함수들이 받는 것 — 절 번호와 **이 요청의 문구 한 벌**. */
 type SectionProps = { index: string; t: LandingText }
 
@@ -910,7 +921,7 @@ function anchorOf(sectionId: string): string {
  *   기본값을 또 정하면 정본이 둘이 된다.
  */
 export function Landing({ locale }: { locale: Locale }) {
-  const t: LandingText = locale === 'en' ? LANDING_EN : LANDING_KO
+  const t = pick(LANDING, locale)
   return (
     <div className={styles.page}>
       <header className={styles.header}>

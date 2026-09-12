@@ -16,6 +16,9 @@
 //    「고장」으로 읽힌다. 화면을 만들 때 같이 한 줄 더한다 (`docs/PLAN.md` P3·P4 행).
 // =====================================================================
 
+import type { Locale } from '../i18n/locale'
+import { localized } from '../i18n/localized'
+
 export type ProjectScreen = {
   /** 프로젝트 밑의 경로 조각. `href` 는 `screenHref()` 가 만든다 — 화면마다 적지 않는다. */
   readonly path: string
@@ -38,7 +41,7 @@ export type ProjectScreen = {
 }
 
 /** 이 프로젝트에서 **지금 열 수 있는** 화면. 순서가 곧 왼쪽 차례이자 팔레트의 차례다. */
-export const PROJECT_SCREENS: readonly ProjectScreen[] = [
+export const PROJECT_SCREENS = [
   //  ⚠ 차례가 일의 차례다 — 문서를 넣는 화면이 먼저고, 그 결과를 보는 화면이 뒤다.
   { path: 'import', label: '가져오기', describe: '문서를 넣습니다', match: /\/import$/, keywords: ['import', '문서', '업로드'] },
   //  ⚠ 정리가 Context 앞이다 — 결정을 끝낸 것만 발행으로 간다 (SPEC §9 화면 4 → 5).
@@ -56,7 +59,7 @@ export const PROJECT_SCREENS: readonly ProjectScreen[] = [
   //  ⚠ Sync 가 마지막이다 — 발행한 Pack 이 **각 기기에 실제로 닿았나**를 보는 자리라
   //    일의 차례에서 제일 끝이다 (발행 → 로드맵이 움직임 → 기기가 받아 감).
   { path: 'sync', label: 'Sync', describe: '기기마다 받은 버전', match: /\/sync$/, keywords: ['동기화', '기기', 'device'] },
-]
+] as const satisfies readonly ProjectScreen[]
 
 /** `/t/{team}/p/{project}` + 화면 한 줄 → 실제 주소. 링크를 화면마다 적지 않는다. */
 export function screenHref(base: string, screen: ProjectScreen): string {
@@ -324,3 +327,125 @@ export const EMPTY_PLACES: Record<EmptySlot, EmptyPlace> = {
 export function emptyNextHref(base: string, next: EmptyNext): string {
   return `${base}/${next.to}`
 }
+
+// =====================================================================
+//  🔴 **언어별 문구** (2026-09-12 · 영어 모드)
+//
+//  ★ 왜 표를 통째로 언어별로 두지 않았나 — 위 표들에는 **언어가 없는 것**이 섞여 있다:
+//    경로(`path`)·판정(`match`)·버튼이 갈 곳(`next.to`)·색조(`tone`), 그리고 화면에
+//    안 나오고 다음 사람에게 말하는 `noNext`. 언어별로 복사하면 그것들이 두 벌이 되고,
+//    한쪽만 고친 날 영어 화면의 버튼만 다른 곳으로 간다.
+//    그래서 **구조는 위 표 하나 · 글자만 여기서 언어별로** 갖는다.
+//
+//  ★ 한국어 쪽은 **위 표에서 뽑아낸다** — 같은 문장을 여기 다시 적지 않는다.
+//    (그래서 위 표를 고치면 한국어는 저절로 따라오고, 영어만 손으로 고친다.)
+//  ⚠ 영어 줄이 빠지면 `Record<…>` 가 타입 검사에서 막는다. 화면을 하나 더하면 여기도 한 줄이다.
+// =====================================================================
+
+/** 화면 하나가 갖는 **글자**. 경로·판정은 여기 없다. */
+export type ScreenWords = {
+  readonly label: string
+  readonly describe: string
+  readonly keywords: readonly string[]
+}
+
+/** 화면 경로의 유니온 — 영어 줄이 빠지면 여기서 막힌다. */
+export type ScreenPath = (typeof PROJECT_SCREENS)[number]['path']
+
+const SCREEN_WORDS_EN: Record<ScreenPath, ScreenWords> = {
+  import: { label: 'Import', describe: 'Add documents', keywords: ['import', 'document', 'upload', 'paste'] },
+  review: { label: 'Review', describe: 'Settle what disagrees', keywords: ['review', 'conflict', 'question', 'decide'] },
+  context: { label: 'Context', describe: 'Approved rules', keywords: ['item', 'rule', 'context', 'approved'] },
+  proposals: { label: 'Proposals', describe: 'Changes from devs', keywords: ['proposal', 'approve', 'reject', 'change'] },
+  packs: { label: 'Pack Explorer', describe: 'Published files', keywords: ['pack', 'publish', 'version', 'claude.md'] },
+  roadmap: { label: 'Roadmap', describe: 'How far the plan got', keywords: ['roadmap', 'milestone', 'progress'] },
+  sync: { label: 'Sync', describe: 'Version per machine', keywords: ['sync', 'device', 'machine', 'apply'] },
+}
+
+/**
+ * 한국어 쪽은 위 표에서 **뽑는다** — 문장을 두 곳에 적지 않는다.
+ * ⚠ `Object.fromEntries` 는 열쇠를 `string` 으로 넓혀서 `Record<ScreenPath,…>` 로 못 좁힌다.
+ *   그래서 표를 직접 돌며 채운다 — 이러면 화면이 늘 때 여기도 저절로 따라온다.
+ */
+const SCREEN_WORDS_KO = PROJECT_SCREENS.reduce((acc, s) => {
+  acc[s.path] = { label: s.label, describe: s.describe, keywords: s.keywords }
+  return acc
+}, {} as Record<ScreenPath, ScreenWords>)
+
+export const SCREEN_WORDS = localized<Record<ScreenPath, ScreenWords>>({ ko: SCREEN_WORDS_KO, en: SCREEN_WORDS_EN })
+
+/**
+ * 이 언어의 화면 표. 구조(`path`·`match`)는 정본에서 오고 글자만 갈아 끼운다.
+ * ⚠ 화면이 **읽는 문은 이것 하나**다 — `PROJECT_SCREENS` 를 직접 그리면 그 화면만 한국어로 남는다.
+ */
+export function screensIn(locale: Locale): readonly ProjectScreen[] {
+  const words = SCREEN_WORDS[locale]
+  return PROJECT_SCREENS.map((s) => ({ ...s, ...words[s.path as ScreenPath] }))
+}
+
+/** 팔레트 묶음의 제목. */
+export const PALETTE_GROUP_WORDS = localized<Record<PaletteGroup, string>>({
+  ko: PALETTE_GROUP_TITLES,
+  en: { screen: 'Screens', project: 'Projects' },
+})
+
+/**
+ * 화면 곳곳에서 쓰는 낱말 둘.
+ * ⚠ `made` 는 「올라온/제출된」이 아니다 — `propose` 는 **만들기만** 하고 안 올린 초안도 목록에 뜬다
+ *   (FINDINGS 167 의 이유 그대로). 영어도 `submitted` 가 아니라 `created` 인 것이 그 때문이다.
+ */
+export const WORDS = localized({
+  ko: { made: MADE, owner: OWNER_LABEL },
+  en: { made: 'created', owner: 'Owner' },
+})
+
+/** 빈 자리에 나가는 **글자만** — 어디로 가는 버튼인지(`next.to`)는 위 표가 정한다. */
+export type EmptyWords = { readonly message: string; readonly nextLabel?: string }
+
+const EMPTY_WORDS_EN: Record<EmptySlot, EmptyWords> = {
+  'import.jobs': {
+    message: 'Nothing has been sorted by AI yet. Paste a document into the “Paste a document” box and press [Sort it with AI] — progress shows up here.',
+  },
+  'context.items': {
+    message: 'No items yet. Import a document, or answer the starter questions.',
+    nextLabel: 'Go to Import',
+  },
+  'context.versions': {
+    message: 'Nothing published yet. Check the items and press [Publish].',
+  },
+  'review.cards': {
+    message: 'Nothing left to decide. You are ready to publish.',
+    nextLabel: 'Go to Context',
+  },
+  'proposals.list': {
+    message: 'No proposals created yet. Run /contextops:propose in Claude Code and they pile up here.',
+    nextLabel: 'View Context items',
+  },
+  'packs.versions': {
+    message: 'Nothing published yet. Press [Publish] on the Context screen.',
+    nextLabel: 'Go to Context',
+  },
+  'pack.files': {
+    message: 'This Pack has no files.',
+    nextLabel: 'Back to Pack list',
+  },
+  'roadmap.versions': {
+    message: 'Nothing published yet. The roadmap comes from the milestones in a published version, so publish from Context first.',
+    nextLabel: 'Go to Context',
+  },
+  'roadmap.milestones': {
+    message: 'The published official version has no milestones. Create roadmap-type items (due date, completion criteria) in Context and publish — rows show up here.',
+    nextLabel: 'Go to Context',
+  },
+  'sync.devices': {
+    message: 'No machines registered yet. Use [Add device] above to issue a token, then run the one line it gives you inside that repository.',
+  },
+}
+
+const EMPTY_WORDS_KO = (Object.entries(EMPTY_PLACES) as [EmptySlot, EmptyPlace][])
+  .reduce((acc, [slot, place]) => {
+    acc[slot] = { message: place.message, ...(place.next ? { nextLabel: place.next.label } : {}) }
+    return acc
+  }, {} as Record<EmptySlot, EmptyWords>)
+
+export const EMPTY_WORDS = localized<Record<EmptySlot, EmptyWords>>({ ko: EMPTY_WORDS_KO, en: EMPTY_WORDS_EN })

@@ -32,7 +32,7 @@ const webRoot = fileURLToPath(new URL('..', import.meta.url))
 const landingSrc = readFileSync(join(webRoot, 'src', 'components', 'landing.tsx'), 'utf8')
 
 function html(): string {
-  return renderToStaticMarkup(createElement(Landing))
+  return renderToStaticMarkup(createElement(Landing, { locale: 'ko' }))
 }
 
 describe('🔴 ① 화면 코드에 캡처 파일 이름이 없다', () => {

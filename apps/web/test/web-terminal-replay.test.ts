@@ -164,7 +164,7 @@ describe('④ 서버 렌더 — 전부 드러난 상태로 글로 읽힌다', ()
   })
 
   it('랜딩이 이 절을 그린다 — 제목 · 설명 · 출처', () => {
-    const out = renderToStaticMarkup(createElement(Landing))
+    const out = renderToStaticMarkup(createElement(Landing, { locale: 'ko' }))
     expect(out).toContain(TERMINAL_REPLAY.title)
     expect(out).toContain(TERMINAL_REPLAY.lead)
     expect(out).toContain(escaped(TERMINAL_REPLAY.source))
