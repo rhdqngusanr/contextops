@@ -5,8 +5,9 @@ import { ERROR_CODES } from '@contextops/schema'
 import { describe, expect, it } from 'vitest'
 
 import {
-  BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, SUBMISSION_IDENTITY, TRUST_BOUNDARY,
+  BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, TRUST_BOUNDARY,
 } from '../src/components/landing'
+import { SUBMISSION_IDENTITY } from '../src/lib/web/submission'
 import { AI_MODELS } from '../src/lib/ai/features'
 import { ERROR_HINT } from '../src/lib/web/api'
 

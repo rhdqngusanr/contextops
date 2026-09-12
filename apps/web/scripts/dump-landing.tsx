@@ -42,7 +42,10 @@ function head(title: string): void {
   console.log('─'.repeat(72))
 }
 
-const html = renderToStaticMarkup(<Landing />)
+//  ⚠ 언어를 인자로 받는다 (2026-09-12) — 기본은 한국어고,
+//    `pnpm --filter web exec tsx scripts/dump-landing.tsx en` 으로 영어 한 벌을 같은 모양으로 뽑는다.
+const LOCALE = process.argv[2] === 'en' ? 'en' : 'ko'
+const html = renderToStaticMarkup(<Landing locale={LOCALE} />)
 
 head('랜딩 `/` — 문장 순서대로')
 for (const line of text(html).split('\n')) console.log(`  ${line}`)

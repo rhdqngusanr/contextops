@@ -16,6 +16,7 @@
 
 import { DEMO_TENANT } from '../src/lib/demo/tenant'
 import { PROJECT_SCREENS } from '../src/lib/web/screens'
+import { DEMO_TOUR } from '../src/lib/web/tour'
 
 export type Shot = {
   /** `.ci/shots/<name>.png` — 이름이 곧 파일 이름이다 */
@@ -43,15 +44,14 @@ export const DEMO_BASE = `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug
  * ⚠ 여기 없는 화면은 찍기만 하고 `public/` 으로 안 간다 — 랜딩에 쓸 그림은 **적게** 둔다.
  *   저장소에 들어가는 바이너리라 한 장이 늘면 매 관통마다 그만큼 diff 가 는다.
  */
-const PUBLISHED: Record<string, string> = {
-  //  🔴 3분 코스(`lib/web/tour.ts`)의 네 걸음과 같은 화면·같은 차례다 — `test/web-demo-tour.test.ts` 가 대조한다.
-  //  ⚠ 전부 **명사구**로 끝난다 — 랜딩은 이 줄을 카드 제목으로 그리고, 설명은 그 밑의 코스 문장(`DEMO_TOUR.stops[].see` · 존댓말)이
-  //    맡는다. 「…이다/…한다」로 끝나면 같은 카드 안에서 말투가 두 벌이 된다 (2026-09-11).
-  review: '정리 화면 — AI 가 찾은 충돌 카드와 사람의 결정 버튼',
-  packs: 'Pack Explorer — 발행된 CLAUDE.md 와 각 줄의 출처',
-  roadmap: 'Roadmap — 근거로 채워지는 마일스톤과 완료 확인',
-  sync: 'Sync 화면 — 기기마다 받은 버전',
-}
+const PUBLISHED: Record<string, string> = Object.fromEntries(
+  //  🔴 **문장을 여기 적지 않는다** (2026-09-12). 캡처 카드 제목의 정본은 3분 코스
+  //     (`src/lib/web/tour.ts` 의 `DEMO_TOUR.stops[].title`)이고 여기는 **읽기만** 한다.
+  //     예전엔 같은 네 문장이 두 곳에 살았고, 시험은 「차례가 같은가」만 재고 있어서
+  //     한쪽만 고쳐도 조용히 지나갔다 — 랜딩이 쓰는 대체텍스트와 코스가 갈리는 자리였다.
+  //  ⚠ 코스에 걸음을 더하면 캡처도 저절로 하나 는다. 여기 고칠 것은 없다.
+  DEMO_TOUR.stops.map((stop) => [stop.path, stop.title]),
+)
 
 /**
  * 앱 껍데기가 붙는 화면인지 (랜딩은 껍데기를 안 쓴다).

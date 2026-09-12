@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation'
 import { DEMO_TENANT, demoBarText, demoResetText } from '../lib/demo/tenant'
 import { PROJECT_SCREENS, screenHref } from '../lib/web/screens'
 import { readSession } from '../lib/web/session'
-import { DEMO_TOUR, tourIndexOf } from '../lib/web/tour'
+import { TOUR, tourIndexOf } from '../lib/web/tour'
+import { useText } from '../lib/i18n/provider'
 
 // =====================================================================
 //  게스트 데모 안내 — **두 조각** (DESIGN_BRIEF §4 「게스트 데모 배너」)
@@ -65,17 +66,19 @@ export function DemoBar() {
 export function DemoTour() {
   const guest = useGuest()
   const pathname = usePathname()
+  //  ⚠ 훅은 이른 반환보다 **위**다 — 아래로 내리면 게스트가 아닐 때만 훅 수가 달라져서 React 가 죽는다.
+  const tour = useText(TOUR)
   if (!guest) return null
   const base = `/t/${DEMO_TENANT.teamSlug}/p/${DEMO_TENANT.projectSlug}`
   const here = tourIndexOf(pathname)
-  const current = here >= 0 ? DEMO_TOUR.stops[here] : undefined
+  const current = here >= 0 ? tour.stops[here] : undefined
   return (
-    <aside className="demo-tour col-tight" aria-label={DEMO_TOUR.title}>
+    <aside className="demo-tour col-tight" aria-label={tour.title}>
       {/* 지금 걸음의 「볼 것」이 먼저다 — 이 사람은 방금 그 화면을 본 참이다. */}
       {current ? <p className="tour-see ink">{current.see}</p> : null}
       <ol className="tour">
-        <li className="tour-title">{DEMO_TOUR.title}</li>
-        {DEMO_TOUR.stops.map((stop, i) => {
+        <li className="tour-title">{tour.title}</li>
+        {tour.stops.map((stop, i) => {
           const screen = PROJECT_SCREENS.find((s) => s.path === stop.path)
           if (screen === undefined) return null
           return (

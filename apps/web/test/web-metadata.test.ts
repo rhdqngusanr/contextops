@@ -6,12 +6,12 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { decodePng } from '../e2e/png'
-import { metadata } from '../src/app/layout'
+import { metadataFor } from '../src/app/layout'
 import { LANDING_HEAD } from '../src/components/landing'
 import { NeedsLogin } from '../src/components/states'
 import { NO_ACCOUNT_HINT } from '../src/lib/web/auth'
 import { DEMO_SESSION_TTL_SEC } from '../src/lib/demo/tenant'
-import { SITE, siteOrigin } from '../src/lib/web/site'
+import { SITE, SITE_TEXT, siteOrigin } from '../src/lib/web/site'
 
 // =====================================================================
 //  링크 미리보기 · 아이콘 · 게스트 재입장 (INBOX H2 · 2026-09-10)
@@ -23,24 +23,28 @@ import { SITE, siteOrigin } from '../src/lib/web/site'
 
 const webRoot = fileURLToPath(new URL('..', import.meta.url))
 
+//  ⚠ 언어를 **직접 준다** — `generateMetadata()` 는 요청을 읽으므로 시험에서 못 부른다.
+//    무엇을 내는지는 전부 `metadataFor` 안에 있어서, 이 한 줄이 그 전부를 잰다.
+const KO_METADATA = metadataFor('ko')
+
 describe('① `<head>` 의 미리보기 — 문장은 랜딩 머리와 같고, 이미지·아이콘이 실재한다', () => {
   it('제목·설명이 `SITE` 에서 오고, 랜딩 머리가 같은 문장을 읽는다 (두 곳이 아니다)', () => {
-    expect(LANDING_HEAD.title).toBe(SITE.tagline)
-    expect(LANDING_HEAD.subtitle).toBe(SITE.description)
-    expect(LANDING_HEAD.eyebrow).toBe(SITE.eyebrow)
-    expect(metadata.description).toBe(SITE.description)
-    const title = metadata.title as { default: string; template: string }
+    expect(LANDING_HEAD.title).toBe(SITE_TEXT.ko.tagline)
+    expect(LANDING_HEAD.subtitle).toBe(SITE_TEXT.ko.description)
+    expect(LANDING_HEAD.eyebrow).toBe(SITE_TEXT.ko.eyebrow)
+    expect(KO_METADATA.description).toBe(SITE_TEXT.ko.description)
+    const title = KO_METADATA.title as { default: string; template: string }
     expect(title.default).toContain(SITE.name)
-    expect(title.default).toContain(SITE.tagline)
+    expect(title.default).toContain(SITE_TEXT.ko.tagline)
     expect(title.template).toContain('%s')
   })
 
   it('OpenGraph · Twitter 카드가 있고 이미지가 `public/og.png` 이며 1200×630 이다', () => {
-    const og = metadata.openGraph as { images: { url: string; width: number; height: number }[]; siteName: string; locale: string }
+    const og = KO_METADATA.openGraph as { images: { url: string; width: number; height: number }[]; siteName: string; locale: string }
     expect(og.siteName).toBe(SITE.name)
     expect(og.locale).toBe('ko_KR')
     expect(og.images[0]?.url).toBe(SITE.ogImage.path)
-    const tw = metadata.twitter as { card: string; images: string[] }
+    const tw = KO_METADATA.twitter as { card: string; images: string[] }
     expect(tw.card).toBe('summary_large_image')
     expect(tw.images[0]).toBe(SITE.ogImage.path)
 
@@ -52,7 +56,7 @@ describe('① `<head>` 의 미리보기 — 문장은 랜딩 머리와 같고, �
   })
 
   it('아이콘이 실재하는 SVG 이고, 색은 DESIGN_BRIEF §3 의 토큰 값뿐이다', () => {
-    const icons = metadata.icons as { icon: string }
+    const icons = KO_METADATA.icons as { icon: string }
     expect(icons.icon).toBe(SITE.icon)
     const svg = readFileSync(join(webRoot, 'public', SITE.icon), 'utf8')
     expect(svg.trimStart().startsWith('<svg')).toBe(true)
@@ -68,7 +72,7 @@ describe('① `<head>` 의 미리보기 — 문장은 랜딩 머리와 같고, �
     expect(siteOrigin({ NEXT_PUBLIC_SITE_ORIGIN: 'https://contextops.example/' })).toBe('https://contextops.example')
     expect(siteOrigin({ VERCEL_PROJECT_PRODUCTION_URL: 'contextops.vercel.app' })).toBe('https://contextops.vercel.app')
     expect(siteOrigin({})).toBe('http://localhost:3000')
-    expect(metadata.metadataBase).toBeInstanceOf(URL)
+    expect(KO_METADATA.metadataBase).toBeInstanceOf(URL)
   })
 })
 

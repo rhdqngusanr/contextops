@@ -5,7 +5,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { sleep } from '../e2e/cdp'
 import { connectPage, launchChrome } from '../e2e/chrome'
-import { SITE } from '../src/lib/web/site'
+import { SITE, SITE_TEXT } from '../src/lib/web/site'
+
+/**
+ * ⚠ **그림은 한 장뿐이라 한국어다** (2026-09-12 · 영어 모드). `og.png` 는 파일 하나를
+ *   덮어쓰는 모양이고 `<meta og:image>` 도 한 경로를 가리킨다. 영어 링크 미리보기에서
+ *   실제로 읽히는 글자는 제목·설명(`generateMetadata` 가 언어를 따라 낸다)이라 이 상태로도
+ *   뜻이 통한다. 언어별 그림이 필요해지면 `og-<locale>.png` 를 그리고 layout 에서 고른다.
+ */
+const OG_TEXT = SITE_TEXT.ko
 
 // =====================================================================
 //  `public/og.png` 를 그린다 — 링크 미리보기 이미지 1200×630 (INBOX H2 · 2026-09-10)
@@ -64,7 +72,7 @@ p{margin:26px 0 0;font-size:27px;line-height:1.55;color:var(--ink-2);max-width:8
 .foot{display:flex;justify-content:space-between;align-items:center;font-size:22px;color:var(--ink-3);border-top:1px solid var(--line-hi);padding-top:22px}
 </style></head><body><div class="card">
 <div class="brand">${MARK}${SITE.name}</div>
-<div><div class="eyebrow">${SITE.eyebrow}</div><h1>${SITE.tagline}</h1><p>${SITE.description}</p></div>
+<div><div class="eyebrow">${OG_TEXT.eyebrow}</div><h1>${OG_TEXT.tagline}</h1><p>${OG_TEXT.description}</p></div>
 <div class="foot"><span>${SITE.event}</span><span>${SITE.name}</span></div>
 </div></body></html>`
 }

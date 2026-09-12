@@ -7,8 +7,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
   AI_USE, BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, Landing, REPLAY_FRAMES,
-  SUBMISSION_IDENTITY, TERMINAL_REPLAY, TRUST_BOUNDARY, WHY_NOT_GIT, skillNamesIn,
+  TERMINAL_REPLAY, TRUST_BOUNDARY, WHY_NOT_GIT, skillNamesIn,
 } from '../src/components/landing'
+import { SUBMISSION_IDENTITY } from '../src/lib/web/submission'
+import { LOCALE_LABEL, LOCALES } from '../src/lib/i18n/locale'
 import { DEMO_PROPOSALS } from '../src/lib/demo/seed-demo'
 import { paylabDrafts } from '../src/lib/demo/seed'
 
@@ -20,7 +22,7 @@ import { paylabDrafts } from '../src/lib/demo/seed'
 //      GATE 3 이 선다 (SPEC §9 표의 「상태」 칸)
 //    ② A·B·C 가 전부 있다 — 헤드라인 · Before/After · [샘플 팀으로 둘러보기]
 //    ③ 🔴 accent 는 **하나**이고 그것이 `/demo` 로 간다 (그 화면이 실제로 있다)
-//    ④ 누르면 아무 일도 안 하는 것이 없다 — `href="#"` 도 `<button>` 도 없다
+//    ④ 누르면 아무 일도 안 하는 것이 없다 — `href="#"` 는 없고, `<button>` 은 언어 토글 둘뿐이다
 //      (영상이 없으니 [2분 영상 보기] 도 없다)
 //    ⑤ 🔴 **Before/After 는 픽스처의 사실이다** — After 의 답은 게스트가 v1.1.0 에서 보는
 //      `item_policy_retry` 의 `data.rule`(승인된 제안 · `DEMO_PROPOSALS`)과 글자 그대로 같고,
@@ -39,7 +41,7 @@ const repoRoot = join(webRoot, '..', '..')
 const fixtures = join(repoRoot, 'fixtures')
 
 function html(): string {
-  return renderToStaticMarkup(createElement(Landing))
+  return renderToStaticMarkup(createElement(Landing, { locale: 'ko' }))
 }
 
 /** 랜딩이 말하는 항목을 씨앗과 **같은 함수**로 만든다 — 손으로 다시 적으면 갈린다. */
@@ -127,10 +129,28 @@ describe('🔴 ③ accent 는 하나 — [샘플 팀으로 둘러보기] → /de
 })
 
 describe('④ 누르면 아무 일도 안 하는 것이 없다', () => {
-  it('href="#" 이 없고 <button> 이 없다 (정적 화면에는 링크뿐이다)', () => {
+  it('href="#" 이 없다 — 가리키는 곳이 없는 링크는 누르면 아무 일도 안 한다', () => {
+    expect(html()).not.toContain('href="#"')
+  })
+
+  /**
+   * 🔴 **버튼은 언어 토글 둘뿐이다** (2026-09-12 · 영어 모드).
+   *
+   * ★ 예전엔 「`<button>` 이 아예 없다」였다. 그 규칙의 **뜻**은 「누르면 아무 일도 안 하는
+   *   것이 없다」이지 「버튼이라는 태그를 쓰지 마라」가 아니다 — 랜딩이 정적이던 시절에는
+   *   둘이 같은 말이었을 뿐이다. 언어 토글은 실제로 쿠키를 쓰고 페이지를 다시 연다.
+   * ⚠ 그래서 「없다」를 「이것 둘뿐이다」로 좁혔다. 넓히지 마라 — 셋째 버튼이 생기면
+   *   여기서 걸리고, 그때 「그 버튼은 정말 무언가를 하는가」를 한 번 묻게 된다.
+   */
+  it('🔴 <button> 은 언어 토글 둘뿐이고, 둘 다 실제로 무언가를 한다', () => {
     const out = html()
-    expect(out).not.toContain('href="#"')
-    expect(out).not.toContain('<button')
+    const buttons = [...out.matchAll(/<button[^>]*>/g)].map((m) => m[0])
+    expect(buttons.length, '랜딩의 버튼이 둘이 아니다 — 새 버튼이 생겼다면 정말 무언가를 하는지 먼저 확인해라').toBe(2)
+    //  언어 수만큼이다 — 언어가 늘면 이 수도 는다 (`LOCALES`).
+    expect(buttons.length).toBe(LOCALES.length)
+    //  ⚠ 눌린 상태를 색이 아니라 **글자로도** 말한다 — 화면 낭독기가 어느 쪽이 켜졌는지 알아야 한다.
+    expect(buttons.filter((b) => b.includes('aria-pressed="true"')).length).toBe(1)
+    for (const locale of LOCALES) expect(out).toContain(`aria-label="${LOCALE_LABEL[locale]}"`)
   })
 
   it('영상이 없으니 [2분 영상 보기] 도 없다', () => {

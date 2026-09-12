@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
-import { LANDING_FOOT, SUBMISSION_IDENTITY } from '../../components/landing'
+import { LANDING_FOOT } from '../../components/landing'
+import { SUBMISSION_IDENTITY } from '../../lib/web/submission'
 import { PRIVACY, PRIVACY_LABEL } from '../../lib/web/privacy'
 
 // =====================================================================

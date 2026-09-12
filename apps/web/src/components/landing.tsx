@@ -4,9 +4,14 @@ import { ReplayFrames, ShotsManifest } from '@contextops/schema'
 
 import replayRecording from '../../../../fixtures/replay/sync.json'
 import shotsManifest from '../../public/shots/manifest.json'
+import type { Locale } from '../lib/i18n/locale'
+import { SUBMISSION_IDENTITY } from '../lib/web/submission'
 import { ART } from '../lib/web/art'
 import { DEMO_TOUR } from '../lib/web/tour'
-import { SITE } from '../lib/web/site'
+import { SITE_TEXT } from '../lib/web/site'
+//  ⚠ 값으로 들여온다 (영어 한 벌). 저쪽은 이 파일에서 **타입만** 들여오므로 실행시 고리가 없다.
+import { LANDING_EN } from './landing.en'
+import { LocaleToggle } from './locale-toggle'
 import styles from './landing.module.css'
 import { TerminalReplay } from './terminal-replay'
 import { Note } from './chips'
@@ -56,10 +61,12 @@ import { Note } from './chips'
 
 /** A. 헤드라인 (DESIGN_BRIEF 화면 1 A). */
 export const LANDING_HEAD = {
-  //  🔴 머리 세 문장의 정본은 `lib/web/site.ts` 다 — 링크 미리보기(`<head>` · og.png)와 같은 문장이어야 한다 (INBOX H2).
-  eyebrow: SITE.eyebrow,
-  title: SITE.tagline,
-  subtitle: SITE.description,
+  //  🔴 머리 세 문장의 정본은 `lib/web/site.ts` 의 `SITE_TEXT` 다 — 링크 미리보기(`<head>` · og.png)와 같은 문장이어야 한다 (INBOX H2).
+  //  ⚠ 이 표는 **한국어 한 벌**이다. 영어 한 벌은 `landing.en.ts` 에 같은 모양으로 있고,
+  //    `test/web-landing-en.test.ts` 가 두 벌의 키가 글자 그대로 같은지 센다.
+  eyebrow: SITE_TEXT.ko.eyebrow,
+  title: SITE_TEXT.ko.tagline,
+  subtitle: SITE_TEXT.ko.description,
   note: '팀장은 브라우저에서 15분, 개발자는 명령 한 줄.',
   /** 🔴 이 화면의 유일한 accent. `/demo` 가 게스트 세션을 받아 샘플 팀으로 보낸다. */
   cta: { label: '샘플 팀으로 둘러보기', href: '/demo' },
@@ -139,6 +146,8 @@ export const PRODUCT_TOUR = {
   //  제목·설명은 코스의 정본(`lib/web/tour.ts`)에서 오고, 캡처 넉 장은 코스의 네 걸음과 같은 화면이다 (시험이 대조).
   title: DEMO_TOUR.title,
   lead: `${DEMO_TOUR.lead} 위의 [샘플 팀으로 둘러보기]를 누르면 같은 순서로 안내가 붙습니다.`,
+  //  ⚠ 걸음은 코스 표에서 그대로 온다 — 랜딩이 문장을 다시 적지 않는다 (정본 `lib/web/tour.ts`).
+  stops: DEMO_TOUR.stops,
   //  하려는 말은 「시안이 아니라 실제 화면」이다 — 경로·단계 이름은 괄호 뒤로 (2026-09-11).
   foot: '위 캡처는 시안이 아니라, 자동 검사가 실제 앱을 띄워 매번 새로 찍은 화면입니다 — 낡은 그림이 남지 않습니다. (검사 스크립트: tools/walkthrough.ps1)',
 } as const
@@ -343,31 +352,6 @@ export const TRUST_BOUNDARY = {
   foot: '서버로 올라가는 것은 정해진 모양(스키마)을 통과한 항목뿐입니다. 코드 본문·비밀값·개인 메모리·대화는 어떤 경우에도 서버로 가지 않고, 개발자 쪽에서 자동으로 도는 훅은 파일을 바꾸지 않습니다.',
 } as const
 
-/**
- * 🔴 제출 정체 — **공개 저장소 URL 과 제출 팀명의 정본은 여기 하나다** (INBOX 2026-09-06 · FINDINGS 122).
- *
- * 랜딩 푸터(`LANDING_FOOT`)는 이 값을 읽고, README 머리 · `docs/SUBMISSION.md` 의 🙋 표 는 마크다운이라
- * import 를 못 하므로 **글자 그대로** 적되 `test/readme.test.ts` 가 세 곳이 같은 문자열인지 센다.
- * 값을 바꿀 때는 여기 한 줄 → 시험이 빨개지는 문서를 따라 고친다. 문서에서 먼저 고치면 갈린다.
- *
- * ⚠ 팀명은 사람이 적어 준 그대로다 — 띄어쓰기를 넣거나 빼지 마라.
- * ⚠ 아직 없는 값(production URL · 영상)은 여기 두지 않는다 — 없는 것을 있는 것처럼 적지 않는다.
- */
-export const SUBMISSION_IDENTITY = {
-  team: '퇴직했는데저좀이직시켜주세요',
-  repoUrl: 'https://github.com/rhdqngusanr/contextops',
-  /**
-   * `claude plugin marketplace add` 가 받는 이름 — **저장소 URL 에서 파생시킨다** (FINDINGS 140).
-   * 손으로 또 적으면 저장소를 옮길 때 한쪽만 바뀌고, 그러면 설치 첫 줄이 조용히 실패한다.
-   * ⚠ 이 이름이 먹히려면 저장소 뿌리에 `.claude-plugin/marketplace.json` 이 있어야 한다
-   *   (`plugins[0].source` → `./plugin/contextops`). 없으면 「목록을 못 찾는다」로 끝난다.
-   */
-  get marketplaceRef(): string {
-    return new URL(this.repoUrl).pathname.slice(1)
-  },
-  /** Known limitations 는 앱에 페이지를 또 만들지 않는다 — 같은 문서가 두 곳이 된다. 저장소의 그 파일로 건다. */
-  limitsPath: 'docs/KNOWN_LIMITATIONS.md',
-} as const
 
 /**
  * C-5. 개발자 설치 — **지금 실제로 도는 명령**만 적는다 (SPEC §8.3 · `docs/evidence/2026-09-03-plugin`).
@@ -404,6 +388,8 @@ export const INSTALL_STEPS = {
 /** 푸터 (DESIGN_BRIEF 화면 1 C-6: 제출 팀명 · GitHub 링크 · Known limitations 링크). 값은 `SUBMISSION_IDENTITY` 하나에서 온다. */
 export const LANDING_FOOT = {
   brand: 'ContextOps',
+  /** 머리글 내비의 이름 — 화면 낭독기가 읽는다. 보이는 글자가 아니라서 눈에 안 띄지만 언어를 탄다. */
+  navLabel: '절로 가기',
   event: 'Wanted AI Championship 2026 출품작',
   //  라벨은 「팀명」이고 푸터가 이름을 「 」로 감싼다 — 「팀 퇴직했는데…」로 한 문장처럼 읽혔다 (2026-09-11).
   team: { label: '팀명', name: SUBMISSION_IDENTITY.team },
@@ -419,6 +405,62 @@ export const LANDING_FOOT = {
 export function skillNamesIn(text: string): string[] {
   return [...text.matchAll(/\/contextops:([a-z-]+)/g)].map((m) => m[1] as string)
 }
+
+/**
+ * 머리글의 절 링크 — 절 제목의 **짧은 판**이다 (제목은 문장이라 머리글에 넣으면 한 줄을 다 먹는다).
+ * ⚠ 열쇠는 `SECTIONS` 의 `id` 다. 절을 더하면 여기 한 줄이고, 없으면 그 절은 머리글에 안 뜬다.
+ */
+export const LANDING_NAV = {
+  'landing-why': '왜 git 이 아닌가',
+  'landing-how': '어떻게 동작하나',
+  'landing-ai': 'AI 활용',
+  'landing-install': '설치',
+} as const
+
+// ---------------------------------------------------------------------
+//  🔴 **한국어 한 벌** — 위 표들을 묶은 것 (2026-09-12 · 영어 모드)
+//
+//  ★ 왜 묶는가 — 아래 모양 함수들이 표를 **모듈 전역에서** 읽고 있었다. 그 상태로는 언어를
+//    바꿀 자리가 없다(전역을 갈아끼우면 동시에 들어온 두 요청이 서로의 언어를 덮는다).
+//    묶어서 **인자로** 내려보내면 요청마다 자기 언어를 들고 간다.
+//
+//  ★ 왜 표 이름을 안 바꿨나 — `LANDING_HEAD`·`BEFORE_AFTER` … 는 시험 11개가 이름으로
+//    붙잡고 있고(「Before/After 의 답이 실제 Pack 규칙과 같은가」 같은 것들), 그 시험들은
+//    **한국어 문장**을 재는 것이 일이다. 이름을 바꾸면 그 시험들이 언어 작업과 무관하게
+//    전부 흔들린다. 그래서 한국어 표는 있던 이름 그대로 두고, 여기서 묶기만 한다.
+// ---------------------------------------------------------------------
+
+export const LANDING_KO = {
+  head: LANDING_HEAD,
+  beforeAfter: BEFORE_AFTER,
+  tour: PRODUCT_TOUR,
+  why: WHY_NOT_GIT,
+  how: HOW_IT_WORKS,
+  ai: AI_USE,
+  replay: TERMINAL_REPLAY,
+  trust: TRUST_BOUNDARY,
+  install: INSTALL_STEPS,
+  foot: LANDING_FOOT,
+  nav: LANDING_NAV,
+} as const
+
+/**
+ * 🔴 **한 벌의 모양.** 영어 한 벌(`landing.en.ts` 의 `LANDING_EN`)이 이 타입을 받는다 —
+ *    그래서 **칸이 하나라도 빠지면 타입 검사에서 막힌다.**
+ *
+ * ★ `Widen` 이 필요한 이유 — `as const` 때문에 위 표의 모든 문자열이 **리터럴 타입**이다
+ *   (`'설치'` 는 `string` 이 아니라 `'설치'`). 그대로 쓰면 영어 한 벌이 한국어와 **글자까지**
+ *   같아야 통과한다. 그래서 문자열만 넓힌다 — 모양(키·배열 길이 구조)은 그대로 강제된다.
+ */
+type Widen<T> = T extends string ? string
+  : T extends readonly (infer U)[] ? readonly Widen<U>[]
+    : T extends object ? { readonly [K in keyof T]: Widen<T[K]> }
+      : T
+
+export type LandingText = Widen<typeof LANDING_KO>
+
+/** 모양 함수들이 받는 것 — 절 번호와 **이 요청의 문구 한 벌**. */
+type SectionProps = { index: string; t: LandingText }
 
 // ---------------------------------------------------------------------
 //  아래는 모양이다 — 문구는 위 표에서만 온다. 절의 번호(01…06)는 `Landing` 이 차례대로 매긴다.
@@ -447,19 +489,19 @@ function SectionHead({ id, index, title, lead }: { id: string; index: string; ti
   )
 }
 
-function Hero() {
+function Hero({ t }: { t: LandingText }) {
   return (
     <section className={styles.hero} aria-labelledby="landing-title">
       <div className={styles.heroCopy}>
-        <span className={styles.eyebrow}>{LANDING_HEAD.eyebrow}</span>
-        <h1 id="landing-title" className={styles.title}>{LANDING_HEAD.title}</h1>
-        <p className={styles.subtitle}>{LANDING_HEAD.subtitle}</p>
+        <span className={styles.eyebrow}>{t.head.eyebrow}</span>
+        <h1 id="landing-title" className={styles.title}>{t.head.title}</h1>
+        <p className={styles.subtitle}>{t.head.subtitle}</p>
         {/* ⚠ 버튼은 하나다. [2분 영상 보기] 는 영상이 생기면 여기 outline 한 줄이고,
             [로그인] 은 머리글에 이미 있다 — 덤프에서 「로그인 로그인」으로 겹쳐 보였다.
             ⚠ 마크업은 시험이 글자 그대로 잰다 — 클래스도 안의 글자도 더하지 마라. 화살표는 CSS 다. */}
         <div className={styles.ctaRow}>
-          <a className="btn btn-primary" href={LANDING_HEAD.cta.href}>{LANDING_HEAD.cta.label}</a>
-          <span className={styles.note}>{LANDING_HEAD.note}</span>
+          <a className="btn btn-primary" href={t.head.cta.href}>{t.head.cta.label}</a>
+          <span className={styles.note}>{t.head.note}</span>
         </div>
       </div>
       <figure className={styles.heroArt}>
@@ -476,8 +518,8 @@ function Hero() {
   )
 }
 
-function BeforeAfter() {
-  const { caption, prompt, askKey, before, after } = BEFORE_AFTER
+function BeforeAfter({ t }: { t: LandingText }) {
+  const { caption, prompt, askKey, plainKey, before, after } = t.beforeAfter
   return (
     <section className={styles.compareBand} aria-labelledby="landing-compare">
       <h2 id="landing-compare" className={styles.compareCaption}>{caption}</h2>
@@ -506,7 +548,7 @@ function BeforeAfter() {
                     <code className={styles.replySource}>{a.source}</code>
                   </div>
                   <p className={styles.replyText}>{a.text}</p>
-                  <Plain plain={a.plain} />
+                  <Plain plain={a.plain} plainKey={plainKey} />
                 </div>
               </div>
             ))}
@@ -531,7 +573,7 @@ function BeforeAfter() {
                   <span className={styles.replyRead}>{after.read}</span>
                 </div>
                 <p className={`${styles.replyText} ${styles.replyTextBig}`}>{after.text}</p>
-                <Plain plain={after.plain} />
+                <Plain plain={after.plain} plainKey={plainKey} />
                 <span className={styles.severity}>{after.detail}</span>
               </div>
             </div>
@@ -554,27 +596,28 @@ function BeforeAfter() {
 }
 
 /** 「쉬운 말로」 한 줄 — 횟수가 먼저, 굵게. A·B·After 를 견주는 눈은 이 숫자만 본다 (README 의 같은 줄과 같은 말). */
-function Plain({ plain }: { plain: { count: string; how: string } }) {
+function Plain({ plain, plainKey }: { plain: { count: string; how: string }; plainKey: string }) {
   return (
     <p className={styles.plain}>
-      <span className={styles.plainKey}>{BEFORE_AFTER.plainKey}</span>
+      <span className={styles.plainKey}>{plainKey}</span>
       <strong className={styles.plainCount}>{plain.count}</strong>
       <span>{plain.how}</span>
     </p>
   )
 }
 
-function ProductShots({ index }: { index: string }) {
+function ProductShots({ index, t }: SectionProps) {
   return (
     <section className={`${styles.section} ${styles.sectionShots}`} aria-labelledby="landing-shots">
-      <SectionHead id="landing-shots" index={index} title={PRODUCT_TOUR.title} lead={PRODUCT_TOUR.lead} />
+      <SectionHead id="landing-shots" index={index} title={t.tour.title} lead={t.tour.lead} />
       {/* 2×2 — 코스의 네 걸음이 네 칸이다 (2026-09-10 저녁 · 「큰 한 장 + 작은 장들」은 첫 장 밑이 비고 넷째 장이 홀로 남았다).
           카드 안의 카드가 아니다 — 그림 한 장 + 그 밑에 번호 동그라미·제목·볼 것·주소. */}
       <div className={styles.shotRow}>
         {PRODUCT_SHOTS.map((shot, i) => {
           //  코스의 「볼 것」 — 이 캡처가 코스의 몇째 걸음이고 무엇을 봐야 하는지 (정본 `lib/web/tour.ts`).
-          const at = DEMO_TOUR.stops.findIndex((t) => shot.src.endsWith(`/${t.path}`))
-          const stop = DEMO_TOUR.stops[at]
+          //  🔴 **이 요청의 언어**에서 찾는다 — 예전엔 모듈 전역(`DEMO_TOUR`)을 봐서 영어 화면에서도 한국어가 떴다.
+          const at = t.tour.stops.findIndex((s) => shot.src.endsWith(`/${s.path}`))
+          const stop = t.tour.stops[at]
           return (
             <figure key={shot.file} className={styles.shot}>
               {/*  ⚠ `<img>` 다 — Next 의 `<Image>` 는 최적화 서버를 타는데, 이 장들은 이미
@@ -584,14 +627,14 @@ function ProductShots({ index }: { index: string }) {
               <img
                 className={styles.shotImg}
                 src={shot.file}
-                alt={shot.alt}
+                alt={stop ? stop.title : shot.alt}
                 width={shot.width}
                 height={shot.height}
                 loading={i === 0 ? 'eager' : 'lazy'}
               />
               <figcaption className={styles.shotCap}>
                 {stop ? <span className={styles.no} aria-hidden="true">{at + 1}</span> : <span />}
-                <span className={styles.shotTitle}>{shot.alt}</span>
+                <span className={styles.shotTitle}>{stop ? stop.title : shot.alt}</span>
                 {stop ? <span className={styles.shotSee}>{stop.see}</span> : null}
                 {/* 근거는 숫자·판정 옆에 있다 — 이 그림이 「어느 화면」인지 (P7 의 정신) */}
                 <span className={`meta mono ${styles.shotSrc}`}>{shot.src}</span>
@@ -600,7 +643,7 @@ function ProductShots({ index }: { index: string }) {
           )
         })}
       </div>
-      <p className={styles.foot}>{PRODUCT_TOUR.foot}</p>
+      <p className={styles.foot}>{t.tour.foot}</p>
     </section>
   )
 }
@@ -629,14 +672,14 @@ function KeyLine({ k, text }: { k: string; text: string }) {
   )
 }
 
-function WhyNotGit({ index }: { index: string }) {
+function WhyNotGit({ index, t }: SectionProps) {
   return (
     <section className={`${styles.section} ${styles.sectionWhy}`} aria-labelledby="landing-why">
-      <SectionHead id="landing-why" index={index} title={WHY_NOT_GIT.title} />
-      <Glossary items={WHY_NOT_GIT.glossary} />
+      <SectionHead id="landing-why" index={index} title={t.why.title} />
+      <Glossary items={t.why.glossary} />
       {/* 카드 셋이 아니라 정의 목록이다 — 번호 · 주장 | 설명 + 「예를 들면」 (anti-slop: 「아이콘-원-제목-문단」 카드 금지). */}
       <dl className={styles.defs}>
-        {WHY_NOT_GIT.cards.map((c, i) => (
+        {t.why.cards.map((c, i) => (
           <div key={c.head} className={styles.def}>
             <dt className={styles.defHead}>
               <span className={styles.no} aria-hidden="true">{i + 1}</span>
@@ -644,28 +687,28 @@ function WhyNotGit({ index }: { index: string }) {
             </dt>
             <dd>
               <p>{c.body}</p>
-              <KeyLine k={WHY_NOT_GIT.exampleKey} text={c.example} />
+              <KeyLine k={t.why.exampleKey} text={c.example} />
             </dd>
           </div>
         ))}
       </dl>
-      <p className={styles.statement}>{WHY_NOT_GIT.line}</p>
+      <p className={styles.statement}>{t.why.line}</p>
     </section>
   )
 }
 
-function HowItWorks({ index }: { index: string }) {
+function HowItWorks({ index, t }: SectionProps) {
   //  단계 그림은 정본(`ART.steps`)이 단계 수와 같을 때만 — 하나라도 빠지면 글로만 선다 (반쪽 시리즈를 보이지 않는다).
-  const art = ART.steps.length === HOW_IT_WORKS.steps.length ? ART.steps : null
+  const art = ART.steps.length === t.how.steps.length ? ART.steps : null
   //  격자의 자리 — 그림·화살표는 1행, 글은 2행(그림이 없으면 1행). 열은 CSS 변수로 넘긴다 (`.flow*` 가 읽는다).
   const bodyRow = art ? 2 : 1
   const at = (col: number, row?: number): CSSProperties =>
     ({ '--col': String(col), ...(row === undefined ? {} : { '--row': String(row) }) }) as CSSProperties
   return (
     <section className={styles.section} aria-labelledby="landing-how">
-      <SectionHead id="landing-how" index={index} title={HOW_IT_WORKS.title} lead={HOW_IT_WORKS.lead} />
+      <SectionHead id="landing-how" index={index} title={t.how.title} lead={t.how.lead} />
       <div className={styles.flow}>
-        {HOW_IT_WORKS.steps.map((s, i) => {
+        {t.how.steps.map((s, i) => {
           const col = i * 2 + 1
           const a = art?.[i]
           return (
@@ -683,7 +726,7 @@ function HowItWorks({ index }: { index: string }) {
                   {s.actors.map((x) => <span key={x} className={styles.actor}>{x}</span>)}
                 </div>
               </div>
-              {i < HOW_IT_WORKS.steps.length - 1 ? (
+              {i < t.how.steps.length - 1 ? (
                 <span className={`${styles.turn} ${styles.flowTurn}`} style={at(col + 1)} aria-hidden="true">→</span>
               ) : null}
             </Fragment>
@@ -694,13 +737,13 @@ function HowItWorks({ index }: { index: string }) {
   )
 }
 
-function AiUse({ index }: { index: string }) {
+function AiUse({ index, t }: SectionProps) {
   return (
     <section className={styles.section} aria-labelledby="landing-ai">
-      <SectionHead id="landing-ai" index={index} title={AI_USE.title} lead={AI_USE.lead} />
+      <SectionHead id="landing-ai" index={index} title={t.ai.title} lead={t.ai.lead} />
       {/* 정의 목록 — 「왜 git」과 같은 모양. 줄마다 「누가 → 누가」 손바뀜이 먼저 서고 설명은 그 밑 (아이콘 없이 글과 괘선으로만). */}
       <dl className={styles.defs}>
-        {AI_USE.rows.map((r, i) => (
+        {t.ai.rows.map((r, i) => (
           <div key={r.head} className={styles.def}>
             <dt className={styles.defHead}>
               <span className={styles.no} aria-hidden="true">{i + 1}</span>
@@ -714,7 +757,7 @@ function AiUse({ index }: { index: string }) {
                     {j > 0 ? <span className={styles.handArrow} aria-hidden="true">→</span> : null}
                     <span className={styles.handWho}>
                       {h.who === 'ai' ? <span className={styles.handDot} aria-hidden="true" /> : null}
-                      {AI_USE.who[h.who]}
+                      {t.ai.who[h.who as keyof typeof t.ai.who]}
                     </span>
                     <span>{h.does}</span>
                   </span>
@@ -729,17 +772,17 @@ function AiUse({ index }: { index: string }) {
   )
 }
 
-function Replay({ index }: { index: string }) {
+function Replay({ index, t }: SectionProps) {
   return (
     <section className={styles.section} aria-labelledby="landing-replay">
-      <SectionHead id="landing-replay" index={index} title={TERMINAL_REPLAY.title} lead={TERMINAL_REPLAY.lead} />
-      <Glossary items={TERMINAL_REPLAY.glossary} />
-      <TerminalReplay frames={REPLAY_FRAMES} milestone={TERMINAL_REPLAY.milestone} />
+      <SectionHead id="landing-replay" index={index} title={t.replay.title} lead={t.replay.lead} />
+      <Glossary items={t.replay.glossary} />
+      <TerminalReplay frames={REPLAY_FRAMES} milestone={t.replay.milestone} />
       {/* 「무슨 일이 일어나나」 — 검은 창의 네 걸음을 사람 말로. 숫자는 녹화의 것이다 (시험이 대조). */}
       <div className="col-tight">
-        <span className={styles.legendTitle}>{TERMINAL_REPLAY.legendTitle}</span>
+        <span className={styles.legendTitle}>{t.replay.legendTitle}</span>
         <ol className={styles.legend}>
-          {TERMINAL_REPLAY.legend.map((t, i) => (
+          {t.replay.legend.map((t, i) => (
             <li key={t} className={styles.legendItem}>
               <span className={styles.no} aria-hidden="true">{i + 1}</span>
               <span>{t}</span>
@@ -747,20 +790,20 @@ function Replay({ index }: { index: string }) {
           ))}
         </ol>
       </div>
-      <p className={styles.foot}>{TERMINAL_REPLAY.source}</p>
+      <p className={styles.foot}>{t.replay.source}</p>
     </section>
   )
 }
 
-function TrustBoundary({ index }: { index: string }) {
-  const { knows, unknown } = TRUST_BOUNDARY
+function TrustBoundary({ index, t }: SectionProps) {
+  const { knows, unknown } = t.trust
   const rows = Math.max(knows.rows.length, unknown.rows.length)
   return (
     <section className={`${styles.section} ${styles.trust}`} aria-labelledby="landing-trust">
       <div className={styles.split}>
         <div className={styles.splitHead}>
-          <SectionHead id="landing-trust" index={index} title={TRUST_BOUNDARY.title} />
-          <p className={styles.foot}>{TRUST_BOUNDARY.foot}</p>
+          <SectionHead id="landing-trust" index={index} title={t.trust.title} />
+          <p className={styles.foot}>{t.trust.foot}</p>
         </div>
         <div className="scroll-x">
           <table className="table">
@@ -792,13 +835,13 @@ function TrustBoundary({ index }: { index: string }) {
   )
 }
 
-function Install({ index }: { index: string }) {
+function Install({ index, t }: SectionProps) {
   return (
     <section className={styles.section} aria-labelledby="landing-install">
       {/* 첫 줄은 「개발자만 합니다」 — 팀장·심사위원이 여기서 자기 일이 아님을 안다. 그 다음 한 줄이 한 행: 번호 · 어디서 · 명령 · 쉬운 설명. */}
-      <SectionHead id="landing-install" index={index} title={INSTALL_STEPS.title} lead={INSTALL_STEPS.who} />
+      <SectionHead id="landing-install" index={index} title={t.install.title} lead={t.install.who} />
       <ol className={styles.installList}>
-        {INSTALL_STEPS.lines.map((l, i) => (
+        {t.install.lines.map((l, i) => (
           <li key={l.cmd} className={styles.installRow}>
             <span className={styles.no} aria-hidden="true">{i + 1}</span>
             <span className={styles.where}>{l.where}</span>
@@ -812,22 +855,22 @@ function Install({ index }: { index: string }) {
           </li>
         ))}
       </ol>
-      <p className={styles.foot}>{INSTALL_STEPS.requires}</p>
-      <p className={styles.foot}>{INSTALL_STEPS.foot}</p>
+      <p className={styles.foot}>{t.install.requires}</p>
+      <p className={styles.foot}>{t.install.foot}</p>
     </section>
   )
 }
 
-function Foot() {
+function Foot({ t }: { t: LandingText }) {
   return (
     <footer className={styles.footer}>
-      <span className={styles.footBrand}>{LANDING_FOOT.brand}</span>
-      <span>{LANDING_FOOT.event}</span>
-      <span>{LANDING_FOOT.team.label} 「{LANDING_FOOT.team.name}」</span>
-      <a className={styles.footLink} href={LANDING_FOOT.github.href} rel="noreferrer">{LANDING_FOOT.github.label}</a>
-      <a className={styles.footLink} href={LANDING_FOOT.limits.href} rel="noreferrer">{LANDING_FOOT.limits.label}</a>
-      <a className={styles.footLink} href={LANDING_FOOT.health.href}>{LANDING_FOOT.health.label}</a>
-      <a className={styles.footLink} href={LANDING_FOOT.privacy.href}>{LANDING_FOOT.privacy.label}</a>
+      <span className={styles.footBrand}>{t.foot.brand}</span>
+      <span>{t.foot.event}</span>
+      <span>{t.foot.team.label} 「{t.foot.team.name}」</span>
+      <a className={styles.footLink} href={t.foot.github.href} rel="noreferrer">{t.foot.github.label}</a>
+      <a className={styles.footLink} href={t.foot.limits.href} rel="noreferrer">{t.foot.limits.label}</a>
+      <a className={styles.footLink} href={t.foot.health.href}>{t.foot.health.label}</a>
+      <a className={styles.footLink} href={t.foot.privacy.href}>{t.foot.privacy.label}</a>
     </footer>
   )
 }
@@ -838,47 +881,62 @@ function Foot() {
  *   허용하고, `/` 위에서는 그냥 그 절로 스크롤한다. 닻은 절을 감싸는 `<div id>` 에 있다 — h2 의 id(`landing-*`)를
  *   머리글에서 먼저 언급하면 「제품 화면이 왜 git 보다 먼저」를 재는 시험이 머리글의 링크를 절로 오해한다.
  */
+//  ⚠ 머리글에 뜨는 낱말은 여기가 아니라 `LANDING_NAV` 다 (언어를 타므로) — 여기 있는 것은
+//    **차례와 어느 절이 머리글에 뜨나**뿐이다. `nav: true` 인 절은 `LANDING_NAV` 에 줄이 있어야
+//    하고, 그 짝은 `test/web-landing-en.test.ts` 가 센다.
 const SECTIONS = [
-  { render: ProductShots, id: 'landing-shots', nav: null },
-  //  머리글의 낱말은 절 제목의 **짧은 판**이다 — 제목은 문장이라 머리글에 넣으면 한 줄을 다 먹는다 (눈으로 봤다).
-  { render: WhyNotGit, id: 'landing-why', nav: '왜 git 이 아닌가' },
-  { render: HowItWorks, id: 'landing-how', nav: '어떻게 동작하나' },
-  { render: AiUse, id: 'landing-ai', nav: 'AI 활용' },
-  { render: Replay, id: 'landing-replay', nav: null },
-  { render: TrustBoundary, id: 'landing-trust', nav: null },
-  { render: Install, id: 'landing-install', nav: '설치' },
+  { render: ProductShots, id: 'landing-shots', nav: false },
+  { render: WhyNotGit, id: 'landing-why', nav: true },
+  { render: HowItWorks, id: 'landing-how', nav: true },
+  { render: AiUse, id: 'landing-ai', nav: true },
+  { render: Replay, id: 'landing-replay', nav: false },
+  { render: TrustBoundary, id: 'landing-trust', nav: false },
+  { render: Install, id: 'landing-install', nav: true },
 ] as const
+
+/** 머리글에 뜨는 절의 id 목록 — 시험이 `LANDING_NAV` 의 열쇠와 대조한다. */
+export const NAV_SECTION_IDS = SECTIONS.filter((s) => s.nav).map((s) => s.id)
 
 /** 머리글 링크의 닻 — h2 의 id 에서 `landing-` 을 뗀 것 (`/#why` · `/#install`). */
 function anchorOf(sectionId: string): string {
   return sectionId.replace(/^landing-/, '')
 }
 
-export function Landing() {
+/**
+ * 🔴 **언어는 인자로 받는다** (2026-09-12). 여기서 `serverLocale()` 을 부르지 않는 이유 —
+ *    이 컴포넌트는 시험과 덤프 스크립트(`scripts/dump-landing.tsx`)가 **요청 없이** 그린다.
+ *    안에서 요청을 읽으면 그 자리에서 죽는다. 요청을 아는 것은 `app/page.tsx` 하나다.
+ * ⚠ 기본값이 한국어인 것은 `DEFAULT_LOCALE` 이 아니라 **부르는 쪽**이 정한다 — 여기서
+ *   기본값을 또 정하면 정본이 둘이 된다.
+ */
+export function Landing({ locale }: { locale: Locale }) {
+  const t: LandingText = locale === 'en' ? LANDING_EN : LANDING_KO
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <a className={styles.brand} href="/"><BrandMark />{LANDING_FOOT.brand}</a>
-        <nav className={styles.headerNav} aria-label="절로 가기">
-          {SECTIONS.filter((s) => s.nav !== null).map((s) => (
-            <a key={s.id} className={styles.navLink} href={`/#${anchorOf(s.id)}`}>{s.nav}</a>
+        <a className={styles.brand} href="/"><BrandMark />{t.foot.brand}</a>
+        <nav className={styles.headerNav} aria-label={t.foot.navLabel}>
+          {SECTIONS.filter((s) => s.nav).map((s) => (
+            <a key={s.id} className={styles.navLink} href={`/#${anchorOf(s.id)}`}>{t.nav[s.id as keyof typeof t.nav]}</a>
           ))}
-          <a className="btn btn-sm" href={LANDING_HEAD.login.href}>{LANDING_HEAD.login.label}</a>
+          <a className="btn btn-sm" href={t.head.login.href}>{t.head.login.label}</a>
+          {/* 언어 토글은 머리글의 마지막 자리다 — 로그인 버튼 뒤. 누르면 쿠키를 쓰고 서버가 다시 그린다. */}
+          <LocaleToggle />
         </nav>
       </header>
       <main className={styles.main}>
-        <Hero />
+        <Hero t={t} />
         {/* Before/After 는 히어로 바로 밑의 두 열이다 — 그림이 오른쪽 자리를 가져가서 내려왔다 (문구·시험은 그대로). */}
-        <BeforeAfter />
+        <BeforeAfter t={t} />
         {/* 🔴 제품 화면이 히어로 **바로 아래**다 — 심사위원은 10초 안에 판단하고, 그때 제품 화면이
             첫 스크롤 안에 있어야 한다 (FINDINGS 131 의 증상이 그것이었다). 차례는 `SECTIONS` 하나다. */}
         {SECTIONS.map((s, i) => (
           <div key={s.id} id={anchorOf(s.id)}>
-            <s.render index={String(i + 1).padStart(2, '0')} />
+            <s.render index={String(i + 1).padStart(2, '0')} t={t} />
           </div>
         ))}
       </main>
-      <Foot />
+      <Foot t={t} />
     </div>
   )
 }
