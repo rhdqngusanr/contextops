@@ -44,15 +44,36 @@ function slot(): Slot {
   return (g[SLOT] ??= {})
 }
 
+/**
+ * 🔴 **서버리스에서 연결을 붙잡고 있지 않는다** (2026-09-13 · 심사 기간 가용성 점검).
+ *
+ * ★ 왜 — postgres.js 의 기본값은 `idle_timeout: null`(쉬는 연결을 영원히 안 닫는다) · `connect_timeout: 30` ·
+ *   `max: 10` 이다. Vercel 은 쉬는 함수 인스턴스를 얼려 두는데 그 안의 연결은 **열린 채** 남고, 인스턴스마다
+ *   10개씩이면 접속이 몰린 날(투표 · Demo Day) Supabase 풀러의 클라이언트 상한에 먼저 닿는다 — 닿으면 모든 API 가 500 이다.
+ *   - `prepare: false` — Supabase pooler(transaction mode)는 prepared statement 를 못 넘긴다. 직결로 붙을 때도 켜 둘 이유가 없다.
+ *   - `idle_timeout` 20초 — 쓰지 않는 연결은 돌려준다. 다음 요청은 새로 연다(같은 리전이라 수십 ms).
+ *   - `connect_timeout` 10초 — DB 가 안 받는 날 화면이 30초 skeleton 뒤에야 실패하지 않게.
+ *   - `max` 5 — 인스턴스 하나가 동시에 여는 연결의 천장.
+ * ⚠ 옵션 객체는 URL 의 `?max=` 보다 **세다**(postgres.js 는 옵션을 먼저 본다). 개발·시험의 DB(pglite-socket)는 소켓
+ *   하나만 받아 URL 에 `?max=1` 을 적는다 — 그래서 `max` 는 **URL 이 말하지 않을 때만** 준다. `test/db-client-options.test.ts` 가 잰다.
+ */
+export function poolOptionsFor(url: string): { prepare: false; idle_timeout: number; connect_timeout: number; max?: number } {
+  let urlSaysMax = false
+  try {
+    urlSaysMax = new URL(url).searchParams.has('max')
+  } catch {
+    //  모양이 낯선 연결 문자열 — 기본 천장을 준다 (연결 자체의 실패는 postgres.js 가 말한다).
+  }
+  return { prepare: false, idle_timeout: 20, connect_timeout: 10, ...(urlSaysMax ? {} : { max: 5 }) }
+}
+
 function create(): Db {
   const url = process.env.DATABASE_URL
   //  🔴 조용히 undefined 로 돌지 않게 여기서 죽인다. 연결 문자열이 없는 채로
   //     뜬 서버는 **첫 요청에서** 알 수 없는 모양으로 실패한다 (.env.example ③).
   if (!url) throw new Error('DATABASE_URL 이 없다 — apps/web/.env.example 을 보고 .env.local 을 만들어라')
 
-  //  prepare: false — Supabase pooler(pgbouncer, transaction mode)는 prepared
-  //  statement 를 못 넘긴다. 직결로 붙을 때도 켜 둘 이유가 없다.
-  const sql = postgres(url, { prepare: false })
+  const sql = postgres(url, poolOptionsFor(url))
   return drizzle(sql, { schema })
 }
 
