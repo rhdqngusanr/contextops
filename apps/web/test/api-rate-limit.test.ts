@@ -63,7 +63,7 @@ describe('빈도 제한 — 세고 끊는다', () => {
   it('🔴 한도까지는 지나고, 한 번 더 하면 429 RATE_LIMITED 다', async () => {
     const route = 'POST /demo/session'
     const limit = limitFor(route)
-    expect(limit.calls).toBe(20)
+    expect(limit.calls).toBe(200)
 
     for (let i = 0; i < limit.calls; i += 1) {
       const r = await hit(route, '203.0.113.7')
@@ -77,7 +77,7 @@ describe('빈도 제한 — 세고 끊는다', () => {
 
   it('🔴 IP 가 다르면 따로 센다 — 한 사람이 막혔다고 남이 막히지 않는다', async () => {
     const route = 'POST /demo/session'
-    for (let i = 0; i < 20; i += 1) await hit(route, '203.0.113.7')
+    for (let i = 0; i < limitFor(route).calls; i += 1) await hit(route, '203.0.113.7')
     expect((await hit(route, '203.0.113.7')).blocked).toBe(true)
 
     //  같은 순간, 다른 IP 는 처음부터 센다.
@@ -85,14 +85,14 @@ describe('빈도 제한 — 세고 끊는다', () => {
   })
 
   it('🔴 라우트가 다르면 따로 센다 — 좁은 문 하나가 나머지를 잠그지 않는다', async () => {
-    for (let i = 0; i < 20; i += 1) await hit('POST /demo/session', '203.0.113.7')
+    for (let i = 0; i < limitFor('POST /demo/session').calls; i += 1) await hit('POST /demo/session', '203.0.113.7')
     expect((await hit('POST /demo/session', '203.0.113.7')).blocked).toBe(true)
     expect((await hit('GET /health', '203.0.113.7')).blocked).toBe(false)
   })
 
   it('🔴 창이 지나면 저절로 풀린다 — 「0으로 되돌리는」 코드가 없어도', async () => {
     const route = 'POST /demo/session'
-    for (let i = 0; i < 20; i += 1) await hit(route, '203.0.113.7')
+    for (let i = 0; i < limitFor(route).calls; i += 1) await hit(route, '203.0.113.7')
     expect((await hit(route, '203.0.113.7')).blocked).toBe(true)
 
     //  창은 600초다. 그만큼 뒤면 `bucket` 문자열이 달라져서 새 창이다.

@@ -46,7 +46,8 @@ export default function DemoPage() {
     return (
       <div className="center">
         <div className="card center-card">
-          <ErrorState error={error} />
+          {/* [다시 시도] 는 이 화면을 다시 여는 것이다 — 발급을 한 번 더 청한다 (빈도 제한에 걸린 사람이 막다른 길에 서지 않게 · 2026-09-13). */}
+          <ErrorState error={error} retry={() => window.location.reload()} />
           <a className="btn btn-sm" href="/">랜딩으로 돌아가기</a>
         </div>
       </div>

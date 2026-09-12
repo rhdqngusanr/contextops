@@ -63,10 +63,13 @@ export const DEFAULT_LIMIT: HttpRateLimit = { calls: 600, windowSeconds: 60 }
  */
 export const HTTP_RATE_LIMITS: Record<string, HttpRateLimit> = {
   //  🔴 **자격증명 없이 부를 수 있는 유일한 쓰기 문**이다 (`app/api/v1/demo/session/route.ts`).
-  //  ★ 왜 10분에 20회인가 — 게스트 토큰의 수명이 24시간이라(`DEMO_SESSION_TTL_SEC`) 사람은
-  //    하루에 한두 번 부른다. 20회면 「새로고침을 여러 번 한 사람」은 지나고, 토큰을 계속
-  //    찍어내는 스크립트는 못 지난다.
-  'POST /demo/session': { calls: 20, windowSeconds: 600 },
+  //  ★ 왜 10분에 200회인가 — 게스트 토큰의 수명이 24시간이라(`DEMO_SESSION_TTL_SEC`) 사람 한 명은
+  //    하루에 한두 번 부른다. 토큰을 찍어내는 스크립트는 초당 수십 번이라 이 천장에도 몇 초 만에 걸린다.
+  //  ⚠ **20 이던 것을 올렸다 — 누가 걸렸나를 먼저 적는다** (2026-09-13 · 위 `DEFAULT_LIMIT` 의 규칙).
+  //    한도는 **IP 하나**에 걸리는데 `/demo` 는 열 때마다(뒤로 가기 포함) 새로 발급받는다(`app/demo/page.tsx`).
+  //    원티드 사무실 · Demo Day(10/17) 행사장 Wi-Fi 처럼 **한 NAT 뒤의 사람들은 한 IP** 다 — 20 이면 그 공간의
+  //    21번째 사람부터 10분 동안 첫 화면이 「요청이 너무 잦습니다」였다. 발급 한 번은 서명 하나와 읽기 하나라 200 도 싸다.
+  'POST /demo/session': { calls: 200, windowSeconds: 600 },
 
   //  ★ zip 은 한 번에 파일 수십 개를 메모리에서 이어 붙인다 (`lib/api/zip.ts`). 다른 읽기 문보다
   //    한 번이 비싸서 따로 좁힌다 — 게스트 토큰 하나로 전송량을 증폭시키는 자리가 여기다.
