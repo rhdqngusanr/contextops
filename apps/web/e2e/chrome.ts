@@ -48,17 +48,56 @@ export type LaunchedChrome = {
   readonly profileDir: string
 }
 
+export type LaunchOpts = {
+  /**
+   * 창을 **보이게** 띄운다 (기본은 헤드리스).
+   * ★ 왜 생겼나 (2026-09-12) — 셋째 사용자가 왔다: `scripts/demo-drive.ts` 가 화면 녹화용으로
+   *   **사람이 보는 창**을 몰아야 한다. 헤드리스는 녹화할 창이 없다.
+   *   ⚠ 함수를 베끼지 않고 인자를 하나 더한 이유는 이 파일 머리말 그대로다 — 베끼면
+   *     Chrome 경로 후보나 기다림이 한쪽에서만 늘어난다.
+   */
+  readonly headed?: boolean
+  /** 창 크기. 녹화는 이 크기가 곧 영상 해상도다 — 헤드리스에서도 뷰포트가 된다. */
+  readonly windowSize?: { readonly width: number; readonly height: number }
+  /**
+   * **앱 창**으로 연다 (`--app=<url>`) — 탭 줄도 주소창도 없는 창이다.
+   * ★ 왜 — 녹화에 브라우저 장식이 같이 찍히면 제품이 아니라 「브라우저 스크린샷」으로 보인다.
+   *   앱 창이면 창 전체가 곧 페이지라, 녹화할 때 자를 것이 없다.
+   * ⚠ 이 값이 첫 주소가 된다. 뒤에 `Page.navigate` 로 옮겨 다니는 것은 그대로 된다.
+   */
+  readonly appUrl?: string
+  /**
+   * 브라우저의 **언어** (`--lang`). 페이지 언어와 맞춰 두면 번역 풍선이 아예 안 뜬다.
+   * ⚠ `--disable-features=Translate` 는 이 Chrome 에서 **안 먹었다** (2026-09-12 실측 · 풍선이 그대로 떴다).
+   *   뜨는 진짜 이유는 「브라우저는 한국어인데 페이지가 영어」라서이므로, 언어를 맞추는 쪽이 원인을 없앤다.
+   *   덤으로 `Accept-Language` 도 같이 바뀌어서, 우리 앱의 자동 감지와도 앞뒤가 맞는다.
+   */
+  readonly lang?: string
+}
+
 /**
- * 헤드리스 Chrome 을 하나 띄우고 CDP 가 열릴 때까지 기다린다.
+ * Chrome 을 하나 띄우고 CDP 가 열릴 때까지 기다린다.
  * ⚠ 프로필은 매번 새 임시 폴더다 — 앞 판이 받아 둔 쿠키·세션이 따라오면
  *   「빈 창에서 링크만으로」(GATE 3 ①)가 거짓말이 된다.
  */
-export async function launchChrome(cdpPort: number): Promise<LaunchedChrome> {
+export async function launchChrome(cdpPort: number, opts: LaunchOpts = {}): Promise<LaunchedChrome> {
   const chrome = findChrome()
   const profileDir = mkdtempSync(join(tmpdir(), 'ctxops-e2e-'))
+  const size = opts.windowSize
   const child = spawn(chrome, [
-    '--headless=new', `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${profileDir}`,
-    '--no-first-run', '--no-default-browser-check', '--disable-gpu', 'about:blank',
+    //  ⚠ 헤드리스일 때만 `--disable-gpu` 다 — 보이는 창에서 GPU 를 끄면 스크롤이 끊겨 보인다(녹화에 그대로 남는다).
+    ...(opts.headed === true ? [] : ['--headless=new', '--disable-gpu']),
+    `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${profileDir}`,
+    '--no-first-run', '--no-default-browser-check',
+    //  🔴 **번역 제안 풍선을 막는다** (2026-09-12). 영어 화면을 한국어 Chrome 으로 열면 오른쪽 위에
+    //     「영어 → 한국어」 풍선이 떠서 **머리글을 가린다** — 영어판 녹화 첫 판이 그렇게 망했다.
+    //     그건 제품이 아니라 브라우저의 말이라 영상에도 캡처에도 있으면 안 된다.
+    //     ⚠ 막는 것은 `lang` 이다 (위 주석) — 플래그로 끄는 길은 안 먹었다.
+    '--disable-infobars',
+    ...(opts.lang === undefined ? [] : [`--lang=${opts.lang}`]),
+    ...(size === undefined ? [] : [`--window-size=${size.width},${size.height}`]),
+    //  ⚠ 앱 창이면 첫 주소가 인자로 들어가고, 아니면 빈 탭에서 시작한다.
+    opts.appUrl === undefined ? 'about:blank' : `--app=${opts.appUrl}`,
   ], { stdio: 'ignore' })
   return { child, profileDir }
 }

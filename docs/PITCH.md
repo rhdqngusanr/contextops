@@ -14,7 +14,56 @@
 
 ---
 
+## 1-A. 🔴 38초 무음 클립 — **한 줄로 만들어진다** (2026-09-12)
+
+> **규정상 영상은 필수가 아니다**(위 머리말). 그래서 먼저 만든 것은 2분 내레이션 영상이 아니라
+> **짧은 무음 클립**이다 — 한 번 찍어 **세 군데**에 쓴다: 온라인 투표 페이지 · 레딧 글 · README 머리.
+>
+> ```
+> powershell -ExecutionPolicy Bypass -File tools/record-demo.ps1            # 한국어
+> powershell -ExecutionPolicy Bypass -File tools/record-demo.ps1 -Locale en # 영어
+> ```
+>
+> 사람이 누를 버튼이 없다. 화면은 `apps/web/scripts/demo-drive.ts` 가 **production 을 진짜로 클릭해서**
+> 몰고, ffmpeg 이 그 창만 찍고 정해진 초에 스스로 멈춘다. 망친 판은 다시 돌리면 그만이다.
+
+### 왜 이렇게 만드나
+
+- **운전이 제일 어렵다.** 2분을 한 번에 찍으면 마우스가 흔들리고 로딩이 판마다 다르고, 한 군데
+  틀리면 처음부터다. 이 저장소엔 이미 production 을 클릭해 훑는 코드가 있었다(`e2e/gate3.ts`) —
+  그걸 사람 눈 속도로 늦춘 것이 전부다.
+- 🔴 **화면에 아무것도 덧그리지 않는다.** 가짜 커서도 강조 테두리도 자막도 없다. 찍히는 것은
+  제품이 실제로 그리는 것뿐이다 — 「화면이 거짓을 말하지 않는다」는 녹화에도 그대로다.
+  설명은 **나중에 자막으로** 얹는다 (§6).
+- **무음이 맞다.** 레딧·X·투표 페이지는 자동재생이 음소거다. 내레이션을 얹고 싶으면
+  `-Hold 2` 로 늘려 찍고 그 위에 목소리를 올려라.
+
+### 컷 표 — **잰 값이다** (`demo:drive` 가 찍은 초 · 2026-09-12)
+
+| # | 클립 시각 | 화면 | 무엇이 보이나 |
+|---|---|---|---|
+| 1 | 2.0s | 랜딩 머리 | 한 줄이 **무슨 물건인지** 말한다 |
+| 2 | 6.0s | Before/After | 같은 질문에 두 사람의 AI 가 다른 답 → 승인된 한 줄 |
+| 3 | 13.5s | 정리 화면 | [샘플 팀으로 둘러보기] → AI 가 찾은 충돌 카드 3장 |
+| 4 | 20.7s | Context | 팀장이 승인한 규칙 목록 |
+| 5 | 25.8s | Roadmap | 마일스톤이 근거로 채워짐 · 완료 확인은 사람 |
+| 6 | 30.9s | Sync | 기기 14대가 받은 버전 |
+| — | 38s | 끝 | |
+
+⚠ **`hold` 의 합(27초)과 실제(34초)는 다르다** — 클릭·도착·그려짐을 기다리는 시간이 약 7초 더 붙는다.
+33초로 찍었다가 **마지막 Sync 컷이 통째로 잘렸다.** 컷 표를 고치면 `pnpm --filter web demo:drive` 를
+한 번 돌려 초를 **다시 재라** — 그 출력이 위 숫자와 `tools/record-demo.ps1` 기본값의 근거다.
+
+⚠ 영어판(`-Locale en`)은 **랜딩·내비·칩까지가 영어**다. 앱 안쪽 화면 문구는 아직 한국어라
+(`docs/STATUS.md` 「다음 판」) 컷 3~6 에 한국어가 섞인다. 레딧에 올릴 때 그 사실을 한 줄로 밝혀라.
+
+---
+
 ## 1. 2분 영상 — 컷 표 8컷 (총 120초)
+
+> ⚠ **이건 아직 안 찍었다** (선택 사항 · 위 §1-A 가 먼저다). 아래 대본은 2026-09-10 에 쓴 것이라
+> 그 뒤에 바뀐 화면이 반영돼 있지 않다 — 머리글에 **KO/EN 토글**이 생겼고 절 차례가 바뀌었다.
+> 찍기 전에 `components/landing.tsx` 의 `SECTIONS` 와 대조해라.
 
 녹화는 **production** 에서 (`https://<production>/demo` 가 열리는 상태 · `verify:prod` 초록 뒤). 마우스는 천천히, 클릭 전 0.5초 멈춤. 내레이션은 대본 그대로 읽는다 — 애드리브가 시간을 먹는다.
 
@@ -87,3 +136,60 @@
 - [ ] mp4 두 곳 보관 — 저장소 밖(드라이브)과 `docs/evidence/2026-09-17-video/` (파일은 링크만 · 저장소에 mp4 를 넣지 않는다)
 - [ ] 제출 폼의 영상 칸이 **선택**임을 확인하고 링크만 붙인다 (`docs/SUBMISSION.md` 🙋 표)
 - [ ] 로컬 리허설 — `pnpm --filter web demo:db` 로 같은 데모를 로컬에서 한 번 밟는다 (본선 당일 네트워크 보험)
+
+---
+
+## 6. 찍은 뒤 — 자막 · GIF · 잘라내기 (ffmpeg)
+
+> 클립은 `.ci/video/` 에 떨어진다. ⚠ **저장소에 mp4·gif 를 넣지 마라** (§5 의 같은 규칙) —
+> `.ci/` 는 `.gitignore` 가 막고 있고, 근거로 남길 것은 **파일이 아니라 만드는 명령**이다.
+
+### 자막 — 시각이 판마다 같아야 얹힌다
+
+`tools/record-demo.ps1` 이 `-t` 로 끊으므로 길이가 늘 같다. 그래서 자막을 **시각으로** 적을 수 있다.
+`docs/evidence/2026-09-12-video/ko.srt` 같은 파일을 만들고 (§1-A 컷 표의 초를 그대로):
+
+```srt
+1
+00:00:02,000 --> 00:00:06,000
+같은 팀인데 AI 마다 답이 다릅니다
+
+2
+00:00:06,000 --> 00:00:13,500
+재시도는 5회인가 3회인가 — 각자의 CLAUDE.md 가 다르기 때문입니다
+```
+
+굽는다 (글꼴은 화면 글꼴과 **다른 것 하나**만 · §1 「자막」):
+
+```bash
+ffmpeg -i .ci/video/demo-ko-<stamp>.mp4 -vf "subtitles=docs/evidence/2026-09-12-video/ko.srt:force_style='FontName=Malgun Gothic,FontSize=22,PrimaryColour=&H00FFFFFF&,BackColour=&H80000000&,BorderStyle=4,MarginV=40'" -c:a copy .ci/video/demo-ko-sub.mp4
+```
+
+### GIF — 레딧 글에 붙일 것
+
+실측 2.46 MB (760px · 12fps · 38초). 팔레트를 따로 뽑아야 색이 안 뭉갠다:
+
+```bash
+ffmpeg -y -i .ci/video/demo-en-<stamp>.mp4 -vf "fps=12,scale=760:-1:flags=lanczos,palettegen=stats_mode=diff" .ci/video/palette.png
+```
+```bash
+ffmpeg -y -i .ci/video/demo-en-<stamp>.mp4 -i .ci/video/palette.png -lavfi "fps=12,scale=760:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" .ci/video/demo-en.gif
+```
+
+### 잘라내기 · 빠르게
+
+```bash
+ffmpeg -y -ss 2 -to 34 -i .ci/video/demo-ko-<stamp>.mp4 -c copy .ci/video/demo-ko-trim.mp4
+```
+```bash
+ffmpeg -y -i .ci/video/demo-ko-<stamp>.mp4 -vf "setpts=0.7*PTS" -an .ci/video/demo-ko-fast.mp4
+```
+
+### 밟은 함정 넷 (2026-09-12 · 다시 밟지 마라)
+
+| 증상 | 원인 | 고친 법 |
+|---|---|---|
+| `Failed to capture image (error 8)` · 0.05 MB 파일 | gdigrab 의 **창** 캡처가 GPU 로 합성된 Chrome 창을 못 뜬다 | 창 대신 **데스크톱의 그 영역**을 찍는다 (`-offset_x/-offset_y/-video_size`) |
+| 앞 15초가 가만히 있는 첫 화면 | 녹화기는 창이 뜨자마자 찍는데 운전은 그 뒤에도 카운트다운을 셌다 — **초를 양쪽에서 지어냈다** | 운전이 **신호 파일**을 남기고 녹화기가 그걸 보고 시작 |
+| 위에 제목 표시줄이 찍힘 | Chrome 앱 창은 제목 줄을 **클라이언트 영역 안에** 그려서 `GetClientRect` 로 안 걷힌다 | 브라우저에게 직접 묻는다 — `screenX/screenY` + 창·뷰포트 크기 차이로 테두리·제목 줄을 센다 |
+| 영어판 오른쪽 위를 번역 풍선이 가림 | 브라우저는 한국어인데 페이지가 영어 (`--disable-features=Translate` 는 **안 먹었다**) | `--lang` 으로 **브라우저 언어를 페이지와 맞춘다** |

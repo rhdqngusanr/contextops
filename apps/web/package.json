@@ -17,6 +17,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "dev:db": "tsx scripts/dev-server.ts",
     "demo:db": "tsx scripts/demo-server.ts",
+    "demo:drive": "tsx scripts/demo-drive.ts",
     "ai:smoke": "tsx scripts/ai-smoke.ts",
     "p3:measure": "tsx scripts/p3-measure.ts",
     "fonts:vendor": "tsx scripts/vendor-fonts.ts"
