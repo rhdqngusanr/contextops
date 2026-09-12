@@ -56,6 +56,37 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): {
 //  스스로 다시 읽는 화면 — 화면 3 의 구조화 진행 (SPEC §9 화면 3 「polling」)
 // ---------------------------------------------------------------------
 
+/** `document` 에서 이 파일이 쓰는 것 셋 — 시험이 가짜를 꽂을 수 있게 좁혀 둔다. */
+export interface VisibilitySource {
+  readonly hidden: boolean
+  addEventListener(type: 'visibilitychange', listener: () => void): void
+  removeEventListener(type: 'visibilitychange', listener: () => void): void
+}
+
+/**
+ * 🔴 **보이지 않는 탭은 두드리지 않는다** (2026-09-13). 보이면 `run` 을 바로 부르고, 숨어 있으면 다시 보이는
+ * 순간 **한 번** 부른다. 돌려주는 함수는 그 기다림을 푼다(화면을 떠날 때).
+ *
+ * ★ 왜 — Roadmap·Sync 는 10초마다 다시 읽는다(`REALTIME_POLL_MS`). 뒤 탭에 열어 둔 화면 하나가 하루 8,640 번
+ *   함수를 부르고, 심사 기간 내내 열린 탭 몇 개면 Vercel Hobby 의 한 달 호출 한도(100만)에 닿는다 —
+ *   아무도 안 보는 화면을 갱신하느라 모두가 보는 링크를 잃는 자리다.
+ * ⚠ 멈추는 것은 **다음 한 번**뿐이다. 돌아온 사람은 기다림이 풀리며 바로 읽은 **지금 값**을 본다.
+ * ⚠ `document` 가 없으면(서버 렌더) 그냥 부른다 — 숨을 곳이 없다.
+ */
+export function whenVisible(page: VisibilitySource | undefined, run: () => void): () => void {
+  if (page === undefined || !page.hidden) {
+    run()
+    return () => {}
+  }
+  const onChange = (): void => {
+    if (page.hidden) return
+    page.removeEventListener('visibilitychange', onChange)
+    run()
+  }
+  page.addEventListener('visibilitychange', onChange)
+  return () => page.removeEventListener('visibilitychange', onChange)
+}
+
 /**
  * 🔴 **다시 읽는 동안 손에 든 값을 버리지 않는다.** `useAsync` + `setInterval(reload)`
  * 로 만들면 2초마다 `loading` 으로 되돌아가 화면이 skeleton 과 막대 사이를 깜빡인다 —
@@ -85,6 +116,9 @@ export function usePolling<T>(
   useEffect(() => {
     let alive = true
     let timer: ReturnType<typeof setTimeout> | undefined
+    //  숨은 탭에서 차례를 기다리는 중이면 그 기다림을 푸는 함수 (`whenVisible`).
+    let stopWaiting = (): void => {}
+    const page = typeof document === 'undefined' ? undefined : document
 
     //  ⚠ 첫 번째만 `loading` 이다. 두 번째부터는 손에 든 값을 그대로 두고 갈아 끼운다.
     setResult({ state: 'loading' })
@@ -94,14 +128,16 @@ export function usePolling<T>(
           if (!alive) return
           setResult({ state: 'ready', data })
           const delay = decide.current(data)
-          if (delay !== null) timer = setTimeout(tick, delay)
+          //  🔴 다음 차례는 **보이는 탭에서만** 온다 — 숨어 있으면 다시 보이는 순간까지 미룬다 (`whenVisible`).
+          //  ⚠ 첫 읽기는 미루지 않는다 — 뒤 탭으로 열어도 한 번은 그려져 있어야 돌아왔을 때 skeleton 이 아니다.
+          if (delay !== null) timer = setTimeout(() => { stopWaiting = whenVisible(page, tick) }, delay)
         },
         (error: unknown) => { if (alive) setResult({ state: 'error', error }) },
       )
     }
     tick()
 
-    return () => { alive = false; if (timer !== undefined) clearTimeout(timer) }
+    return () => { alive = false; stopWaiting(); if (timer !== undefined) clearTimeout(timer) }
   }, [run])
 
   return { result, reload: useCallback(() => setNonce((n) => n + 1), []) }
