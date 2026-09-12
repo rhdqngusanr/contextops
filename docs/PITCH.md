@@ -144,26 +144,47 @@
 > 클립은 `.ci/video/` 에 떨어진다. ⚠ **저장소에 mp4·gif 를 넣지 마라** (§5 의 같은 규칙) —
 > `.ci/` 는 `.gitignore` 가 막고 있고, 근거로 남길 것은 **파일이 아니라 만드는 명령**이다.
 
-### 자막 — 시각이 판마다 같아야 얹힌다
+### 자막 · 음악 — 한 줄 (`tools/burn-captions.ps1`)
 
-`tools/record-demo.ps1` 이 `-t` 로 끊으므로 길이가 늘 같다. 그래서 자막을 **시각으로** 적을 수 있다.
-`docs/evidence/2026-09-12-video/ko.srt` 같은 파일을 만들고 (§1-A 컷 표의 초를 그대로):
-
-```srt
-1
-00:00:02,000 --> 00:00:06,000
-같은 팀인데 AI 마다 답이 다릅니다
-
-2
-00:00:06,000 --> 00:00:13,500
-재시도는 5회인가 3회인가 — 각자의 CLAUDE.md 가 다르기 때문입니다
+```
+powershell -ExecutionPolicy Bypass -File tools/burn-captions.ps1 `
+  -Video .ci/video/demo-ko-<stamp>.mp4 -Srt docs/evidence/2026-09-12-video/ko.srt
 ```
 
-굽는다 (글꼴은 화면 글꼴과 **다른 것 하나**만 · §1 「자막」):
+음악까지 (파일은 직접 구해야 한다 — 아래 「음악은 어디서」):
 
-```bash
-ffmpeg -i .ci/video/demo-ko-<stamp>.mp4 -vf "subtitles=docs/evidence/2026-09-12-video/ko.srt:force_style='FontName=Malgun Gothic,FontSize=22,PrimaryColour=&H00FFFFFF&,BackColour=&H80000000&,BorderStyle=4,MarginV=40'" -c:a copy .ci/video/demo-ko-sub.mp4
 ```
+powershell -ExecutionPolicy Bypass -File tools/burn-captions.ps1 `
+  -Video .ci/video/demo-en-<stamp>.mp4 -Srt docs/evidence/2026-09-12-video/en.srt `
+  -Font "Segoe UI" -Music path/to/track.mp3 -MusicVolume 0.22
+```
+
+★ **자막은 화면 위가 아니라 아래 띠에 얹는다.** 이 클립의 주인공은 제품 화면이라, 그 위에
+  자막을 올리면 보여 주려던 것을 가린다. 스크립트가 아래에 96px 띠를 붙이고 거기에 그린다.
+★ **문장의 정본은 `.srt` 다** — 사람이 고치고, 유튜브에는 자막 트랙으로 그대로 올린다.
+  스크립트가 굽기 직전에 `.ass` 로 바꿔 쓰고 버린다 (문장을 두 곳에 두지 않는다).
+★ 음악은 **반복되고 끝 2초가 페이드 아웃**이다. 음원이 영상보다 짧아도 되고, 뚝 끊기지 않는다.
+
+⚠ **왜 raw ffmpeg `subtitles=...force_style` 로 안 하나** — libass 는 자막에 해상도 정보가
+  없으면 기준을 **288** 로 잡고 글자를 그 비율로 늘린다. `FontSize=23` 이라고 적어도 956px
+  영상에서는 **약 76px** 로 그려져 띠 밖으로 삐져나온다 (`original_size` 로도 안 잡혔다 · 2026-09-12
+  에 두 번 밟았다). 스크립트는 `.ass` 헤더에 `PlayResX/PlayResY` 를 영상 크기로 박아서
+  **1 단위 = 1 픽셀**로 만든다.
+
+### 음악은 어디서 — ⚠ 라이선스가 걸린다
+
+대회 약관이 **오픈소스·외부 API·생성형 AI 의 라이선스 준수**를 요구한다(`docs/SUBMISSION.md`
+「대회 규정 원문」). 저작권 있는 곡을 깔면 유튜브·레딧에서 막히는 것보다 **규정 쪽이 먼저 문제**다.
+
+| 어디 | 조건 |
+|---|---|
+| YouTube 오디오 보관함 | 무료 · 상당수 저작자 표시 불필요 · 유튜브에 올릴 거면 제일 안전 |
+| Pixabay Music · Free Music Archive | CC0/CC-BY 가 섞여 있다 — **곡마다** 조건을 확인하고 CC-BY 면 크레딧을 넣어라 |
+| 생성형 AI 로 만들기 | 그 서비스의 상업적 이용 조건을 확인하고, **제출서의 「사용한 AI 툴」에 적어라** (필수 기재 항목이다) |
+
+🔴 **음악이 꼭 필요한지 먼저 물어라.** 이 클립은 38초 무음이고, 레딧·X·투표 페이지는
+   **자동재생이 음소거**다 — 거기서 음악은 아무 일도 안 한다. 값이 있는 곳은 유튜브에 올려
+   링크로 걸 때뿐이다. **자막이 음악보다 훨씬 중요하다.**
 
 ### GIF — 레딧 글에 붙일 것
 
@@ -193,3 +214,5 @@ ffmpeg -y -i .ci/video/demo-ko-<stamp>.mp4 -vf "setpts=0.7*PTS" -an .ci/video/de
 | 앞 15초가 가만히 있는 첫 화면 | 녹화기는 창이 뜨자마자 찍는데 운전은 그 뒤에도 카운트다운을 셌다 — **초를 양쪽에서 지어냈다** | 운전이 **신호 파일**을 남기고 녹화기가 그걸 보고 시작 |
 | 위에 제목 표시줄이 찍힘 | Chrome 앱 창은 제목 줄을 **클라이언트 영역 안에** 그려서 `GetClientRect` 로 안 걷힌다 | 브라우저에게 직접 묻는다 — `screenX/screenY` + 창·뷰포트 크기 차이로 테두리·제목 줄을 센다 |
 | 영어판 오른쪽 위를 번역 풍선이 가림 | 브라우저는 한국어인데 페이지가 영어 (`--disable-features=Translate` 는 **안 먹었다**) | `--lang` 으로 **브라우저 언어를 페이지와 맞춘다** |
+| 자막이 3배 크기로 띠 밖에 그려짐 | libass 가 해상도 정보 없는 SRT 를 **288 기준**으로 늘린다 | `.ass` 헤더에 `PlayResX/PlayResY` 를 박는다 (`tools/burn-captions.ps1`) |
+| `afade` 가 `st==2` 로 죽음 | PowerShell 이 `$fadeStart:` 를 **이름공간 문법**(`$env:PATH` 같은)으로 읽는다 | `${fadeStart}` 로 감싼다 |

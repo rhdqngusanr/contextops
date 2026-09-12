@@ -1,0 +1,27 @@
+1
+00:00:02,200 --> 00:00:06,000
+Same team — a different answer from every AI
+
+2
+00:00:06,200 --> 00:00:13,300
+Retry 5 times? 3?
+Everyone's CLAUDE.md says something different
+
+3
+00:00:13,700 --> 00:00:20,500
+The AI raises the contradictions as questions
+It doesn't rule on them — people decide
+
+4
+00:00:20,900 --> 00:00:25,600
+Only what the team lead approves gets published
+No AI touches anything after approval
+
+5
+00:00:26,000 --> 00:00:30,700
+Progress shows up with its evidence
+A person confirms what counts as done
+
+6
+00:00:31,100 --> 00:00:36,500
+Every machine receives the same version
