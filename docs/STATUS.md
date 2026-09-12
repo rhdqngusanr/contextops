@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-12 오후 · 사람 세션(루프 밖) · **공개 전 보안 점검 3건 + 영어 모드 기반·랜딩** — 아래 첫 절. 그 앞의 마지막 갱신은 ↓_
+_마지막 갱신: 2026-09-12 저녁 · 사람 세션(루프 밖) · **보안 3건 + 영어 모드(기반·랜딩·앱 껍데기·칩) → push·배포 완료** — `verify:prod` 47/0 · 영어 자동감지 production 실측. 남은 것은 앱 안쪽 화면 문구(아래 「🙋 다음 판」). 아래 첫 절._
 
 _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **프론트 리디자인 push·배포 완료** — 뉴트럴 모노크롬 · Codex 클레이 그림 + 스톱모션 · 한 줄 「팀의 기억과 AI의 기억을 한 방향으로」 · production <https://contextops-rosy.vercel.app> 이 새 벌 (`verify:prod` 44/0 · 15:0x) · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄 + 이 세션의 🙋 둘(Taste 영구 로그인 · Taste 샘플)._
 
@@ -55,8 +55,37 @@ _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **�
 | 눈으로 봄 | dev 서버 + 브라우저로 KO→EN 토글 실제 클릭 · 탭 제목·머리글·히어로·3분 코스 전부 영어 전환 확인 |
 | 곁다리 정리 | 캡처 카드 제목이 `e2e/plan.ts`·`tour.ts` **두 곳**에 같은 문장으로 살고 있었다 → 코스로 정본을 모으고 plan 이 읽게 |
 
-🙋 **남은 것 (다음 판)** — 앱 7화면 문구 약 550줄(`screens.ts`·chips·proposals·conflict-card·roadmap·sync) ·
-데모 씨앗 내용 약 200줄 · `og.png` 는 한 장이라 한국어(제목·설명은 언어를 따라가므로 영어 미리보기에서 읽히는 글자는 영어다).
+### 배포 (2026-09-12 저녁)
+
+| 무엇 | 잰 것 |
+|---|---|
+| push | `a11310e..4b7e6da` 일곱 커밋 |
+| 마이그레이션 0010 | 적용 — **표 19 · 인덱스 9/9 · RLS 19/19** (`rate_hits` · Session pooler 5432 로) |
+| `verify:prod` | **47 passed / 0 failed** · GATE 3 6.9초 · Data API 꺼짐 확인(503) |
+| 영어 자동감지 | production 실측 — `Accept-Language: en` → 영어 랜딩 · `<html lang="en">` · 탭 제목 영어 |
+
+### 🙋 다음 판 — 영어화가 **안 된** 것 (여기부터 이어 하면 된다)
+
+> 방법은 정해져 있다: 구조(경로·tone·버튼 목적지)는 기존 표에 두고 **글자만** `localized()` 로 가른다.
+> 한국어 쪽은 기존 표에서 뽑아 쓰고(문장을 두 번 적지 않는다), 표를 만들면 `test/i18n.test.ts` 의
+> `MODULES` 에 한 줄 — 안 적으면 게이트 ①이 빨개진다. 함수 대신 `fill()` 자리표시자를 쓴다.
+
+| 파일 | 대략 줄 | 왜 이 차례인가 |
+|---|---|---|
+| `components/roadmap.tsx` · `components/sync.tsx` | 29 · 29 | 3분 코스의 걸음 3·4 |
+| `components/conflict-card.tsx` · `question-stack.tsx` · `lib/web/conflict-sides.ts` | 42 · 25 · 25 | 걸음 1(정리) — 게스트가 **제일 먼저** 보는 화면 |
+| `app/…/packs/[semver]/page.tsx` · `components/context-doc.tsx` | 15 · 14 | 걸음 2(Pack Explorer) |
+| `components/proposals.tsx` | 56 | 화면 6 |
+| `app/…/context/page.tsx` · `components/item-status-actions.tsx` · `lib/web/item-gist.ts` | 36 · 10 · 14 | 화면 5 |
+| `lib/web/jargon.ts` · `components/fact-line.tsx` · `evidence.tsx` · `job-progress.tsx` | 31 · 23 · 12 · 12 | 여러 화면이 같이 쓰는 조각 |
+| `components/team-home.tsx` · `app/…/p/new` · `app/…/import` | 15 · 14 · 17 | 로그인 뒤의 길 |
+| `lib/demo/seed.ts` · `seed-demo.ts` | 159 · 36 | **데모 내용 자체** — 씨앗을 언어별로 심을지 화면에서 옮길지 먼저 정해야 한다 |
+
+⛔ **번역하면 안 되는 것** — `lib/ai/structure.ts`·`lib/ai/conflict.ts`(LLM 프롬프트 · 바꾸면 모델 출력이 바뀐다) ·
+`lib/api/seed-questions.ts`(그 문장이 행과 표를 잇는 열쇠다 · SPEC §2) · `og.png`(한 장이라 한국어 — 제목·설명은 언어를 따라간다).
+
+🙋 **레딧 글**: `docs/evidence/2026-09-12-reddit/post-draft.md` — 링크·점검표까지 채워 둠. ⚠ 본문 마지막 문단이
+「앱 안쪽은 아직 한국어」를 밝히는 자리다. 위 표가 비면 그 문장을 지워라.
 
 🙋 **레딧 글 초안**: `docs/evidence/2026-09-12-reddit/post-draft.md` — 서브레딧 추천 · 제목 후보 3 · 영어 본문 ·
 올리기 전 점검표. ⚠ **링크는 위 보안 수정이 배포된 뒤에** 붙인다.

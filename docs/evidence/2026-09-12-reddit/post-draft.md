@@ -1,7 +1,8 @@
 # Reddit post draft (2026-09-12)
 
 > 목적: 레딧에서 **배울 것**을 얻는다 — 자랑이 아니라 **구체적인 질문 셋**.
-> 규칙: 링크는 보안 수정이 배포된 뒤에 붙인다 (R1~R3 는 이 날 닫았다).
+> ✅ 2026-09-12 배포 완료 — R1~R3 가 production 에 올라갔고 `verify:prod` 47/0.
+>   영어 자동감지도 production 에서 확인했다 (`Accept-Language: en` → 영어 랜딩 · `<html lang="en">`).
 >
 > ⚠ 레딧은 홍보 글에 가차없다. 그래서 이 초안은 ① 문제부터 ② 만든 것 ③ **틀렸을지도
 >   모르는 결정 셋** ④ 물어보는 것 — 순서다. 답을 원하는 자리를 명시해야 답이 온다.
@@ -111,20 +112,27 @@ usual answer "put Redis in front of it and stop thinking about it"?
 public anon key can't read anything), Gemini server-side for the structuring/conflict-detection steps only,
 and a Claude Code plugin (hooks + skills + a small CLI) on the developer side.
 
-It's open source, and it's my entry for a hackathon here in Korea, so the UI is Korean-first — I added an
-English toggle in the header today, mostly so this post would be worth clicking.
+It's open source, and it's my entry for a hackathon here in Korea, so the UI is Korean-first. I added English
+today — the landing page, navigation, status chips, sign-in and privacy policy are all translated, and the page
+picks English from your browser automatically. **Fair warning: the deeper screens inside the demo are still
+Korean while I work through them.** The four-screen guided tour will tell you what you're looking at in English
+even where the data around it isn't.
 
 Happy to go into detail on any of it. Mostly I want to know where this breaks at a team size bigger than
 mine.
 
-<LINK — 보안 수정 배포 뒤에 붙인다>
+Live: https://contextops-rosy.vercel.app — it picks English from your browser, and there's a KO/EN toggle in the header.
+Code: https://github.com/rhdqngusanr/contextops
 
 ---
 
 ## 올리기 전 점검
 
-- [ ] R1~R3 배포 완료 · `verify:prod` 초록
-- [ ] 영어 토글이 production 에서 실제로 동작
+- [x] R1~R3 배포 완료 · `verify:prod` 47/0 (2026-09-12)
+- [x] 영어 토글·자동감지가 production 에서 동작 (실측)
+- [ ] ⚠ **앱 안쪽 화면은 아직 한국어다** — 랜딩·내비·칩·로그인·처리방침까지가 영어다.
+      글에서 링크를 걸 때 그 사실을 한 줄로 말해라 (아래 본문 마지막 문단이 그 자리다).
+      숨기면 클릭한 사람이 「고장」으로 읽는다
 - [ ] 링크 하나만 · 본문 맨 아래
 - [ ] 제목에 제품 이름 없음 (문제가 먼저)
 - [ ] 첫 댓글로 「스택 상세」를 직접 달아 둔다 — 본문을 짧게 유지하는 관용 수법
