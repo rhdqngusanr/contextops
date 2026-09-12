@@ -34,6 +34,7 @@ const MODULES: Record<string, () => Promise<Record<string, unknown>>> = {
   'lib/web/chrome': () => import('../src/lib/web/chrome'),
   'lib/web/auth': () => import('../src/lib/web/auth'),
   'components/landing': () => import('../src/components/landing'),
+  'components/chips': () => import('../src/components/chips'),
   'components/states': () => import('../src/components/states'),
   'components/command-palette': () => import('../src/components/command-palette'),
 }

@@ -1,4 +1,10 @@
+'use client'
+
 import type { ReactNode } from 'react'
+
+import { fill } from '../lib/i18n/format'
+import { localized, pick } from '../lib/i18n/localized'
+import { useLocale } from '../lib/i18n/provider'
 import { type ScopeKind, type ProgressStatus,
   AI_JOB_STATUSES, CONFIDENCE_LEVELS, CONFLICT_KIND_RULES, CONFLICT_KINDS, CONFLICT_SEVERITIES, ITEM_STATUSES,
   ITEM_TYPES, MILESTONE_STATUSES, PROGRESS_SOURCES, PROPOSAL_OPERATIONS, PROPOSAL_STATUSES,
@@ -304,43 +310,47 @@ export function SyncChip({ status }: { status: SyncStatus }) {
   //  ⚠ 툴팁 문구는 DESIGN_BRIEF §4 화면 9 가 정한 문장이고, 정본은 `SYNC_MEANING` 이다.
   //    (56바퀴까지는 `applied` 하나만 문장이 있었다 — 나머지 넷은 칩만 보고 뜻을 짐작해야
   //    했다. 다섯 다 표에 있으니 자리마다 갈릴 곳이 없다.)
-  return <Chip spec={SYNC_CHIP[status]} title={SYNC_MEANING[status]} />
+  const chips = useChips()
+  return <Chip spec={chips.sync[status]} title={chips.syncMeaning[status]} />
 }
 
 export function ItemStatusChip({ status }: { status: ItemStatus }) {
-  return <Chip spec={ITEM_STATUS_CHIP[status]} />
+  return <Chip spec={useChips().itemStatus[status]} />
 }
 
 export function ConfidenceChip({ confidence }: { confidence: Confidence }) {
-  return <Chip spec={CONFIDENCE_CHIP[confidence]} title={CONFIDENCE_MEANING[confidence]} />
+  const chips = useChips()
+  return <Chip spec={chips.confidence[confidence]} title={chips.confidenceMeaning[confidence]} />
 }
 
 export function AiJobStatusChip({ status }: { status: AiJobStatus }) {
-  return <Chip spec={AI_JOB_STATUS_CHIP[status]} />
+  return <Chip spec={useChips().aiJobStatus[status]} />
 }
 
 export function ConflictKindChip({ kind }: { kind: ConflictKind }) {
   //  툴팁은 계약의 사람 말(`CONFLICT_KIND_RULES[kind].hint`) — 영어 값이 떴다 (2026-09-11). 빈 힌트면 툴팁 없음.
   const hint = CONFLICT_KIND_RULES[kind].hint.replace(/\*\*/g, '')
-  return <Chip spec={CONFLICT_KIND_CHIP[kind]} title={hint === '' ? undefined : hint} />
+  return <Chip spec={useChips().conflictKind[kind]} title={hint === '' ? undefined : hint} />
 }
 
 export function ConflictSeverityChip({ severity }: { severity: ConflictSeverity }) {
   //  높음만 진하다 — 카드의 왼쪽 빨간 괘선(`.conflict-card[data-severity='high']`)과 짝이다.
-  return <Chip spec={CONFLICT_SEVERITY_CHIP[severity]} strong={severity === 'high'} />
+  return <Chip spec={useChips().conflictSeverity[severity]} strong={severity === 'high'} />
 }
 
 export function MilestoneChip({ status }: { status: MilestoneStatus }) {
-  return <Chip spec={MILESTONE_CHIP[status]} />
+  return <Chip spec={useChips().milestone[status]} />
 }
 
 export function ProposalStatusChip({ status }: { status: ProposalStatus }) {
-  return <Chip spec={PROPOSAL_STATUS_CHIP[status]} title={PROPOSAL_STATUS_MEANING[status]} />
+  const chips = useChips()
+  return <Chip spec={chips.proposalStatus[status]} title={chips.proposalStatusMeaning[status]} />
 }
 
 export function ProposalOperationChip({ operation }: { operation: ProposalOperation }) {
   //  진하다 — 항목 카드에서 「무엇을 하자는 것인가」가 제일 먼저 보여야 한다 (2026-09-11 · 「눈이 확 안 보여서」).
-  return <Chip spec={PROPOSAL_OPERATION_CHIP[operation]} title={PROPOSAL_OPERATION_MEANING[operation]} strong />
+  const chips = useChips()
+  return <Chip spec={chips.proposalOperation[operation]} title={chips.proposalOperationMeaning[operation]} strong />
 }
 
 /**
@@ -375,11 +385,12 @@ export const SNAPSHOT_HASH_MEANING = '승인본 번호 — 이 버전이 승인�
 
 /** `v1.2.0` 모노 + 「승인본 8자」 (DESIGN_BRIEF §3 「VersionPill」) — 이름표 없는 8자 코드였다 (2026-09-11). */
 export function VersionPill({ semver, hash, official }: { semver: string; hash?: string; official?: boolean }) {
+  const chips = useChips()
   return (
     <span className="row">
-      {official ? <span className="chip tone-ok"><span className="chip-dot" aria-hidden="true" />공식</span> : null}
+      {official ? <span className="chip tone-ok"><span className="chip-dot" aria-hidden="true" />{chips.official}</span> : null}
       <span className="mono ink">v{semver}</span>
-      {hash ? <span className="meta" title={`${SNAPSHOT_HASH_MEANING} (${hash})`}>승인본 <span className="mono">{hash.slice(0, 8)}</span></span> : null}
+      {hash ? <span className="meta" title={`${chips.snapshotHashMeaning} (${hash})`}>{chips.approvedSet} <span className="mono">{hash.slice(0, 8)}</span></span> : null}
     </span>
   )
 }
@@ -389,22 +400,210 @@ export function VersionPill({ semver, hash, official }: { semver: string; hash?:
  * 🔴 P7 의 얼굴이다 — Pack 의 한 줄에서 이 칩까지 이어져야 역추적이 성립한다.
  */
 /** 꼬리표가 무엇인지 — 툴팁 한 줄 (2026-09-11 · 비개발자에게 `item_policy_retry` 는 낱말이 아니다). 항목 제목을 알면 앞에 붙인다. */
-export function ctxTagMeaning(revision?: number, title?: string): string {
-  const head = title === undefined ? '' : `「${title}」 — `
-  const rev = revision === undefined ? '' : ` 개정 ${revision} = 이 항목을 ${revision}번째 고친 판입니다.`
-  return `${head}이 항목의 꼬리표입니다. 발행된 CLAUDE.md 의 줄이 이 이름으로 이 항목을 가리킵니다.${rev}`
+export function ctxTagMeaning(revision?: number, title?: string, words: typeof CHIPS_KO = CHIPS_KO): string {
+  const head = title === undefined ? '' : fill(words.ctxTagTitle, { title })
+  const rev = revision === undefined ? '' : fill(words.ctxTagRevision, { n: revision })
+  return `${head}${words.ctxTagBody}${rev}`
 }
 
 export function CtxTag({ itemId, revision, title }: { itemId: string; revision?: number; title?: string }) {
+  const chips = useChips()
   return (
-    <span className="ctx-tag" title={ctxTagMeaning(revision, title)}>
+    <span className="ctx-tag" title={ctxTagMeaning(revision, title, chips)}>
       {itemId}
-      {revision === undefined ? null : <span className="ctx-rev">개정 {revision}</span>}
+      {revision === undefined ? null : <span className="ctx-rev">{fill(chips.revision, { n: revision })}</span>}
     </span>
   )
 }
 
 /** AI 가 만든 것에만 붙는다 (DESIGN_BRIEF §3 — 사람이 정한 것에 붙이면 신뢰 경계가 흐려진다). */
 export function AiBadge() {
-  return <span className="chip tone-llm"><span className="chip-dot" aria-hidden="true" />AI 제안</span>
+  return <span className="chip tone-llm"><span className="chip-dot" aria-hidden="true" />{useChips().aiProposed}</span>
+}
+
+// =====================================================================
+//  🔴 **칩 표의 언어별 글자** (2026-09-12 · 영어 모드)
+//
+//  ★ 왜 표를 통째로 복사하지 않았나 — 칩의 `tone`(ok/warn/bad/neutral/llm)은 **언어가 없다.**
+//    언어별로 복사하면 색이 두 벌이 되고, 한쪽만 고친 날 영어 화면에서만 초록이던 칩이 노랑이 된다.
+//    그래서 **글자만** 언어별로 두고, `tone` 은 위 표 하나에서 온다.
+//
+//  ★ 한 표에 다 모은 이유 — 칩 표가 열두 개다. 하나씩 `localized()` 로 감싸면 등록도 열둘,
+//    화면이 읽는 문도 열둘이 된다. 화면은 `useChips()` 하나만 알면 된다.
+//
+//  ⚠ 영어 라벨은 **좁은 칸에 들어가는 이름**이다 (위 `SYNC_MEANING` 주석의 구분 그대로) —
+//    문장은 `*Meaning` 쪽이다. 라벨이 길어지면 표가 접힌다.
+// =====================================================================
+
+/** `tone` 은 그대로 두고 `label` 만 갈아 끼운다. */
+function relabel<K extends string>(base: Record<K, ChipSpec>, labels: Record<K, string>): Record<K, ChipSpec> {
+  const out = {} as Record<K, ChipSpec>
+  for (const key of Object.keys(base) as K[]) out[key] = { label: labels[key], tone: base[key].tone }
+  return out
+}
+
+const CHIPS_KO = {
+  sync: SYNC_CHIP,
+  syncMeaning: SYNC_MEANING,
+  itemStatus: ITEM_STATUS_CHIP,
+  confidence: CONFIDENCE_CHIP,
+  confidenceMeaning: CONFIDENCE_MEANING,
+  evidence: EVIDENCE_CHIP,
+  aiJobStatus: AI_JOB_STATUS_CHIP,
+  conflictKind: CONFLICT_KIND_CHIP,
+  conflictSeverity: CONFLICT_SEVERITY_CHIP,
+  milestone: MILESTONE_CHIP,
+  proposalStatus: PROPOSAL_STATUS_CHIP,
+  proposalStatusMeaning: PROPOSAL_STATUS_MEANING,
+  proposalOperation: PROPOSAL_OPERATION_CHIP,
+  proposalOperationMeaning: PROPOSAL_OPERATION_MEANING,
+  sourceDocumentKind: SOURCE_DOCUMENT_KIND_LABEL,
+  progressSource: PROGRESS_SOURCE_LABEL,
+  progressStatus: PROGRESS_STATUS_LABEL,
+  itemType: ITEM_TYPE_LABEL,
+  scopeKind: SCOPE_KIND_LABEL,
+  snapshotHashMeaning: SNAPSHOT_HASH_MEANING,
+  official: '공식',
+  approvedSet: '승인본',
+  aiProposed: 'AI 제안',
+  revision: '개정 {n}',
+  //  ⚠ 세 조각으로 나눠 두는 이유 — 「「제목」 — 이 항목의 꼬리표입니다. … 개정 n = …」은
+  //    어순이 언어마다 달라서, 한 문장으로 붙여 두면 영어에서 조각의 자리가 어긋난다.
+  ctxTagTitle: '「{title}」 — ',
+  ctxTagBody: '이 항목의 꼬리표입니다. 발행된 CLAUDE.md 의 줄이 이 이름으로 이 항목을 가리킵니다.',
+  ctxTagRevision: ' 개정 {n} = 이 항목을 {n}번째 고친 판입니다.',
+}
+
+const CHIPS_EN: typeof CHIPS_KO = {
+  sync: relabel(SYNC_CHIP, {
+    applied: 'Applied',
+    outdated: 'Old version',
+    modified: 'Edited by hand',
+    manual: 'Taken as zip',
+    unknown: 'No report',
+  }),
+  syncMeaning: {
+    applied: 'At the last report, the files matched the official version exactly',
+    outdated: 'This machine is on an older version than the official one',
+    modified: 'Same version, but the files were edited by hand on this machine',
+    manual: 'Downloaded as a zip and applied by hand, without the plugin',
+    unknown: 'This machine has not reported yet',
+  },
+  itemStatus: relabel(ITEM_STATUS_CHIP, {
+    draft: 'Draft',
+    review: 'In review',
+    active: 'In force',
+    deprecated: 'Retired',
+  }),
+  confidence: relabel(CONFIDENCE_CHIP, {
+    high: 'Well grounded',
+    medium: 'Fairly grounded',
+    low: 'Weakly grounded',
+  }),
+  confidenceMeaning: {
+    high: 'This is in the source document as written',
+    medium: 'Read out of the source, but some interpretation was involved',
+    low: 'The AI was not confident about this one — a person should check it',
+  },
+  evidence: relabel(EVIDENCE_CHIP, { yes: 'Has evidence', no: 'No evidence' }),
+  aiJobStatus: relabel(AI_JOB_STATUS_CHIP, {
+    queued: 'Waiting its turn',
+    running: 'Sorting it out',
+    succeeded: 'Sorted',
+    failed: 'Sorting failed',
+  }),
+  conflictKind: relabel(CONFLICT_KIND_CHIP, {
+    contradiction: 'Contradiction',
+    stale: 'Out of date',
+    duplicate: 'Duplicate',
+    doc_vs_code: 'Doc ↔ code',
+    open_question: 'Needs an answer',
+    seed_question: 'Question for the team',
+  }),
+  conflictSeverity: relabel(CONFLICT_SEVERITY_CHIP, {
+    high: 'Severity high',
+    medium: 'Severity medium',
+    low: 'Severity low',
+  }),
+  milestone: relabel(MILESTONE_CHIP, {
+    not_started: 'Not started',
+    in_progress: 'In progress',
+    done_candidate: 'Waiting to be confirmed',
+    done: 'Done',
+  }),
+  proposalStatus: relabel(PROPOSAL_STATUS_CHIP, {
+    draft: 'Draft',
+    submitted: 'Awaiting approval',
+    approved: 'Approved (awaiting publish)',
+    rejected: 'Rejected',
+    published: 'Published',
+  }),
+  proposalStatusMeaning: {
+    draft: 'Not submitted yet',
+    submitted: 'Waiting on the team lead',
+    approved: 'Approved, waiting for the next publish',
+    rejected: 'Sent back with a reason',
+    published: 'Already went out in a publish',
+  },
+  proposalOperation: relabel(PROPOSAL_OPERATION_CHIP, {
+    add: 'Add item',
+    update: 'Update item',
+    deprecate: 'Retire item',
+  }),
+  proposalOperationMeaning: {
+    add: 'Adds a new item',
+    update: 'Changes the item as it stands',
+    deprecate: 'Takes the item out',
+  },
+  sourceDocumentKind: {
+    goal: 'Goals',
+    policy: 'Policy',
+    roadmap: 'Roadmap',
+    adr: 'Technical decision record',
+    notes: 'Notes',
+    wiki: 'Wiki page',
+  },
+  progressSource: {
+    agent: 'Reported by Claude',
+    hook: 'Reported by the plugin at the end of a session',
+    manual: 'Written by a person',
+  },
+  progressStatus: {
+    in_progress: 'In progress',
+    criterion_done: 'Filled one completion criterion',
+    done_candidate: 'Completion candidate — waiting on a person',
+    none: 'No progress',
+  },
+  itemType: {
+    mission: 'Mission',
+    goal: 'Goal',
+    roadmap: 'Roadmap',
+    architecture: 'Structure',
+    domain: 'Domain term',
+    policy: 'Policy',
+    adr: 'Technical decision',
+    workflow: 'Workflow',
+    constraint: 'Constraint',
+    open_question: 'Needs an answer',
+  },
+  scopeKind: {
+    project: 'Whole project',
+    domain: 'Domain',
+    path: 'Path',
+  },
+  snapshotHashMeaning: 'Approved-set number — the number of the item set this version approved. Same number means same contents.',
+  official: 'Official',
+  approvedSet: 'Approved set',
+  aiProposed: 'AI proposal',
+  revision: 'rev {n}',
+  ctxTagTitle: '“{title}” — ',
+  ctxTagBody: 'This is the item’s tag. A line in the published CLAUDE.md points at this item by this name.',
+  ctxTagRevision: ' rev {n} = the {n}th time this item was changed.',
+}
+
+export const CHIP_WORDS = localized<typeof CHIPS_KO>({ ko: CHIPS_KO, en: CHIPS_EN })
+
+/** 화면이 칩 글자를 읽는 **유일한 문**. 표를 직접 그리면 그 화면만 한국어로 남는다. */
+export function useChips(): typeof CHIPS_KO {
+  return pick(CHIP_WORDS, useLocale())
 }
