@@ -100,7 +100,8 @@ describe('drizzle 마이그레이션이 Postgres 에서 실제로 적용된다',
     )
     const inDb = created.map((r) => r.table_name).sort()
     const inTs = tables.map(getTableName).sort()
-    expect(inTs.length).toBe(18) // SPEC §2 의 표 개수 (+`ai_jobs` · §7.1·§7.2 의 job 자리)
+    //  SPEC §2 의 표 개수 (+`ai_jobs` · §7.1·§7.2 의 job 자리 · +`rate_hits` · §5 빈도 제한)
+    expect(inTs.length).toBe(19)
     expect(inDb).toEqual(inTs)
   })
 
@@ -123,7 +124,7 @@ describe('drizzle 마이그레이션이 Postgres 에서 실제로 적용된다',
     const inDb = (
       await rows<{ indexname: string }>(`select indexname from pg_indexes where schemaname = 'public'`)
     ).map((r) => r.indexname)
-    expect(INDEX_NAMES.length).toBe(8)
+    expect(INDEX_NAMES.length).toBe(9)
     for (const name of INDEX_NAMES) expect(inDb, `인덱스 ${name}`).toContain(name)
   })
 

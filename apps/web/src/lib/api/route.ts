@@ -5,6 +5,7 @@ import { getDb, type Db } from '../../db/client'
 import { actorWrites, readBearer, resolveActor, type Actor } from './auth'
 import { ApiError } from './error'
 import { describeError, logError, logRequest } from './log'
+import { checkRateLimit } from './rate-limit'
 import { failure, matchesEtag, noContent, notModified, ok, packText, packZip, quoteEtag } from './respond'
 
 // =====================================================================
@@ -40,11 +41,17 @@ export type RouteContext<P> = {
    * ETag 가 붙는 응답을 한 번에 낸다 (SPEC §5 packs 세 줄).
    * `If-None-Match` 가 맞으면 **본문을 만들지 않고** 304 를 돌려준다 —
    * 그래서 `body` 는 값이 아니라 함수다. 안 그러면 304 인데도 Pack 을 조립한다.
+   *
+   * 🔴 **`body` 는 `async` 여도 된다** (2026-09-12 · R2). 예전엔 동기 함수만 받았고,
+   *    그래서 DB 를 읽어야 만들 수 있는 본문은 **`cached` 를 부르기 전에** 만들 수밖에
+   *    없었다 — zip 라우트가 정확히 그랬다: 304 로 끝날 요청에도 파일 수십 개를 먼저
+   *    이어 붙였다. 게스트 토큰 하나로 CPU·전송량을 증폭시킬 수 있는 자리였다.
+   *    ★ 값을 기다리는 것은 304 가 아닐 때뿐이다 — 「비싼 본문은 늦게 만든다」가 이 문의 약속이다.
    */
   //  ★ 본문의 **종류가 표**다 — `json`(봉투) · `text`(Pack 파일 그대로) · `zip`(파일로 저장).
   //    새 종류를 더하는 절차: ① 여기 `CachedOpts` 에 갈래 ② `respond.ts` 에 만드는 함수
   //    ③ 아래 `cached` 의 분기 한 줄. 라우트는 종류만 말하고 `Response` 를 만들지 않는다.
-  cached(opts: CachedOpts, body: () => unknown): Response
+  cached(opts: CachedOpts, body: () => unknown | Promise<unknown>): Response | Promise<Response>
   /** 로그에 남길 식별자를 붙인다 (SPEC §11 — id 만, 이름·본문 금지). */
   note(fields: { user_id?: string; project_id?: string }): void
 }
@@ -79,6 +86,16 @@ export function route<P extends Record<string, string | string[]> = Record<strin
     let response: Response
 
     try {
+      //  🔴 **핸들러보다, 그리고 주체 판정보다 먼저 센다** (`lib/api/rate-limit.ts` 의 머리 주석).
+      //     ★ 여기가 아니면 셀 수 없다 — 라우트 안에서 세면 새 라우트가 반드시 빠뜨리고,
+      //       `ctx.actor()` 뒤에서 세면 「자격증명이 틀린 요청을 초당 천 번」이 그대로 지난다.
+      //     ⚠ DB 가 흔들리면 이 문은 **열린다**(fail-open). 그 선택의 이유도 같은 주석에 있다.
+      //  ⚠ `getDb` 를 **부르지 않고 넘긴다** — DB 설정이 없는 배포에서 여기서 터지면
+      //    「DB 가 없어도 401」·「DB 가 없으면 503」이 500 으로 덮인다 (rate-limit.ts 의 주석).
+      await checkRateLimit(getDb, name, req, now, (err) => {
+        logError({ request_id: requestId, route: name, error: describeError(err) })
+      })
+
       const params = (await next.params) ?? ({} as P)
       response = await handle({
         get db() { return getDb() },
@@ -102,14 +119,15 @@ export function route<P extends Record<string, string | string[]> = Record<strin
         ok: (data, status, headers) => ok(data, requestId, status, headers),
         noContent,
         cached: (opts, body) => {
+          //  🔴 **본문을 만들기 전에 끊는다.** `body()` 를 부르지도 않는다 — 그게 이 문의 전부다.
           if (matchesEtag(req.headers.get('if-none-match'), opts.etag)) {
             return notModified(requestId, opts)
           }
-          const value = body()
-          if (opts.kind === 'text') return packText(String(value), requestId, opts)
-          if (opts.kind === 'zip') return packZip(value as Uint8Array, requestId, opts)
-          //  JSON 쪽은 봉투를 지킨다 — 화면이 `{data, meta}` 하나만 읽게.
-          return ok(value, requestId, 200, { etag: quoteEtag(opts.etag), 'cache-control': opts.cacheControl })
+          const produced = body()
+          //  ⚠ 동기 본문은 그대로 돌려준다 — `await` 로 감싸면 멀쩡하던 라우트가
+          //    전부 마이크로태스크 한 바퀴를 더 돌고, 시험의 동기 기대값이 흔들린다.
+          if (produced instanceof Promise) return produced.then((value) => respondCached(opts, value, requestId))
+          return respondCached(opts, produced, requestId)
         },
         note: (fields) => Object.assign(noted, fields),
       })
@@ -144,6 +162,17 @@ export function route<P extends Record<string, string | string[]> = Record<strin
  *   여기에 **그 라우트 이름 하나만** 예외로 적어라. 「게스트도 POST 할 수 있다」로
  *   넓히지 마라 — 그러면 이 검사가 사실상 사라진다.
  */
+/**
+ * 만들어진 본문을 **종류대로** 봉투에 담는다 — `cached` 의 동기·비동기 두 갈래가 같은 자리로 모인다.
+ * ⚠ 새 `kind` 를 더하면 여기 한 줄이다 (`CachedOpts` 의 주석이 절차의 정본).
+ */
+function respondCached(opts: CachedOpts, value: unknown, requestId: string): Response {
+  if (opts.kind === 'text') return packText(String(value), requestId, opts)
+  if (opts.kind === 'zip') return packZip(value as Uint8Array, requestId, opts)
+  //  JSON 쪽은 봉투를 지킨다 — 화면이 `{data, meta}` 하나만 읽게.
+  return ok(value, requestId, 200, { etag: quoteEtag(opts.etag), 'cache-control': opts.cacheControl })
+}
+
 const SAFE_METHODS = new Set(['GET', 'HEAD'])
 
 function refuseWrite(method: string, actor: Actor): void {

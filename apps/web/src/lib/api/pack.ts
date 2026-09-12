@@ -85,22 +85,38 @@ export async function packZipOf(
   projectId: string,
   version: ResolvedVersion,
 ): Promise<{ bytes: Uint8Array; filename: string }> {
+  const filename = await packZipName(db, projectId, version)
+  return { bytes: await packZipBytes(db, version), filename }
+}
+
+/**
+ * 저장될 **파일 이름**만 (`<slug>-v<semver>.zip`).
+ *
+ * 🔴 왜 갈랐나 (2026-09-12 · R2) — 응답이 304 인지 아닌지는 ETag 로 갈리는데, 그 판정에
+ *    필요한 것은 이름뿐이다. 예전엔 이름과 바이트를 한 함수가 같이 냈고, 그래서 라우트가
+ *    **304 로 끝날 요청에도 파일 수십 개를 먼저 이어 붙였다.** 게스트 토큰 하나로 CPU 와
+ *    전송량을 증폭시킬 수 있는 자리였다 (인덱스가 있는 작은 질의 하나 ↔ 표 전체 읽기 + 조립).
+ */
+export async function packZipName(db: Db, projectId: string, version: ResolvedVersion): Promise<string> {
   const [project] = await db
     .select({ slug: projects.slug })
     .from(projects)
     .where(eq(projects.id, projectId))
     .limit(1)
   if (!project) fail('NOT_FOUND', '프로젝트를 찾을 수 없다')
+  return `${project.slug}-v${version.semver}.zip`
+}
 
+/** zip 바이트 — **비싼 쪽**이다. 304 가 아닐 때만 부른다 (`ctx.cached` 의 body). */
+export async function packZipBytes(db: Db, version: ResolvedVersion): Promise<Uint8Array> {
   const rows = await db
     .select({ path: packFiles.path, text: packFiles.content })
     .from(packFiles)
     .where(eq(packFiles.versionId, version.id))
     .orderBy(asc(packFiles.path))
 
-  const bytes = zipBytes(
+  return zipBytes(
     [...rows, { path: ZIP_MANIFEST_PATH, text: manifestJsonText(version.manifest) }],
     new Date(version.manifest.generated_at),
   )
-  return { bytes, filename: `${project.slug}-v${version.semver}.zip` }
 }

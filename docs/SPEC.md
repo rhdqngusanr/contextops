@@ -177,6 +177,11 @@ sync_reports     { id, device_id, project_id, version_id, status enum('applied',
                       없다 (기기가 보낼 수 있는 값은 `REPORTABLE_SYNC_STATUSES` 로 따로 좁힌다). */
 ai_usage         { id, project_id null /* 게스트 데모는 없다 */, feature enum('structure','conflict','ask','demo'), actor_hash text null /* sha256 — 원문 저장 금지 */,
                    model text, input_tokens int, output_tokens int, cost_micros int /* USD 백만분의 1 */, day text /* UTC YYYY-MM-DD */ }
+rate_hits        { bucket text pk /* sha256(주체):라우트:창시작 — 행 하나 = 창 하나 */, count int,
+                   expires_at /* Cron 이 이 값으로 쓸어간다 */ }
+                 /* 🔴 HTTP 빈도 제한의 장부 (§5 「빈도 제한」 · 2026-09-12). ai_usage 와 같은 이유로 표다 —
+                    서버리스는 인스턴스마다 따로 세고 콜드 스타트마다 0이 된다. 원문(IP·사용자 id)은 저장하지
+                    않는다 (§11). 세는 자리는 `lib/api/route.ts` 하나이고 한도의 정본 표는 `lib/api/rate-limit.ts`. */
 ai_jobs          { id, project_id, feature enum('structure','conflict') /* ai_feature 4종 중 job 으로 도는 둘 · CHECK 이 좁힌다 */,
                    status enum('queued','running','succeeded','failed'), input jsonb /* 가리키는 id 만 · P1 */, result jsonb null,
                    progress jsonb null /* {done,total,unit} · 도는 동안 갱신 · CHECK 밖 */,
@@ -192,7 +197,7 @@ progress_events  { id, project_id, device_id, milestone_id text, criterion text 
 
 🔴 **`kind` 6종 중 둘은 「사람에게 묻는 것」이다** (`detected:false` · 값 목록은 `QUESTION_CONFLICT_KINDS`). `open_question` 은 §7.1 이 문서를 읽다 남긴 질문이라 원문 구간(`a_ref`)을 가리키고, **`seed_question` 은 프로젝트를 만드는 순간 심는 씨앗 질문 10장**이라 가리킬 것이 아직 없다 (`anchor:'none'`) — 그래서 넷이 다 빈다. 씨앗 질문 문구의 정본은 `apps/web/src/lib/api/seed-questions.ts` 이고, **그 문장이 행과 표를 잇는 열쇠라서 고치면 안 된다** (고칠 일이 생기면 줄을 하나 더한다). ★ 왜 별도 종류인가 — 같은 `open_question` 으로 심으면 없는 문서를 가리키는 `a_ref` 를 지어내야 하고, 그 근거는 아무 원문도 안 가리킨다 (P7).
 
-인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`, `ai_jobs(project_id,created_at desc)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
+인덱스: `context_items(project_id,status)`, `proposals(project_id,status,created_at desc)`, `progress_events(project_id,milestone_id,created_at desc)`, `sync_reports(project_id,device_id,reported_at desc)`, `conflicts(project_id,status)`, `ai_usage(day,feature)`, `ai_usage(created_at)`, `ai_jobs(project_id,created_at desc)`, `rate_hits(expires_at)`. 정본 목록은 `apps/web/src/db/schema.ts` 의 `INDEX_NAMES` 이고 `test/migration.test.ts` 가 대조한다.
 
 ### 2.1 발행 트랜잭션 (Drizzle `db.transaction`)
 

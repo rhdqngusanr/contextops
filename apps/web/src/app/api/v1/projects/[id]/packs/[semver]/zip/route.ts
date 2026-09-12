@@ -2,7 +2,7 @@ import { Semver } from '@contextops/schema'
 
 import { fail } from '../../../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../../../lib/api/guard'
-import { packZipOf, versionBySemver } from '../../../../../../../../lib/api/pack'
+import { packZipBytes, packZipName, versionBySemver } from '../../../../../../../../lib/api/pack'
 import { pathUuid, route } from '../../../../../../../../lib/api/route'
 
 // =====================================================================
@@ -34,12 +34,14 @@ export const GET = route<{ id: string; semver: string }>(
     await requireProject(ctx.db, actor, projectId, 'member')
     const version = await versionBySemver(ctx.db, projectId, semver.data)
 
-    //  ⚠ `cached` 의 body 는 동기 함수라 zip 을 **먼저** 만든다. 304 면 헛일이지만,
-    //    파일 수십 개를 이어 붙이는 일이라 DB 왕복 하나보다 싸다.
-    const zip = await packZipOf(ctx.db, projectId, version)
+    //  🔴 **이름만 먼저 읽고, 바이트는 304 가 아닐 때만 만든다** (2026-09-12 · R2).
+    //     예전엔 여기서 zip 을 먼저 조립했다 — 「파일 수십 개를 이어 붙이는 일이 DB 왕복
+    //     하나보다 싸다」는 이유였는데, **그 비교가 틀렸다.** 304 인 요청에서 옳은 값은
+    //     「왕복 하나」가 아니라 **0** 이고, 이 문은 게스트 토큰으로도 열린다.
+    const filename = await packZipName(ctx.db, projectId, version)
     return ctx.cached(
-      { etag: version.manifest.manifest_hash, cacheControl: version.cacheControl, kind: 'zip', filename: zip.filename },
-      () => zip.bytes,
+      { etag: version.manifest.manifest_hash, cacheControl: version.cacheControl, kind: 'zip', filename },
+      () => packZipBytes(ctx.db, version),
     )
   },
 )

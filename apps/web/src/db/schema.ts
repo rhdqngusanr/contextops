@@ -641,8 +641,36 @@ function aiJobShapeCheck(column: string, needs: (rule: AiJobStatusRule) => boole
   })
 }
 
+/**
+ * 🔴 **HTTP 빈도 제한의 장부** (SPEC §5 「빈도 제한」 · §11 · 2026-09-12).
+ *
+ * ★ 왜 표가 필요한가 — `ai_usage` 와 똑같은 이유다. 서버리스는 인스턴스마다 따로 세고
+ *   콜드 스타트마다 0으로 돌아간다. 프로세스 메모리에 세면 「분당 n회」는 문서에만
+ *   있는 숫자이고, 실제로는 인스턴스 수만큼 곱해진 값이 통과한다.
+ *
+ * ★ **행 하나 = 창(window) 하나.** `bucket` 이 「누가 · 어느 라우트를 · 어느 창에서」를
+ *   전부 담는다. 그래서 창이 지나면 열쇠가 저절로 달라지고, 「창을 0으로 되돌리는」
+ *   코드가 아예 필요 없다 — 경쟁이 생길 자리를 만들지 않는 것이 이 모양의 목적이다.
+ *   지난 행은 `expires_at` 을 보고 Cron 이 쓸어간다 (`lib/api/rate-limit.ts` 의 `sweepRateHits`).
+ *
+ * ★ 세는 것은 **원자적 UPSERT 한 번**이다 (`INSERT … ON CONFLICT DO UPDATE SET count = count + 1
+ *   RETURNING count`). 「읽고 → 판단하고 → 쓰기」로 하면 동시 요청 둘이 같은 값을 읽고
+ *   둘 다 통과한다 — `ai_usage` 가 advisory lock 으로 막은 바로 그 자리다.
+ *
+ * ⚠ **원문을 담지 않는다** (P1 · SPEC §11). IP 도 사용자 ID 도 sha256 을 지나서 온다.
+ * ⚠ 행에 있는 것은 **수**뿐이다 — 무엇을 요청했는지는 여기 없다.
+ */
+export const rateHits = pgTable('rate_hits', {
+  /** `<sha256(주체)>:<라우트 이름>:<창 시작 epoch초>` — 이 문자열 하나가 곧 창이다. */
+  bucket: text('bucket').primaryKey(),
+  count: integer('count').notNull().default(1),
+  /** 이 창이 쓸모없어지는 시각. Cron 이 이 값으로 지운다 — 안 지우면 표가 무한히 자란다. */
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: createdAt(),
+}, (t) => [index('rate_hits_expires_idx').on(t.expiresAt)]).enableRLS()
+
 // ---------------------------------------------------------------------
-//  인덱스 7개 — SPEC §2 마지막 줄이 정본이다
+//  인덱스 9개 — SPEC §2 마지막 줄이 정본이다
 //  ★ 이 표는 `test/migration.test.ts` 의 기대값이다. 인덱스를 더하면 여기 한 줄.
 //    (unique 제약이 만드는 인덱스는 여기 세지 않는다 — 그건 제약의 부산물이다)
 // ---------------------------------------------------------------------
@@ -657,4 +685,6 @@ export const INDEX_NAMES = [
   'ai_usage_created_idx',
   //  ★ 화면 3 의 polling 이 매번 도는 질의다 (SPEC §9).
   'ai_jobs_project_created_idx',
+  //  ★ Cron 이 지난 창을 쓸어갈 때 도는 질의다 (`sweepRateHits`). 세는 질의는 PK 로 간다.
+  'rate_hits_expires_idx',
 ] as const

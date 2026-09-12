@@ -1,4 +1,5 @@
 import { requireCronSecret } from '../../../../../lib/api/cron'
+import { sweepRateHits } from '../../../../../lib/api/rate-limit'
 import { route } from '../../../../../lib/api/route'
 import { resetDemo } from '../../../../../lib/demo/reset'
 import { DEMO_TENANT } from '../../../../../lib/demo/tenant'
@@ -33,9 +34,16 @@ export const GET = route('GET /cron/demo-reset', async (ctx) => {
   const { existed, seeded } = await resetDemo(ctx.now)
   ctx.note({ project_id: seeded.projectId })
 
+  //  ⚠ 지난 빈도 제한 창을 같이 쓸어간다 (`lib/api/rate-limit.ts`). 요청 경로에서 지우면
+  //    모든 요청이 쓰기 하나를 더 낸다 — 하루 한 번이면 충분한 청소라 이 문에 붙였다.
+  //    ⚠ 리셋이 실패하면 여기까지 오지 않는다. 그래도 깨지는 것은 없다 — 지난 행은
+  //      열쇠가 달라서 이미 아무도 안 읽고, 다음 날 Cron 이 같이 쓸어간다.
+  const sweptRateHits = await sweepRateHits(ctx.db, ctx.now)
+
   return ctx.ok({
     team_slug: DEMO_TENANT.teamSlug,
     existed,
+    swept_rate_hits: sweptRateHits,
     official_version: seeded.versions.official.semver,
     items: seeded.itemCount,
     members: seeded.memberCount,

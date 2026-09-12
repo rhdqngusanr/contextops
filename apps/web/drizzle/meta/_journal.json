@@ -71,6 +71,13 @@
       "when": 1788970673382,
       "tag": "0009_nostalgic_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789195759926,
+      "tag": "0010_cool_victor_mancha",
+      "breakpoints": true
     }
   ]
 }
