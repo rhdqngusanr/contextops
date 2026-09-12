@@ -1,0 +1,81 @@
+{
+  "_why": "영상 하나를 정의하는 표. 컷·초·자막이 한 파일에 있어야 자막 시각이 컷과 갈라지지 않는다. tools/make-video.ps1 이 이걸 읽어 영상과 자막을 같이 만든다. 컷의 그림은 apps/web/scripts/demo-stills.ts 의 같은 이름이 찍는다.",
+  "_rule": "한 컷에 한 생각. 자막은 '지금 보고 있는 것의 이름'이고, 화면에 없는 것을 주장하지 않는다. 초를 늘리고 싶으면 컷을 늘리지 말고 sec 를 키워라.",
+  "_format": "유튜브 쇼츠 — 세로 1080x1920, 60초 이내. 세로가 오히려 쉽다: 좁게 잡은 컷이 화면을 꽉 채우고, 전체화면으로 보니 글자가 커진다. 가로 16:9 로 만들었을 때는 480px 인라인에서 글자가 죽었다 (2026-09-13).",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "background": "0x0B0B0D",
+    "fps": 30,
+    "_layout": "그림은 **아래를 기준으로** 놓는다 (imageBottom) — 컷마다 높이가 달라서 가운데 정렬하면 어떤 컷은 자막과 멀찍이 떨어져 화면이 텅 빈다. 자막은 그 바로 아래 (captionBottom 은 화면 밑에서부터). 쇼츠 UI 가 아랫단 약 300px 을 가리므로 captionBottom 은 그보다 커야 한다.",
+    "imageBottom": 1300,
+    "imageBox": {
+      "width": 1010,
+      "height": 1060
+    },
+    "captionBottom": 420,
+    "captionSize": 66
+  },
+  "shots": [
+    {
+      "still": "01-question",
+      "sec": 3.4,
+      "ko": "팀에 물었습니다 — 결제 재시도는 몇 번까지?",
+      "en": "We asked the team: how many times do we retry a payment?"
+    },
+    {
+      "still": "02-answer-a",
+      "sec": 3.4,
+      "ko": "A 의 Claude Code 는 문서를 읽고 — 5번",
+      "en": "A's Claude Code read the docs — five"
+    },
+    {
+      "still": "03-answer-b",
+      "sec": 3.4,
+      "ko": "B 의 Claude Code 는 코드를 읽고 — 3번",
+      "en": "B's Claude Code read the code — three"
+    },
+    {
+      "still": "04-split",
+      "sec": 3.4,
+      "ko": "둘 다 틀리지 않았습니다. 팀이 갈렸을 뿐입니다",
+      "en": "Neither one is wrong. The team is just split"
+    },
+    {
+      "still": "05-approved",
+      "sec": 4.2,
+      "ko": "팀장이 승인한 한 줄 — 모든 팀원이 이것을 받습니다",
+      "en": "One line the lead approved — every teammate gets it"
+    },
+    {
+      "still": "06-evidence",
+      "sec": 3.8,
+      "ko": "모든 줄은 원문으로 되짚힙니다",
+      "en": "Every line traces back to its source"
+    },
+    {
+      "still": "07-conflict",
+      "sec": 4.2,
+      "ko": "AI 가 어긋난 곳을 찾아 쉬운 말로 묻습니다",
+      "en": "The AI finds the clash and asks about it in plain words"
+    },
+    {
+      "still": "08-decide",
+      "sec": 4.0,
+      "ko": "판정은 하지 않습니다. 사람이 고릅니다",
+      "en": "It doesn't rule on it — a person chooses"
+    },
+    {
+      "still": "09-roadmap",
+      "sec": 4.0,
+      "ko": "진행은 근거와 함께. 완료 확인은 사람이 합니다",
+      "en": "Progress comes with evidence. A person confirms it"
+    },
+    {
+      "still": "10-sync",
+      "sec": 4.0,
+      "ko": "기기 14대가 같은 버전을 받았습니다",
+      "en": "All 14 machines received the same version"
+    }
+  ]
+}
