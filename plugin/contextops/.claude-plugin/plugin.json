@@ -8,6 +8,5 @@
   "homepage": "https://github.com/rhdqngusanr/contextops",
   "repository": "https://github.com/rhdqngusanr/contextops",
   "license": "MIT",
-  "keywords": ["team-context", "claude-md", "sync", "roadmap", "governance"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["team-context", "claude-md", "sync", "roadmap", "governance"]
 }

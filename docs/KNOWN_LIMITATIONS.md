@@ -35,8 +35,10 @@
   플러그인 설치 폴더를 사람이 찾아야 해서 안내하지 않는다.
 - **`npx contextops` 는 없다.** npm 에 올린 적이 없다. 설치는 `claude plugin marketplace add rhdqngusanr/contextops`
   부터이고, 그 이름과 목록 파일(`.claude-plugin/marketplace.json`)은 이제 저장소에 있다 (`5d024ed`).
-  ⚠ 다만 **`claude plugin install` 로 깐 기록이 아직 없다** — 새 PC 에서 add → install → `/contextops:init` 까지
-  밟는 것은 🙋 사람 몫이다 (PLAN P5 둘째 행). 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는
+  ⚠ **`claude plugin install` 은 로드까지만 쟀다** (2026-09-13 · `docs/evidence/2026-09-13-plugin-install/`) — 그날 처음 깔아 보니
+  플러그인이 **로드에 실패**하고 있었고(`plugin.json` 이 표준 hooks 파일을 한 번 더 선언했다) 고친 뒤 `✔ enabled` 까지 봤다.
+  깐 플러그인의 Skill 을 진짜 Claude Code 세션에서 돌려 `/contextops:setup` → `sync` → `progress` 가 서버와 말하는 걸음은
+  🙋 사람 몫이다 (PLAN P5 둘째 행). 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는
   `node plugin/contextops/bin/contextops-cli.mjs` 를 직접 부른다.
 - **이메일 매직링크 문은 숨겨져 있다** — Supabase 기본 SMTP 는 프로젝트 팀 멤버 주소로만 보내고 시간당 몇 통이라,
   심사위원이 눌러도 메일이 오지 않는다. 그래서 `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` 이 비어 있으면 로그인 화면이 그 문 대신

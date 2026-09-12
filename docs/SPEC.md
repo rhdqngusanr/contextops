@@ -550,6 +550,10 @@ App Router 의 경로는 **폴더 이름**이고 Windows 는 파일 이름에 `:
              "Stop":         [{ "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/stop.mjs\"", "timeout": 5 }] }] } }
 ```
 
+⚠ **`plugin.json` 에 `hooks` 를 적지 않는다.** `hooks/hooks.json` 은 Claude Code 가 표준 자리에서 스스로 읽는다 —
+manifest 가 같은 파일을 한 번 더 가리키면 「Duplicate hooks file detected」로 **플러그인 전체가 로드에 실패한다**
+(Skill 도 안 뜬다 · `claude plugin validate` 는 통과시킨다 · FINDINGS 173). `plugin/contextops/test/hooks.test.ts` 가 그 줄이 없음을 잰다.
+
 ### 8.2 로컬 파일
 ```
 ~/.contextops/credentials.json        {"<api_origin>": {"<project_id>": {"token": "ctx_...", "device_id": "..."}}}  chmod 600

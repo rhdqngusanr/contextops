@@ -33,6 +33,24 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 173. **README 대로 깐 플러그인이 로드에 실패한다** — `plugin.json` 이 표준 자리의 `hooks/hooks.json` 을 한 번 더 선언했다   [고장] ✅
+- **증상**: `claude plugin marketplace add rhdqngusanr/contextops` → `claude plugin install contextops@contextops` 는 둘 다 `✔` 인데
+  `claude plugin list` 가 `Status: ✘ failed to load` 다 — `Hook load failed: Duplicate hooks file detected: ./hooks/hooks.json resolves to
+  already-loaded file …\hooks\hooks.json. The standard hooks/hooks.json is loaded au…`(CLI 가 자른 그대로). 플러그인 전체가 안 뜨므로
+  **Skill 다섯·훅 둘이 하나도 없다** — 설치 절을 따라 한 사람은 `/contextops:setup` 부터 없는 명령을 본다.
+- **근거**: 2026-09-13 격리 설정(`CLAUDE_CONFIG_DIR` 를 스크래치로)에 공개 저장소 main 을 그대로 깔았다 — `docs/evidence/2026-09-13-plugin-install/`.
+  같은 파일로 `claude plugin validate plugin/contextops` 는 **Validation passed** 였다.
+- **왜 아무도 못 봤나**: ① 실제로 깐 적이 한 번도 없었다(KNOWN_LIMITATIONS 「`claude plugin install` 로 깐 기록이 아직 없다」)
+  ② `claude plugin validate` 는 이 충돌을 통과시킨다 ③ 🔴 **시험이 정반대를 강제했다** — `hooks.test.ts` 「plugin.json 이 이 파일을
+  가리킨다 — 안 가리키면 훅은 아예 안 돈다」. 문서로 추론해 세운 게이트가 고장을 지키고 있었다.
+- **정본**: `docs/SPEC.md` §8.1 · P6
+- **고친 것**: `plugin.json` 에서 `hooks` 를 뺐다(표준 자리는 Claude Code 가 스스로 읽는다) · 시험을 뒤집어 「표준 자리를 다시 선언하지
+  않는다」를 잠갔다 · SPEC §8.1 에 ⚠ 한 줄. 이 작업 트리를 로컬 마켓플레이스로 **새** 격리 설정에 깔아 `claude plugin list` 가
+  `✔ enabled` 인 것을 봤다 · `@contextops/plugin` 시험 200 통과.
+- ⚠ **아직 못 잰 것**: 깐 플러그인의 Skill 을 진짜 Claude Code 세션에서 돌려 서버와 말하게 하는 걸음(setup → sync → progress) —
+  이 세션에서는 도구 권한에 막혀 못 돌렸다. 🙋 사람이 새 저장소에서 한 번 (`docs/PITCH.md` §3 의 세 장면).
+- **상태**: ✅ 2026-09-13 사람 세션 (플러그인 로드 수정 커밋)
+
 ### 172. stop 훅의 git 한도가 부하에서 조용히 초과돼 CI 를 네 번 빨갛게 했다   [고장] ✅
 - **증상**: `plugin/contextops test/hooks.test.ts > 🔴 P6 … > stop 이 바꾼 경로가 _writes 선언과 정확히
   같다` 가 코드와 무관하게 `expected 0 to be greater than 0` 으로 빨개진다 (2026-09-11 · 4670ms).

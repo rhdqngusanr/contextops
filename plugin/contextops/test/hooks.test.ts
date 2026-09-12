@@ -447,11 +447,17 @@ describe('hooks.json — 가리키는 것이 전부 있다 (SPEC §8.1)', () => 
   }
   const commands = Object.values(hooksJson.hooks).flatMap((entries) => entries.flatMap((e) => e.hooks))
 
-  it('plugin.json 이 이 파일을 가리킨다 — 안 가리키면 훅은 아예 안 돈다', () => {
+  it('plugin.json 이 표준 자리(hooks/hooks.json)를 다시 선언하지 않는다 — 선언하면 플러그인 전체가 로드에 실패한다', () => {
+    //  🔴 2026-09-13 실측: Claude Code 는 `hooks/hooks.json` 을 **스스로** 읽는다. manifest 의 `hooks` 가 같은 파일을
+    //     가리키면 「Duplicate hooks file detected」로 **플러그인 전체가 failed to load** 이고 Skill 도 훅도 안 뜬다.
+    //     `claude plugin validate` 는 통과시켰다 — 설치해서 `claude plugin list` 를 봐야만 보인다.
+    //  ⚠ 예전 시험은 정반대(「가리켜야 훅이 돈다」)를 강제했다. 깔아 보지 않고 추론으로 잠근 자리였다
+    //    (docs/evidence/2026-09-13-plugin-install/).
     const manifest = JSON.parse(
       readFileSync(join(packageRoot, '.claude-plugin', 'plugin.json'), 'utf8'),
     ) as Record<string, unknown>
-    expect(manifest['hooks']).toBe('./hooks/hooks.json')
+    const declared = [manifest['hooks']].flat().filter((v): v is string => typeof v === 'string')
+    expect(declared.map((p) => p.replace(/^\.\//, ''))).not.toContain('hooks/hooks.json')
   })
 
   it('훅이 하나 이상 있다 — 표가 비면 위 검사가 아무것도 안 잰다', () => {
