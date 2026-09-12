@@ -37,7 +37,7 @@ export const LANDING_EN: LandingText = {
   },
 
   beforeAfter: {
-    caption: 'We asked two teammates’ Claude Code the same question.',
+    caption: 'Two teammates ask their own Claude Code the same question.',
     prompt: 'How many times should we retry a failed payment provider (PSP) call?',
     askKey: 'Question',
     plainKey: 'In plain words',

@@ -5,9 +5,48 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-12 저녁 · 사람 세션(루프 밖) · **보안 3건 + 영어 모드(기반·랜딩·앱 껍데기·칩) → push·배포 완료** — `verify:prod` 47/0 · 영어 자동감지 production 실측. 남은 것은 앱 안쪽 화면 문구(아래 「🙋 다음 판」). 아래 첫 절._
+_마지막 갱신: 2026-09-13 새벽 · 사람 세션(루프 밖) · **원티드 입상 기준 최종 점검** — README 대로 깐 플러그인이 로드에 실패하던 고장(FINDINGS 173)을 찾아 고쳤고, 심사 기간 가용성 다섯 · 제출서 사실을 고쳤다(로컬 커밋 · **push 는 사람 확인 뒤**). 사람 몫·결정할 제안의 정본은 `docs/evidence/2026-09-13-final-audit/README.md`. 아래 첫 절._
+
+_2026-09-12 저녁 · 사람 세션(루프 밖) · **보안 3건 + 영어 모드(기반·랜딩·앱 껍데기·칩) → push·배포 완료** — `verify:prod` 47/0 · 영어 자동감지 production 실측. 남은 것은 앱 안쪽 화면 문구(아래 「🙋 다음 판」)._
 
 _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **프론트 리디자인 push·배포 완료** — 뉴트럴 모노크롬 · Codex 클레이 그림 + 스톱모션 · 한 줄 「팀의 기억과 AI의 기억을 한 방향으로」 · production <https://contextops-rosy.vercel.app> 이 새 벌 (`verify:prod` 44/0 · 15:0x) · INBOX 의 Claude 몫 전부 ✅ · 남은 것은 🙋 8줄 + 이 세션의 🙋 둘(Taste 영구 로그인 · Taste 샘플)._
+
+---
+
+## 🧑 사람 세션 (2026-09-13 새벽 · 루프 밖) — **원티드 입상 기준 최종 점검**
+
+> 사용자 지시: 「최종으로 우리 프로젝트 부족한 점 추가할 점 없는지 확실하게 확인해줘 — 조건은 원티드 입상할 정도의 퀄리티」.
+> production 을 심사위원처럼 직접 열고, README 설치를 실제로 밟고, 에이전트 둘(심사 기간 가용성 감사 · 모의 심사위원 5인)을 붙인 뒤
+> **코드에서 다시 확인한 주장만** 고쳤다. 전체 목록 · 사람 몫 · 결정할 제안의 정본은 `docs/evidence/2026-09-13-final-audit/README.md`.
+
+### 잰 것
+
+| 무엇 | 잰 것 |
+|---|---|
+| production | `/` 200 · `/demo` 200 · health `db:true · ai:true` · 월 $10 중 지출 $0 |
+| 데모 네 걸음 | 정리 카드 12(AI 충돌 3) · Pack v1.1.0/v1.0.0 · Roadmap 근거 3/9 · Sync 14대 중 적용됨 9 — 오류 0 · 375px 가로 밀림 0 |
+| 게스트 동선 | 정리 화면 1440×900 문서 높이 6,995px · 3분 코스 y=6,856 · 「읽기 전용」 안내 12번 (375×812: 10,885px · 코스 y=10,594) — 제안 E 로 남김 |
+| 플러그인 설치 | 격리 설정(`CLAUDE_CONFIG_DIR`)에 공개 main → `✘ failed to load` (Duplicate hooks file) · 고친 작업 트리 → `✔ enabled` |
+| 감시 | `gh variable list` 가 비어 있고 watch-prod 로그는 「건너뛴다」 · exit 0 — 한 번도 안 쟀다 |
+
+### 고친 것 — 일곱 커밋
+
+| 무엇 | 게이트 |
+|---|---|
+| **FINDINGS 173** — `plugin.json` 의 `hooks` 가 표준 `hooks/hooks.json` 을 중복 선언해 플러그인 전체가 로드 실패(Skill 5 · 훅 2 가 0개). 시험이 정반대를 강제하고 있었다 | `hooks.test` 뒤집음 · SPEC §8.1 · 근거 `docs/evidence/2026-09-13-plugin-install/` |
+| watch-prod — 변수가 없으면 제출서의 production URL 로 잰다(fork 는 건너뜀) | `test/watch-prod.test.ts` 4 (기본 origin == 제출서 URL) |
+| `POST /demo/session` 10분 20회/IP → 200 (한 NAT 뒤 21번째 사람이 막히던 자리) · `/demo` 오류 카드에 [다시 시도] | `api-rate-limit.test` 가 표의 한도를 읽는다 |
+| 숨은 탭 폴링 정지 — `whenVisible` (열어 둔 탭 하나 = 하루 8,640 호출) | `test/web-polling-visible.test.ts` 6 |
+| DB 풀 — `idle_timeout 20 · connect_timeout 10 · max 5`, URL 의 `?max=` 는 존중 | `test/db-client-options.test.ts` 3 |
+| 데모 리셋 swap 을 한 트랜잭션으로 (지우기와 slug 바꾸기 사이의 하루짜리 404 틈) | 리셋 시험 셋 초록 |
+| 제출서 · README · 랜딩 — AI 툴 칸에 Codex CLI · 커밋 수(실측 352) · 「못 찾으면 버립니다」→ 다시 묻는다 · 월 $10 상한 · 「실제로 나온 답」/「던졌습니다」→ 사실대로(녹화 없음) | `readme.test` 제출 폼 상한 (한 줄 60 · 문제 290 · AI 활용 446 · AI 툴 191) |
+
+🙋 **사람 몫 — 마감 순** (방법은 근거 문서 표): ① **참가 접수 9/18 23:59:59** + 폼 칸·상한 캡처 ② 이 일곱 커밋 push 확인 → `verify:prod` ③ watch-prod 수동 dispatch 로 `GET / → 200` 로그 ④ **플러그인 Skill 실기**(setup → sync → progress · 로드는 고쳤지만 세션 안 실행은 아무도 안 봤다) ⑤ production 로그인 → 발행 스톱워치(「15분」) ⑥ Vercel `DATABASE_URL` 포트 6543 확인 · Gemini Tier 1 결정 ⑦ 쇼츠 mp4 업로드 · GitHub 저장소 소개(옛 한 줄)·topics ⑧ 9/18 동결 · 9/19 제출. 정리: 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 — 기본 실행은 안 읽는 파일이라 지워도 된다.
+
+🙋 **결정이 필요한 제안** — A 게스트가 AI 가 도는 장면을 본다(충돌 탐지 한 단계 · ≈ $0.01/회 · 하루 상한) · B 제출 4칸 설득력 판(글자 수 통과한 원문) · C 차별점 표(관리형 CLAUDE.md · Cursor Team Rules · ruler · rulesync — 출처 확인) · D 서비스 링크 `/` · E 게스트 동선 · F 실사용자 5팀 · AI 품질 10회 · 누가 돈을 내나.
+⚠ A 는 INBOX 블로커 5 ③ 의 조건(「앞이 다 닫혔을 때만 · 9/16 안에 안 끝나면 버린다」)을 사람이 정해 두었다 — 사람 몫 ①~⑤ 가 아직 열려 있어 만들지 않았다.
+
+`tools/ci.ps1`: 2026-09-13 06:26 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1579) | docs OK => GREEN
 
 ---
 
