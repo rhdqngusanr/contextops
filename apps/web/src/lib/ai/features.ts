@@ -113,6 +113,29 @@ export function isAiJobFeature(f: AiFeature): f is AiJobFeature {
 /** 같은 것의 런타임 목록. DB CHECK 과 시험이 이 값을 읽는다. */
 export const AI_JOB_FEATURES: readonly AiJobFeature[] = AI_FEATURES.filter(isAiJobFeature)
 
+/**
+ * 🔴 **아직 부르는 자리가 없는 기능** — 표에는 있는데 `withBudget('<이름>')` 호출처가 **0곳**이다.
+ *
+ * ★ 왜 이 목록이 필요한가 (2026-09-12 · R3) — CLAUDE.md 가 「정의만 있고 아무 일도 안 하는
+ *   코드가 이런 저장소의 단골 고장」이라고 못 박은 바로 그 모양이 여기 있었다. `AI_FEATURE_LIMITS`
+ *   는 네 기능의 빈도 상한을 적어 두었지만 실제로 `withBudget()` 을 지나는 것은 `structure`·
+ *   `conflict` 둘뿐이고, `ask`·`demo` 는 **읽는 코드가 없다.** 표만 보면 넷 다 도는 것처럼 읽힌다.
+ *
+ * ★ 왜 표에서 지우지 않나 — `ai_feature` 는 **DB enum** 이다. CLAUDE.md: 「enum 값은
+ *   직렬화된다 — 끝에만 더하고 중간을 지우지 마라」. 지우는 대신 **안 도는 것을 적어 둔다.**
+ *
+ * 🔴 이 목록은 **양쪽으로** 잠겨 있다 (`test/ai-features-wired.test.ts`):
+ *   ① 여기 없는 기능은 호출처가 **있어야** 한다 — 새 기능을 표에만 더하고 안 부르면 빨개진다
+ *   ② 여기 있는 기능은 호출처가 **없어야** 한다 — 나중에 그 문을 만들면 이 줄을 지워야 초록이다
+ *   그래서 이 목록은 저절로 낡지 않는다.
+ */
+export const AI_FEATURES_NOT_WIRED: Partial<Record<AiFeature, string>> = {
+  //  SPEC §5 는 `POST /projects/{id}/ask` 를 적어 두었지만 그 라우트는 없다.
+  ask: '§7.3 `POST /projects/{id}/ask` 라우트가 아직 없다',
+  //  SPEC §5 는 `POST /demo/ai-once` 를 적어 두었지만 그 라우트는 없다 (FINDINGS 117).
+  demo: '§7.4 `POST /demo/ai-once` 라우트가 아직 없다 (INBOX B5③ — 조건부)',
+}
+
 // ---------------------------------------------------------------------
 //  모델과 값
 // ---------------------------------------------------------------------
