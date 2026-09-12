@@ -19,9 +19,10 @@ import { DEMO_TENANT } from './tenant'
 //  ★ 왜 「있으면 건너뛰기」가 아닌가 — 심사위원이 어제 만진 흔적(제안 결정·확인)이 그대로 남는다. 리셋의 뜻은
 //    **매일 같은 데모**다.
 //
-//  ⚠ 지우기와 바꾸기 사이에 몇 ms 의 틈이 있다 — 그 순간 `/demo/session` 은 404 다. 심기(수십 초)가 아니라
-//    UPDATE 하나의 길이라 받아들였다. 사람(users)은 지우지 않는다 — 같은 subject 로 upsert 되므로 새 팀의
-//    멤버십이 같은 행을 가리키고, 남는 행도 없다.
+//  🔴 지우기와 바꾸기는 **한 트랜잭션**이다 (2026-09-13). 예전엔 둘이 따로 커밋돼서, 그 사이에 함수가 죽으면
+//    (300초 한도 · 잠든 DB) `demo` 팀이 **없는 채로** 다음 Cron(하루 뒤)까지 갔다 — 「실패하면 어제 데모가 산다」의
+//    유일한 구멍이었다. 이제 둘 다 되거나 둘 다 안 되고, 그 사이의 404 순간도 밖에서 안 보인다.
+//    사람(users)은 지우지 않는다 — 같은 subject 로 upsert 되므로 새 팀의 멤버십이 같은 행을 가리키고, 남는 행도 없다.
 //  ⚠ 옆자리에 심다 죽으면 옆자리만 지운다. 지난 리셋이 옆자리를 남긴 채 죽었을 수도 있어 시작할 때 한 번 더 지운다.
 // =====================================================================
 
@@ -60,8 +61,11 @@ export async function resetDemo(now: Date = new Date(), seed: DemoSeeder = seedD
   if (!staged) throw new Error(`[demo-reset] 옆자리(${DEMO_STAGING_SLUG})에 심었다는데 팀이 없다`)
 
   //  ── 바꾸기 — 옛 팀을 지우고 새 팀이 정본 slug 를 받는다 ─────────────
-  if (current) await deleteTeamBySlug(db, DEMO_TENANT.teamSlug)
-  await db.update(teams).set({ slug: DEMO_TENANT.teamSlug }).where(eq(teams.id, staged.id))
+  //  ⚠ `deleteTeamBySlug` 안의 트랜잭션은 이 안에서 savepoint 가 된다.
+  await db.transaction(async (tx) => {
+    if (current) await deleteTeamBySlug(tx, DEMO_TENANT.teamSlug)
+    await tx.update(teams).set({ slug: DEMO_TENANT.teamSlug }).where(eq(teams.id, staged.id))
+  })
 
   return { existed: current !== undefined, seeded: { ...seeded, teamSlug: DEMO_TENANT.teamSlug } }
 }
