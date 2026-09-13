@@ -14,7 +14,7 @@
 | 제출 팀명 | 퇴직했는데저좀이직시켜주세요 | 정본은 랜딩의 `SUBMISSION_IDENTITY`(`apps/web/src/components/landing.tsx`) · README 머리 · 랜딩 푸터 (`LANDING_FOOT`) — 셋이 같은 글자인지 `apps/web/test/readme.test.ts` 가 잰다 |
 | 공개 저장소 URL | <https://github.com/rhdqngusanr/contextops> (PUBLIC · MIT) | 같은 정본 · README 머리 · 랜딩 푸터의 GitHub · Known limitations 링크. 설치 첫 줄의 마켓플레이스 이름(`rhdqngusanr/contextops`)도 이 URL 에서 파생된다 — 목록 파일은 저장소 뿌리의 `.claude-plugin/marketplace.json` 이다 |
 | production URL | https://contextops-rosy.vercel.app (Vercel Hobby · 서울 icn1 · 2026-09-10 첫 배포 · `verify:prod` 44/0) | README 머리 · 「서비스 링크」 · 근거 `docs/evidence/2026-09-10-production/` |
-| 2분 영상 링크 | 🙋 (PLAN P6 첫 행 · 규정상 필수는 아니다 — 투표·본선 자산) | 컷 표·대본·녹화 체크리스트는 [PITCH.md](PITCH.md) |
+| 2분 영상 링크 | 🙋 안 올린다 — 이미 만든 쇼츠도 올리지 않기로 했다 (2026-09-14 사용자 결정) · 규정상 필수는 아니다 · 올리면 투표·본선 자산 | 컷 표·대본·녹화 체크리스트는 [PITCH.md](PITCH.md) |
 | 슬라이드 링크 | 🙋 (PLAN P6 첫 행 · 규정상 필수는 아니다) | 8장 뼈대는 [PITCH.md](PITCH.md) |
 | 참가 접수 | 🙋 (원티드 계정 · **2026-09-18(금) 23:59:59 마감** · 제출과 별개의 마감이다) | 접수 없이는 제출 화면이 안 열린다. 접수 뒤 폼의 칸·글자 수·썸네일 규격을 캡처해(`docs/evidence/` 아래 2026-09-09-submission-form 폴더) 아래 「제출 폼 원문」의 괄호 상한을 그 값으로 바꾼다 |
 

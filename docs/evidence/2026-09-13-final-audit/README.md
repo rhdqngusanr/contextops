@@ -42,10 +42,10 @@
 | push 뒤 | 감시가 진짜 도는지 | GitHub Actions → watch-prod → Run workflow → 로그에 `GET / → 200` · 한 번은 틀린 `PROD_ORIGIN` 변수로 실패 메일 확인 뒤 변수 삭제 |
 | 9/14 | **플러그인 실기** — 로드 고장은 고쳤지만 Skill 이 실제 세션에서 도는 것은 **아직 아무도 안 봤다** | 새 저장소에서 `claude plugin marketplace add rhdqngusanr/contextops` → `install` → `/contextops:setup`(Sync 화면 [기기 추가]가 준 줄) → `/contextops:sync` → 작업 뒤 `/contextops:progress` 가 production Roadmap 을 움직이는지 · GIF 셋(`docs/PITCH.md` §3) |
 | 9/14 | production **로그인 → 팀 → 문서 → AI 정리 → 승인 → 발행** 을 스톱워치로 | 「팀장은 브라우저에서 15분」의 유일한 근거 (`docs/PITCH.md` §4) · 막히면 원인 코드를 Claude 에게 |
-| 9/14 | Vercel env `DATABASE_URL` 의 포트가 **6543**(Transaction pooler)인지 1분 확인 | 5432(Session)면 풀 크기에 묶여 몰릴 때 500 |
-| ✅ 9/14 | Gemini **Tier 1** — **이미 유료였다** (사용자 확인) | 사이트 고지가 「무료 요금제라 Google 이 제품 개선에 쓸 수 있다」로 사실보다 나쁘게 말하던 것을 `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER='paid'` 로 바로잡았다 |
-| 9/15~17 | **영상 링크** — 쇼츠 mp4 가 이미 있다(`.ci/video/shorts-*.mp4`) | 유튜브 업로드 → `docs/SUBMISSION.md` 🙋 표 · 투표 페이지 · 레딧 글 |
-| 아무 때 | GitHub 저장소 소개가 **옛 한 줄**(「팀의 지식과 Claude의 기억을 같은 방향으로」) · topics 0개 | 저장소 Settings 또는 `gh repo edit` 로 지금 한 줄과 topics(`claude-code` · `ai-agents` · `developer-tools` …) |
+| ✅ 9/14 | Vercel env `DATABASE_URL` 의 포트가 **6543**(Transaction pooler)인지 — **6543 이었다** (사용자 확인) | 5432(Session)면 풀 크기에 묶여 몰릴 때 500 · 바꿀 것 없음 |
+| ✅ 9/14 | Gemini **Tier 1** — **이미 유료였다** (사용자 확인) | 사이트 고지가 「무료 요금제라 Google 이 제품 개선에 쓸 수 있다」로 사실보다 나쁘게 말하던 것을 `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER='paid'` 로 바로잡았다 · production `/privacy` 한·영 확인 (`41de61b`) |
+| — 9/14 | **영상 링크** — 쇼츠 mp4 는 있지만 **올리지 않기로 했다** (사용자 결정) | 규정상 필수가 아니다(제출물은 링크 · 문제 · AI 활용 · AI 툴 넷) · 마음이 바뀌면 유튜브 업로드 → `docs/SUBMISSION.md` 🙋 표 |
+| ✅ 9/14 | GitHub 저장소 소개 · topics — 옛 한 줄(「팀의 지식과 Claude의 기억을 같은 방향으로」) · topics 0개였다 | 사용자 요청으로 `gh api` 로 바꿨다: 소개 = README 머리 한 줄 + 제출 폼 「한 줄」 + 「팀장은 웹에서, 개발자는 Claude Code 플러그인으로 · Wanted AI Championship 2026 출품작」 · topics 12개(`claude-code` · `claude-code-plugin` · `claude-md` · `context-engineering` · `ai-agents` · `ai-coding` · `developer-tools` · `knowledge-management` · `gemini-api` · `nextjs` · `supabase` · `typescript`) · homepage 는 이미 production URL |
 | 9/18 저녁 | 동결 — `release` 브랜치 · Preview 끄기 | `docs/DEPLOY.md` 「심사 기간 런북」 |
 | 9/19 | **제출** (임시저장은 제출이 아니다) | 제출 확인 캡처 |
 | 정리 | 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 (05:53) | 기본 실행은 이 파일을 읽지 않는다 — 지워도 된다 |
