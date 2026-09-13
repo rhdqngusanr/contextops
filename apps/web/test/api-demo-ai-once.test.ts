@@ -139,6 +139,27 @@ describe('POST /demo/ai-once — 게스트의 AI 한 번 (SPEC §7.4)', () => {
     expect(JSON.stringify(ledger)).not.toContain('203.0.113.9')
   })
 
+  it('🔴 질문 문장 안의 항목 id 는 제목으로 바뀐다 — 긴 id 가 짧은 id 에 먹히지 않고, 낱말은 그대로다', async () => {
+    //  2026-09-13 production 실측: 진짜 모델이 질문에 `'item_try_float_money'` · `item_policy_integer_money` 를 그대로 적었다.
+    await seedDemo(NOW, {})
+    const tryId = demoTryItemId(REFUND.id)
+    stubAi(() => ({
+      input: {
+        conflicts: [{
+          kind: 'contradiction', a_item_id: tryId, b_item_id: 'item_policy_refund_escalation', severity: 'medium',
+          question: `'${tryId}'는 3영업일인데 기존 항목(item_policy_refund_escalation)과 item_policy_refund 는 하루를 말합니다. 어느 쪽인가요?`,
+        }],
+      },
+    }))
+    const res = await aiOnce(aiOnceReq({ preset: REFUND.id }), params({}))
+    expect(res.status).toBe(200)
+    const question = ((await dataOf(res)) as unknown as { conflicts: { question: string }[] }).conflicts[0]!.question
+    expect(question).toBe(
+      `「${REFUND.title}」는 3영업일인데 기존 항목(「하루 넘게 손대지 않은 환불은 자동으로 윗선에 올라간다」)과 「환불은 24시간 안에 종결한다」 는 하루를 말합니다. 어느 쪽인가요?`,
+    )
+    expect(question).not.toMatch(/item_/)
+  })
+
   it('모델이 프롬프트에 없는 규칙을 짝으로 내면 한 번 다시 묻는다 — 지어낸 짝은 통과하지 못한다', async () => {
     await seedDemo(NOW, {})
     const tryId = demoTryItemId(REFUND.id)

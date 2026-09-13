@@ -66,3 +66,24 @@ export function demoTryItemId(presetId: string): string {
 export function findDemoAiPreset(id: string): DemoAiPreset | undefined {
   return DEMO_AI_PRESETS.find((p) => p.id === id)
 }
+
+/**
+ * 모델이 질문 문장 안에서 항목을 **id 로** 부른 자리(`'item_try_float_money'는 …`)를 「제목」으로 바꾼다 — 화면에 id 가 서지 않게.
+ *
+ * ★ 왜 — 2026-09-13 production 실측에서 진짜 모델이 질문에 `item_policy_integer_money` 같은 id 를 그대로 적었다. 로그인 없는 사람
+ *   (비개발자 심사위원)에게 그 낱말은 뜻이 없다. **모델이 고른 낱말은 그대로 두고 가리킨 대상의 이름만** 바꾼다 — 기록 카드도
+ *   같은 예외를 적어 두었다(`lib/demo/seed.ts` 의 `RECORDED_CONFLICTS` 주석).
+ * ⚠ 긴 id 부터 바꾼다 — `item_policy_refund` 를 먼저 바꾸면 `item_policy_refund_escalation` 이 「…」_escalation 으로 깨진다.
+ * ⚠ 따옴표로 감싼 id 는 따옴표째 바꾸고, 표에 없는 id(앞뒤가 id 글자로 이어진 것 포함)는 건드리지 않는다 — 지어내지 않는다.
+ */
+export function nameItemsInQuestion(question: string, titles: ReadonlyMap<string, string>): string {
+  let out = question
+  for (const id of [...titles.keys()].sort((a, b) => b.length - a.length)) {
+    const name = `「${titles.get(id)}」`
+    //  id 는 `item_[a-z0-9_]` 모양뿐이라(`ItemId`) 정규식에 그대로 넣어도 특수문자가 없다.
+    out = out
+      .replace(new RegExp(`['"‘“\`]${id}['"’”\`]`, 'g'), name)
+      .replace(new RegExp(`(?<![a-z0-9_])${id}(?![a-z0-9_])`, 'g'), name)
+  }
+  return out
+}

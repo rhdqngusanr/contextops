@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { DEMO_AI_WORDS, DemoAiOnceView, demoAiMeta, type DemoAiOnceState } from '../src/components/demo-ai-once'
-import { DEMO_AI_PRESETS } from '../src/lib/demo/ai-presets'
+import { DEMO_AI_PRESETS, nameItemsInQuestion } from '../src/lib/demo/ai-presets'
 import { ApiClientError } from '../src/lib/web/api'
 import type { DemoAiOnceResult } from '../src/lib/web/queries'
 
@@ -82,6 +82,13 @@ describe('게스트의 AI 한 번 — 모양 넷', () => {
     const out = html({ phase: 'failed', preset: 'refund_three_days', error: new ApiClientError('AI_OUTPUT_INVALID', 502) })
     expect(out).toContain('다시 시도')
     expect(out).not.toContain(DEMO_AI_WORDS.capped)
+  })
+
+  it('🔴 질문 속 id 를 이름으로 — 따옴표째 바꾸고, 긴 id 먼저, 표에 없는 id 는 건드리지 않는다', () => {
+    const names = new Map([['item_policy_refund', '환불은 24시간'], ['item_policy_refund_escalation', '에스컬레이션']])
+    expect(nameItemsInQuestion("'item_policy_refund'와 item_policy_refund_escalation, 그리고 item_policy_refund_v2", names))
+      .toBe('「환불은 24시간」와 「에스컬레이션」, 그리고 item_policy_refund_v2')
+    expect(nameItemsInQuestion('id 가 없는 질문은 그대로입니다.', names)).toBe('id 가 없는 질문은 그대로입니다.')
   })
 
   it('어느 모양에도 「실시간」이라는 낱말이 없다 (DESIGN_BRIEF §2-3)', () => {

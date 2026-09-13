@@ -63,9 +63,13 @@ _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **�
 
 ⚠ 밟은 것 둘 — ① SPEC 에 쓴 굵게(닫는 별표 뒤에 바로 조사)가 `markdown-emphasis.test` 에 걸려 `<b>` 로 바꿨다 ② 스키마에 계약을 더하고 플러그인 번들을 안 구워 CI 가 한 번 빨갰다 — `packages/schema` 를 바꾸면 `pnpm --filter @contextops/plugin build`.
 
-🙋 **push 는 사람 확인 뒤** — 배포되면 production 에서 `POST /api/v1/demo/ai-once` 에 `{"preset":"refund_three_days"}` 한 번(약 $0.01)과 `verify:prod`.
+✅ **push · 배포 · 실측** (사용자 확인 뒤 · `248d4ce..7d99634`) — Vercel 상태 success · `verify:prod` **47 passed / 0 failed** (GATE 3 5.2초).
+production 실측 둘: API 로 `refund_three_days` → 200 · 2.4초 · 충돌 2(환불 24시간 규칙 high · 자동 에스컬레이션 규칙 medium) · 입력 1,087 · 출력 282 토큰 · $0.0042 /
+브라우저에서 [금액을 소수로 계산] 을 눌러 → 1.8초 · 충돌 1(원 단위 정수 규칙) · $0.003 · 꼬리 줄 「저장되지 않음」까지 보임 · health `spent_month_usd` 0.0072 · 없는 메모 이름은 400(모델을 안 부름).
+⚠ 실측에서 찾은 것 — 진짜 모델이 질문 문장에 `'item_try_float_money'` · `item_policy_integer_money` 같은 id 를 적었다 → 라우트가 내기 전에 id 를 「제목」으로 바꾼다
+(`nameItemsInQuestion` · 긴 id 먼저 · 따옴표째 · 표에 없는 id 는 그대로 · 시험 2). 🙋 이 수정 커밋의 push 는 사람 확인 뒤.
 
-`tools/ci.ps1`: 2026-09-13 21:52 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1596) | docs OK => GREEN
+`tools/ci.ps1`: 2026-09-13 23:20 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1598) | docs OK => GREEN
 
 ---
 

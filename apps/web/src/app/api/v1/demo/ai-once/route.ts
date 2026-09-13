@@ -5,7 +5,7 @@ import { costMicros } from '../../../../../lib/ai/features'
 import { fail } from '../../../../../lib/api/error'
 import { clientIp } from '../../../../../lib/api/rate-limit'
 import { parseBody, route } from '../../../../../lib/api/route'
-import { demoTryItemId, findDemoAiPreset } from '../../../../../lib/demo/ai-presets'
+import { demoTryItemId, findDemoAiPreset, nameItemsInQuestion } from '../../../../../lib/demo/ai-presets'
 import { findDemoProject } from '../../../../../lib/demo/project'
 
 // =====================================================================
@@ -16,6 +16,8 @@ import { findDemoProject } from '../../../../../lib/demo/project'
 //    있었다. 로그인 없는 심사위원이 「AI 활용」을 직접 확인할 문이 없었다 (docs/evidence/2026-09-13-final-audit/ 제안 A).
 //  ★ 하는 일: 고른 문장 하나(`lib/demo/ai-presets.ts`)를 「바뀐 항목」으로 삼아, 샘플 팀의 **같은 type 의 적용 중 항목**과
 //    §7.2 와 같은 프롬프트·같은 검증으로 견준다(`detectDemoConflicts`). 모델은 판정하지 않고 질문을 낸다 — 제품과 같은 길이다.
+//  ★ 질문 문장은 모델의 것이되, 그 안에 적힌 **항목 id 만** 제목으로 바꿔 낸다(`nameItemsInQuestion` · 2026-09-13 실측에서 모델이
+//    `item_policy_integer_money` 같은 id 를 문장에 적었다). 낱말은 안 고친다 — 가리킨 대상의 이름만.
 //  🔴 **아무것도 저장하지 않는다.** `conflicts` 표에도 항목 표에도 안 쓴다 — 방문자가 누를 때마다 샘플 팀의 정리 화면이 늘어나면
 //     다음 사람이 보는 데모가 망가진다. 남는 것은 예산 장부(`ai_usage`) 한 줄과 빈도 표뿐이다.
 //  🔴 **돈의 문은 `withBudget('demo')` 하나다** (P3) — 샘플 팀 전체 하루 20회 · 월 $10 천장. 사람(IP)은 라우트 감싸기가 센다
@@ -43,6 +45,8 @@ export const POST = route('POST /demo/ai-once', async (ctx) => {
     now: ctx.now,
   })
   const titles = new Map(result.candidates.map((c) => [c.id, c.title]))
+  //  질문 문장 안의 id → 이름. 체험 메모는 그 문장이 이름이다.
+  const names = new Map([[tryId, preset.title], ...titles])
 
   return ctx.ok({
     preset: preset.id,
@@ -52,7 +56,7 @@ export const POST = route('POST /demo/ai-once', async (ctx) => {
       return {
         kind: c.kind,
         severity: c.severity,
-        question: c.question,
+        question: nameItemsInQuestion(c.question, names),
         other: otherId === undefined ? null : { id: otherId, title: titles.get(otherId) ?? otherId },
       }
     }),
