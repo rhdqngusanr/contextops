@@ -135,6 +135,31 @@ A 는 문서를, B 는 코드를 읽었습니다. 둘 다 틀리지 않았는데
 
 ---
 
+## 비슷한 도구와 무엇이 다른가요?
+
+팀 전체의 AI 에 같은 지침을 **나눠 주는** 방법은 이미 여럿 있습니다. ContextOps 가 맡는 것은 그 앞과 뒤입니다.
+나눠 주기 **전에** 무엇이 팀의 규칙인지 정하고(어긋난 곳은 AI 가 찾아 묻고, 결정은 팀장이 합니다),
+나눠 준 **뒤에** 모두가 정말 같은 판을 받았는지와 계획이 어디까지 왔는지를 근거로 보여 줍니다.
+
+| 이미 있는 방법 | 그 방법이 하는 일 <sub>(공식 문서·저장소에서 확인 · 2026-09-14)</sub> | ContextOps 가 더하는 것 |
+|---|---|---|
+| 저장소에 커밋한 `CLAUDE.md` | 한 저장소 안에서 팀원이 git 으로 같은 파일을 봅니다 | 저장소 바깥의 결정(목표 문서 · 회의록)까지 항목으로 모으고, 누가 승인했는지 남깁니다 |
+| Claude Code 관리형 CLAUDE.md | IT 가 MDM · 그룹 정책 같은 도구로 기기마다 조직 공통 CLAUDE.md 를 깔거나 `managed-settings.json` 에 넣습니다. 개인 설정으로 끌 수 없고, 그 기기의 모든 저장소에서 먼저 읽힙니다 | 나눠 주는 방식은 겹칩니다. 더하는 것은 **무엇을 나눠 줄지 정하는 단계** — 흩어진 문서 → 항목 → 어긋남 → 팀장 결정 — 와, 기기마다 받은 판이 같은지 해시로 확인하는 일입니다 |
+| Cursor Team Rules <sub>(Team · Enterprise 요금제)</sub> | 관리자가 Cursor 대시보드에 팀 규칙을 적습니다. 필수로 두면 팀원이 끌 수 없고, 그 팀의 모든 저장소에 들어가며, 파일 경로 조건도 걸 수 있습니다 | 규칙 한 줄마다 원문(문서 몇 절 · 코드 몇 번째 줄)과 승인 기록이 붙습니다. 문서끼리, 문서와 코드가 어긋난 곳을 AI 가 먼저 찾아 질문으로 올립니다 |
+| GitHub Copilot 조직 지침 <sub>(Business · Enterprise)</sub> | 조직 관리자가 설정에 적은 지침이 조직의 모든 저장소에서 github.com 의 Copilot Chat · 코드 리뷰 · 클라우드 에이전트에 들어갑니다 (2026-04 정식 출시) | 지침을 적는 칸 앞의 일 — 흩어진 문서에서 규칙을 뽑고 어긋난 곳을 묻는 단계 · 줄마다 원문 되짚기 · 계획의 진행을 근거와 함께 보여 주기 |
+| ruler · rulesync <sub>(오픈소스)</sub> | 한 폴더(`.ruler/` · `.rulesync/`)에 적은 규칙을 30~40여 개 AI 도구의 설정 파일로 옮겨 적습니다. rulesync 는 기존 설정 파일을 거꾸로 가져오기도 합니다 | 이미 정해진 규칙을 옮기기 전과 후 — 문서에서 뽑아 어긋남을 묻고 승인한 것만 내보내고, 받은 기기가 같은 판인지 해시로 확인하고, 작업 진행을 근거와 함께 보고받습니다 |
+
+**왜 그 앞 단계가 필요한가.** [Claude Code 공식 문서](https://code.claude.com/docs/en/memory)도 규칙 두 개가 서로 어긋나면 Claude 가 둘 중 아무거나 고를 수 있다고 적고,
+CLAUDE.md 들을 주기적으로 훑어 낡거나 어긋난 지침을 지우라고 권합니다. 그 검토를 사람이 기억해서 하는 대신, ContextOps 는 AI 가 먼저 찾고 사람이 결정하게 합니다.
+
+**우리가 더 좁은 곳도 적어 둡니다.** 여러 에이전트 형식으로 옮겨 적는 폭은 ruler · rulesync 가 훨씬 넓습니다 — ContextOps 가 내보내는 파일은
+Claude Code 용 `CLAUDE.md` 묶음 · `AGENTS.md` · Cursor 규칙 파일이고, 코드 근거 수집과 진행 보고는 Claude Code 플러그인에서만 됩니다.
+끌 수 없게 강제하는 힘도 관리형 정책 · Team Rules 쪽이 셉니다. 그래서 그것들을 대신하기보다 그 위에 얹는 층을 목표로 합니다.
+
+<sub>출처 (2026-09-14 확인): [Claude Code — CLAUDE.md 와 관리형 정책](https://code.claude.com/docs/en/memory) · [Cursor — Rules](https://cursor.com/docs/context/rules) · [GitHub — Copilot 조직 지침 정식 출시](https://github.blog/changelog/2026-04-02-copilot-organization-custom-instructions-are-generally-available/) · [ruler](https://github.com/intellectronica/ruler) · [rulesync](https://github.com/dyoshikawa/rulesync). 기능은 빨리 바뀝니다 — 틀린 곳을 보시면 이슈로 알려 주세요.</sub>
+
+---
+
 ## 🔒 우리 서버가 보는 것 / 절대 못 보는 것
 
 회사 코드를 남의 서버에 올리는 건 무서운 일입니다. **그래서 애초에 안 받게 만들었습니다.**

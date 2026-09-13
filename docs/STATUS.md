@@ -44,7 +44,7 @@ _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **�
 🙋 **사람 몫 — 마감 순** (방법은 근거 문서 표): ① **참가 접수 9/18 23:59:59** + 폼 칸·상한 캡처 ② 이 일곱 커밋 push 확인 → `verify:prod` ③ watch-prod 수동 dispatch 로 `GET / → 200` 로그 ④ **플러그인 Skill 실기**(setup → sync → progress · 로드는 고쳤지만 세션 안 실행은 아무도 안 봤다) ⑤ production 로그인 → 발행 스톱워치(「15분」) ⑥ ✅ Vercel `DATABASE_URL` 은 Transaction pooler **6543** (2026-09-14 사용자 확인) · Gemini 는 **이미 유료(Tier 1)** 였다 — 같은 날 사용자 확인 → `GEMINI_DATA_TIER='paid'` · production `/privacy` 한·영 확인(`41de61b`) ⑦ 쇼츠 mp4 는 올리지 않기로 했다(사용자 결정 · 규정상 필수 아님) · ✅ GitHub 저장소 소개(README 머리 + 제출 한 줄)·topics 12개 — 2026-09-14 `gh api` ⑧ 9/18 동결 · 9/19 제출. 정리: 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 — 기본 실행은 안 읽는 파일이라 지워도 된다.
 
 🙋 **제안의 결정** (같은 날 저녁 · 사용자가 골랐다) — A 게스트의 「AI 한 번」 **지금 구현** ✅(아래 절) · B 제출 4칸 설득력 판 **교체** ✅ · D 서비스 링크 `/` ✅.
-남은 것: C 차별점 표(관리형 CLAUDE.md · Cursor Team Rules · ruler · rulesync — 출처 확인) · E 게스트 동선 · F 실사용자 5팀 · AI 품질 10회 · 누가 돈을 내나.
+✅ C 차별점 표 — README 「비슷한 도구와 무엇이 다른가요?」(정본 표 · 출처 2026-09-14 재확인 · GitHub Copilot 조직 지침 추가 · Cursor Team Rules 는 glob 경로 조건도 된다로 정정) · 제출서는 요약 한 문단. 남은 것: E 게스트 동선 · F 실사용자 5팀 · AI 품질 10회 · 누가 돈을 내나.
 ⚠ A 는 INBOX 블로커 5 ③ 이 「앞이 다 닫혔을 때만」이라는 조건을 달아 두었는데, 사용자가 이번에 그 조건을 넘어 「지금 바로」를 골랐다.
 
 `tools/ci.ps1`: 2026-09-13 06:26 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1579) | docs OK => GREEN

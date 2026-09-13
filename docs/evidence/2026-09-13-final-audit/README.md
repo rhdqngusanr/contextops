@@ -80,9 +80,16 @@
 
 ⚠ A 를 만들면 「AI 활용 방식」 끝에 한 문장(「로그인 없이 데모에서 직접 돌려 볼 수 있습니다」)을 더할 자리가 있다(538 → 약 570자).
 
-### C. 차별점 — 대안과 나란히 (심사위원이 먼저 떠올릴 것)
+### C. 차별점 — 대안과 나란히 (심사위원이 먼저 떠올릴 것) ✅ 9/14 채택
 
 > 2026-09-13 에 각 도구의 문서·저장소로 확인한 사실만 적었다(아래 출처). 기능은 빨리 바뀌니 제출서·랜딩에 옮기는 날 한 번 더 본다.
+>
+> ✅ **2026-09-14 옮겼다** — 정본 표는 README 「비슷한 도구와 무엇이 다른가요?」, 제출서는 「비슷한 도구와의 차이」 요약 한 문단(표는 README 하나에만 둔다). 옮기는 날 다시 확인해 고친 것:
+> ① Cursor Team Rules 는 **glob 경로 조건을 걸 수 있다** — 아래 표의 「경로 조건 같은 메타데이터는 없다」는 틀렸다 · 요금제는 Team · Enterprise · 필수로 두면 팀원이 끌 수 없다
+> ② ruler 는 30여 개 · rulesync 는 40여 개 도구로 늘었다
+> ③ **GitHub Copilot 조직 지침**(Business · Enterprise · 2026-04-02 정식 출시 — github.com Chat · 코드 리뷰 · 클라우드 에이전트)을 더했다
+> ④ Claude Code 문서 스스로 「규칙이 서로 어긋나면 Claude 가 아무거나 고를 수 있으니 주기적으로 검토하라」고 적는다 — 우리 문제 정의의 1차 출처로 README 에 한국어로 옮겼다.
+> 출처: <https://cursor.com/docs/context/rules> · <https://github.blog/changelog/2026-04-02-copilot-organization-custom-instructions-are-generally-available/> · <https://code.claude.com/docs/en/memory> (옛 `cursor.com/docs/rules.md` 는 9/14 에 404)
 
 | 대안 | 하는 일 (확인한 사실) | ContextOps 가 더하는 것 |
 |---|---|---|
