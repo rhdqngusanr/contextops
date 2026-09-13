@@ -82,8 +82,13 @@ export const AI_FEATURE_LIMITS = {
   conflict: { spec: '§7.2', job: true, rate: { calls: 10, windowSeconds: 3600, scope: 'project' } },
   //  §7.5 「IP·사용자당 분당 3회(`/ask`, `/demo`)」
   ask: { spec: '§7.3', job: false, rate: { calls: 3, windowSeconds: 60, scope: 'actor' } },
-  //  §7.4 「게스트 IP당 일 5회」 — 분당 3회(§7.5)보다 이쪽이 좁아서 이 값을 쓴다.
-  demo: { spec: '§7.4', job: false, rate: { calls: 5, windowSeconds: 86_400, scope: 'actor' } },
+  //  §7.4 「게스트 AI 한 번」 — **샘플 팀 하나에 하루 20회**(모든 방문자를 합쳐서 · 2026-09-13).
+  //  ★ 왜 `project` 범위인가 — 이 문은 자격증명이 없어서 「사람마다」를 셀 열쇠가 IP 뿐이고, IP 로 막는 일은 이미
+  //    라우트 감싸기가 한다(`HTTP_RATE_LIMITS['POST /demo/ai-once']` · 한 IP 에 하루 10회). 여기서 세는 것은 **돈**이다 —
+  //    샘플 팀 전체를 한 통으로 세야 방문자가 몰려도 하루 20회(탐지 한 번 ≈ $0.01 → 약 $0.2)를 못 넘는다.
+  //    넘으면 `RATE_LIMITED` 이고 화면은 기록 카드를 보라고 말한다. 월 $10 천장은 그대로 위에 있다.
+  //  ⚠ 원래 SPEC 은 「게스트 IP당 일 5회」였다 — 한 사무실(한 NAT) 뒤의 심사위원들이 다섯 번에 같이 막히는 모양이라 바꿨다.
+  demo: { spec: '§7.4', job: false, rate: { calls: 20, windowSeconds: 86_400, scope: 'project' } },
   //  ⚠ `as const` 가 필요하다 — 그래야 `job` 이 `boolean` 이 아니라 `true`/`false`
   //     **리터럴**로 남고, 아래 `AiJobFeature` 가 이 표에서 유니온을 뽑아낼 수 있다.
   //     `satisfies` 는 기능이 하나라도 빠지면 여기서 막는다.
@@ -132,8 +137,8 @@ export const AI_JOB_FEATURES: readonly AiJobFeature[] = AI_FEATURES.filter(isAiJ
 export const AI_FEATURES_NOT_WIRED: Partial<Record<AiFeature, string>> = {
   //  SPEC §5 는 `POST /projects/{id}/ask` 를 적어 두었지만 그 라우트는 없다.
   ask: '§7.3 `POST /projects/{id}/ask` 라우트가 아직 없다',
-  //  SPEC §5 는 `POST /demo/ai-once` 를 적어 두었지만 그 라우트는 없다 (FINDINGS 117).
-  demo: '§7.4 `POST /demo/ai-once` 라우트가 아직 없다 (INBOX B5③ — 조건부)',
+  //  ✅ `demo` 는 2026-09-13 에 문이 생겼다 — `POST /demo/ai-once` 가 `withBudget('demo')` 를 지난다 (`lib/ai/conflict.ts`).
+  //     그래서 이 목록에서 지웠고, 시험(`ai-features-wired.test.ts`)이 그 사실을 양쪽으로 잰다.
 }
 
 // ---------------------------------------------------------------------

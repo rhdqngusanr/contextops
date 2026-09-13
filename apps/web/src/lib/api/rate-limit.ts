@@ -71,6 +71,12 @@ export const HTTP_RATE_LIMITS: Record<string, HttpRateLimit> = {
   //    21번째 사람부터 10분 동안 첫 화면이 「요청이 너무 잦습니다」였다. 발급 한 번은 서명 하나와 읽기 하나라 200 도 싸다.
   'POST /demo/session': { calls: 200, windowSeconds: 600 },
 
+  //  🔴 **자격증명 없이 부를 수 있는 둘째 쓰기 문** — 게스트의 「AI 한 번」 (`app/api/v1/demo/ai-once/route.ts` · 2026-09-13).
+  //  ★ 여기서 세는 것은 **사람(IP)** 이다 — 한 IP 에 하루 10회. 돈은 `withBudget('demo')` 가 샘플 팀 전체를 한 통으로
+  //    따로 센다(하루 20회 · `AI_FEATURE_LIMITS.demo`). 둘을 한 줄에 섞지 않는다 — 한 NAT 뒤의 사무실은 10회를 나눠 쓰고,
+  //    세상의 모든 방문자는 20회를 나눠 쓴다.
+  'POST /demo/ai-once': { calls: 10, windowSeconds: 86_400 },
+
   //  ★ zip 은 한 번에 파일 수십 개를 메모리에서 이어 붙인다 (`lib/api/zip.ts`). 다른 읽기 문보다
   //    한 번이 비싸서 따로 좁힌다 — 게스트 토큰 하나로 전송량을 증폭시키는 자리가 여기다.
   'GET /projects/{id}/packs/{semver}/zip': { calls: 60, windowSeconds: 60 },

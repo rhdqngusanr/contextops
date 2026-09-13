@@ -225,9 +225,9 @@ describe('빈도 제한 표 — 죽은 줄 금지', () => {
   })
 
   it('🔴 자격증명 없이 부를 수 있는 문은 기본값보다 좁다', () => {
-    //  `POST /demo/session` 은 `ctx.actor()` 를 부르지 않는 유일한 쓰기 문이다.
+    //  `ctx.actor()` 를 부르지 않는 쓰기 문 — 게스트 세션 발급과 게스트의 AI 한 번(2026-09-13) 둘이다.
     //  ⚠ 그런 문이 또 생기면 여기 한 줄을 더하고 표에도 한 줄을 더해라.
-    const open = ['POST /demo/session']
+    const open = ['POST /demo/session', 'POST /demo/ai-once']
     for (const name of open) {
       const limit = limitFor(name)
       expect(limit, `${name} 이 표에 없다 — 자격증명 없는 문이 기본값으로 열려 있다`).not.toEqual(DEFAULT_LIMIT)

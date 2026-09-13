@@ -68,8 +68,9 @@ describe('AI 기능 표 — 죽은 줄 금지', () => {
     }
   })
 
-  it('지금 도는 기능은 `structure`·`conflict` 둘이다 — 바뀌면 이 숫자가 말해 준다', () => {
+  it('지금 도는 기능은 `structure`·`conflict`·`demo` 셋이다 — 바뀌면 이 숫자가 말해 준다', () => {
     const wired = [...wiredFeatures()].filter((f) => (AI_FEATURES as readonly string[]).includes(f)).sort()
-    expect(wired).toEqual(['conflict', 'structure'])
+    //  2026-09-13 — `demo`(§7.4 게스트의 AI 한 번)가 문을 가졌다 (`lib/ai/conflict.ts` 의 `detectDemoConflicts`).
+    expect(wired).toEqual(['conflict', 'demo', 'structure'])
   })
 })

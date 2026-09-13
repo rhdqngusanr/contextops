@@ -47,7 +47,10 @@ import { currentModel } from './model'
 
 /** 부르는 쪽이 주는 맥락. 본문은 받지 않는다 — 글자수만 받는다 (P1). */
 export interface BudgetContext {
-  /** 게스트 데모(§7.4)는 없다. */
+  /**
+   * 빈도의 열쇠(범위가 `project` 인 기능)이자 프로젝트별 하루 상한의 열쇠. 게스트 데모(§7.4)도 **샘플 팀 프로젝트**를 싣는다
+   * (2026-09-13 — 방문자 전체를 한 통으로 세려고). 없는 호출은 전역 상한만 본다.
+   */
   readonly projectId?: string
   /** 사용자 ID 나 게스트 IP. **여기서 sha256 으로 바꿔 저장한다** (SPEC §11). */
   readonly actor?: string

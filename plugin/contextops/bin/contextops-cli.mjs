@@ -19492,6 +19492,9 @@ var AnswerQuestions = external_exports.object({
 var AcceptJobItems = external_exports.object({
   item_ids: external_exports.array(ItemId).min(1).max(MAX_DRAFT_ITEMS)
 }).strict();
+var DemoAiOnce = external_exports.object({
+  preset: external_exports.string().regex(/^[a-z][a-z0-9_]{2,30}$/)
+}).strict();
 var ContextItemsBatchDraftEnvelope = ContextItemsBatchDraft.extend({
   items: external_exports.array(external_exports.unknown()).min(1).max(50)
 }).strict();

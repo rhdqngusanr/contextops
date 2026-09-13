@@ -158,9 +158,9 @@ export function route<P extends Record<string, string | string[]> = Record<strin
  *
  * ⚠ 판정 기준은 **HTTP 의 안전한 메서드**다. GET·HEAD 는 서버 상태를 안 바꾼다는
  *   약속이고 우리 라우트도 그 약속을 지킨다 (`sync-reports` 조차 POST 다).
- * ⚠ 게스트가 부를 쓰기 문이 나중에 생기면(§7.4 `POST /demo/ai-once` — 그 문은 아직 없다)
- *   여기에 **그 라우트 이름 하나만** 예외로 적어라. 「게스트도 POST 할 수 있다」로
- *   넓히지 마라 — 그러면 이 검사가 사실상 사라진다.
+ * ⚠ 게스트도 부르는 쓰기 문(§7.4 `POST /demo/ai-once` · 2026-09-13)은 **`ctx.actor()` 를 부르지 않는 문**으로 만들었다
+ *   (`/demo/session` 과 같은 모양) — 그래서 여기에 예외가 없다. 「게스트도 POST 할 수 있다」로 넓히지 마라 —
+ *   그러면 이 검사가 사실상 사라진다. 자격증명 없는 문의 목록은 `test/api-rate-limit.test.ts` 가 센다.
  */
 /**
  * 만들어진 본문을 **종류대로** 봉투에 담는다 — `cached` 의 동기·비동기 두 갈래가 같은 자리로 모인다.

@@ -389,9 +389,16 @@ describe('프로젝트별 하루 상한 — 전역 안의 이중 상한 (INBOX H
       .resolves.toBe('ok')
   })
 
-  it('프로젝트가 없는 호출(게스트 데모)은 전역 상한만 본다', async () => {
+  it('프로젝트가 없는 호출은 전역 상한만 본다 — 프로젝트별 상한은 열쇠가 있을 때만 건다', async () => {
     process.env.AI_PROJECT_DAILY_BUDGET_USD = '0'
-    await expect(withBudget('demo', { actor: '203.0.113.9', inputChars: 10, now: NOW }, fakeCall()))
+    //  ⚠ 2026-09-13 전까지 이 자리는 `demo` 였다 — 게스트 데모가 프로젝트 없이 불렸다. 이제 `demo` 는 샘플 팀 프로젝트를
+    //    열쇠로 싣는다(방문자 전체를 한 통으로 센다 · `features.ts`). 프로젝트 없이 부를 수 있는 기능은 범위가 `actor` 인 `ask` 다.
+    await expect(withBudget('ask', { actor: '203.0.113.9', inputChars: 10, now: NOW }, fakeCall()))
       .resolves.toBe('ok')
+  })
+
+  it('🔴 게스트 데모(`demo`)는 샘플 팀 프로젝트가 있어야 부를 수 있다 — 열쇠가 없으면 셀 수 없어서 막는다', async () => {
+    await expect(withBudget('demo', { actor: '203.0.113.9', inputChars: 10, now: NOW }, fakeCall()))
+      .rejects.toMatchObject({ code: 'VALIDATION_FAILED' })
   })
 })

@@ -1,10 +1,11 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
-import { projects, teamMembers, teams, users } from '../../../../../db/schema'
+import { teamMembers, users } from '../../../../../db/schema'
 import { fail } from '../../../../../lib/api/error'
 import { route } from '../../../../../lib/api/route'
 import { signSessionJwt } from '../../../../../lib/api/session'
-import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_SESSION_TTL_SEC, DEMO_TENANT } from '../../../../../lib/demo/tenant'
+import { findDemoProject } from '../../../../../lib/demo/project'
+import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_SESSION_TTL_SEC } from '../../../../../lib/demo/tenant'
 
 // =====================================================================
 //  `POST /demo/session` — **인증 없이** 부르는 유일한 쓰기 문 (SPEC §9 「게스트 데모」)
@@ -21,14 +22,14 @@ import { DEMO_ENTRY_PATH, DEMO_GUEST_SUBJECT, DEMO_SESSION_TTL_SEC, DEMO_TENANT 
 //  ⚠ POST 인 이유 — 세션을 **발급**한다. GET 으로 두면 브라우저·프록시가 캐시할 수 있고,
 //    캐시된 토큰은 만료가 지난 뒤에도 화면에 남는다.
 //  ⚠ 이 응답에 이메일·사람 이름이 없다. 게스트는 데모 팀의 읽기 권한 하나만 받는다.
-//  🔴 **빈도 제한이 걸려 있다 — IP 당 10분에 20회** (2026-09-12 · `lib/api/rate-limit.ts`
+//  🔴 **빈도 제한이 걸려 있다 — IP 당 10분에 200회** (2026-09-12 에 20 으로 걸었고 2026-09-13 에 올렸다 — 한 NAT 뒤의 사람들 · `lib/api/rate-limit.ts`
 //     의 `HTTP_RATE_LIMITS`). 예전엔 없었고, 그 근거가 「이 문은 LLM 을 안 부르고 행을 안
 //     만든다」였다. **그 셈이 틀렸다 — 돈이 드는 것은 LLM 만이 아니다.** 자격증명 없이 부를 수
 //     있는 문이 무제한이면 Vercel 호출 수와 Supabase 연결이 그대로 올라가고, 심사 기간
 //     (9/21~10/5)에 링크가 죽는 것은 대회 규정상 **제외 사유**다. 세는 자리는 라우트
 //     감싸기 하나이고(`lib/api/route.ts`), 이 문은 그 표에 한 줄로 좁혀져 있다.
-//  ⚠ 돈이 드는 쪽(§7.4 `/demo/ai-once`)은 `withBudget()` 이 세는 자리이고, 그 문은
-//    아직 없다 (FINDINGS 117 · P3).
+//  ⚠ 돈이 드는 쪽(§7.4 `/demo/ai-once`)은 `withBudget('demo')` 가 세는 자리이고, 그 문은
+//    `app/api/v1/demo/ai-once/route.ts` 다 (2026-09-13 · P3). 데모 팀을 찾는 문(`findDemoProject`)을 둘이 같이 쓴다.
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
@@ -38,23 +39,8 @@ export const POST = route('POST /demo/session', async (ctx) => {
   //    그래서 로그의 `user_id` 도 비어 있다 (SPEC §11 — 없는 것을 지어내지 않는다).
 
   //  데모 팀 · 그 안의 프로젝트 · 게스트 행이 **셋 다** 있어야 들어갈 수 있다.
-  const [team] = await ctx.db
-    .select({ id: teams.id })
-    .from(teams)
-    .where(eq(teams.slug, DEMO_TENANT.teamSlug))
-    .limit(1)
-  if (!team) fail('NOT_FOUND', '데모 테넌트가 심어져 있지 않다')
-
-  const [project] = await ctx.db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(and(
-      eq(projects.teamId, team.id),
-      eq(projects.slug, DEMO_TENANT.projectSlug),
-      isNull(projects.deletedAt),
-    ))
-    .limit(1)
-  if (!project) fail('NOT_FOUND', '데모 프로젝트가 심어져 있지 않다')
+  //  앞의 둘은 `findDemoProject` 하나가 찾는다 — `/demo/ai-once` 와 같은 문이다 (2026-09-13).
+  const { teamId, projectId } = await findDemoProject(ctx.db)
 
   const [guest] = await ctx.db
     .select({ id: users.id })
@@ -69,7 +55,7 @@ export const POST = route('POST /demo/session', async (ctx) => {
     .select({ role: teamMembers.role })
     .from(teamMembers)
     .where(and(
-      eq(teamMembers.teamId, team.id),
+      eq(teamMembers.teamId, teamId),
       eq(teamMembers.userId, guest.id),
       eq(teamMembers.status, 'active'),
     ))
@@ -78,7 +64,7 @@ export const POST = route('POST /demo/session', async (ctx) => {
 
   //  claims 는 `sub` 하나다 — 게스트에게 이메일·이름은 없다 (`signSessionJwt` 의 주석).
   const { token, expiresAt } = signSessionJwt({ sub: DEMO_GUEST_SUBJECT }, ctx.now, DEMO_SESSION_TTL_SEC)
-  ctx.note({ project_id: project.id })
+  ctx.note({ project_id: projectId })
 
   return ctx.ok({
     access_token: token,

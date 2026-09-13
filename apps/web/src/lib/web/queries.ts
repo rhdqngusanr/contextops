@@ -79,6 +79,28 @@ export function startGuestSession(): Promise<{
   return post('/demo/session', {})
 }
 
+/** `POST /demo/ai-once` 의 답 (SPEC §7.4) — 라우트(`app/api/v1/demo/ai-once/route.ts`)가 `ok()` 에 넣는 모양 그대로다. */
+export type DemoAiOnceResult = {
+  preset: string
+  /** `other` 는 체험 메모와 부딪힌 **샘플 팀의 적용 중 규칙**이다 — 체험 메모 쪽은 화면이 이미 안다. */
+  conflicts: { kind: ConflictKind; severity: ConflictSeverity; question: string; other: { id: string; title: string } | null }[]
+  /** 견준 적용 중 규칙의 수. */
+  compared: number
+  model: string
+  input_tokens: number
+  output_tokens: number
+  cost_usd: number
+  duration_ms: number
+}
+
+/**
+ * 🔴 게스트의 「AI 한 번」 — 고른 메모의 **이름 하나만** 보낸다 (`lib/demo/ai-presets.ts`). 서버는 누구인지 안 묻는다.
+ * ⚠ 결과는 저장되지 않는다 — 화면이 손에 든 값이 전부다 (새로고침하면 사라진다).
+ */
+export function runDemoAiOnce(preset: string): Promise<DemoAiOnceResult> {
+  return post('/demo/ai-once', { preset })
+}
+
 export function createTeam(body: { name: string; slug: string }): Promise<{ id: string; slug: string }> {
   return post('/teams', body)
 }

@@ -836,6 +836,17 @@ export const AcceptJobItems = z.object({
 }).strict()
 
 /**
+ * `POST /demo/ai-once` — 로그인 없는 사람이 AI 충돌 탐지를 **한 번 직접 돌려 본다** (SPEC §5 · §7.4 · 2026-09-13).
+ *
+ * ★ 오는 것은 **고른 문장의 이름** 하나뿐이다 — 문장 본문이 아니다. 문장의 정본은 웹의 `lib/demo/ai-presets.ts` 표이고
+ *   서버가 그 이름으로 찾는다(없는 이름은 400). 자유 입력을 받으면 자격증명 없는 문으로 아무 글이나 우리 키를 타고 모델에 간다.
+ * ⚠ 이름의 목록을 여기 적지 않는다 — 표가 두 곳이 된다. 여기서는 모양만 잰다.
+ */
+export const DemoAiOnce = z.object({
+  preset: z.string().regex(/^[a-z][a-z0-9_]{2,30}$/),
+}).strict()
+
+/**
  * `POST /projects/{id}/context-items:batch-draft` 를 **서버가** 팔 때 쓰는 모양.
  *
  * ★ 왜 `ContextItemsBatchDraft` 와 따로 있나 — 그쪽은 플러그인이 **보내기 전에** 스스로

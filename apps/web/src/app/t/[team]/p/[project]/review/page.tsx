@@ -16,6 +16,7 @@ import { writeDoor } from '../../../../../../lib/web/actor'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
 import { AiBadge, ConflictKindChip, Note } from '../../../../../../components/chips'
 import { ConflictCard } from '../../../../../../components/conflict-card'
+import { DemoAiOnce } from '../../../../../../components/demo-ai-once'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { ErrorState, ScreenEmpty, Skeleton } from '../../../../../../components/states'
@@ -169,6 +170,10 @@ function ReviewView({
         {/* 사람 말 한 줄이 먼저 (2026-09-10 저녁). */}
         <p className="ink-2">문서끼리, 문서와 코드가 서로 다르게 말하는 자리를 AI 가 찾아 카드로 올렸습니다. 어느 쪽이 맞는지는 사람이 정합니다.</p>
       </header>
+
+      {/* 🔴 게스트(쓰기 문이 닫힌 주체)에게만 — 로그인 없이 AI 가 **도는** 장면을 보는 유일한 자리 (SPEC §7.4 · 2026-09-13).
+          팀장·팀원은 문서를 붙여 넣으면 진짜 탐지(`DetectionPanel`)가 돈다. 게스트는 샘플 팀에만 들어오므로 이 조건이 곧 「데모」다. */}
+      {!door.open ? <DemoAiOnce /> : null}
 
       <DetectionPanel jobs={jobs} />
 

@@ -14,7 +14,7 @@ import { getDb } from '../../db/client'
 import { contextItemRevisions, contextItems, REVISION_ORIGINS } from '../../db/schema'
 import { ApiError } from '../api/error'
 import { CURRENT_REVISION_JOIN } from '../api/item'
-import { withBudget } from './budget'
+import { withBudget, type AiCall } from './budget'
 import { OUTPUT_TRUNCATED_COMPLAINT, callModel, type ToolCallRequest } from './client'
 import { currentModel } from './model'
 import { AI_SYSTEM_COMMON, untrusted } from './prompt'
@@ -259,27 +259,8 @@ export async function detectConflicts(input: ConflictInput): Promise<ConflictRes
   //  없는 항목을 물어봤다면 부를 것이 없다. **지어내지 않는다** — 빈 결과가 답이다.
   if (changed.length === 0) return empty
 
-  //  🔴 SPEC §7.2 「같은 type 의 기존 active 항목」. type 만 DB 가 좁힌다 — 한 프로젝트의
-  //     active 항목 수는 §7.3 이 150개로 묶어 두었으므로 전부 읽어도 한 줌이다.
-  //  ⚠ scope 로는 거르지 않는다 (FINDINGS 146). scope 는 §7.1 에서 **모델이 항목마다
-  //     고르는** 값이라, 그것으로 후보를 거르면 같은 규칙이 실행마다 `project` 와
-  //     `path:src/…` 사이를 오가며 후보가 3 ↔ 0 으로 갈렸다. scope 는 `renderItem` 의
-  //     `scope=` 줄에 실려 모델이 견준다 — 범위가 안 겹치는 둘은 모델이 짝으로 내지 않는다.
   const changedIds = new Set(changed.map((c) => c.id))
-  const sameType = (await db
-    .select(ITEM_BRIEF_COLUMNS)
-    .from(contextItems)
-    .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
-    .where(and(
-      eq(contextItems.projectId, input.projectId),
-      eq(contextItems.status, 'active'),
-      inArray(contextItems.type, [...new Set(changed.map((c) => c.type))]),
-    ))
-    //  ⚠ 40개로 자를 때 **무엇이 잘리는가**가 곧 무엇을 못 보는가다. 우선순위 높은
-    //     항목부터 싣고, 같으면 id 순으로 고정한다 (같은 입력 → 같은 프롬프트).
-    .orderBy(desc(contextItems.priority), asc(contextItems.publicId))) as ItemBrief[]
-
-  const matched = sameType.filter((i) => !changedIds.has(i.id))
+  const matched = await sameTypeCandidates(input.projectId, changed.map((c) => c.type), changedIds)
   const candidates = matched.slice(0, CONFLICT_MAX_CANDIDATES)
 
   //  견줄 상대가 없고 바뀐 항목도 하나뿐이면 짝이 나올 수 없다 — 부르지 않는다.
@@ -299,36 +280,128 @@ export async function detectConflicts(input: ConflictInput): Promise<ConflictRes
       inputChars,
       now: input.now,
     },
-    async () => {
-      let inputTokens = 0
-      let outputTokens = 0
-      let model = currentModel()
-      let complaint: string | undefined
-
-      for (let attempt = 0; attempt <= CONFLICT_RETRIES; attempt++) {
-        const call = await callModel(toolRequest(changed, candidates, complaint))
-        //  ⚠ 실패한 시도의 토큰도 더한다. 안 더하면 재시도가 장부 밖에서 예산을 태운다.
-        inputTokens += call.inputTokens
-        outputTokens += call.outputTokens
-        model = call.model
-        try {
-          //  🔴 잘린 응답은 계약 위반보다 먼저 가른다 — `structure.ts` 와 같은 판단 (FINDINGS 144).
-          if (call.truncated) throw new OutputInvalid(OUTPUT_TRUNCATED_COMPLAINT)
-          return { value: convert(call.value, known, changedIds), model, inputTokens, outputTokens }
-        } catch (err) {
-          if (!(err instanceof OutputInvalid)) throw err
-          complaint = err.message
-        }
-      }
-      throw new ApiError(
-        'AI_OUTPUT_INVALID',
-        `AI 응답이 계약과 맞지 않는다 (${CONFLICT_RETRIES + 1}회): ${complaint}`,
-      )
-    },
+    () => askModel(changed, candidates, known, changedIds),
   )
 
   return {
     conflicts: [...conflicts].sort(bySeverity),
     candidates: { used: candidates.length, total: matched.length },
   }
+}
+
+/**
+ * 🔴 SPEC §7.2 「같은 type 의 기존 active 항목」 — 탐지 두 문(`detectConflicts` · `detectDemoConflicts`)이 같이 읽는다.
+ * type 만 DB 가 좁힌다 — 한 프로젝트의 active 항목 수는 §7.3 이 150개로 묶어 두었으므로 전부 읽어도 한 줌이다.
+ *
+ * ⚠ scope 로는 거르지 않는다 (FINDINGS 146). scope 는 §7.1 에서 **모델이 항목마다 고르는** 값이라, 그것으로 후보를 거르면
+ *   같은 규칙이 실행마다 `project` 와 `path:src/…` 사이를 오가며 후보가 3 ↔ 0 으로 갈렸다. scope 는 `renderItem` 의
+ *   `scope=` 줄에 실려 모델이 견준다 — 범위가 안 겹치는 둘은 모델이 짝으로 내지 않는다.
+ */
+async function sameTypeCandidates(projectId: string, types: readonly ItemType[], exclude: ReadonlySet<string>): Promise<ItemBrief[]> {
+  const sameType = (await getDb()
+    .select(ITEM_BRIEF_COLUMNS)
+    .from(contextItems)
+    .innerJoin(contextItemRevisions, CURRENT_REVISION_JOIN)
+    .where(and(
+      eq(contextItems.projectId, projectId),
+      eq(contextItems.status, 'active'),
+      inArray(contextItems.type, [...new Set(types)]),
+    ))
+    //  ⚠ 40개로 자를 때 **무엇이 잘리는가**가 곧 무엇을 못 보는가다. 우선순위 높은
+    //     항목부터 싣고, 같으면 id 순으로 고정한다 (같은 입력 → 같은 프롬프트).
+    .orderBy(desc(contextItems.priority), asc(contextItems.publicId))) as ItemBrief[]
+  return sameType.filter((i) => !exclude.has(i.id))
+}
+
+/**
+ * LLM 왕복 한 번(+재시도 `CONFLICT_RETRIES`) — 부르고 · Zod 로 다시 판다. **예산 문 안에서만 부른다** (P3).
+ * ★ 왜 따로 뺐나 — 탐지 문이 둘이 됐다(§7.2 · §7.4). 프롬프트와 검증이 두 벌이면 데모가 제품과 다른 AI 를 보여 준다.
+ *   두 문이 다른 것은 **어느 예산 줄을 지나나**(`withBudget('conflict'|'demo')`)와 무엇을 「바뀐 항목」으로 삼나뿐이다.
+ */
+async function askModel(
+  changed: readonly ItemBrief[],
+  candidates: readonly ItemBrief[],
+  known: ReadonlySet<string>,
+  changedIds: ReadonlySet<string>,
+): Promise<AiCall<AiConflict[]>> {
+  let inputTokens = 0
+  let outputTokens = 0
+  let model = currentModel()
+  let complaint: string | undefined
+
+  for (let attempt = 0; attempt <= CONFLICT_RETRIES; attempt++) {
+    const call = await callModel(toolRequest(changed, candidates, complaint))
+    //  ⚠ 실패한 시도의 토큰도 더한다. 안 더하면 재시도가 장부 밖에서 예산을 태운다.
+    inputTokens += call.inputTokens
+    outputTokens += call.outputTokens
+    model = call.model
+    try {
+      //  🔴 잘린 응답은 계약 위반보다 먼저 가른다 — `structure.ts` 와 같은 판단 (FINDINGS 144).
+      if (call.truncated) throw new OutputInvalid(OUTPUT_TRUNCATED_COMPLAINT)
+      return { value: convert(call.value, known, changedIds), model, inputTokens, outputTokens }
+    } catch (err) {
+      if (!(err instanceof OutputInvalid)) throw err
+      complaint = err.message
+    }
+  }
+  throw new ApiError(
+    'AI_OUTPUT_INVALID',
+    `AI 응답이 계약과 맞지 않는다 (${CONFLICT_RETRIES + 1}회): ${complaint}`,
+  )
+}
+
+// ---------------------------------------------------------------------
+//  §7.4 게스트 「AI 한 번」 — 같은 프롬프트 · 같은 검증 · 다른 예산 줄
+// ---------------------------------------------------------------------
+
+export interface DemoConflictInput {
+  readonly projectId: string
+  /** 「바뀐 항목」으로 삼는 체험 문장 — **DB 에 없는 항목**이다 (`lib/demo/ai-presets.ts`). */
+  readonly tryItem: { readonly id: string; readonly type: ItemType; readonly scope: Scope; readonly title: string; readonly body: string }
+  /** 게스트의 IP — 장부에는 sha256 으로만 남는다 (`budget.ts` 의 `actorHash`). */
+  readonly actor: string
+  readonly now?: Date
+}
+
+export interface DemoConflictResult {
+  /** 심각도가 높은 것부터. 체험 문장이 **한쪽에 반드시** 있다 (`convert` 가 잰다). */
+  readonly conflicts: AiConflict[]
+  /** 견준 상대 — 화면이 짝의 제목을 그리려고 받는다. 모델이 가리킬 수 있는 id 는 이 안과 체험 문장뿐이다. */
+  readonly candidates: readonly { readonly id: string; readonly title: string }[]
+  /** 실제로 쓴 모델·토큰 — 화면이 「몇 초 · 몇 토큰 · 얼마」를 그대로 말한다. 부르지 않았으면 토큰 0 이다. */
+  readonly usage: { readonly model: string; readonly inputTokens: number; readonly outputTokens: number }
+}
+
+/**
+ * 🔴 SPEC §7.4 — 체험 문장 하나를 샘플 팀의 **같은 type 적용 중 항목**과 견준다. `detectConflicts` 와 같은 프롬프트·검증이고
+ * 예산 줄만 `demo` 다 (샘플 팀 전체 하루 상한 · `features.ts`).
+ *
+ * ⚠ **아무것도 저장하지 않는다** — 이 함수도 부르는 라우트도 `conflicts` 표에 쓰지 않는다. 남는 것은 예산 장부 한 줄이다.
+ * @throws ApiError `RATE_LIMITED`(샘플 팀 하루 상한) · `BUDGET_EXCEEDED` · `AI_OUTPUT_INVALID` · `AI_NOT_CONFIGURED`
+ */
+export async function detectDemoConflicts(input: DemoConflictInput): Promise<DemoConflictResult> {
+  const changed: ItemBrief = { ...input.tryItem, origin: 'doc', valid_until: null }
+  const changedIds = new Set([changed.id])
+  const candidates = (await sameTypeCandidates(input.projectId, [changed.type], changedIds)).slice(0, CONFLICT_MAX_CANDIDATES)
+  const titles = candidates.map((c) => ({ id: c.id, title: c.title }))
+
+  //  견줄 규칙이 없으면 짝이 나올 수 없다 — 부르지 않는다 (예산도 안 쓴다).
+  if (candidates.length === 0) return { conflicts: [], candidates: titles, usage: { model: currentModel(), inputTokens: 0, outputTokens: 0 } }
+
+  const known = new Set([changed.id, ...candidates.map((c) => c.id)])
+  const inputChars = [changed, ...candidates].reduce((sum, i) => sum + renderItem(i).length, 0)
+  let usage: DemoConflictResult['usage'] = { model: currentModel(), inputTokens: 0, outputTokens: 0 }
+
+  const conflicts = await withBudget(
+    'demo',
+    //  ⚠ 본문이 아니라 **글자수**만 넘긴다 (P1). 열쇠는 샘플 팀 프로젝트다 — 방문자 전체를 한 통으로 센다.
+    { projectId: input.projectId, actor: input.actor, inputChars, now: input.now },
+    async () => {
+      const call = await askModel([changed], candidates, known, changedIds)
+      usage = { model: call.model, inputTokens: call.inputTokens, outputTokens: call.outputTokens }
+      return call
+    },
+  )
+
+  return { conflicts: [...conflicts].sort(bySeverity), candidates: titles, usage }
 }

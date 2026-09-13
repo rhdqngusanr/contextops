@@ -1040,6 +1040,9 @@ params:
   「[AI 한 번 실행해보기]」 버튼이 있는데 부르는 문(`POST /demo/ai-once` · §7.4)이 0곳이라
   **배너에 그 버튼을 안 만들었다** (`components/demo-banner.tsx`). 두 문(`ask`·`demo/ai-once`)은
   둘 다 P3 이고 `withBudget()` 경유여야 한다 — 같은 바퀴에 하는 것이 싸다.
+  ✅ **그 둘째 절반(`demo/ai-once`)은 2026-09-13 사람 세션이 닫았다** — 사용자가 「지금 바로 만든다」를 골랐다(최종 점검 제안 A ·
+  `docs/evidence/2026-09-13-final-audit/`). §7.2 와 같은 프롬프트·검증(`askModel`)을 `withBudget('demo')` 로 부르고, 저장하지 않으며,
+  버튼은 배너가 아니라 정리 화면 머리에 선다(`components/demo-ai-once.tsx`). **이 항목은 `ask` 때문에 여전히 대기다.**
 
 ### 116. **`decided_by` 는 아직 uuid 뿐이다** — 「누가 결정했나」를 그릴 수 없다   [격차]
 - **증상**: 화면 6 상세는 거절 사유와 결정 시각을 그리는데 **누가 결정했는지**는 못 그린다.
