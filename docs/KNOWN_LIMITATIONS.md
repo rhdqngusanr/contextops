@@ -51,8 +51,8 @@
   게스트는 등급이 아니라 「쓸 수 없는 주체」로 만들었다 — GET·HEAD 만 지난다.
 - **실시간이 아니다** — 모든 상태는 「마지막 보고 기준」이다. 화면은 폴링으로 갱신하고 「실시간」이라는 낱말을
   쓰지 않는다 (SPEC §6 · `apps/web/test/web-landing.test.ts` 가 랜딩에서 그 낱말을 센다).
-- **서버측 AI 는 Gemini 무료 티어의 분당 요청 제한 안에서 돈다.** 키는 우리 것이고(P3) 호출은 전부 `withBudget()` 을
-  거치지만, 무료 티어의 **분당 요청 제한**은 우리 예산 가드 바깥의 상한이다 — 데모 중 여러 사람이 동시에 구조화를 누르면
+- **서버측 AI 는 Gemini 유료 티어(Tier 1)의 분당 요청 제한 안에서 돈다.** 키는 우리 것이고(P3) 호출은 전부 `withBudget()` 을
+  거치지만, 공급자의 **분당 요청 제한**은 우리 예산 가드 바깥의 상한이다(무료 티어보다 넉넉할 뿐 없지는 않다) — 여러 사람이 동시에 구조화를 누르면
   429 로 돌아오고 그 job 은 `RATE_LIMITED` 로 끝나 화면은 「요청이 너무 잦습니다」와 [다시 시도] 를 본다
   (`apps/web/src/lib/ai/client.ts` 의 `GEMINI_HTTP_ERROR_CODES` · SPEC §7.5). **픽스처 결과로 떨어지는 갈래는 어디에도
   없다** — 키가 없는 배포는 `AI_NOT_CONFIGURED`(503)로 끝나고 `/api/v1/health` 의 `ai:false` 가 그것을 미리 말한다 (INBOX G9).
@@ -62,10 +62,10 @@
 - **초대 메일은 보내지 않는다.** 팀원 초대(`/t` 의 owner 폼 · `POST /teams/{id}/members`)는 이메일을 적어 두는 것까지고, 그 사람은
   owner 가 전한 `/login` 주소로 GitHub 로그인해야 팀원이 된다(첫 로그인에 승격). 발신 SMTP 가 없어서다 (`docs/DEPLOY.md` ①-b) —
   화면이 그 사실을 초대 폼 위에 말한다 (INBOX H9).
-- **AI 처리 데이터의 행방 — 붙여넣은 문서는 Google Gemini API(국외)로 간다.** 지금 키는 **무료 티어**라 Google 약관상 그 입력이
-  제품 개선에 쓰일 수 있다 (ai.google.dev/gemini-api/docs/pricing · 2026-09-10 확인). 그래서 붙여넣기 칸 바로 밑과 `/privacy` 가
-  그 사실을 말하고(문장의 정본은 `apps/web/src/lib/web/privacy.ts` 의 `AI_TRANSFER_NOTICE` · 티어 상수 하나가 문장을 고른다),
-  🙋 Tier 1(빌링 연결)로 바꾸면 그 상수를 `paid` 로 고친다. 어느 티어든 비밀·개인정보를 붙여넣지 말라는 말은 남는다.
+- **AI 처리 데이터의 행방 — 붙여넣은 문서는 Google Gemini API(국외)로 간다.** 키는 유료 티어(Tier 1)라 Google 약관상 그 입력을
+  제품 개선에 쓰지 않는다 (ai.google.dev/gemini-api/docs/pricing · 2026-09-10 확인 · 유료임은 2026-09-14 사용자가 확인). 붙여넣기 칸
+  바로 밑과 `/privacy` 가 그 사실을 말한다(문장의 정본은 `apps/web/src/lib/web/privacy.ts` 의 `AI_TRANSFER_NOTICE` · 티어 상수 하나가
+  문장을 고른다). 국외 서버로 간다는 것과 비밀·개인정보를 붙여넣지 말라는 말은 티어와 상관없이 남는다.
 - **데모 항목은 승인 27 + 초안 3 이다** — 정본은 픽스처 둘(`fixtures/paylab-docs/goals.md` · 폐기된 `old-roadmap.md`)이고 그 문서에서
   문장 하나까지 역추적되는 전부다. 데모용 항목을 따로 지어내지 않는다 — 지어내면 데모에서 본 것과 관통이 잰 것이 갈린다 (SPEC §10.3).
 - **데모의 「AI 제안」 충돌 카드 3장은 기록물이다** — 2026-09-07 gemini-3.5-flash 가 같은 두 문서에서 실제로 찾은 모순을

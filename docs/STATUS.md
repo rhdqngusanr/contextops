@@ -41,7 +41,7 @@ _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **�
 | 데모 리셋 swap 을 한 트랜잭션으로 (지우기와 slug 바꾸기 사이의 하루짜리 404 틈) | 리셋 시험 셋 초록 |
 | 제출서 · README · 랜딩 — AI 툴 칸에 Codex CLI · 커밋 수(실측 352) · 「못 찾으면 버립니다」→ 다시 묻는다 · 월 $10 상한 · 「실제로 나온 답」/「던졌습니다」→ 사실대로(녹화 없음) | `readme.test` 제출 폼 상한 (한 줄 60 · 문제 290 · AI 활용 446 · AI 툴 191) |
 
-🙋 **사람 몫 — 마감 순** (방법은 근거 문서 표): ① **참가 접수 9/18 23:59:59** + 폼 칸·상한 캡처 ② 이 일곱 커밋 push 확인 → `verify:prod` ③ watch-prod 수동 dispatch 로 `GET / → 200` 로그 ④ **플러그인 Skill 실기**(setup → sync → progress · 로드는 고쳤지만 세션 안 실행은 아무도 안 봤다) ⑤ production 로그인 → 발행 스톱워치(「15분」) ⑥ Vercel `DATABASE_URL` 포트 6543 확인 · Gemini Tier 1 결정 ⑦ 쇼츠 mp4 업로드 · GitHub 저장소 소개(옛 한 줄)·topics ⑧ 9/18 동결 · 9/19 제출. 정리: 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 — 기본 실행은 안 읽는 파일이라 지워도 된다.
+🙋 **사람 몫 — 마감 순** (방법은 근거 문서 표): ① **참가 접수 9/18 23:59:59** + 폼 칸·상한 캡처 ② 이 일곱 커밋 push 확인 → `verify:prod` ③ watch-prod 수동 dispatch 로 `GET / → 200` 로그 ④ **플러그인 Skill 실기**(setup → sync → progress · 로드는 고쳤지만 세션 안 실행은 아무도 안 봤다) ⑤ production 로그인 → 발행 스톱워치(「15분」) ⑥ Vercel `DATABASE_URL` 포트 6543 확인(로컬 사본 `.env.vercel` 은 6543 · 대시보드 확인은 사람) · Gemini 는 **이미 유료(Tier 1)** 였다 — 2026-09-14 사용자 확인 → `GEMINI_DATA_TIER='paid'` ⑦ 쇼츠 mp4 업로드 · GitHub 저장소 소개(옛 한 줄)·topics ⑧ 9/18 동결 · 9/19 제출. 정리: 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 — 기본 실행은 안 읽는 파일이라 지워도 된다.
 
 🙋 **제안의 결정** (같은 날 저녁 · 사용자가 골랐다) — A 게스트의 「AI 한 번」 **지금 구현** ✅(아래 절) · B 제출 4칸 설득력 판 **교체** ✅ · D 서비스 링크 `/` ✅.
 남은 것: C 차별점 표(관리형 CLAUDE.md · Cursor Team Rules · ruler · rulesync — 출처 확인) · E 게스트 동선 · F 실사용자 5팀 · AI 품질 10회 · 누가 돈을 내나.

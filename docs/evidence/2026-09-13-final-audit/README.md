@@ -43,7 +43,7 @@
 | 9/14 | **플러그인 실기** — 로드 고장은 고쳤지만 Skill 이 실제 세션에서 도는 것은 **아직 아무도 안 봤다** | 새 저장소에서 `claude plugin marketplace add rhdqngusanr/contextops` → `install` → `/contextops:setup`(Sync 화면 [기기 추가]가 준 줄) → `/contextops:sync` → 작업 뒤 `/contextops:progress` 가 production Roadmap 을 움직이는지 · GIF 셋(`docs/PITCH.md` §3) |
 | 9/14 | production **로그인 → 팀 → 문서 → AI 정리 → 승인 → 발행** 을 스톱워치로 | 「팀장은 브라우저에서 15분」의 유일한 근거 (`docs/PITCH.md` §4) · 막히면 원인 코드를 Claude 에게 |
 | 9/14 | Vercel env `DATABASE_URL` 의 포트가 **6543**(Transaction pooler)인지 1분 확인 | 5432(Session)면 풀 크기에 묶여 몰릴 때 500 |
-| 9/14 | Gemini **Tier 1** 결정 | 무료 티어 = 분당 제한 + 입력이 Google 제품 개선에 쓰일 수 있음 · 바꾸면 `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER` 한 줄 |
+| ✅ 9/14 | Gemini **Tier 1** — **이미 유료였다** (사용자 확인) | 사이트 고지가 「무료 요금제라 Google 이 제품 개선에 쓸 수 있다」로 사실보다 나쁘게 말하던 것을 `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER='paid'` 로 바로잡았다 |
 | 9/15~17 | **영상 링크** — 쇼츠 mp4 가 이미 있다(`.ci/video/shorts-*.mp4`) | 유튜브 업로드 → `docs/SUBMISSION.md` 🙋 표 · 투표 페이지 · 레딧 글 |
 | 아무 때 | GitHub 저장소 소개가 **옛 한 줄**(「팀의 지식과 Claude의 기억을 같은 방향으로」) · topics 0개 | 저장소 Settings 또는 `gh repo edit` 로 지금 한 줄과 topics(`claude-code` · `ai-agents` · `developer-tools` …) |
 | 9/18 저녁 | 동결 — `release` 브랜치 · Preview 끄기 | `docs/DEPLOY.md` 「심사 기간 런북」 |

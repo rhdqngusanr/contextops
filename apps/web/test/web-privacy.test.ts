@@ -37,11 +37,15 @@ describe('① 표가 하나이고 티어가 문장을 고른다', () => {
     expect(AI_TRANSFER_NOTICE_NOW).toBe(AI_TRANSFER_NOTICE[GEMINI_DATA_TIER])
   })
 
-  it('지금 티어는 `free` 다 — 🙋 Tier 1 로 바꾸는 날 이 줄과 KNOWN_LIMITATIONS 를 같이 고친다', () => {
-    expect(GEMINI_DATA_TIER).toBe('free')
+  it('지금 티어는 `paid` 다 — 티어가 바뀌는 날 이 줄과 KNOWN_LIMITATIONS 를 같이 고친다', () => {
+    //  2026-09-14 — 키는 이미 유료(Tier 1)였는데 상수가 `free` 로 남아, 화면이 「무료 요금제라 제품 개선에 쓸 수 있다」고
+    //  사실보다 나쁘게 말하고 있었다(사용자 확인). 문장은 표가 고르므로 상수 한 줄과 이 시험·한계 문서만 같이 바뀐다.
+    expect(GEMINI_DATA_TIER).toBe('paid')
     const limits = readFileSync(join(webRoot, '..', '..', 'docs', 'KNOWN_LIMITATIONS.md'), 'utf8')
     expect(limits).toContain('AI 처리 데이터의 행방')
-    expect(limits).toContain('무료 티어')
+    expect(limits).toContain('유료 티어(Tier 1)')
+    //  옛 문장이 한계 문서에 남지 않는다 — 두 문서가 서로 다른 요금제를 말하면 둘 다 못 믿는다.
+    expect(limits).not.toContain('지금 키는 **무료 티어**')
     expect(limits).toContain('AI_TRANSFER_NOTICE')
   })
 })

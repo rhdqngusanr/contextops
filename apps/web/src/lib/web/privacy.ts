@@ -12,16 +12,17 @@ import { SITE } from './site'
 //
 //  🔴 **티어가 문장을 정한다.** Gemini 무료 티어의 약관은 입력을 Google 의 제품 개선에 쓸 수 있다고 적고
 //     (ai.google.dev/gemini-api/docs/pricing 「Used to improve our products: Yes」 · 2026-09-10 읽음),
-//     유료 티어(Tier 1 이상)는 쓰지 않는다. 지금 키는 무료 티어다 — 🙋 AI Studio 에 빌링을 연결하고 키를 바꾸면
-//     `GEMINI_DATA_TIER` 를 `'paid'` 로 고친다. 그 한 줄이 화면 둘의 문장을 같이 바꾼다.
+//     유료 티어(Tier 1 이상)는 쓰지 않는다. **지금 키는 유료 티어다** (2026-09-14 사용자 확인 — 그 전까지 이 상수가 `free` 로
+//     남아 화면이 「무료 요금제라 제품 개선에 쓸 수 있다」고 사실보다 나쁘게 말하고 있었다). 티어가 바뀌면 아래 상수 한 줄이
+//     화면 둘의 문장을 같이 바꾼다.
 //  ⚠ 어느 티어든 「비밀·개인정보를 붙여넣지 마라」는 남는다 — 이 제품이 받는 문서는 팀장이 손수 붙여 넣은
 //     팀 문서이지 사람의 개인정보가 아니다 (P1 은 코드·secret·대화를 막지만 붙여넣기 칸은 사람의 판단이다).
 // =====================================================================
 
 export type GeminiDataTier = 'free' | 'paid'
 
-/** 🙋 Tier 1 로 바꾸는 날 `'paid'` 로. 값을 바꾸면 아래 문장이 갈린다 — 시험이 둘 다 참인지 본다. */
-export const GEMINI_DATA_TIER: GeminiDataTier = 'free'
+/** 키의 요금제. 값을 바꾸면 아래 문장이 갈린다 — 시험이 둘 다 참인지 본다. ⚠ 무료 키로 배포하는 사람(fork)은 `'free'` 로 둬라. */
+export const GEMINI_DATA_TIER: GeminiDataTier = 'paid'
 
 /**
  * 붙여넣기 칸 밑과 처리방침에 나가는 **한 문장** — 사람이 문서를 넣기 전에 읽는다.
@@ -48,7 +49,7 @@ export type PrivacySection = { readonly heading: string; readonly lines: readonl
  */
 export const PRIVACY: { readonly title: string; readonly updated: string; readonly sections: readonly PrivacySection[] } = {
   title: `${SITE.name} ${PRIVACY_LABEL}`,
-  updated: '2026-09-10',
+  updated: '2026-09-14',
   sections: [
     {
       heading: '무엇을 받나',
