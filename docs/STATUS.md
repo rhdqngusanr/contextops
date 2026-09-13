@@ -5,7 +5,7 @@
 > **한 일이 아니라 잰 것을 써라.**
 > 「API 작업함」 ✗ / 「publish 409 재현 테스트 3개 초록, Pack 파일 6개, manifest_hash 고정」 ○
 
-_마지막 갱신: 2026-09-13 새벽 · 사람 세션(루프 밖) · **원티드 입상 기준 최종 점검** — README 대로 깐 플러그인이 로드에 실패하던 고장(FINDINGS 173)을 찾아 고쳤고, 심사 기간 가용성 다섯 · 제출서 사실을 고쳤다(로컬 커밋 · **push 는 사람 확인 뒤**). 사람 몫·결정할 제안의 정본은 `docs/evidence/2026-09-13-final-audit/README.md`. 아래 첫 절._
+_마지막 갱신: 2026-09-13 저녁 · 사람 세션(루프 밖) · **원티드 입상 기준 최종 점검** — 플러그인 로드 실패(FINDINGS 173) 등 일곱 커밋은 push·배포 확인(`248d4ce`). 이어서 사용자 결정 넷(push · AI 한 번 구현 · 제출 4칸 교체 · 링크 `/`)에 따라 **게스트의 「AI 한 번」(`POST /demo/ai-once`)** 을 지었다 — 로컬 커밋, **push 는 사람 확인 뒤**. 사람 몫·남은 제안의 정본은 `docs/evidence/2026-09-13-final-audit/README.md`. 아래 첫 절._
 
 _2026-09-12 저녁 · 사람 세션(루프 밖) · **보안 3건 + 영어 모드(기반·랜딩·앱 껍데기·칩) → push·배포 완료** — `verify:prod` 47/0 · 영어 자동감지 production 실측. 남은 것은 앱 안쪽 화면 문구(아래 「🙋 다음 판」)._
 
@@ -43,10 +43,29 @@ _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **�
 
 🙋 **사람 몫 — 마감 순** (방법은 근거 문서 표): ① **참가 접수 9/18 23:59:59** + 폼 칸·상한 캡처 ② 이 일곱 커밋 push 확인 → `verify:prod` ③ watch-prod 수동 dispatch 로 `GET / → 200` 로그 ④ **플러그인 Skill 실기**(setup → sync → progress · 로드는 고쳤지만 세션 안 실행은 아무도 안 봤다) ⑤ production 로그인 → 발행 스톱워치(「15분」) ⑥ Vercel `DATABASE_URL` 포트 6543 확인 · Gemini Tier 1 결정 ⑦ 쇼츠 mp4 업로드 · GitHub 저장소 소개(옛 한 줄)·topics ⑧ 9/18 동결 · 9/19 제출. 정리: 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 — 기본 실행은 안 읽는 파일이라 지워도 된다.
 
-🙋 **결정이 필요한 제안** — A 게스트가 AI 가 도는 장면을 본다(충돌 탐지 한 단계 · ≈ $0.01/회 · 하루 상한) · B 제출 4칸 설득력 판(글자 수 통과한 원문) · C 차별점 표(관리형 CLAUDE.md · Cursor Team Rules · ruler · rulesync — 출처 확인) · D 서비스 링크 `/` · E 게스트 동선 · F 실사용자 5팀 · AI 품질 10회 · 누가 돈을 내나.
-⚠ A 는 INBOX 블로커 5 ③ 의 조건(「앞이 다 닫혔을 때만 · 9/16 안에 안 끝나면 버린다」)을 사람이 정해 두었다 — 사람 몫 ①~⑤ 가 아직 열려 있어 만들지 않았다.
+🙋 **제안의 결정** (같은 날 저녁 · 사용자가 골랐다) — A 게스트의 「AI 한 번」 **지금 구현** ✅(아래 절) · B 제출 4칸 설득력 판 **교체** ✅ · D 서비스 링크 `/` ✅.
+남은 것: C 차별점 표(관리형 CLAUDE.md · Cursor Team Rules · ruler · rulesync — 출처 확인) · E 게스트 동선 · F 실사용자 5팀 · AI 품질 10회 · 누가 돈을 내나.
+⚠ A 는 INBOX 블로커 5 ③ 이 「앞이 다 닫혔을 때만」이라는 조건을 달아 두었는데, 사용자가 이번에 그 조건을 넘어 「지금 바로」를 골랐다.
 
 `tools/ci.ps1`: 2026-09-13 06:26 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1579) | docs OK => GREEN
+
+### 같은 날 저녁 — 게스트의 「AI 한 번」 (`POST /demo/ai-once`)
+
+| 무엇 | 잰 것 |
+|---|---|
+| 서버 | §7.2 와 같은 프롬프트·검증 — `conflict.ts` 에서 `askModel` · `sameTypeCandidates` 를 뽑아 `detectConflicts` 와 `detectDemoConflicts` 가 같이 쓴다. 다른 것은 예산 줄(`withBudget('demo')`)뿐 · 저장 0 · `ai_usage` 한 줄(IP 는 sha256) |
+| 입력 | 고른 메모 이름 하나(`lib/demo/ai-presets.ts` · 셋) — 계약 `DemoAiOnce` 는 `.strict()` · 없는 이름 400 · 데모가 안 심겼으면 404 |
+| 상한 | 한 IP 하루 10(`HTTP_RATE_LIMITS`) · 샘플 팀 전체 하루 20(`AI_FEATURE_LIMITS.demo` · 범위 project) · 월 $10 천장 |
+| 화면 | 정리 화면 머리 · 게스트에게만(`components/demo-ai-once.tsx`) — 모양 넷(처음 · 도는 중 · 결과 · 실패) · 결과 꼬리에 모델·초·토큰·값·견준 규칙 수·저장되지 않음 · 상한이면 [다시 시도] 대신 기록 카드 안내. 관통이 다시 찍은 랜딩 캡처(`public/shots/screen-review.png`)에 체험 칸과 첫 충돌 카드가 한 화면에 선다(눈으로 봄) |
+| 시험 | `api-demo-ai-once` 9 · `web-demo-ai-once` 7 · `ai-budget`(데모는 프로젝트 열쇠가 있어야 한다) · `ai-features-wired`(도는 기능 셋) · `api-rate-limit`(자격증명 없는 쓰기 문 둘) |
+| 같이 고친 것 | `AI_FEATURES_NOT_WIRED` 에서 demo 삭제 · 데모 팀 찾기를 `lib/demo/project.ts` 로 올려 `/demo/session` 과 공용 · 플러그인 번들 재생성 · SPEC §5·§7.4·§7.5 · DESIGN_BRIEF §4·§5 · KNOWN_LIMITATIONS(「4종 중 하나」) · 제출서 AI 활용 칸 589자 · FINDINGS 117 은 `ask` 때문에 여전히 대기 |
+| 감시 | 수동 `workflow_dispatch` 로그에 `GET / → 200` — 변수 없이 production 을 잰다(예전엔 「건너뛴다」) |
+
+⚠ 밟은 것 둘 — ① SPEC 에 쓴 굵게(닫는 별표 뒤에 바로 조사)가 `markdown-emphasis.test` 에 걸려 `<b>` 로 바꿨다 ② 스키마에 계약을 더하고 플러그인 번들을 안 구워 CI 가 한 번 빨갰다 — `packages/schema` 를 바꾸면 `pnpm --filter @contextops/plugin build`.
+
+🙋 **push 는 사람 확인 뒤** — 배포되면 production 에서 `POST /api/v1/demo/ai-once` 에 `{"preset":"refund_three_days"}` 한 번(약 $0.01)과 `verify:prod`.
+
+`tools/ci.ps1`: 2026-09-13 21:52 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1596) | docs OK => GREEN
 
 ---
 

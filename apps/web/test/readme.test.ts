@@ -326,8 +326,9 @@ describe('⑥ 제출서(docs/SUBMISSION.md) — README·코드와 같은 말을 
     expect(submission).toContain('](KNOWN_LIMITATIONS.md)')
     expect(submission).toContain('계약은 못 막습니다')
     expect(limits).toContain('계약은 못 막는다')
-    expect(submission).toContain('서버측 AI 4종 중 둘')
-    expect(limits).toContain('서버측 AI 4종 중 둘')
+    //  2026-09-13 — 게스트의 AI 한 번(§7.4 · `POST /demo/ai-once`)이 문을 가져 「둘」이 「하나(질의)」가 됐다.
+    expect(submission).toContain('서버측 AI 4종 중 하나')
+    expect(limits).toContain('서버측 AI 4종 중 하나')
   })
 })
 

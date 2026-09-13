@@ -56,10 +56,9 @@
   429 로 돌아오고 그 job 은 `RATE_LIMITED` 로 끝나 화면은 「요청이 너무 잦습니다」와 [다시 시도] 를 본다
   (`apps/web/src/lib/ai/client.ts` 의 `GEMINI_HTTP_ERROR_CODES` · SPEC §7.5). **픽스처 결과로 떨어지는 갈래는 어디에도
   없다** — 키가 없는 배포는 `AI_NOT_CONFIGURED`(503)로 끝나고 `/api/v1/health` 의 `ai:false` 가 그것을 미리 말한다 (INBOX G9).
-- **서버측 AI 4종 중 둘은 문이 없다.** `apps/web/src/lib/ai/features.ts` 의 표는 `structure · conflict · ask · demo`
-  넷인데, 라우트에서 `withBudget()` 을 부르는 자리는 문서 구조화와 충돌 탐지 둘뿐이다. **질의창(§7.3 ·
-  `POST …/ask`)과 「AI 한 번 실행해보기」(§7.4 · `POST /demo/ai-once`)는 없다** — 화면 9 에 질의창이 없고 게스트
-  배너에 그 버튼이 없는 이유다 (FINDINGS 117 · SPEC §14 절삭 순서 1번).
+- **서버측 AI 4종 중 하나는 문이 없다.** `apps/web/src/lib/ai/features.ts` 의 표는 `structure · conflict · ask · demo`
+  넷이고, `withBudget()` 을 지나는 자리는 문서 구조화 · 충돌 탐지 · 게스트의 「AI 한 번」(§7.4 · `POST /demo/ai-once` ·
+  2026-09-13) 셋이다. **질의창(§7.3 · `POST …/ask`)은 없다** — 화면 9 에 질의창이 없는 이유다 (FINDINGS 117 · SPEC §14 절삭 순서 1번).
 - **초대 메일은 보내지 않는다.** 팀원 초대(`/t` 의 owner 폼 · `POST /teams/{id}/members`)는 이메일을 적어 두는 것까지고, 그 사람은
   owner 가 전한 `/login` 주소로 GitHub 로그인해야 팀원이 된다(첫 로그인에 승격). 발신 SMTP 가 없어서다 (`docs/DEPLOY.md` ①-b) —
   화면이 그 사실을 초대 폼 위에 말한다 (INBOX H9).
@@ -70,8 +69,10 @@
 - **데모 항목은 승인 27 + 초안 3 이다** — 정본은 픽스처 둘(`fixtures/paylab-docs/goals.md` · 폐기된 `old-roadmap.md`)이고 그 문서에서
   문장 하나까지 역추적되는 전부다. 데모용 항목을 따로 지어내지 않는다 — 지어내면 데모에서 본 것과 관통이 잰 것이 갈린다 (SPEC §10.3).
 - **데모의 「AI 제안」 충돌 카드 3장은 기록물이다** — 2026-09-07 gemini-3.5-flash 가 같은 두 문서에서 실제로 찾은 모순을
-  씨앗이 다시 심는 것이고, 카드 본문이 그 사실을 말한다. 게스트는 쓸 수 없으므로 **데모 안에서 AI 가 새로 도는 장면은 없다**
-  (구조화·충돌 탐지는 로그인한 팀장이 문서를 붙여 넣을 때 돈다 · `POST /demo/ai-once` 는 없다 — FINDINGS 117).
+  씨앗이 다시 심는 것이고, 카드 본문이 그 사실을 말한다. **AI 가 새로 도는 장면은 정리 화면 맨 위의 체험 칸 하나다**
+  (2026-09-13 · `POST /demo/ai-once`) — 고른 메모 셋 중 하나만 넣을 수 있고(자유 입력 없음 · `lib/demo/ai-presets.ts`),
+  결과는 저장되지 않으며, 한 주소와 방문자 전체에 하루 상한이 있다(`HTTP_RATE_LIMITS` · `AI_FEATURE_LIMITS.demo`).
+  문서를 붙여 넣는 진짜 구조화는 여전히 로그인한 팀장이 문서를 넣을 때 돈다.
 - **가져오기의 zip 드롭존이 없다** — 문서 붙여넣기만 있다. 서버에 경로 검사·개수·용량 상한(SPEC §11)이 먼저
   서야 한다 (`apps/web/src/app/t/[team]/p/[project]/import/page.tsx` 머리).
 - **sync 상태 `manual` 을 사람이 실제로 밟은 적은 없다.** 찍는 쪽은 생겼다 — `judge()` 가 「우리 캐시에 그 버전의
