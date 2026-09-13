@@ -67,7 +67,8 @@ _2026-09-10 오후 · 사람 세션(루프 밖 · `loop/STOP` 그대로) · **�
 production 실측 둘: API 로 `refund_three_days` → 200 · 2.4초 · 충돌 2(환불 24시간 규칙 high · 자동 에스컬레이션 규칙 medium) · 입력 1,087 · 출력 282 토큰 · $0.0042 /
 브라우저에서 [금액을 소수로 계산] 을 눌러 → 1.8초 · 충돌 1(원 단위 정수 규칙) · $0.003 · 꼬리 줄 「저장되지 않음」까지 보임 · health `spent_month_usd` 0.0072 · 없는 메모 이름은 400(모델을 안 부름).
 ⚠ 실측에서 찾은 것 — 진짜 모델이 질문 문장에 `'item_try_float_money'` · `item_policy_integer_money` 같은 id 를 적었다 → 라우트가 내기 전에 id 를 「제목」으로 바꾼다
-(`nameItemsInQuestion` · 긴 id 먼저 · 따옴표째 · 표에 없는 id 는 그대로 · 시험 2). 🙋 이 수정 커밋의 push 는 사람 확인 뒤.
+(`nameItemsInQuestion` · 긴 id 먼저 · 따옴표째 · 표에 없는 id 는 그대로 · 시험 2) — 사용자 확인 뒤 push(`f1286b0`) · Vercel success 뒤
+production 재실측: `float_money` → 200 · 2.0초 · 충돌 1(원 단위 정수 규칙 high) · $0.0029 · 질문 문장에 `item_` 0.
 
 `tools/ci.ps1`: 2026-09-13 23:20 | principles OK | typecheck OK | test OK | build OK | walkthrough OK (1598) | docs OK => GREEN
 
