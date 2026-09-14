@@ -291,25 +291,45 @@ describe('⑥ 제출서(docs/SUBMISSION.md) — README·코드와 같은 말을 
     expect(section).toContain('서비스 링크(정상 작동 필수)')
   })
 
-  it('🔴 제출 폼 원문의 각 칸이 적어 둔 상한 안이다 — 마감일에 급히 자르다 차별점이 빠지지 않게', () => {
+  it('🔴 제출 폼 원문의 칸이 실제 폼(2026-09-14 캡처)과 같고 상한·한 줄·16:9 를 지킨다 — 마감일에 급히 자르다 차별점이 빠지지 않게', () => {
+    /**
+     * 실제 제출 폼의 칸 — 이름·차례 그대로 (`docs/evidence/2026-09-14-submission-form/README.md`).
+     * ★ 폼이 바뀌면 다시 캡처하고 이 줄과 `docs/SUBMISSION.md` 「제출 폼 원문」의 머리를 같이 고친다.
+     */
+    const SUBMISSION_FORM_FIELDS = ['대표 이미지', '제목', '해결하고자 한 문제', 'AI 활용 방식 및 결과', '사용 AI툴 및 기술 스택', '서비스 링크', '스크린샷']
     const start = submission.indexOf('\n## 제출 폼 원문')
     expect(start).toBeGreaterThan(0)
     const section = submission.slice(start + 1).split(/\n## /)[0] as string
-    //  `### <칸 이름> (≤ N자)` 머리 아래의 본문이 그 칸의 원문이다. 상한이 없는 머리(서비스 링크)는 길이를 안 잰다.
+    //  `### <칸 이름> (<모양>)` 머리 아래의 본문이 그 칸의 원문이다. 모양 — `≤ N자` 는 글자 상한 · `한 줄` 은 줄바꿈 없는 입력칸.
     const blocks = section.split('\n### ').slice(1).map((chunk) => {
       const nl = chunk.indexOf('\n')
       const head = nl === -1 ? chunk : chunk.slice(0, nl)
       const body = nl === -1 ? '' : chunk.slice(nl + 1).trim()
-      const m = /^(.+?) \(≤ (\d+)자\)$/.exec(head)
-      return m ? { label: m[1] as string, cap: Number(m[2]), body } : { label: head, cap: undefined, body }
+      const m = /^(.+?)(?: \((.+)\))?$/.exec(head)
+      const shape = m?.[2]
+      const cap = shape === undefined ? undefined : /^≤ (\d+)자$/.exec(shape)?.[1]
+      return { label: (m?.[1] ?? head).trim(), cap: cap === undefined ? undefined : Number(cap), oneLine: shape === '한 줄', body }
     })
-    const capped = blocks.filter((b) => b.cap !== undefined)
-    for (const must of ['한 줄', '해결하고자 한 문제', 'AI 활용 방식', '사용한 AI 툴']) {
-      expect(capped.map((b) => b.label), `폼 칸 「${must}」 이 없거나 상한이 없다`).toContain(must)
-    }
-    for (const b of capped) {
-      expect(b.body.length, `「${b.label}」 이 비었다`).toBeGreaterThan(0)
+    expect(blocks.map((b) => b.label)).toEqual(SUBMISSION_FORM_FIELDS)
+    for (const b of blocks) expect(b.body.length, `「${b.label}」 이 비었다`).toBeGreaterThan(0)
+    expect(blocks.find((b) => b.label === 'AI 활용 방식 및 결과')?.cap, '폼의 글자 세기가 0/500 이다').toBe(500)
+    for (const b of blocks.filter((x) => x.cap !== undefined)) {
       expect(b.body.length, `「${b.label}」 이 상한 ${b.cap}자를 넘는다 (${b.body.length}자)`).toBeLessThanOrEqual(b.cap as number)
+    }
+    for (const b of blocks.filter((x) => x.oneLine)) expect(b.body, `「${b.label}」 은 한 줄 입력칸이다`).not.toContain('\n')
+
+    //  그림 칸 — 가리키는 파일이 있고, 스크린샷은 폼이 요구한 16:9 · 최대 5장이다 (`scripts/submission-shots.ts` 가 찍는다).
+    const pngs = (label: string): string[] =>
+      [...(blocks.find((b) => b.label === label)?.body ?? '').matchAll(/`([^`]+\.png)`/g)].map((m) => m[1] as string)
+    expect(pngs('대표 이미지')).toHaveLength(1)
+    const shots = pngs('스크린샷')
+    expect(shots.length).toBeGreaterThan(0)
+    expect(shots.length).toBeLessThanOrEqual(5)
+    for (const p of [...pngs('대표 이미지'), ...shots]) expect(existsSync(join(repoRoot, p)), p).toBe(true)
+    for (const p of shots) {
+      const png = readFileSync(join(repoRoot, p))
+      const ratio = png.readUInt32BE(16) / png.readUInt32BE(20)
+      expect(Math.abs(ratio - 16 / 9), `${p} 가 16:9 가 아니다 (${ratio.toFixed(3)})`).toBeLessThan(0.01)
     }
   })
 
@@ -505,7 +525,7 @@ describe('⑩ 「AI 활용」 실측 표가 근거 JSON 과 같다 (INBOX H3)', 
     for (const row of rows) expect(text, row).toContain(row)
   })
 
-  it('제출 폼 600자 칸의 「실측:」 문장도 같은 숫자다', () => {
+  it('제출 폼 「AI 활용 방식 및 결과」(500자) 칸의 「실측:」 문장도 같은 숫자다', () => {
     const line = /실측: [^\n]+/.exec(submission)?.[0] ?? ''
     expect(line).toContain(`${fmt(probe.goals.chars + probe.roadmap.chars)}자`)
     expect(line).toContain(`항목 후보 ${items}`)
