@@ -41,9 +41,19 @@
 ## 우리가 넣는 값
 
 원문의 정본은 `docs/SUBMISSION.md` 「제출 폼 원문」 하나다 — 여기 다시 적지 않는다 (두 곳이면 갈린다).
-그림 다섯 장은 이 폴더의 `1-landing.png` … `5-sync.png` 이고, `apps/web/scripts/submission-shots.ts` 가 production 을 16:9(1600×900 · 2배)로 찍었다.
-화면이 바뀌면 다시 찍는다:
+
+그림은 두 단계다.
+
+1. **원본 캡처** — 이 폴더의 `1-landing.png` · `1b-landing-compare.png` · `2-review-ai.png` … `5-sync.png` (3200×1800).
+   `apps/web/scripts/submission-shots.ts` 가 production 을 심사위원과 같은 길(`/demo` 게스트 세션)로 찍는다.
+2. **갤러리 그림** — `cards/` 의 다섯 장 (1920×1080). `apps/web/scripts/submission-cards.ts` 가 원본의 핵심 부분만 잘라 위에 제목 한 줄을 얹는다.
+   ★ 왜 — 처음엔 원본을 그대로 올렸는데, 원티드 과제 화면이 스크린샷을 작은 칸(아래 줄 ≈ 300px)으로 줄여 보여 줘서 글자가 점으로 보였다(2026-09-14 제출 뒤 사용자 확인).
+   후보 셋(확대만 · 밝은 제목 띠 · 어두운 제목 띠)을 같은 화면으로 그려 보였고 사용자가 **밝은 제목 띠**를 골랐다.
+   대표 이미지는 원본 `1-landing.png` 그대로다 — 첫 화면 표제가 이미 크다.
+
+화면이 바뀌면 둘 다 다시 돌린다 (둘째 장은 진짜 AI 를 한 번 부르므로, 다시 찍으면 카드 제목 띠의 초·값도 다시 본다):
 
 ```
 pnpm --filter web exec tsx scripts/submission-shots.ts --url https://contextops-rosy.vercel.app
+pnpm --filter web exec tsx scripts/submission-cards.ts
 ```

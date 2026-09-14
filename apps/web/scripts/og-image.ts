@@ -1,4 +1,4 @@
-import { readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { sleep } from '../e2e/cdp'
 import { connectPage, launchChrome } from '../e2e/chrome'
 import { SITE, SITE_TEXT } from '../src/lib/web/site'
+import { fontFaces, rootTokens } from './page-style'
 
 /**
  * ⚠ **그림은 한 장뿐이라 한국어다** (2026-09-12 · 영어 모드). `og.png` 는 파일 하나를
@@ -37,20 +38,8 @@ const webRoot = fileURLToPath(new URL('..', import.meta.url))
 const CDP_PORT = Number(process.env.OG_CDP_PORT ?? 9231)
 const OUT = join(webRoot, 'public', 'og.png')
 
-/** `globals.css` 의 첫 `:root { … }` — 토큰을 복사하지 않고 통째로 넣는다. */
-function rootTokens(): string {
-  const css = readFileSync(join(webRoot, 'src', 'app', 'globals.css'), 'utf8')
-  const block = /:root\s*\{[\s\S]*?\}/.exec(css)
-  if (!block) throw new Error('globals.css 에 :root 블록이 없다')
-  return block[0]
-}
-
-/** `fonts.css` 의 `@font-face` — 조각 주소만 저장소의 `public/fonts/` 절대 `file://` 로 편다. */
-function fontFaces(): string {
-  const css = readFileSync(join(webRoot, 'src', 'app', 'fonts.css'), 'utf8')
-  const publicUrl = pathToFileURL(join(webRoot, 'public')).toString()
-  return css.replace(/url\(\/fonts\//g, `url(${publicUrl}/fonts/`)
-}
+//  색 토큰(`rootTokens`)과 글꼴(`fontFaces`)을 읽는 법의 정본은 `./page-style.ts` 다 —
+//  둘째 사용자(`submission-cards.ts`)가 생겨 그리로 옮겼다 (2026-09-14).
 
 /** 브랜드 마크 — `public/icon.svg` 와 같은 그림. 색은 토큰이다 (아이콘 파일은 값이고 여기는 var). */
 const MARK = `<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="16" fill="var(--ink)"/><path d="M19 33.5l8.5 8.5L45 24" fill="none" stroke="var(--on-accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`

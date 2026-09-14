@@ -64,11 +64,11 @@ https://contextops-rosy.vercel.app
 
 ### 스크린샷 (16:9 · 최대 5장)
 
-1. `docs/evidence/2026-09-14-submission-form/1-landing.png` — 첫 화면: 같은 질문에 팀원마다 다른 답 → 팀이 승인한 한 판
-2. `docs/evidence/2026-09-14-submission-form/2-review-ai.png` — 정리: 고른 메모 한 줄을 AI 가 지금 승인된 규칙과 견줘 질문으로 올린 결과 (production · 저장 안 됨)
-3. `docs/evidence/2026-09-14-submission-form/3-pack-trace.png` — Pack Explorer: 배포된 CLAUDE.md 의 문단을 누르면 어느 문서 몇 번째 글자에서 왔는지
-4. `docs/evidence/2026-09-14-submission-form/4-roadmap.png` — Roadmap: 마일스톤마다 근거 n / 3
-5. `docs/evidence/2026-09-14-submission-form/5-sync.png` — Sync: 기기마다 받은 판과 확인값(해시)
+1. `docs/evidence/2026-09-14-submission-form/cards/1-landing-compare.png` — 같은 질문인데 팀원마다 AI 답이 다릅니다 (첫 화면의 비교 띠)
+2. `docs/evidence/2026-09-14-submission-form/cards/2-review-ai.png` — AI가 새 규칙과 부딪히는 기존 규칙을 찾아 물어봅니다 (정리 · production · 저장 안 됨)
+3. `docs/evidence/2026-09-14-submission-form/cards/3-pack-trace.png` — 배포된 규칙이 어느 문서에서 왔는지 바로 보입니다 (Pack Explorer)
+4. `docs/evidence/2026-09-14-submission-form/cards/4-roadmap.png` — 계획이 어디까지 왔는지 근거와 함께 봅니다 (Roadmap)
+5. `docs/evidence/2026-09-14-submission-form/cards/5-sync.png` — 누구 기기가 옛 규칙을 쓰고 있는지 한눈에 보입니다 (Sync)
 
 ## production URL 이 온 뒤 지운 문장 (2026-09-10 반영)
 
