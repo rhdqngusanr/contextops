@@ -306,13 +306,16 @@ describe('⑥ 제출서(docs/SUBMISSION.md) — README·코드와 같은 말을 
       const head = nl === -1 ? chunk : chunk.slice(0, nl)
       const body = nl === -1 ? '' : chunk.slice(nl + 1).trim()
       const m = /^(.+?)(?: \((.+)\))?$/.exec(head)
-      const shape = m?.[2]
-      const cap = shape === undefined ? undefined : /^≤ (\d+)자$/.exec(shape)?.[1]
-      return { label: (m?.[1] ?? head).trim(), cap: cap === undefined ? undefined : Number(cap), oneLine: shape === '한 줄', body }
+      //  괄호 안은 ` · ` 로 이어진 모양 조각이다 — 「한 줄 · ≤ 100자」처럼 둘이 같이 올 수 있다.
+      const shape = (m?.[2] ?? '').split(' · ')
+      const cap = shape.map((s) => /^≤ (\d+)자$/.exec(s)?.[1]).find((n) => n !== undefined)
+      return { label: (m?.[1] ?? head).trim(), cap: cap === undefined ? undefined : Number(cap), oneLine: shape.includes('한 줄'), body }
     })
     expect(blocks.map((b) => b.label)).toEqual(SUBMISSION_FORM_FIELDS)
     for (const b of blocks) expect(b.body.length, `「${b.label}」 이 비었다`).toBeGreaterThan(0)
     expect(blocks.find((b) => b.label === 'AI 활용 방식 및 결과')?.cap, '폼의 글자 세기가 0/500 이다').toBe(500)
+    //  2026-09-14 — 한 줄 칸이 100자에서 잘린다는 것을 사용자가 끝까지 채워 보고 확인했다(글자 세기는 안 보인다).
+    expect(blocks.find((b) => b.label === '해결하고자 한 문제')?.cap, '문제 칸은 100자에서 잘린다').toBe(100)
     for (const b of blocks.filter((x) => x.cap !== undefined)) {
       expect(b.body.length, `「${b.label}」 이 상한 ${b.cap}자를 넘는다 (${b.body.length}자)`).toBeLessThanOrEqual(b.cap as number)
     }
@@ -525,13 +528,17 @@ describe('⑩ 「AI 활용」 실측 표가 근거 JSON 과 같다 (INBOX H3)', 
     for (const row of rows) expect(text, row).toContain(row)
   })
 
-  it('제출 폼 「AI 활용 방식 및 결과」(500자) 칸의 「실측:」 문장도 같은 숫자다', () => {
-    const line = /실측: [^\n]+/.exec(submission)?.[0] ?? ''
-    expect(line).toContain(`${fmt(probe.goals.chars + probe.roadmap.chars)}자`)
-    expect(line).toContain(`항목 후보 ${items}`)
-    expect(line).toContain(`충돌 ${probe.conflict.count}`)
-    expect(line).toContain(`약 ${seconds}초`)
-    expect(line).toContain(`약 $${costUsd.toFixed(2)}`)
+  it('제출 폼 「AI 활용 방식 및 결과」(500자) 칸의 실측 숫자도 같은 숫자다', () => {
+    //  칸 본문을 머리부터 다음 `###` 까지 읽는다 — 문장 모양(「실측:」 같은 꼬리표)에 기대지 않는다.
+    //  ★ 왜 — 사용자가 실제로 넣은 문장은 사람이 읽기 좋게 풀어 쓴 판이라 꼬리표가 없다(2026-09-14). 재야 할 것은 숫자다.
+    const start = submission.indexOf('\n### AI 활용 방식 및 결과')
+    expect(start).toBeGreaterThan(0)
+    const field = submission.slice(start + 1).split('\n### ')[0] as string
+    expect(field).toContain(`${fmt(probe.goals.chars + probe.roadmap.chars)}자`)
+    expect(field).toContain(`항목 후보 ${items}`)
+    expect(field).toContain(`충돌 ${probe.conflict.count}`)
+    expect(field).toContain(`약 ${seconds}초`)
+    expect(field).toContain(`약 $${costUsd.toFixed(2)}`)
   })
 
   it('비용은 이 저장소의 정가 표로 센 값이다 — 정가가 바뀌면 문서의 비용도 따라 바뀌어야 한다', () => {
