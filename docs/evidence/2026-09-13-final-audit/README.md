@@ -37,7 +37,7 @@
 
 | 언제 | 무엇 | 방법 · 완료 기준 |
 |---|---|---|
-| **오늘** | **참가 접수** (마감 **9/18 금 23:59:59**) — 폼 캡처는 ✅ 9/14 | 실제 폼(일곱 칸 · AI 500자 · 16:9 스크린샷 필수)으로 `docs/SUBMISSION.md` 「제출 폼 원문」과 스크린샷 다섯 장을 맞췄다(`docs/evidence/2026-09-14-submission-form/`) · 남은 것은 채워서 **[과제 제출하기]** — 임시저장은 제출이 아니다 |
+| ✅ 9/15 | **참가 접수** — **완료** (사용자 확인 · 과제는 9/14 에 제출 · 폼 캡처 ✅ 9/14) | 실제 폼(일곱 칸 · AI 500자 · 16:9 스크린샷 필수)으로 `docs/SUBMISSION.md` 「제출 폼 원문」과 스크린샷 다섯 장을 맞췄다(`docs/evidence/2026-09-14-submission-form/`) · 9/20 23:59:59 전까지 고칠 수 있다 — 고치면 다시 **[과제 제출하기]** (임시저장은 제출이 아니다) |
 | 오늘 | 이 점검의 커밋을 **push → 배포 확인** | `pnpm --filter web verify:prod -- --url https://contextops-rosy.vercel.app` 0 failed |
 | push 뒤 | 감시가 진짜 도는지 | GitHub Actions → watch-prod → Run workflow → 로그에 `GET / → 200` · 한 번은 틀린 `PROD_ORIGIN` 변수로 실패 메일 확인 뒤 변수 삭제 |
 | 9/14 | **플러그인 실기** — 로드 고장은 고쳤지만 Skill 이 실제 세션에서 도는 것은 **아직 아무도 안 봤다** | 새 저장소에서 `claude plugin marketplace add rhdqngusanr/contextops` → `install` → `/contextops:setup`(Sync 화면 [기기 추가]가 준 줄) → `/contextops:sync` → 작업 뒤 `/contextops:progress` 가 production Roadmap 을 움직이는지 · GIF 셋(`docs/PITCH.md` §3) |
@@ -47,7 +47,7 @@
 | — 9/14 | **영상 링크** — 쇼츠 mp4 는 있지만 **올리지 않기로 했다** (사용자 결정) | 규정상 필수가 아니다(제출물은 링크 · 문제 · AI 활용 · AI 툴 넷) · 마음이 바뀌면 유튜브 업로드 → `docs/SUBMISSION.md` 🙋 표 |
 | ✅ 9/14 | GitHub 저장소 소개 · topics — 옛 한 줄(「팀의 지식과 Claude의 기억을 같은 방향으로」) · topics 0개였다 | 사용자 요청으로 `gh api` 로 바꿨다: 소개 = README 머리 한 줄 + 제출 폼 「한 줄」 + 「팀장은 웹에서, 개발자는 Claude Code 플러그인으로 · Wanted AI Championship 2026 출품작」 · topics 12개(`claude-code` · `claude-code-plugin` · `claude-md` · `context-engineering` · `ai-agents` · `ai-coding` · `developer-tools` · `knowledge-management` · `gemini-api` · `nextjs` · `supabase` · `typescript`) · homepage 는 이미 production URL |
 | 9/18 저녁 | 동결 — `release` 브랜치 · Preview 끄기 | `docs/DEPLOY.md` 「심사 기간 런북」 |
-| 9/19 | **제출** (임시저장은 제출이 아니다) | 제출 확인 캡처 |
+| ✅ 9/14 | **제출** — 접수와 같은 폼이다(「참가 신청하기」가 이 폼으로 온다) · 9/15 사용자가 접수 완료를 확인 | 9/20 23:59:59 전까지 고칠 수 있다 — 고치면 다시 [과제 제출하기] · 제출 확인 캡처는 아직 저장소에 없다 |
 | 정리 | 이 세션의 격리 시험이 `%USERPROFILE%\.claude\.claude.json` 을 하나 만들었다 (05:53) | 기본 실행은 이 파일을 읽지 않는다 — 지워도 된다 |
 
 ## 점수를 올리는 제안 — 결정이 필요한 것
