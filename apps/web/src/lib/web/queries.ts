@@ -379,6 +379,8 @@ export function structureCandidates(result: unknown): StructureCandidate[] {
 /**
  * 🔴 **고른 후보만 항목이 된다** (`POST /projects/{id}/jobs/{jobId}/items` · SPEC §7.1).
  * ⚠ 보내는 것은 **id 뿐**이다 — 본문을 실으면 화면이 모델 출력을 고쳐 되보내는 문이 된다.
+ * ⚠ `job_id` 는 받아들인 것이 있을 때 서버가 시작한 **충돌 탐지 job** 의 id 다 (§7.2 · FINDINGS 174) —
+ *   화면은 그 job 을 들고 다니지 않는다. 진행은 정리 화면이 목록에서 다시 읽는다.
  */
 export function acceptJobItems(
   projectId: string,
@@ -387,6 +389,7 @@ export function acceptJobItems(
 ): Promise<{
   accepted: { index: number; id: string }[]
   rejected: { index: number; issues: { path: string; message: string }[] }[]
+  job_id: string | null
 }> {
   return post(`/projects/${projectId}/jobs/${jobId}/items`, { item_ids: itemIds })
 }

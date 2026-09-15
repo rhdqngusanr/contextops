@@ -52,5 +52,6 @@ export const LONG_RUNNING_ROUTES = [
   'api/v1/cron/demo-reset',
   'api/v1/projects/[id]/documents',
   'api/v1/projects/[id]/context-items/batch-draft',
+  'api/v1/projects/[id]/jobs/[jobId]/items',
   'api/v1/projects/[id]/jobs/[jobId]/retry',
 ] as const

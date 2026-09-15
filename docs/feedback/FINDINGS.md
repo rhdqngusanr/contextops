@@ -33,6 +33,32 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 174. **웹에서 문서를 가져온 팀에는 충돌 탐지가 안 돌고, 둘째 문서를 올리면 첫 문서의 후보가 화면에서 사라진다**   [고장] ✅
+- **증상**: ① 화면 3 에서 문서를 올려 후보를 받아도(`POST /projects/{id}/jobs/{jobId}/items`) §7.2 탐지 job 이 안 선다 —
+  탐지를 시작하는 문은 플러그인의 `batch-draft` 하나였고(`review/page.tsx` 의 `DetectionPanel` 주석이 그렇게 적었다), 그래서
+  웹만 쓰는 팀의 정리 화면에는 AI 가 찾은 충돌 카드가 생길 길이 없다. 제출 문구(「어긋난 규칙을 AI가 찾고」)와 어긋난다.
+  ② 화면 3 오른쪽 칸이 `GET …/jobs?feature=structure&limit=1` 한 줄만 읽어서, 첫 문서의 후보를 받기 전에 둘째 문서를 올리면
+  첫 문서의 후보가 화면에서 사라진다 — 받을 길이 API 뿐이다.
+- **근거**: 2026-09-15 새벽 production 로그인 한 바퀴(로그인은 사용자 · 나머지는 Claude in Chrome) — 팀 `mukteam` · 프로젝트 `api` 에
+  goals.md·old-roadmap.md 를 올려 초안 24 → 18 승인 → v1.0.0 발행까지 갔다. 둘째 문서를 올린 뒤 첫 문서의 후보는 화면에서 안 보여
+  API 로 받았다. ① 은 그 흐름을 코드로 따라가 확인했다 — 후보 받기 라우트에 `startJob` 이 없었다.
+- **정본**: `docs/SPEC.md` §5 (`jobs/{jobId}/items` 행) · §7.2 「부르는 자리」 · `docs/DESIGN_BRIEF.md` §4 화면 3
+- **고친 것**:
+  ① 후보 받기 문이 받아들인 항목이 있으면 `conflict` job 을 만들고 `startJob()` 한다 — `batch-draft` 와 같은 줄이고 응답도 같은 계약
+  (`ContextItemsBatchDraftResult` · `job_id`)이다. `LONG_RUNNING_ROUTES` 한 줄 + `maxDuration = 300`(시험 ⑥ 이 둘을 대조한다).
+  만든 뒤 카드가 「방금 만든 초안끼리, 그리고 이미 승인된 규칙과 어긋나는 곳이 있는지 AI 가 찾기 시작했습니다」와 [정리 보기] 를 낸다.
+  ⚠ 탐지가 견주는 것은 **방금 들어온 묶음 안**과 **같은 종류의 승인된(active) 항목**이다(§7.2) — 두 문서를 다 초안으로 둔 채면
+  문서 **사이**의 어긋남은 안 잡힌다. 옛 문서를 먼저 승인하고 새 문서의 후보를 받으면 잡힌다(`scripts/p3-measure.ts` 가 재는 흐름).
+  ② 화면 3 이 최근 구조화 job 다섯 줄(`RECENT_STRUCTURE_JOBS`)을 읽고, 둘 이상이면 「N분 전 올린 문서」 버튼으로 골라 그 후보로
+  돌아간다(`components/structure-jobs.tsx` · 새 문서를 올리면 고른 것이 풀린다). 이미 Context 에 있는 후보는 잠그고 기본 선택에서
+  뺀다 — 안 그러면 돌아온 사람이 전부 선택된 목록을 눌러 「항목 0개를 만들었습니다」를 받는다. 전부 있으면 버튼 대신 그 사실을
+  한 번 말하고 목록은 읽기 전용으로 남긴다 — 샘플 팀의 화면 3 이 그 모양이라(씨앗이 goals 후보를 전부 Context 에 넣어 둔다),
+  목록까지 지웠다면 심사위원이 AI 가 뽑은 후보와 근거를 못 봤다 (고치는 도중 데모 씨앗을 읽다가 잡았다).
+  `scripts/p3-measure.ts` 는 탐지 job 을 따로 만들지 않고 라우트가 만든 것을 굴린다 — 같은 묶음을 두 번 견주지 않게.
+- **시험**: `ai-job.test.ts` +3(받으면 job 이 선다 · 안 받으면 없다 · 그 job 이 정리 화면의 카드를 만든다) ·
+  `web-structure-candidates.test.ts` +5(잠김 · 전부 있음 · 탐지 문장) · `web-structure-jobs.test.ts` 새로 9(고르기 · 새 문서에 풀림 · 이름표).
+- **상태**: ✅ 2026-09-15 사람 세션 — production 에서 같은 한 바퀴를 다시 돌려 충돌 카드가 뜨는지는 배포 뒤에 본다
+
 ### 173. **README 대로 깐 플러그인이 로드에 실패한다** — `plugin.json` 이 표준 자리의 `hooks/hooks.json` 을 한 번 더 선언했다   [고장] ✅
 - **증상**: `claude plugin marketplace add rhdqngusanr/contextops` → `claude plugin install contextops@contextops` 는 둘 다 `✔` 인데
   `claude plugin list` 가 `Status: ✘ failed to load` 다 — `Hook load failed: Duplicate hooks file detected: ./hooks/hooks.json resolves to

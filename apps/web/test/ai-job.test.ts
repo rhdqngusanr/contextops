@@ -1191,6 +1191,67 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
     expect(await db.select().from(contextItems)).toHaveLength(2)
   })
 
+  it('🔴 받아들인 것이 있으면 **충돌 탐지 job 을 시작한다** — 웹에서 문서만 올리는 팀도 탐지를 받는다 (§7.2 · FINDINGS 174)', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+
+    //  가운데 것은 후보가 아니다 — 묶음에 실리는 것은 **받아들인 것만**이어야 한다.
+    const data = await dataOf(await accept(owner, projectId, job.id, ['item_doc_retry', 'item_not_a_candidate', 'item_doc_card']))
+    expect(data.accepted).toEqual([{ index: 0, id: 'item_doc_retry' }, { index: 2, id: 'item_doc_card' }])
+    //  🔴 `batch-draft` 와 같은 계약이다 — job **id** 이고 객체가 아니다 (FINDINGS 44 · 63).
+    expect(typeof data.job_id).toBe('string')
+    expect(data.job).toBeUndefined()
+    const detection = data.job_id as string
+    //  응답을 보낸 **뒤에** 굴린다 — 문서 구조화 job 다음에 탐지 job 이 섰다.
+    expect(startedJobIds()).toEqual([job.id, detection])
+
+    const row = await jobRow(detection)
+    expect(row.feature).toBe('conflict')
+    expect(row.status).toBe('queued')
+    expect(row.input).toEqual({ changed_item_ids: ['item_doc_retry', 'item_doc_card'] })
+  })
+
+  it('받아들인 것이 없으면 탐지 job 도 없다 — 빈 탐지는 시간당 상한만 태운다', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+    await accept(owner, projectId, job.id, ['item_doc_retry'])
+
+    //  이미 있는 것만 다시 보냈다 — 전부 거절이고 새 묶음이 없다.
+    const data = await dataOf(await accept(owner, projectId, job.id, ['item_doc_retry']))
+    expect(data.accepted).toEqual([])
+    expect(data.job_id).toBeNull()
+    //  첫 받기가 세운 탐지 하나뿐이다.
+    expect(startedJobIds()).toHaveLength(2)
+    expect(await db.select().from(aiJobs).where(eq(aiJobs.feature, 'conflict'))).toHaveLength(1)
+  })
+
+  it('🔴 그 탐지가 돌면 정리 화면이 읽는 카드가 생긴다 — 플러그인 없이 문서 → 후보 → 충돌 카드 (FINDINGS 174)', async () => {
+    const { owner, projectId } = await seed()
+    const job = await structured(owner, projectId)
+    const data = await dataOf(await accept(owner, projectId, job.id, ['item_doc_retry', 'item_doc_card']))
+
+    stubAi(() => ({
+      input: {
+        conflicts: [{
+          kind: 'contradiction',
+          a_item_id: 'item_doc_retry',
+          b_item_id: 'item_doc_card',
+          question: '두 규칙 중 어느 쪽을 따르나?',
+          severity: 'high',
+        }],
+      },
+    }))
+    expect(await runJob(data.job_id as string)).toBe('succeeded')
+
+    const list = (await dataOf(await listConflicts(
+      req('GET', `/api/v1/projects/${projectId}/conflicts`, { auth: owner }),
+      params({ id: projectId }),
+    ))).conflicts as { kind: string; a_item_id: string; b_item_id: string }[]
+    expect(list.filter((c) => c.kind === 'contradiction')).toEqual([
+      expect.objectContaining({ a_item_id: 'item_doc_retry', b_item_id: 'item_doc_card' }),
+    ])
+  })
+
   it('아직 안 끝난 job · 탐지 job 은 400 이다 — 「없어서 0건」과 갈린다', async () => {
     const { owner, projectId } = await seed()
     const queued = await uploadDoc(owner, projectId)

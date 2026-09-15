@@ -1,9 +1,10 @@
 import { and, eq } from 'drizzle-orm'
-import { AcceptJobItems, ContextItemDraft } from '@contextops/schema'
+import { AcceptJobItems, ContextItemDraft, ContextItemsBatchDraftResult } from '@contextops/schema'
 //  ⚠ 값과 **타입**을 따로 들여온다 — 유니온 스키마의 `z.infer` 는 느슨하다 (item.ts 주석).
 import type { ContextItemDraft as Draft } from '@contextops/schema'
 
 import { aiJobs } from '../../../../../../../../db/schema'
+import { createJob, startJob } from '../../../../../../../../lib/ai/job'
 import { fail } from '../../../../../../../../lib/api/error'
 import { requireProject } from '../../../../../../../../lib/api/guard'
 import { insertDrafts, type DraftEntry, type DraftInsertResult } from '../../../../../../../../lib/api/item'
@@ -30,9 +31,17 @@ import { parseBody, pathUuid, route } from '../../../../../../../../lib/api/rout
 //  ⚠ 넣는 코드는 여기 없다 — `insertDrafts()` 하나다. 이 문이 정하는 것은
 //    `origin: 'doc'` 뿐이고, 그래서 §7.2 의 `doc_vs_code` 가 실데이터로 날 수 있게 된다
 //    (FINDINGS 31 — 그 값을 찍는 자리가 여기가 생기기 전까지 0곳이었다).
+//
+//  🔴 **받아들인 것이 있으면 충돌 탐지 job 을 시작한다** (§7.2 · FINDINGS 174).
+//    이 문이 탐지를 안 부르던 동안 탐지를 시작하는 문은 플러그인의 `batch-draft` 하나였다 —
+//    웹에서 문서만 올리는 팀은 정리 화면에 AI 가 찾은 충돌 카드가 **한 장도** 안 떴다
+//    (2026-09-15 production 한 바퀴). 「바뀐 항목 묶음 하나 = 탐지 한 번」은 어느 문으로
+//    들어왔든 같다. 그래서 응답도 `batch-draft` 와 **같은 계약**(`ContextItemsBatchDraftResult`)이다.
 // =====================================================================
 
 export const dynamic = 'force-dynamic'
+//  ⚠ 응답 뒤 `after()` 에서 충돌 탐지 job 이 돈다 — 상한의 정본과 이유는 `lib/api/vercel.ts`. 리터럴이어야 Next 가 읽는다.
+export const maxDuration = 300
 
 /** job 의 `result` 에서 **항목 후보만** 꺼낸다. 모양이 다르면 `undefined` 다. */
 function candidatesOf(result: unknown): unknown[] | undefined {
@@ -106,6 +115,18 @@ export const POST = route<{ id: string; jobId: string }>(
     }
 
     rejected.sort((a, b) => a.index - b.index)
-    return ctx.ok({ accepted, rejected }, 201)
+
+    //  🔴 **바뀐 항목 묶음 하나 = 탐지 한 번**이다 (§7.2 · `batch-draft` 와 같은 줄).
+    //     받아들인 것이 없으면 부를 것도 없다 — 빈 탐지는 §7.5 의 시간당 상한만 태운다.
+    //  ⚠ 트랜잭션 **밖에서** 만든다 — 안에서 만들면 러너가 아직 커밋되지 않은 항목을 읽으러 간다.
+    const detection = accepted.length === 0 ? null : await createJob(ctx.db, {
+      projectId,
+      feature: 'conflict',
+      input: { changed_item_ids: accepted.map((a) => a.id) },
+    })
+    if (detection) startJob(detection.id)
+
+    //  계약으로 한 번 파싱해서 낸다 — 손으로 만든 객체는 계약을 받는 쪽에서만 강제한다 (FINDINGS 44).
+    return ctx.ok(ContextItemsBatchDraftResult.parse({ accepted, rejected, job_id: detection?.id ?? null }), 201)
   },
 )

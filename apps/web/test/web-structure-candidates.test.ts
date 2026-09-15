@@ -6,7 +6,7 @@ import { ITEM_TYPES, type SourceRef } from '@contextops/schema'
 import { ITEM_TYPE_LABEL } from '../src/components/chips'
 import { SRC_LABEL } from '../src/components/evidence'
 import {
-  bodyPreview, CANDIDATE_BODY_CHARS, StructureCandidates, type StructureCandidatesState,
+  bodyPreview, CANDIDATE_BODY_CHARS, defaultPicked, StructureCandidates, type StructureCandidatesState,
 } from '../src/components/structure-candidates'
 import { structureCandidates, type StructureCandidate } from '../src/lib/web/queries'
 
@@ -25,6 +25,7 @@ import { structureCandidates, type StructureCandidate } from '../src/lib/web/que
 //    🔴 ④ **한 줄에 근거가 붙는다** (FINDINGS 86 · DESIGN_BRIEF §2-1) — 제목·타입 셋만
 //       있으면 사람은 「재시도 정책 · policy」 다섯 글자만 보고 체크를 남기고, 그 항목은
 //       다음 Pack 에 나갈 초안이 된다. 「근거 없는 숫자·판정은 화면에 없다」
+//    🔴 ⑤ **이미 Context 에 있는 후보는 잠근다** · 만든 뒤 **충돌 탐지가 시작됐다고 말한다** (FINDINGS 174)
 // =====================================================================
 
 const REF: SourceRef = {
@@ -50,9 +51,11 @@ function render(over: Partial<StructureCandidatesState> = {}): string {
   const state: StructureCandidatesState = {
     candidates: CANDIDATES,
     picked: new Set(CANDIDATES.map((c) => c.id)),
+    existing: new Set(),
     saving: false,
     error: null,
     made: null,
+    detecting: false,
     ...over,
   }
   return renderToStaticMarkup(createElement(StructureCandidates, {
@@ -220,5 +223,72 @@ describe('🔴 무엇이 되는지를 누르기 **전에** 말한다', () => {
     const html = render({ candidates: [], picked: new Set() })
     expect(html).toContain('받아들일 항목 후보가 없습니다')
     expect(html).not.toContain('<button')
+  })
+})
+
+// =====================================================================
+//  🔴 FINDINGS 174 — **이전 문서로 돌아온 사람**이 헛누르지 않는다
+//
+//  ★ 화면 3 이 올린 문서를 골라 이전 후보로 돌아갈 수 있게 되면서 생긴 자리다. 이미 받은
+//    후보가 전부 선택된 채로 나오면 누른 결과는 「이미 있다」 거절뿐이고, 카드는
+//    「항목 0개를 만들었습니다」라고 말한다.
+// =====================================================================
+
+describe('🔴 이미 Context 에 있는 후보는 잠그고 그렇다고 말한다 (FINDINGS 174)', () => {
+  const inContext = new Set(['item_doc_card'])
+  /** 후보 한 줄의 마크업 — 제목으로 찾는다. */
+  const rowOf = (html: string, title: string): string => html.split('<label').find((part) => part.includes(title)) ?? ''
+
+  it('기본 선택에서 빠진다 — 아직 없는 것만 고른 채로 시작한다', () => {
+    expect([...defaultPicked(CANDIDATES, inContext)]).toEqual(['item_doc_retry'])
+    expect([...defaultPicked(CANDIDATES, new Set())]).toEqual(['item_doc_retry', 'item_doc_card'])
+  })
+
+  it('그 줄은 잠기고 「이미 Context 에 있습니다」라고 말한다 — 나머지 줄은 그대로 고를 수 있다', () => {
+    const html = render({ existing: inContext, picked: defaultPicked(CANDIDATES, inContext) })
+    const card = rowOf(html, '카드 원본 금지')
+    expect(card).toContain('disabled')
+    expect(card).not.toContain('checked')
+    expect(card).toContain('이미 Context 에 있습니다')
+
+    const retry = rowOf(html, '재시도 정책')
+    expect(retry).toContain('checked')
+    expect(retry).not.toContain('disabled')
+    expect(retry).not.toContain('이미 Context 에 있습니다')
+    //  버튼의 수도 아직 없는 것만 센다.
+    expect(html).toContain('고른 1개를 항목으로 만들기')
+  })
+
+  it('전부 이미 있으면 버튼 대신 그 사실을 **한 번** 말하고, 목록은 읽기 전용으로 남긴다', () => {
+    const all = new Set(CANDIDATES.map((c) => c.id))
+    const html = render({ existing: all, picked: defaultPicked(CANDIDATES, all) })
+    expect(html).toContain(`항목 후보 ${CANDIDATES.length}개는 모두 Context 에 있습니다`)
+    expect(html).toContain('href="/t/paylab/p/api/context"')
+    //  고를 것이 없다 — 누를 버튼도 체크 칸도 없다.
+    expect(html).not.toContain('<button')
+    expect(html).not.toContain('type="checkbox"')
+    //  🔴 목록과 근거는 남는다 — 샘플 팀의 화면 3 이 이 모양이라(씨앗이 후보를 전부 Context 에 넣어 둔다),
+    //     지우면 심사위원이 AI 가 문서에서 뽑은 것을 못 본다.
+    for (const c of CANDIDATES) expect(html).toContain(c.title)
+    expect(html.replace(/<[^>]+>/g, '')).toContain(SRC_LABEL.source_document(REF))
+    //  같은 말을 줄마다 되풀이하지 않는다 — 머리의 한 문장이 이미 말했다.
+    expect(html).not.toContain('이미 Context 에 있습니다')
+  })
+})
+
+describe('🔴 만든 뒤에는 충돌 탐지가 시작됐다는 것과 결과가 뜨는 곳을 말한다 (FINDINGS 174)', () => {
+  it('서버가 탐지를 시작했으면 그렇다고 말하고 「정리」로 가는 문이 있다', () => {
+    const html = render({ made: 2, detecting: true })
+    expect(html).toContain('AI 가 찾기 시작했습니다')
+    expect(html).toContain('href="/t/paylab/p/api/review"')
+    //  ⚠ 여기서도 「초안」이 먼저고 「발행」은 없다.
+    expect(html).toContain('아직 초안입니다')
+    expect(html).not.toContain('발행')
+  })
+
+  it('탐지가 없었으면 그 문장도 문도 없다 — 안 도는 일을 기다리게 하지 않는다', () => {
+    const html = render({ made: 0, detecting: false })
+    expect(html).not.toContain('AI 가 찾기 시작했습니다')
+    expect(html).not.toContain('/review')
   })
 })

@@ -10,7 +10,7 @@ import { hintFor, messageOf } from '../../../../../../lib/web/api'
 import { AI_TRANSFER_NOTICE_NOW, PRIVACY_LABEL, PRIVACY_PATH } from '../../../../../../lib/web/privacy'
 import { SAMPLE_DOCUMENT } from '../../../../../../lib/web/sample-document'
 import {
-  JOB_POLL_MS, acceptJobItems, answerQuestions, createDocument, fetchJob, fetchJobs, fetchQuestions,
+  JOB_POLL_MS, acceptJobItems, answerQuestions, createDocument, fetchItems, fetchJob, fetchJobs, fetchQuestions,
   retryJob, structureCandidates, structureCounts,
   type AiJobSummary, type ProjectRef, type QuestionRow,
 } from '../../../../../../lib/web/queries'
@@ -20,8 +20,11 @@ import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { QuestionStack, type QuestionStackState } from '../../../../../../components/question-stack'
 import {
-  StructureCandidates, type StructureCandidate,
+  StructureCandidates, defaultPicked, type StructureCandidate,
 } from '../../../../../../components/structure-candidates'
+import {
+  RECENT_STRUCTURE_JOBS, StructureJobPicker, focusedJob, type JobPick,
+} from '../../../../../../components/structure-jobs'
 import { ErrorState, ReadOnlyNotice, ScreenEmpty, Skeleton } from '../../../../../../components/states'
 
 // =====================================================================
@@ -40,8 +43,13 @@ import { ErrorState, ReadOnlyNotice, ScreenEmpty, Skeleton } from '../../../../.
 //
 //  🔴 **진행 표시는 새로고침을 견딘다.** job id 를 state 에만 들고 있으면 새로고침
 //     한 번에 길을 잃고, 사람은 문서를 다시 올린다 — 그게 §7.5 의 시간당 5회를 태우는
-//     자리다 (FINDINGS 58). 그래서 이 화면은 **언제나 `GET …/jobs?feature=structure
-//     &limit=1` 부터 읽는다.** 방금 올렸든 어제 올렸든 그리는 것은 그 한 줄이다.
+//     자리다 (FINDINGS 58). 그래서 이 화면은 **언제나 `GET …/jobs?feature=structure`
+//     의 최근 몇 줄(`RECENT_STRUCTURE_JOBS`)부터 읽는다.** 방금 올렸든 어제 올렸든
+//     기본으로 그리는 것은 맨 위(가장 새) 한 줄이다.
+//  🔴 **한 줄(`limit=1`)만 읽던 동안 이전 문서의 후보가 화면에서 사라졌다** (FINDINGS 174 ·
+//     2026-09-15 production) — 첫 문서의 후보를 받기 전에 둘째 문서를 올리면 첫 문서의 후보는
+//     API 로만 받을 수 있었다. 그래서 올린 문서가 둘 이상이면 문서를 골라 그 후보로 돌아간다
+//     (`components/structure-jobs.tsx`).
 //
 //  ⚠ accent 는 [AI 로 정리하기] 하나뿐이다 (DESIGN_BRIEF §3).
 // =====================================================================
@@ -67,13 +75,15 @@ export default function ImportPage({ params }: { params: Promise<{ team: string;
 function ImportView({ base, project }: { base: string; project: ProjectRef }) {
   const door = writeDoor()
   const jobs = usePolling(
-    () => fetchJobs(project.id, { feature: STRUCTURE, limit: 1 }),
+    () => fetchJobs(project.id, { feature: STRUCTURE, limit: RECENT_STRUCTURE_JOBS }),
     [project.id],
     //  🔴 **끝났으면 멈춘다.** 「끝났나」를 상태 이름으로 세지 않는다 (`succeeded`·
     //     `failed` 를 손으로 적으면 수명이 늘 때 이 화면이 영원히 두드린다).
     //     `finished_at` 이 그 판정의 결과다 — DB CHECK 이 `AI_JOB_STATUS_RULES` 에서
     //     생성되어 「끝난 상태면 이 칸이 찬다」를 강제한다 (`db/schema.ts`).
-    (data) => (data.jobs[0] && data.jobs[0].finished_at === null ? JOB_POLL_MS : null),
+    //  ⚠ 줄이 여럿이라 **하나라도** 안 끝났으면 다시 읽는다 — 가장 새 줄만 보면 사람이 고른 이전 문서가
+    //     도는 중일 때 그 진행이 멈춘 채로 그려진다 (FINDINGS 174).
+    (data) => (data.jobs.some((j) => j.finished_at === null) ? JOB_POLL_MS : null),
   )
 
   return (
@@ -323,7 +333,10 @@ function StructureCard({
   jobs: { result: Async<{ jobs: AiJobSummary[] }>; reload: () => void }
 }) {
   const { result } = jobs
-  const job = result.state === 'ready' ? result.data.jobs[0] : undefined
+  const list = result.state === 'ready' ? result.data.jobs : []
+  //  🔴 사람이 고른 문서 (FINDINGS 174). 새 문서가 올라오면 저절로 풀린다 — 그 판정은 `focusedJob` 하나다.
+  const [pick, setPick] = useState<JobPick | null>(null)
+  const job = focusedJob(list, pick)
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState<unknown>(null)
 
@@ -337,12 +350,21 @@ function StructureCard({
       await retryJob(projectId, jobId)
       //  ⚠ 응답의 job 을 들고 다니지 않는다 — 그리는 것은 언제나 목록이 낸 한 줄이다
       //    (`PasteCard` 와 같은 판단). `reload` 가 polling 을 다시 켠다.
+      //    멈춘 job 을 새로 만드는 갈래(`fresh`)면 새 행이 가장 새 줄이 되어 고른 것이 저절로 풀린다.
       jobs.reload()
     } catch (err) {
       setRetryError(err)
     } finally {
       setRetrying(false)
     }
+  }
+
+  function choose(jobId: string): void {
+    const newest = list[0]
+    if (newest === undefined) return
+    setPick({ id: jobId, newest: newest.id })
+    //  ⚠ 다른 문서에서 난 [다시 시도] 실패 문구를 들고 가지 않는다.
+    setRetryError(null)
   }
 
   return (
@@ -357,10 +379,13 @@ function StructureCard({
       {result.state === 'ready' && !job ? (
         <ScreenEmpty slot="import.jobs" base={base} />
       ) : null}
+      <StructureJobPicker jobs={list} focused={job?.id ?? null} onPick={choose} />
+      {/* ⚠ `Succeeded` 의 `key` 가 job 마다 다르다 — 문서를 바꿔 고르면 체크한 후보·만든 수를 **새로** 시작한다.
+          같은 컴포넌트를 다시 쓰면 앞 문서에서 체크한 id 들이 뒤 문서의 목록에 남는다. */}
       {job ? (
         <JobProgress
           job={job}
-          done={<Succeeded base={base} projectId={projectId} jobId={job.id} door={door} />}
+          done={<Succeeded key={job.id} base={base} projectId={projectId} jobId={job.id} door={door} />}
           retry={{ run: () => { void retry(job.id) }, busy: retrying }}
         />
       ) : null}
@@ -380,14 +405,20 @@ function StructureCard({
  *   그 말만 하고 [Context 보기] 로 보내면 사람은 **아무것도 없는 표**를 본다.
  *   찾았다고 말한 자리가 곧 받아들이는 자리여야 그 말이 사실이 된다.
  * ⚠ 전문(`shape:'full'`)은 목록에 없다 (FINDINGS 60) — 그래서 여기서 한 번 더 읽는다.
+ * ⚠ **이 프로젝트에 이미 있는 항목 id** 도 같이 읽는다 (FINDINGS 174) — 이전 문서로 돌아온 사람이
+ *   이미 받은 후보를 또 고르지 않게 카드가 그 줄을 잠근다.
  */
 function Succeeded({ base, projectId, jobId, door }: { base: string; projectId: string; jobId: string; door: WriteDoor }) {
-  const { result, reload } = useAsync(() => fetchJob(projectId, jobId), [projectId, jobId])
+  const { result, reload } = useAsync(
+    () => Promise.all([fetchJob(projectId, jobId), fetchItems(projectId, {})]),
+    [projectId, jobId],
+  )
 
   if (result.state === 'loading') return <Skeleton rows={2} />
   if (result.state === 'error') return <ErrorState error={result.error} retry={reload} />
 
-  const counts = structureCounts(result.data.result)
+  const [job, items] = result.data
+  const counts = structureCounts(job.result)
   if (!counts) {
     //  ⚠ 「succeeded 인데 result 가 없다」는 DB CHECK 이 막는 모양이다. 그래도 화면이
     //    빈 칸을 그리지 않게 한 문장을 둔다 — 지어낸 숫자보다 「못 읽었다」가 낫다.
@@ -405,7 +436,8 @@ function Succeeded({ base, projectId, jobId, door }: { base: string; projectId: 
         projectId={projectId}
         jobId={jobId}
         door={door}
-        candidates={structureCandidates(result.data.result)}
+        candidates={structureCandidates(job.result)}
+        existing={new Set(items.items.map((i) => i.id))}
       />
     </div>
   )
@@ -421,18 +453,24 @@ function Candidates({
   jobId,
   door,
   candidates,
+  existing,
 }: {
   base: string
   projectId: string
   jobId: string
   door: WriteDoor
   candidates: StructureCandidate[]
+  /** 이 프로젝트에 이미 있는 항목 id — 그 후보는 잠기고 기본 선택에서 빠진다 (FINDINGS 174). */
+  existing: ReadonlySet<string>
 }) {
-  //  ★ 기본은 **전부 선택**이다 — 왜인지는 카드 쪽 주석에 있다.
-  const [picked, setPicked] = useState<Set<string>>(() => new Set(candidates.map((c) => c.id)))
+  //  ★ 기본은 **아직 Context 에 없는 것 전부**다 — 왜인지는 카드 쪽 주석에 있다.
+  const [picked, setPicked] = useState<Set<string>>(() => defaultPicked(candidates, existing))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [made, setMade] = useState<number | null>(null)
+  //  만들면서 서버가 충돌 탐지를 시작했나 — 응답의 `job_id` 가 그 사실이다. 그 job 은 들고 다니지 않는다
+  //  (진행은 정리 화면이 목록에서 다시 읽는다 · FINDINGS 174).
+  const [detecting, setDetecting] = useState(false)
 
   const toggle = (id: string) => {
     setPicked((prev) => {
@@ -451,6 +489,7 @@ function Candidates({
     try {
       const done = await acceptJobItems(projectId, jobId, [...picked])
       setMade(done.accepted.length)
+      setDetecting(done.job_id !== null)
     } catch (e) {
       //  ⚠ 지어내지 않는다 — 서버가 낸 문장을 그대로 옮긴다 (`messageOf`).
       setError(messageOf(e))
@@ -461,7 +500,7 @@ function Candidates({
 
   return (
     <StructureCandidates
-      state={{ candidates, picked, saving, error, made }}
+      state={{ candidates, picked, existing, saving, error, made, detecting }}
       base={base}
       onToggle={toggle}
       onAccept={accept}

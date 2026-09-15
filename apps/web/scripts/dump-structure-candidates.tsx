@@ -22,6 +22,7 @@ type Candidate = { id: string; type: string; title: string; body: string; eviden
 function text(html: string): string {
   return html
     .replace(/<input[^>]*checked[^>]*>/g, ' [v] ')
+    .replace(/<input[^>]*disabled[^>]*>/g, ' [-] ')
     .replace(/<input[^>]*>/g, ' [ ] ')
     .replace(/<[^>]+>/g, ' | ')
     .replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')
@@ -74,17 +75,21 @@ const ALL = new Set(CANDIDATES.map((c) => c.id))
 function draw(state: {
   candidates?: Candidate[]
   picked?: Set<string>
+  existing?: Set<string>
   saving?: boolean
   error?: string | null
   made?: number | null
+  detecting?: boolean
 }): string {
   return text(renderToStaticMarkup(createElement(StructureCandidates, {
     state: {
       candidates: (state.candidates ?? CANDIDATES) as never,
       picked: state.picked ?? ALL,
+      existing: state.existing ?? new Set(),
       saving: state.saving ?? false,
       error: state.error ?? null,
       made: state.made ?? null,
+      detecting: state.detecting ?? false,
     },
     base: '/t/paylab/p/api',
     onToggle: () => {},
@@ -92,7 +97,7 @@ function draw(state: {
   })))
 }
 
-const lines: string[] = ['화면 3 — 구조화 후보 고르기 (마크업에서 글자만 뽑은 것)', '']
+const lines: string[] = ['화면 3 — 구조화 후보 고르기 (마크업에서 글자만 뽑은 것 · [v] 고름 · [ ] 안 고름 · [-] 잠김)', '']
 
 lines.push('① 처음 — 기본은 전부 선택')
 lines.push(`  ${draw({})}`)
@@ -118,7 +123,22 @@ lines.push('⑥ 만든 뒤 — 「승인」이 아니라 「초안」이라고 �
 lines.push(`  ${draw({ made: 3 })}`)
 lines.push('')
 
-lines.push('⑦ 후보가 0개일 때 (빈 상태)')
+lines.push('⑦ 만든 뒤 · 서버가 충돌 탐지를 시작했을 때 (FINDINGS 174) — 무엇과 견주는지 부풀리지 않나')
+lines.push(`  ${draw({ made: 3, detecting: true })}`)
+lines.push('')
+
+lines.push('⑧ 이전 문서로 돌아왔을 때 — 둘은 이미 Context 에 있다 (FINDINGS 174)')
+lines.push(`  ${draw({
+  existing: new Set(['item_doc_mission', 'item_doc_card']),
+  picked: new Set(['item_doc_retry', 'item_doc_m1', 'item_doc_ledger']),
+})}`)
+lines.push('')
+
+lines.push('⑨ 전부 이미 Context 에 있을 때 — 샘플 팀의 화면 3 이 이 모양이다 (목록과 근거가 읽기 전용으로 남나)')
+lines.push(`  ${draw({ existing: ALL, picked: new Set() })}`)
+lines.push('')
+
+lines.push('⑩ 후보가 0개일 때 (빈 상태)')
 lines.push(`  ${draw({ candidates: [] })}`)
 lines.push('')
 

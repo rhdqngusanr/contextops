@@ -28,7 +28,7 @@ import { CONFLICT_KIND_RULES, type SourceDocumentKind, type SourceRef } from '@c
 
 import { aiUsage } from '../src/db/schema'
 import { geminiTransport, setAiClientForTest, type AiTransport, type GenerateResponse } from '../src/lib/ai/client'
-import { createJob, runJob } from '../src/lib/ai/job'
+import { runJob } from '../src/lib/ai/job'
 import { fixtureText } from '../src/lib/demo/fixtures'
 import { seedSession } from '../src/lib/demo/seed'
 import { POST as createTeam } from '../src/app/api/v1/teams/route'
@@ -216,12 +216,17 @@ async function main(): Promise<void> {
     }
   }
 
-  async function accept(jobId: string, ids: string[]): Promise<{ accepted: string[]; rejected: unknown[] }> {
-    if (ids.length === 0) return { accepted: [], rejected: [] }
+  async function accept(jobId: string, ids: string[]): Promise<{ accepted: string[]; rejected: unknown[]; detectionJobId: string | null }> {
+    if (ids.length === 0) return { accepted: [], rejected: [], detectionJobId: null }
     const out = await dataOf(await acceptJobItems(req('POST', `${P(projectId)}/jobs/${jobId}/items`, {
       auth: owner, body: { item_ids: ids },
     }), params({ id: projectId, jobId })))
-    return { accepted: (out.accepted as { id: string }[]).map((a) => a.id), rejected: out.rejected as unknown[] }
+    //  🔴 받아들인 것이 있으면 라우트가 §7.2 탐지 job 을 **이미 만들었다** (FINDINGS 174) — 여기서는 굴리기만 한다.
+    return {
+      accepted: (out.accepted as { id: string }[]).map((a) => a.id),
+      rejected: out.rejected as unknown[],
+      detectionJobId: out.job_id as string | null,
+    }
   }
 
   // ① 폐기된 로드맵 → active (견줄 상대)
@@ -239,10 +244,12 @@ async function main(): Promise<void> {
   const goals = await structure('paylab-docs/goals.md', '팀 목표와 규칙', 'goal')
   const goalsAccepted = await accept(goals.jobId, goals.items.map((i) => i.id))
 
-  // ③ 탐지 — batch-draft 가 만드는 것과 같은 job 을 같은 표로 만든다
+  // ③ 탐지 — goals 후보를 받은 라우트가 **이미 만든** job 을 그대로 굴린다 (FINDINGS 174).
+  //    ⚠ 여기서 job 을 하나 더 만들면 같은 묶음을 두 번 견준다. ① 의 로드맵 받기도 탐지 job 을 세웠지만
+  //      그건 굴리지 않는다 — 이 측정이 재는 것은 「새 문서 대 승인된 옛 규칙」이다.
   let conflictRun: Record<string, unknown> = { skipped: '받아들인 goals 항목이 없다' }
-  if (goalsAccepted.accepted.length > 0) {
-    const job = await createJob(db, { projectId, feature: 'conflict', input: { changed_item_ids: goalsAccepted.accepted } })
+  if (goalsAccepted.detectionJobId !== null) {
+    const job = { id: goalsAccepted.detectionJobId }
     const t0 = Date.now()
     const status = await runJob(job.id)
     const latencyMs = Date.now() - t0
