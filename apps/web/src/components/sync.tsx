@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { SYNC_STATUSES, setupCommandLine, type SyncStatus } from '@contextops/schema'
+import { SETUP_COMMAND_NAME, SYNC_STATUSES, setupCommandLine, type SyncStatus } from '@contextops/schema'
 
 import type { DeviceSyncRow, IssuedDevice, VersionRow } from '../lib/web/queries'
 import { dateText, sinceText } from '../lib/web/time'
@@ -8,6 +8,7 @@ import { SYNC_CHIP, SYNC_MEANING, SyncChip, Note } from './chips'
 import { FactLine, syncFact } from './fact-line'
 import { ScrollTable } from './scroll-table'
 import { ErrorState, ReadOnlyNotice } from './states'
+import { CommandBox, CommandText, Step, Steps, Why } from './guide'
 
 // =====================================================================
 //  화면 9 — Sync 가 그리는 조각들 (SPEC §9 화면 9 · §6 · DESIGN_BRIEF §4 「화면 9」)
@@ -136,9 +137,15 @@ export function officialOf(versions: readonly VersionRow[]): VersionRow | null {
  *   하는지 모른다. 낱말은 칩 표에서 오고, 명령은 실재한다(`plugin/contextops/skills/sync`).
  * 🔴 손으로 고친 파일을 말없이 덮지 않는다 — Skill 이 **먼저 묻고**, 덮어도 백업을 남긴다.
  *   여기 문장이 그 순서와 달라지면 화면이 거짓말을 한다.
+ * ★ **할 일(누가 · 어디서 · 무슨 명령)은 보이고, 실행하면 무엇이 달라지나는 접는다** (FINDINGS 177) — 한 문단이던 동안
+ *   명령 `/contextops:sync` 가 긴 설명문 가운데 묻혀 「설명문을 읽는 느낌」이었다 (2026-09-15 사용자).
  * ⚠ 볼 것이 없으면(옛 버전·손으로 고침·보고 없음이 전부 0) 그리지 않는다 — 0 은 안 적는 규칙.
  */
-export const SYNC_NEXT_STEP = `「${SYNC_CHIP.outdated.label}」·「${SYNC_CHIP.modified.label}」 기기는 그 팀원이 Claude Code 에서 /contextops:sync 를 실행하면 공식 판으로 맞춰집니다 — 손으로 고친 파일은 덮을지 먼저 묻고, 덮어도 백업을 남깁니다. 「${SYNC_CHIP.unknown.label}」 기기는 처음 실행한 뒤부터 상태가 보입니다.`
+export const SYNC_NEXT_STEP = {
+  todo: `「${SYNC_CHIP.outdated.label}」·「${SYNC_CHIP.modified.label}」·「${SYNC_CHIP.unknown.label}」 기기는 그 팀원이 Claude Code 에서 /contextops:sync 를 실행합니다.`,
+  why: '실행하면 무엇이 달라지나요?',
+  detail: `공식 판으로 맞춰집니다. 손으로 고친 파일은 덮을지 먼저 묻고, 덮어도 백업을 남깁니다. 「${SYNC_CHIP.unknown.label}」 기기는 처음 실행한 뒤부터 상태가 보입니다.`,
+} as const
 
 export function SyncSummary({
   devices,
@@ -165,7 +172,12 @@ export function SyncSummary({
       {/* 사실 한 줄 (2026-09-11) — 표보다 먼저 「14대 중 9대가 「적용됨」」이 읽힌다. 문장의 정본은 `fact-line.tsx`. */}
       <FactLine parts={syncFact(devices.map((d) => d.status))} />
       {/* 다음 걸음 — 볼 것이 있을 때만 (0 은 안 적는다). */}
-      {needsStep ? <p className="meta">{SYNC_NEXT_STEP}</p> : null}
+      {needsStep ? (
+        <div className="col-tight">
+          <p><CommandText text={SYNC_NEXT_STEP.todo} /></p>
+          <Why summary={SYNC_NEXT_STEP.why}><p>{SYNC_NEXT_STEP.detail}</p></Why>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -291,7 +303,14 @@ export const ADD_DEVICE = {
   once: '이 토큰은 지금 한 번만 보입니다. 서버에는 해시만 남아서 다시 볼 수 없습니다 — 잃어버리면 새로 발급받으세요.',
   //  🔴 붙여 넣는 자리는 터미널이 아니라 **Claude Code** 다 — 머리가 `/contextops:setup` Skill 이고, 그 Skill 이
   //     플러그인 CLI 의 경로를 채워 `setup` 을 부른다 (사용자 터미널에는 그 경로가 없다 · 2026-09-09).
-  commandLead: '그 저장소에서 Claude Code 를 열고 이 한 줄을 그대로 붙여넣으세요.',
+  //  ★ 할 일은 걸음 제목 셋이다 (FINDINGS 177) — 한 문장(`commandLead` 「그 저장소에서 Claude Code 를 열고 이 한 줄을
+  //    그대로 붙여넣으세요.」)에 할 일 둘이 섞여 라벨 글씨로 서 있던 것을 나눴다. 그래서 그 키는 지웠다.
+  stepOpen: '그 저장소에서 Claude Code 를 엽니다',
+  stepPaste: '이 한 줄을 그대로 붙여넣습니다',
+  pasteWhy: '터미널에 붙여넣으면 안 되나요?',
+  pasteHelp: `안 됩니다 — 줄의 머리 ${SETUP_COMMAND_NAME} 은 Claude Code 안의 명령입니다. 토큰과 기기 id 가 줄에 다 들어 있어 따로 옮겨 적을 것이 없습니다.`,
+  tokenWhy: '토큰만 따로 필요하면요?',
+  stepDone: '붙여넣었으면 닫습니다',
   copyToken: '토큰 복사',
   copyCommand: '명령 한 줄 복사',
   copied: '복사했습니다',
@@ -423,35 +442,42 @@ export function IssuedDeviceCard({
   })
   return (
     <div className="card pad col" aria-label={ADD_DEVICE.issuedTitle}>
-      {/*  색점 + 글자 — 상태를 색만으로 말하지 않는다 (DESIGN_BRIEF §2-4). */}
+      {/*  색점 + 글자 — 상태를 색만으로 말하지 않는다 (DESIGN_BRIEF §2-4).
+          ⚠ 접지 않는다 — 닫기 전에 반드시 읽어야 하는 문장이다 (FINDINGS 177). */}
       <Note tone="warn">{ADD_DEVICE.once}</Note>
 
-      <div className="field">
-        <span className="label">{ADD_DEVICE.tokenLabel}</span>
-        <div className="row wrap">
-          <input className="input mono grow" readOnly aria-label={ADD_DEVICE.tokenLabel} value={issued.token} />
-          <button type="button" className="btn btn-sm" onClick={() => on.copy('token', issued.token)}>
-            {copied === 'token' ? ADD_DEVICE.copied : ADD_DEVICE.copyToken}
-          </button>
-        </div>
-      </div>
-
-      <div className="col-tight">
-        <span className="label">{ADD_DEVICE.commandLead}</span>
-        {/*  ⚠ 긴 한 줄이다 — 본문을 가로로 밀지 않게 자기 칸 안에서만 넘친다 (⑦3층). */}
-        <div className="scroll-x"><code className="mono">{command}</code></div>
-        <div className="row wrap">
-          <button type="button" className="btn btn-sm" onClick={() => on.copy('command', command)}>
-            {copied === 'command' ? ADD_DEVICE.copied : ADD_DEVICE.copyCommand}
-          </button>
+      {/*  🔴 할 일은 번호 걸음 셋이다 — 모양의 정본은 `components/guide.tsx` (FINDINGS 177). */}
+      <Steps label={ADD_DEVICE.issuedTitle}>
+        <Step title={ADD_DEVICE.stepOpen} />
+        <Step title={ADD_DEVICE.stepPaste}>
+          {/*  ⚠ 긴 한 줄이다 — 상자 안에서 접히고, 바깥은 본문을 가로로 밀지 않는 `scroll-x` 다 (⑦3층). */}
+          <CommandBox
+            command={command}
+            action={(
+              <button type="button" className="btn btn-sm" onClick={() => on.copy('command', command)}>
+                {copied === 'command' ? ADD_DEVICE.copied : ADD_DEVICE.copyCommand}
+              </button>
+            )}
+          />
           <span className="meta mono">{ADD_DEVICE.expires(dateText(issued.expires_at))}</span>
-        </div>
-      </div>
-
-      <div className="row wrap">
-        <button type="button" className="btn" onClick={on.close}>{ADD_DEVICE.done}</button>
-        <span className="meta">{ADD_DEVICE.after}</span>
-      </div>
+          <Why summary={ADD_DEVICE.pasteWhy}><p><CommandText text={ADD_DEVICE.pasteHelp} /></p></Why>
+          {/*  토큰만 옮기는 길은 접는다 — 한 줄에 이미 들어 있어서, 펼쳐 두면 둘 중 무엇을 복사해야 하는지 고르게 된다. */}
+          <Why summary={ADD_DEVICE.tokenWhy}>
+            <div className="row wrap">
+              <input className="input mono grow" readOnly aria-label={ADD_DEVICE.tokenLabel} value={issued.token} />
+              <button type="button" className="btn btn-sm" onClick={() => on.copy('token', issued.token)}>
+                {copied === 'token' ? ADD_DEVICE.copied : ADD_DEVICE.copyToken}
+              </button>
+            </div>
+          </Why>
+        </Step>
+        <Step title={ADD_DEVICE.stepDone}>
+          <div className="row wrap">
+            <button type="button" className="btn" onClick={on.close}>{ADD_DEVICE.done}</button>
+            <span className="meta">{ADD_DEVICE.after}</span>
+          </div>
+        </Step>
+      </Steps>
     </div>
   )
 }

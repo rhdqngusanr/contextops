@@ -585,7 +585,8 @@ describe('제안 목록 (DESIGN_BRIEF §4 화면 6 「함 목록 테이블」)',
       hrefOf: href,
       empty: createElement(ScreenEmpty, { slot: 'proposals.list', base: '/t/a/p/b' }),
     }))
-    expect(markup).toContain(EMPTY_PLACES['proposals.list'].message)
+    //  ⚠ 글자로 잰다 — 문장 속 명령(`/contextops:propose`)이 `<code>` 로 떠 있어 마크업은 문장 가운데서 끊긴다 (FINDINGS 177).
+    expect(markup.replace(/<[^>]+>/g, '')).toContain(EMPTY_PLACES['proposals.list'].message)
     //  🔴 다음 행동이 같이 온다 — 「없습니다」에서 갈 곳이 없던 것이 133 이었다.
     expect(markup).toContain('/t/a/p/b/context')
   })

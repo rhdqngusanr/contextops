@@ -364,6 +364,39 @@ code, pre, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-
 .note { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-table); color: var(--ink); line-height: 1.5; }
 .note.tone-bad { color: var(--bad); }
 
+/* ── 안내 문장 — 할 일은 번호 걸음 · 이유는 접는다 · 명령은 검은 상자 (DESIGN_BRIEF §3 「안내 문장」 · FINDINGS 177) ──
+   ★ 모양은 `components/guide.tsx` 하나가 짓는다. 번호는 카운터가 매긴다 — 차례가 곧 번호라 손으로 적지 않는다.
+   ⚠ 걸음 번호의 검정 원은 누를 수 없는 표시다 — accent(검정 알약 버튼)는 여전히 화면당 주요 액션 하나다. */
+.guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-5); counter-reset: guide-step; }
+.guide-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--sp-3); counter-increment: guide-step; }
+.guide-step::before {
+  content: counter(guide-step);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+.guide-step-body { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.guide-step-title { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: 1.5; }
+.guide-optional { font-weight: 400; font-size: var(--fs-table); color: var(--ink-3); margin-left: var(--sp-2); }
+.guide-why summary { cursor: pointer; width: fit-content; font-size: var(--fs-label); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; list-style: none; }
+.guide-why summary::-webkit-details-marker { display: none; }
+.guide-why[open] > summary { color: var(--ink); }
+.guide-why-body { padding-top: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-2); font-size: var(--fs-label); color: var(--ink-3); line-height: 1.6; }
+.cmd-box { background: var(--term-bg); color: var(--term-ink); border-radius: var(--radius); padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4); display: flex; gap: var(--sp-3); align-items: flex-start; }
+.cmd-box code { flex: 1 1 auto; min-width: 0; font-size: var(--fs-table); line-height: 1.6; overflow-wrap: anywhere; }
+.cmd-box .btn { flex: 0 0 auto; background: transparent; border-color: var(--term-ink-2); color: var(--term-ink); }
+.cmd-box .btn:hover { background: transparent; border-color: var(--term-ink); color: var(--term-ink); }
+/* 검은 상자 안에서는 검정 링이 안 보인다 — 색만 바꾼다(굵기·offset 은 위의 `:focus-visible` 한 줄 그대로). */
+.cmd-box .btn:focus-visible { outline-color: var(--term-ink); }
+/* 문장 속 명령(`/contextops:sync`) — 설명 글자 사이에서 명령만 떠 보이게. 복사할 한 줄은 위의 검은 상자다. */
+.cmd-inline { font-family: var(--font-mono); color: var(--ink); background: var(--surface-hi); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 var(--sp-1); white-space: nowrap; }
+
 /* CtxTag — 역추적 칩. 작고 회색이고 모노다 (P7 의 얼굴). */
 .ctx-tag {
   display: inline-flex;

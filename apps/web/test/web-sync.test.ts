@@ -129,10 +129,20 @@ describe('🔴 「그래서 어떻게 하면 고쳐지나」 — 다음 걸음 �
   })
 
   it('문장의 낱말은 칩 표에서 온다 — 상태 이름을 지어내지 않고, 판단 대신 할 일만 말한다', () => {
-    for (const s of ['outdated', 'modified', 'unknown'] as const) expect(SYNC_NEXT_STEP).toContain(`「${SYNC_CHIP[s].label}」`)
+    //  할 일(누가 · 어디서 · 무슨 명령)은 보이는 줄에 있다 — 세 상태가 다 거기 선다 (FINDINGS 177).
+    for (const s of ['outdated', 'modified', 'unknown'] as const) expect(SYNC_NEXT_STEP.todo).toContain(`「${SYNC_CHIP[s].label}」`)
+    expect(SYNC_NEXT_STEP.todo).toContain('/contextops:sync')
     //  손으로 고친 파일을 말없이 덮는다고 말하지 않는다 — Skill 이 먼저 묻는다 (`plugin/contextops/skills/sync`).
-    expect(SYNC_NEXT_STEP).toContain('묻')
-    expect(SYNC_NEXT_STEP).toContain('백업')
+    expect(SYNC_NEXT_STEP.detail).toContain('묻')
+    expect(SYNC_NEXT_STEP.detail).toContain('백업')
+  })
+
+  it('🔴 명령이 설명문에 묻히지 않는다 — 명령만 떠 보이고, 달라지는 것은 접힌 질문 밑에 있다 (FINDINGS 177)', () => {
+    const html = summary(['outdated'])
+    expect(html).toContain('<code class="cmd-inline">/contextops:sync</code>')
+    expect(html).toContain(`<details class="guide-why"><summary>${SYNC_NEXT_STEP.why}</summary>`)
+    //  보이는 줄에는 사정(백업)이 없다 — 한 문단으로 되돌아가면 여기서 빨개진다.
+    expect(html.slice(0, html.indexOf('<details'))).not.toContain('백업')
   })
 })
 

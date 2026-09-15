@@ -9,12 +9,18 @@ import { readSession } from '../../../lib/web/session'
 import { toSlug } from '../../../lib/web/slug'
 import { NeedsLogin, ReadOnlyNotice } from '../../../components/states'
 import { Note } from '../../../components/chips'
+import { Step, Steps, Why } from '../../../components/guide'
+import { SETUP_TEXT, SetupSteps } from '../../../components/setup-guide'
 
 // =====================================================================
 //  화면 2 — 팀 만들기 (DESIGN_BRIEF §4 「화면 2」 · SPEC §5 `POST /teams`)
 //
 //  ★ slug 는 이름에서 **자동으로 만들고 편집 가능**하다. 사람이 한 번 손대면
 //    그 뒤로는 이름을 고쳐도 slug 를 덮지 않는다 — 덮으면 방금 적은 것이 사라진다.
+//
+//  🔴 **할 일은 번호 걸음, 이유는 접는다** (FINDINGS 176 · 177) — 칸 이름과 placeholder 뿐이던 동안 처음 온 사람은
+//     「팀」이 무엇인지부터 막혔고, 설명을 칸마다 붙이자 이번엔 긴 설명문처럼 읽혔다. 문장의 정본은
+//     `components/setup-guide.tsx` 의 `SETUP_TEXT`, 모양의 정본은 `components/guide.tsx` 다.
 //
 //  ⚠ 실패 문구는 필드 옆에 붙인다. 서버가 주는 `details` 가 `[{path, message}]` 라
 //    어느 칸이 문제인지 말할 수 있다 (`lib/api/route.ts` 의 `issuesOf`).
@@ -57,37 +63,42 @@ export default function NewTeamPage() {
     <div className="center">
       <form className="card center-card" onSubmit={(e) => { e.preventDefault(); void submit() }}>
         <div className="col-tight">
+          <SetupSteps current={0} />
           <h1 className="text-section">팀 만들기</h1>
-          <p className="ink-3">팀 하나에 프로젝트가 여러 개 들어갑니다.</p>
+          <Why summary={SETUP_TEXT.team.leadWhy}>
+            <p>{SETUP_TEXT.team.lead}</p>
+            <p>{SETUP_TEXT.team.invite}</p>
+          </Why>
         </div>
 
-        <div className="field">
-          <label className="label" htmlFor="team-name">이름</label>
-          <input
-            id="team-name"
-            className="input"
-            value={name}
-            //  예시대로 적으면 주소 후보가 실제로 생기는 이름이어야 한다 — 한글 예시는 `toSlug` 가 빈 문자열을 낸다 (FINDINGS 158 의 결).
-            placeholder="Paylab"
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-
-        <div className="field">
-          <label className="label" htmlFor="team-slug">주소용 이름 — 영문 소문자·숫자·하이픈. 팀 주소가 됩니다</label>
-          <input
-            id="team-slug"
-            className="input mono"
-            value={candidate}
-            placeholder="paylab"
-            onChange={(e) => { setTouchedSlug(true); setSlug(e.target.value) }}
-          />
-          <span className="meta">주소: <span className="mono">/t/{candidate || '…'}</span></span>
-          {candidate.length === 0 && name.length > 0
-            //  한글 이름은 후보가 비어 있다 — 지어내지 않는다 (`lib/web/slug.ts`).
-            ? <Note tone="warn">이름에서 주소용 이름(slug)을 만들지 못했습니다. 영문·숫자로 직접 적어주세요.</Note>
-            : null}
-        </div>
+        <Steps>
+          <Step title={SETUP_TEXT.team.nameTitle} htmlFor="team-name">
+            <input
+              id="team-name"
+              className="input"
+              value={name}
+              //  예시대로 적으면 주소 후보가 실제로 생기는 이름이어야 한다 — 한글 예시는 `toSlug` 가 빈 문자열을 낸다 (FINDINGS 158 의 결).
+              placeholder="Paylab"
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Why summary={SETUP_TEXT.team.nameWhy}><p>{SETUP_TEXT.team.nameHelp}</p></Why>
+          </Step>
+          <Step title={SETUP_TEXT.slugTitle} htmlFor="team-slug">
+            <input
+              id="team-slug"
+              className="input mono"
+              value={candidate}
+              placeholder="paylab"
+              onChange={(e) => { setTouchedSlug(true); setSlug(e.target.value) }}
+            />
+            <span className="meta">주소: <span className="mono">/t/{candidate || '…'}</span></span>
+            {candidate.length === 0 && name.length > 0
+              //  한글 이름은 후보가 비어 있다 — 지어내지 않는다 (`lib/web/slug.ts`). 잠긴 버튼의 이유라 접지 않는다.
+              ? <Note tone="warn">{SETUP_TEXT.noSlug}</Note>
+              : null}
+            <Why summary={SETUP_TEXT.slugWhy}><p>{SETUP_TEXT.slugHelp}</p></Why>
+          </Step>
+        </Steps>
 
         {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
         {error ? <Note tone="bad">{error}</Note> : null}

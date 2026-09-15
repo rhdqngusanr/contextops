@@ -131,6 +131,17 @@ describe('② 🔴 한 줄이 통째로 있다 — 사람이 uuid 를 손으로 
   it('긴 줄이 자기 칸 안에서만 넘친다 — 본문이 가로로 밀리지 않는다 (⑦3층)', () => {
     expect(markup).toContain('scroll-x')
   })
+
+  it('🔴 그 줄은 검은 명령 상자 안에 있고, 복사 버튼이 상자 안에 같이 선다 (FINDINGS 177)', () => {
+    expect(markup).toContain(`<div class="cmd-box"><code>${line}</code><button`)
+  })
+
+  it('할 일은 걸음 셋이다 — 연다 · 붙여넣는다 · 닫는다 (차례대로)', () => {
+    const at = [ADD_DEVICE.stepOpen, ADD_DEVICE.stepPaste, ADD_DEVICE.stepDone].map((t) => markup.indexOf(t))
+    expect(at.every((i) => i > -1), at.join(',')).toBe(true)
+    expect([...at].sort((a, b) => a - b)).toEqual(at)
+    expect(markup.match(/<li class="guide-step">/g)).toHaveLength(3)
+  })
 })
 
 describe('③ 🔴 줄을 화면이 짓지 않는다 — 정본은 스키마 하나다', () => {
@@ -152,6 +163,14 @@ describe('④ 🔴 「한 번만 보인다」를 말한다', () => {
     expect(markup).toContain('class="note tone-warn"')
     expect(markup).not.toContain('⚠')
     expect(ADD_DEVICE.once).toContain('한 번만')
+  })
+
+  it('🔴 경고는 접지 않는다 — 할 일 걸음보다 먼저, 접힌 설명 밖에 선다 (FINDINGS 177)', () => {
+    const markup = html({ kind: 'issued', issued: ISSUED, copied: null })
+    const at = markup.indexOf(ADD_DEVICE.once)
+    expect(at).toBeGreaterThan(-1)
+    expect(at).toBeLessThan(markup.indexOf('<ol'))
+    expect(markup.lastIndexOf('<details', at)).toBe(-1)
   })
 })
 

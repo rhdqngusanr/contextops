@@ -16,6 +16,7 @@ import {
 } from '../../../../../../lib/web/queries'
 import { useAsync, usePolling, type Async } from '../../../../../../lib/web/use-async'
 import { AiBadge, SOURCE_DOCUMENT_KIND_LABEL, Note } from '../../../../../../components/chips'
+import { Step, Steps, Why } from '../../../../../../components/guide'
 import { JobProgress } from '../../../../../../components/job-progress'
 import { ProjectGate } from '../../../../../../components/project-gate'
 import { QuestionStack, type QuestionStackState } from '../../../../../../components/question-stack'
@@ -90,10 +91,11 @@ function ImportView({ base, project }: { base: string; project: ProjectRef }) {
     <>
       <header className="col-tight">
         <h1 className="text-section">가져오기</h1>
-        <p className="meta">
-          팀 문서가 있으면 붙여넣고, 없으면 질문에 답하세요. 둘 다 해도 됩니다.
-          AI 가 정리한 결과는 「AI 정리 진행」 칸에 나타나고, 무엇을 남길지는 사람이 고릅니다.
-        </p>
+        {/* 할 일은 보이고 그 뒤의 사정은 접는다 (FINDINGS 177 · 모양의 정본은 `components/guide.tsx`). */}
+        <p>팀 문서가 있으면 붙여넣고, 없으면 질문에 답하세요. 둘 다 해도 됩니다.</p>
+        <Why summary="AI 가 정리한 결과는 어디에 나오나요?">
+          <p>「AI 정리 진행」 칸에 나타나고, 무엇을 남길지는 사람이 고릅니다.</p>
+        </Why>
       </header>
 
       {/* 🔴 쓰기 문은 **누르기 전에** 서버와 같은 표(`ACTOR_RULES.writes`)를 읽는다 (INBOX H7 · FINDINGS 135).
@@ -160,66 +162,78 @@ function PasteCard({ projectId, onCreated, door }: { projectId: string; onCreate
     <form className="card pad col import-paste" onSubmit={submit}>
       <div className="col-tight">
         <h2 className="text-section">문서 붙여넣기</h2>
-        <p className="meta">문서가 있으면 여기서 시작하세요. 목표 문서·정책·회의록 무엇이든 됩니다. 서버가 받는 것은 여기 붙여넣은 글자뿐입니다.</p>
-        {/* 손에 든 문서가 없는 사람(심사위원)을 위한 문 — 정본 픽스처 goals.md 를 채운다. 실측 표가 이 문서로 잰 것이다. */}
-        <span className="row"><button type="button" className="btn btn-sm" onClick={fillSample}>예시 문서 붙여넣기</button><span className="meta">샘플 팀의 목표 문서 · {SAMPLE_DOCUMENT.content.length.toLocaleString()}자</span></span>
+        {/* 할 일은 아래 걸음 셋이고, 어떤 문서가 되는지는 접는다 (FINDINGS 177 · 모양의 정본은 `components/guide.tsx`). */}
+        <Why summary="어떤 문서를 넣나요?">
+          <p>목표 문서·정책·회의록 무엇이든 됩니다. 서버가 받는 것은 여기 붙여넣은 글자뿐입니다.</p>
+        </Why>
+        {/* 손에 든 문서가 없는 사람(심사위원)을 위한 문 — 정본 픽스처 goals.md 를 채운다. 실측 표가 이 문서로 잰 것이다.
+            ⚠ 걸음 밖(위)에 둔다 — 제목·종류·본문을 한 번에 채우는 지름길이라 어느 한 걸음의 일이 아니다. */}
+        <span className="row wrap"><button type="button" className="btn btn-sm" onClick={fillSample}>예시 문서 붙여넣기</button><span className="meta">샘플 팀의 목표 문서 · {SAMPLE_DOCUMENT.content.length.toLocaleString()}자</span></span>
       </div>
 
       {refused ? <ReadOnlyNotice reason={refused} onClose={() => setRefused(null)} /> : null}
 
-      <label className="field">
-        <span className="label">제목</span>
-        <input
-          className="input"
-          value={title}
-          maxLength={200}
-          placeholder="2026 4분기 목표"
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
+      <Steps>
+        <Step title="제목과 종류를 정합니다">
+          <label className="field">
+            <span className="label">제목</span>
+            <input
+              className="input"
+              value={title}
+              maxLength={200}
+              placeholder="2026 4분기 목표"
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </label>
 
-      <label className="field">
-        <span className="label">종류</span>
-        {/* 표를 읽기만 한다 — `<option>` 을 손으로 적으면 종류가 늘 때 화면이 빠뜨린다. */}
-        <select className="select" value={kind} onChange={(e) => setKind(e.target.value as SourceDocumentKind)}>
-          {SOURCE_DOCUMENT_KINDS.map((k) => (
-            <option key={k} value={k}>{SOURCE_DOCUMENT_KIND_LABEL[k]}</option>
-          ))}
-        </select>
-      </label>
+          <label className="field">
+            <span className="label">종류</span>
+            {/* 표를 읽기만 한다 — `<option>` 을 손으로 적으면 종류가 늘 때 화면이 빠뜨린다. */}
+            <select className="select" value={kind} onChange={(e) => setKind(e.target.value as SourceDocumentKind)}>
+              {SOURCE_DOCUMENT_KINDS.map((k) => (
+                <option key={k} value={k}>{SOURCE_DOCUMENT_KIND_LABEL[k]}</option>
+              ))}
+            </select>
+          </label>
+        </Step>
 
-      <label className="field">
-        <span className="label">본문</span>
-        <textarea
-          className="textarea"
-          rows={10}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={'# 2026 4분기 목표\n\n- 결제 재시도는 5회까지, 지수 백오프를 쓴다.\n- 환불 SLA 는 24시간이다.'}
-        />
-        <span className="meta mono">{content.length.toLocaleString()}자</span>
-      </label>
+        {/* 걸음 제목이 곧 본문 칸의 이름표다 — 「본문」 라벨을 따로 두지 않는다. */}
+        <Step title="본문을 붙여넣습니다" htmlFor="paste-content">
+          <textarea
+            id="paste-content"
+            className="textarea"
+            rows={10}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={'# 2026 4분기 목표\n\n- 결제 재시도는 5회까지, 지수 백오프를 쓴다.\n- 환불 SLA 는 24시간이다.'}
+          />
+          <span className="meta mono">{content.length.toLocaleString()}자</span>
+        </Step>
 
-      {/* 🔴 문서를 넣기 **전**에 읽는 문장 — 어디로 가고 누가 볼 수 있나 (INBOX H4). 정본은 `lib/web/privacy.ts`. */}
-      <p className="meta">{AI_TRANSFER_NOTICE_NOW} <a href={PRIVACY_PATH}>{PRIVACY_LABEL}</a></p>
+        <Step title="AI 로 정리합니다">
+          {/* 🔴 문서를 넣기 **전**에 읽는 문장 — 어디로 가고 누가 볼 수 있나 (INBOX H4). 정본은 `lib/web/privacy.ts`.
+              ⚠ 접지 않는다 — 누르기 전에 반드시 읽어야 하는 문장이다 (FINDINGS 177). */}
+          <p className="meta">{AI_TRANSFER_NOTICE_NOW} <a href={PRIVACY_PATH}>{PRIVACY_LABEL}</a></p>
 
-      {error ? <ErrorState error={error} /> : null}
+          {error ? <ErrorState error={error} /> : null}
 
-      <div className="row">
-        <button type="submit" className="btn btn-primary" disabled={!ready || busy}>AI 로 정리하기</button>
-        {/* 🔴 **왜 못 누르는지를 버튼 옆에서 말한다** (2026-09-11). 잠긴 알약만 서 있으면
-            본문만 붙여넣고 제목을 안 적은 사람은 그것을 「고장」으로 읽는다 — 이 화면의
-            유일한 accent 버튼이 첫 화면부터 죽어 보이던 자리다.
-            ⚠ 제목과 본문을 갈라 말하지 않는다 — 한 문장이면 충분하고, 갈래가 늘면
-              화면이 `ready` 의 조건을 두 번 적게 된다. */}
-        <span className="meta">
-          {busy
-            ? '올리는 중입니다…'
-            : !ready
-              ? '제목과 본문을 채우면 누를 수 있습니다.'
-              : 'AI 가 항목 후보와 질문을 만듭니다. 결정은 사람이 합니다.'}
-        </span>
-      </div>
+          <div className="row wrap">
+            <button type="submit" className="btn btn-primary" disabled={!ready || busy}>AI 로 정리하기</button>
+            {/* 🔴 **왜 못 누르는지를 버튼 옆에서 말한다** (2026-09-11). 잠긴 알약만 서 있으면
+                본문만 붙여넣고 제목을 안 적은 사람은 그것을 「고장」으로 읽는다 — 이 화면의
+                유일한 accent 버튼이 첫 화면부터 죽어 보이던 자리다.
+                ⚠ 제목과 본문을 갈라 말하지 않는다 — 한 문장이면 충분하고, 갈래가 늘면
+                  화면이 `ready` 의 조건을 두 번 적게 된다. */}
+            <span className="meta">
+              {busy
+                ? '올리는 중입니다…'
+                : !ready
+                  ? '제목과 본문을 채우면 누를 수 있습니다.'
+                  : 'AI 가 항목 후보와 질문을 만듭니다. 결정은 사람이 합니다.'}
+            </span>
+          </div>
+        </Step>
+      </Steps>
     </form>
   )
 }

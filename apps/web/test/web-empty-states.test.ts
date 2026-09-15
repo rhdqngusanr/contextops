@@ -46,7 +46,8 @@ function html(slot: EmptySlot, message?: string): string {
 
 describe('① 표가 정본이다 — 화면이 문구를 손으로 적지 않는다', () => {
   it('표의 모든 문구가 그 자리에서 그대로 나온다', () => {
-    for (const slot of SLOTS) expect(html(slot), slot).toContain(EMPTY_PLACES[slot].message)
+    //  ⚠ 글자로 잰다 — 문장 속 명령은 `<code>` 로 떠 있어 마크업이 문장 가운데서 끊긴다 (FINDINGS 177).
+    for (const slot of SLOTS) expect(html(slot).replace(/<[^>]+>/g, ''), slot).toContain(EMPTY_PLACES[slot].message)
   })
 
   it('🔴 상태에 따라 달라지는 문장만 덮어쓴다 — 그때도 다음 행동은 표의 것이다', () => {

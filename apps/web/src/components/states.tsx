@@ -9,6 +9,7 @@ import { EMPTY_PLACES, EMPTY_WORDS, emptyNextHref, type EmptySlot } from '../lib
 import { localized, pick } from '../lib/i18n/localized'
 import { useLocale } from '../lib/i18n/provider'
 import { Note } from './chips'
+import { CommandText } from './guide'
 
 /**
  * 세 상태가 같이 쓰는 낱말. 문장이 아니라 **버튼과 이름표**라 여기 있다.
@@ -57,7 +58,8 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 export function EmptyState({ message, action }: { message: string; action?: ReactNode }) {
   return (
     <div className="state-box">
-      <p>{message}</p>
+      {/* 문장 속 명령(`/contextops:propose`)만 떠 보이게 — 문장은 표의 것 그대로다 (FINDINGS 177). */}
+      <p><CommandText text={message} /></p>
       {action}
     </div>
   )
