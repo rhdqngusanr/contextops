@@ -47,7 +47,7 @@ git diff
 🔴 **규칙 넷**:
 
 1. `add` 는 `draft` 가, `update`·`deprecate` 는 `target_item_id` 가 **필요하다**.
-   기존 항목 id 는 웹의 Context 화면이나 적용된 Pack 의 역추적 태그(`<!-- ctx:item_…:N -->`)에 있다.
+   기존 항목 id 는 웹의 Context 화면이나 적용된 Pack 의 역추적 태그(`<!-- ctx:<id> rev:N conf:… src:… -->` 의 `ctx:` 바로 뒤 낱말)에 있다.
 2. `evidence` 는 **이 저장소의 실제 경로와 줄**이다. 확인하지 않은 줄 번호를 적지 마라.
 3. `reason` 은 **관찰한 것**이다. 사람의 의도를 추측해 적지 마라.
 4. `base_version_id` 와 `client_request_id` 는 **적지 않는다.** 둘 다 네가 알 수 없는

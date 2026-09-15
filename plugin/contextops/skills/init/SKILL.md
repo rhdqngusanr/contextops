@@ -11,6 +11,15 @@ allowed-tools: Bash(node:*), Read, Glob, Grep
 > 계약에 그 자리가 없다 (`schemas/context-item-draft.json`). 5단계에서 사용자에게
 > 무엇이 나가는지 **그대로** 보여 주고 확인을 받는다.
 
+## 0. 이어져 있는지 먼저 본다
+
+`.contextops/project.json` 이 있는지 본다 (`setup` 이 만드는 파일이다). **없으면** 이 저장소는 아직
+이어지지 않았다 → `/contextops:setup` 을 안내하고 멈춘다. `scan`·`validate` 는 setup 없이도 돌아서,
+여기서 안 보면 초안을 다 쓰고 5단계에서야 막힌다.
+
+- 파일이 있어도 이 기기에 토큰이 없으면 5단계가 exit 30 으로 알려 준다.
+- ⛔ `~/.contextops/credentials.json` 은 열지 마라 — 토큰이 들어 있다.
+
 ## 1. 저장소를 훑는다
 
 ```bash
@@ -20,7 +29,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" scan
 `.contextops/cache/scan.json` 이 생긴다. 그 파일을 읽어라 — 파일 목록·언어·엔트리·
 인프라 파일·**env 키 이름**(값이 아니다)·의존성·제외 목록이 있다.
 
-- exit 30 이면 이 저장소는 아직 이어지지 않았다 → `/contextops:setup` 을 안내하고 멈춘다.
+- exit 30 이면 스캔 결과가 계약과 맞지 않았다 (`스캔이 계약과 맞지 않는 결과를 냈다 — …`). 출력 그대로 보여 주고 멈춘다.
 
 ## 2. 읽을 파일을 고른다 — **최대 15개**
 
@@ -66,6 +75,10 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" upload-draft --dry-run
 
 이 출력이 **실제로 보낼 payload 에서 뽑은 것**이다 — 항목 수·항목 id·근거 경로 수·
 「코드 본문 0건」. 요약하지 말고 그대로 보여 준 뒤 사용자에게 물어라.
+
+- exit 30 → 출력 문장대로다. 설정 파일이나 이 기기의 토큰이 없으면(`/contextops:setup` 을 실행하라는 문장) setup 을
+  안내하고 멈춘다. `초안 이 없다` 면 3단계로, `스캔 결과 이 없다` 면 1단계로 돌아간다.
+- exit 2 → 출력이 가리키는 파일을 본다. `scan.json` 이면 손으로 고치지 말고 1단계(`scan`)부터 다시, 초안이면 4단계부터 다시.
 
 ⛔ 확인 없이 6단계로 가지 마라.
 

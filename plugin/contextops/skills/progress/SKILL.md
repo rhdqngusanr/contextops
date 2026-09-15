@@ -27,7 +27,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" progress $ARGUMENTS
 - 해당 없음: `--milestone none --summary "<한 줄>"`
 
 `<ID>` 는 Roadmap 의 마일스톤 id(예: `PL-M1`)이고 `<done_when 문장>` 은 그 마일스톤의 `done_when` 중 **글자 그대로** 하나다.
-`--evidence` 는 이번 변경이 실제로 닿은 파일과 줄(`src/psp/client.ts:18-46`)이다 — 확인하지 않은 줄 번호를 적지 마라.
+`--evidence` 는 이번 변경이 실제로 닿은 파일과 줄(`src/psp/psp.client.ts:18-46`)이다 — 확인하지 않은 줄 번호를 적지 마라.
 
 ## 2. 종료 코드
 

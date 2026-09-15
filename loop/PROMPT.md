@@ -97,7 +97,7 @@
 | **모든 외부 입력은 `packages/schema` 로 파싱한다.** 새 필드는 스키마에 먼저 | P1 이 스키마 하나에 걸려 있다. 라우트마다 손으로 검사하면 한 곳만 빠져도 방어선이 뚫린다 |
 | **`packages/compiler` 는 순수 함수만.** `Date.now`·`Math.random`·네트워크 금지 | P4 = 「같은 snapshot → byte-identical Pack」. 시각 하나만 섞여도 golden test 가 매일 빨개지고, 재현성 주장이 거짓이 된다 |
 | **golden test 를 깨면 템플릿 버전을 올리고, expected 를 갱신한 이유를 커밋 메시지에 쓴다** | 아무 말 없이 expected 를 덮으면 게이트가 게이트가 아니게 된다. 「테스트가 빨개서 테스트를 고쳤다」가 제일 흔한 자멸이다 |
-| **표를 만들면 「표의 항목이 전부 실제로 뭔가를 바꾼다」를 시험으로 잠가라** | 10종 중 8종이 무효인데 화면에는 멀쩡히 뜨는 종류의 고장은 **눈으로 절대 안 잡힌다.** ItemType 10종·에러 코드 9종·상태 5종이 전부 이 위험에 있다 |
+| **표를 만들면 「표의 항목이 전부 실제로 뭔가를 바꾼다」를 시험으로 잠가라** | 10종 중 8종이 무효인데 화면에는 멀쩡히 뜨는 종류의 고장은 **눈으로 절대 안 잡힌다.** ItemType 10종·에러 코드 12종·상태 5종이 전부 이 위험에 있다 |
 | **서버 AI 호출은 `withBudget()` 경유 외에 금지** | P3. 한 곳만 새도 하룻밤에 예산이 탄다. 그리고 새는 자리는 항상 「급해서 임시로」 부른 자리다 |
 | **로그에 body·토큰·문서 본문을 남기지 않는다** (`request_id`·route·status·latency만) | P1 은 「받지 않는다」이지 「받아서 안 쓴다」가 아니다. 로그에 남으면 이미 받은 것이다 |
 | 🔴 **확장은 「표에 한 줄」이어야 한다.** 타입별 분기를 여러 파일에 흩지 말고 표 하나로 모으고, 화면·컴파일러는 그 표를 **읽기만** 한다. 더하는 절차는 그 표 옆 주석에 | **오픈소스로 공개한다 — 남이 읽고 남이 한 줄 더한다.** 판정 기준은 「ItemType 을 하나 더하려면 몇 군데를 고쳐야 하나」다. 절차가 코드 밖에 있으면 다음 사람은 반드시 하나를 빠뜨린다 (사용자 상시 지시 · 상세는 `CLAUDE.md`) |
@@ -163,7 +163,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1
 | ① 소비처가 있나 | 그 이름을 **읽는 코드**가 있나 | `grep -rn "<이름>" packages apps plugin` — 타입 선언·표시용 코드는 **빼고** 센다 |
 | ② 실제로 바꾸나 | 값을 바꾸면 **결과가 달라지나** | 테스트에서 그 값만 뒤집고 출력이 갈리는지 본다 |
 
-이번 라운드의 후보 (돌아가며): `ItemType` 10종 · `SourceRef` 4종 · 에러 코드 9종 ·
+이번 라운드의 후보 (돌아가며): `ItemType` 10종 · `SourceRef` 4종 · 에러 코드 12종 ·
 sync 상태 5종 · `confidence` 3단계 · `scope.kind` 3종 · `enforcement` 4종.
 
 죽은 것을 찾으면 **둘 중 하나만** 해라 — 어중간하게 두지 마라:
@@ -241,7 +241,8 @@ sync 상태 5종 · `confidence` 3단계 · `scope.kind` 3종 · `enforcement` 4
 powershell -ExecutionPolicy Bypass -File tools/ci.ps1
 ```
 → `.ci/result` 한 줄. **전 층이 초록이어야** 커밋한다.
-아직 없는 층은 `SKIP` 으로 나온다 — P0 단계에서는 정상이다.
+지금은 모든 층의 대상이 있다 — `SKIP` 은 `-Fast` 로 건너뛰었거나 앞 층이 빨갈 때만 정상이고,
+**대상이 있는데 `SKIP` 이면 그게 고장이다.**
 
 ### 🔴 CI 를 **백그라운드로 돌리지 마라.** 앞단에서 끝까지 기다려라
 
@@ -268,9 +269,9 @@ powershell -ExecutionPolicy Bypass -File tools/ci.ps1
 
 | 층 | 무엇을 보장하나 | 빨개지면 |
 |---|---|---|
-| `principles` | P1·P2·P3·P4·P6 을 기계로 센다 (`tools/principles.ps1`) | **제품의 주장이 깨졌다. 최우선이다** |
+| `principles` | P1·P2·P3·P4·P6·P7 을 기계로 센다 (`tools/principles.ps1` · P5 는 기계로 못 잰다 — ⑦ 3층 눈 판정) | **제품의 주장이 깨졌다. 최우선이다** |
 | `typecheck` | `tsc --noEmit` 전 패키지 | 타입이 갈렸다 |
-| `test` | vitest — schema · compiler golden · api | golden 이면 ⑤ 의 규칙을 읽어라 |
+| `test` | vitest — 워크스페이스 전 멤버 (`pnpm -r test`: schema · compiler golden · web 의 API·화면 · plugin 의 CLI·훅·Skill) | golden 이면 ③ 의 규칙을 읽어라 |
 | `build` | `next build` | 배포가 막힌다 |
 | `walkthrough` | 관통 시나리오 (있을 때만) | ④1 로 돌아간다 |
 | `docs` | 🔴 **`STATUS.md` 가 자기와 어긋나지 않는가** (`tools/status-shape.mjs`) — 다음 할 일을 말하는 자리가 **하나**이고 그 항목이 **대기**인가 · 지난 바퀴 기록이 상한 안인가 | ④8 을 안 했거나 반만 했다 |
@@ -294,7 +295,7 @@ powershell -ExecutionPolicy Bypass -File tools/ci.ps1
 - [ ] **`base_version_id` 가 낡으면 409 `STALE_BASE`** 가 나오나
 - [ ] **sync 가 hash 불일치에서 멈추나** · 실패하면 backup 에서 전부 복원되나
 - [ ] **업로드 payload 를 캡처했을 때 코드 본문이 0건인가** (P1 · 심사 첫 질문이다)
-- [ ] 예산 초과 시 `BUDGET_EXCEEDED` → 픽스처 결과로 떨어지나 (P3)
+- [ ] 예산 초과 시 모델을 부르기 **전에** `BUDGET_EXCEEDED` 로 막히고, 화면이 예산 소진 문구(`ERROR_HINT.BUDGET_EXCEEDED`)를 내나 — 픽스처로 떨어지는 갈래는 없다 (P3)
 
 ### 3층 · 눈 판정 — 캡처를 **직접 읽어라**
 

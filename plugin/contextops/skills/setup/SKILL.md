@@ -29,7 +29,7 @@ node "${CLAUDE_PLUGIN_ROOT}/bin/contextops-cli.mjs" setup $ARGUMENTS --no-browse
 
 | exit | 뜻 | 다음 |
 |---|---|---|
-| 0 | 이어졌다 — `.contextops/project.json`(커밋됨 · secret 없음) 과 `~/.contextops/credentials.json`(저장소 밖) 이 생겼다 | 출력의 두 경로를 그대로 보여 주고 **`/contextops:init`** 을 권한다 (첫 항목을 올리는 Skill) |
+| 0 | 이어졌다 — `.contextops/project.json`(커밋할 파일 · secret 없음) · `.contextops/.gitignore`(`cache/`·`backups/` 등을 커밋에서 뺀다 · 이미 있으면 그대로 둔다) · `~/.contextops/credentials.json`(저장소 밖) 이 생겼다 | 출력의 경로 줄(`설정을 저장했다:` · `토큰을 저장했다:`)을 그대로 보여 주고 **`/contextops:init`** 을 권한다 (첫 항목을 올리는 Skill) |
 | 10 | 토큰이 없거나 모양이 아니거나 서버가 거절했다(만료·취소) | 웹에서 **다시 발급**받아 새 한 줄로 다시 붙여 넣으라고 한다 |
 | 30 | 서버 주소나 프로젝트 uuid 가 없거나 잘못됐다 | 한 줄을 통째로 복사했는지 확인하라고 한다 — 손으로 옮기면 uuid 가 잘린다 |
 | 20 | 서버에 닿지 못했다 | 주소와 네트워크를 확인하고 같은 줄로 다시 |

@@ -4,6 +4,9 @@
 Claude Code 세션이 열려서, 이번에 뭘 할지 문서에서 읽고, 하나를 고치고, 검사하고,
 커밋하고, 다음 바퀴를 위해 기록을 남긴다.
 
+> 지금 상태 (2026-09-15) — 루프는 **2026-09-07 밤부터 멈춰 있다** (`loop/STOP`). 그 뒤 작업은 사람이 연
+> Claude Code 세션이 했다. 다시 켜기 전에 아래 「파일」 절의 🔴 경고(`main` push = production 배포)를 먼저 읽어라.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/loop-cycle-dark.svg">
   <img alt="자율 루프 한 바퀴 — ctl.ps1 이 보이는 터미널 창에서 loop.ps1 을 돌리고, 한 바퀴마다 새 세션이 읽고 하나만 고치고 기록을 남긴다" src="../docs/diagrams/loop-cycle-light.svg" width="100%">
@@ -34,21 +37,21 @@ Claude Code 세션이 열려서, 이번에 뭘 할지 문서에서 읽고, 하�
 
 ### 같은 지적이 두 번 나오면 **게이트로 올린다**
 
-문서에 적는 것만으로는 안 지켜진다. `tools/principles.ps1` 이 절대 원칙 P1~P7 을
-기계로 세는 자리다. **게이트는 문서보다 강하다.**
+문서에 적는 것만으로는 안 지켜진다. `tools/principles.ps1` 이 절대 원칙 P1~P7 중 기계로 잴 수 있는
+여섯(P5 는 눈 판정)을 세는 자리다. **게이트는 문서보다 강하다.**
 
 ---
 
 ## 쓰는 법
 
 ```bash
-# 1. 등록 — PATH·claude.exe 경로를 잡아 작업 스케줄러에 넣는다
+# 1. 등록 — PATH·claude.exe 경로를 env.local.ps1 에 박는다 (스케줄러 작업도 수동 전용으로 올라가지만 start 는 안 쓴다)
 powershell -ExecutionPolicy Bypass -File loop/ctl.ps1 install
 
 # 2. 시험 주행 — 파일을 하나도 안 고친다. 턴 수·시간·비용만 잰다
 powershell -ExecutionPolicy Bypass -File loop/ctl.ps1 dryrun
 
-# 3. 켜기 — 창을 닫아도, 껐다 켜도 계속 돈다
+# 3. 켜기 — 보이는 터미널 창이 새로 뜬다. 그 창을 닫으면 루프도 죽는다
 powershell -ExecutionPolicy Bypass -File loop/ctl.ps1 start
 
 # 4. 지켜보기
@@ -64,8 +67,9 @@ powershell -ExecutionPolicy Bypass -File loop/ctl.ps1 stop
 > ⚠ 로그아웃·재부팅은 못 넘는다. 스케줄러로 숨겨 돌리면 넘지만, **그건 안 쓰기로 했다** —
 > 창 없이 돌 때 조용히 죽은 판을 몇 시간 뒤에야 알아챈 적이 네 번 있다.
 
-> ⚠ `loop.ps1` 을 **직접 실행하지 마라.** 무한 루프라 그 창과 세션이 거기 묶이고,
-> 창을 닫으면 같이 죽는다. 작업 스케줄러로 돌려야 로그아웃·재부팅을 넘긴다.
+> ⚠ `loop.ps1` 을 **직접 실행하지 마라.** 무한 루프라 부른 창과 세션이 거기 묶인다.
+> `ctl.ps1 start` 는 브랜치를 맞추고, 이미 도는 루프가 있으면 거절하고, `STOP` 파일을 치운 뒤
+> **새 창**으로 띄운다.
 
 ### 밤에 두 번 돌리기
 
@@ -91,16 +95,24 @@ powershell -ExecutionPolicy Bypass -File loop/relay.ps1 -InsertOnly
 
 | 파일 | 무엇 |
 |---|---|
-| `env.ps1` | 설정만. 로직 없음. 모델·노력·바퀴 상한·비용 상한·브랜치 |
+| `env.ps1` | 설정만. 로직 없음. 모델·노력·갈아탈 모델·바퀴 상한·비용 상한·자동 push·브랜치 |
 | `env.local.ps1` | `ctl.ps1 install` 이 만든다. PATH·claude.exe 경로. **커밋 안 함** |
 | `loop.ps1` | 루프 본체. 한 바퀴 = 새 세션 하나 |
-| `ctl.ps1` | 켜기/끄기/상태/시험주행/등록 |
+| `ctl.ps1` | 켜기/끄기/상태/시험주행/등록/등록 해제 |
 | `common.ps1` | 셋이 같이 쓰는 것(브랜치·HEAD 조회 · **잠금**). **같은 걸 두 곳에 적으면 갈라진다** |
 | `relay.ps1` | 1차가 끝나면 인계장을 꽂고 2차를 잇는다. `-InsertOnly` 로 미리보기 |
 | **`PROMPT.md`** | **한 바퀴의 전부.** 합격 기준·읽을 문서·규칙·순서·체크리스트 |
 | `HANDOFF.md` | 2차 루프 인계장 (사람이 자기 전에 고쳐 둔다) |
-| `STOP` | 있으면 현재 바퀴를 마치고 멈춘다. `ctl.ps1 stop` 이 만든다 |
+| `STOP` | 있으면 현재 바퀴를 마치고 멈춘다. `ctl.ps1 stop` 이 만들고 `start` 가 지운다. 있는 동안 `relay.ps1` 은 잇지 않는다 |
 | `.lock` | **누가** 잠금을 들고 있나 (진단 전용). 배타는 이 파일이 아니라 OS 뮤텍스가 한다 |
+
+> 🔴 **루프의 커밋은 곧바로 production 에 배포된다.** `env.ps1` 이 `AutoPush = $true` · `Branch = "main"` 이라
+> 커밋이 생긴 바퀴마다 `loop.ps1` 이 `git push origin main` 을 하고, production
+> (<https://contextops-rosy.vercel.app>)은 `main` 에서 배포된다. 대회 과제는 2026-09-14 에 제출됐고
+> 9/20 까지 고칠 수 있다. 사람이 9/18 에 `release` 브랜치로 동결할 계획이지만(`docs/DEPLOY.md` 「동결」),
+> 그 전까지는 `main` 이 곧 production 이다.
+> **심사 기간에 `main` 에서 루프를 다시 켤지는 사람이 정한다.** 켠다면 먼저 `AutoPush` 를 `$false` 로 두거나
+> `Branch` 를 별도 브랜치로 바꿔라 (`env.ps1` 주석).
 
 ---
 
@@ -124,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File loop/relay.ps1 -InsertOnly
 
 ## 멈추는 조건
 
-넷 중 먼저 오는 쪽. 전부 `env.ps1` 에 있다.
+아래 중 먼저 오는 쪽. `STOP` 파일 말고는 전부 `env.ps1` 에 있다.
 
 | 조건 | 기본값 | 왜 |
 |---|---|---|
@@ -134,8 +146,9 @@ powershell -ExecutionPolicy Bypass -File loop/relay.ps1 -InsertOnly
 | `IdleCyclesMax` | 3 연속 빈 바퀴 | 아래 「조용한 실패」 |
 | `STOP` 파일 | — | 사람이 세운다 |
 
-사용량 한도에 걸리면 멈추지 않고 `BackoffMin` 만큼 물러섰다가 다시 시도한다
-(20분 → 40 → 80 → 120 상한). 그 바퀴는 바퀴 수로 세지 않는다.
+사용량 한도(또는 API 과부하)에 걸려도 멈추지 않는다. `FallbackModel` 이 있으면 **먼저 그 모델로 한 번 갈아탄다** —
+물러서지 않고, 그 판이 끝날 때까지 되돌아오지 않는다. 갈아탄 모델까지 막히거나 `FallbackModel` 이 비어 있으면
+`BackoffMin` 만큼 물러섰다가 다시 시도한다 (20분 → 40 → 80 → 120 상한). 어느 쪽이든 그 바퀴는 바퀴 수로 세지 않는다.
 
 ---
 
@@ -145,14 +158,14 @@ powershell -ExecutionPolicy Bypass -File loop/relay.ps1 -InsertOnly
 커밋한다.** 한쪽이 남의 반쯤 된 작업을 같이 커밋하거나 둘이 서로를 덮어쓴다.
 무인이라 아무도 못 본다.
 
-스케줄러의 `-MultipleInstances IgnoreNew` 는 **작업(task) 중복만** 막는다.
-사람이 `loop.ps1` 을 손으로 돌리거나 `relay.ps1` 이 띄운 판은 작업이 아니라서 그대로 뚫린다.
-그래서 잠금이 따로 있다.
+스케줄러의 `-MultipleInstances IgnoreNew` 는 **작업(task) 중복만** 막는데, 지금은 어느 판도 작업으로 뜨지 않는다 —
+`ctl.ps1 start` 는 보이는 창(`Start-Process`)으로, `relay.ps1` 은 자기 창에서 `loop.ps1` 을 부르고,
+사람이 손으로 돌린 판도 마찬가지다. 그래서 잠금이 따로 있다.
 
 ### 왜 잠금 파일이 아니라 **뮤텍스**인가
 
 잠금 파일은 프로세스가 **강제 종료되면 그대로 남는다.** 그리고 이 루프는 실제로 강제
-종료된다 — `Stop-ScheduledTask` · 재부팅 · 바퀴 시간 초과 정리. 그러면 다음 날 아침
+종료된다 — 창 닫기 · 재부팅 · 바퀴 시간 초과 정리. 그러면 다음 날 아침
 루프가 "이미 돌고 있다"며 안 켜지고, 사람이 유령 파일을 손으로 지워야 한다.
 
 **OS 뮤텍스는 프로세스가 죽으면 OS 가 놓아준다.** 지울 것이 없다.
@@ -168,7 +181,7 @@ powershell -ExecutionPolicy Bypass -File loop/relay.ps1 -InsertOnly
 |---|---|
 | **저장소마다 따로** | 뮤텍스 이름에 저장소 경로 해시가 들어간다. 다른 프로젝트에서 같은 루프를 동시에 돌리는 건 충돌이 아니다 |
 | **DRY RUN 은 안 잠근다** | 파일을 하나도 안 고치니 옆에서 도는 진짜 루프와 안 부딪힌다 — 그게 dryrun 의 존재 이유다. 대신 로그를 `<날짜>_dryNNN.jsonl` 로 갈라 진짜 바퀴 기록을 안 덮는다 |
-| **거절은 `exit 0`** | 0 이 아니면 스케줄러가 「비정상 종료」로 보고 3번 다시 켠다. 같은 벽에 세 번 부딪히며 로그만 더러워진다 |
+| **거절은 `exit 0`** | 스케줄러가 0 이 아닌 종료를 「비정상 종료」로 보고 3번 다시 켜던 때의 규칙이다. 그 자동 재시작(`-RestartCount`)은 2026-09-04 에 없앴고 지금은 창으로 켜서 0 이 막는 것은 없다 — 재시작을 되살리면 다시 같은 벽에 세 번 부딪히며 로그만 더러워진다 |
 | **고아 세션을 정리한다** | `loop.ps1` 이 강제 종료되면 **자식 `claude` 는 살아남는다.** 뮤텍스는 풀리니 새 루프가 켜지고, 그 옆에서 고아가 같은 저장소를 계속 고친다 — 뮤텍스를 우회한 중복이다. 잠금을 잡은 직후 `.lock` 의 `child_pid` 를 보고 정리한다 |
 
 `relay.ps1` 도 잇기 전에 잠금을 확인하고, 잡혀 있으면 최대 60분 기다린다.
