@@ -9,7 +9,7 @@
 > ⚠ **날짜에 맞추려고 여러 행을 한 바퀴에 하지 마라.** 반쯤 된 것 셋보다 끝난 것 하나가 낫다.
 > 일정이 밀리면 행을 빨리 하는 게 아니라 §14 **절삭 순서**로 행을 **줄인다.**
 
-**대회**: Wanted AI Championship 2026 · 제출 2026-09-20 · 개발 1인 + Claude Code
+**대회**: Wanted AI Championship 2026 · 제출 ✅ 2026-09-14 (참가 접수 확인 2026-09-15 · 고칠 수 있는 마감 2026-09-20 23:59:59) · 개발 1인 + Claude Code
 
 ---
 
@@ -41,7 +41,8 @@
       (`scripts/migrate.ts` · drizzle-orm migrator · `--status` 는 읽기만)로 **실제로 적용했다** —
       PostgreSQL 17.6 (Session pooler · IPv4) · 적용 7/7 · **표 18/18 · 인덱스 8/8 · enum 17** ·
       다시 돌리면 +0 (`docs/evidence/2026-09-06-supabase-migrate/`). 완료 기준의 「인덱스 5」는 P0 때
-      수치고 지금 정본 `INDEX_NAMES` 는 8 (SPEC §2 마지막 줄 · P3 가 `ai_usage`·`ai_jobs` 셋을 더했다).
+      수치고 그때 정본 `INDEX_NAMES` 는 8 (SPEC §2 마지막 줄 · P3 가 `ai_usage`·`ai_jobs` 셋을 더했다) → 2026-09-12 부터 9
+      (`rate_hits_expires_idx` · `0d5186e` · 마이그레이션 0010 · production 인덱스 9/9).
       시험 4개(`test/migrate-script.test.ts`)가 같은 길(pglite-socket → postgres-js)로 「두 번 돌려도 무해」를 잠근다
 - [x] **API 1군** — teams · projects · repos · tokens · documents · context-items · conflicts · questions — `0a370d8` `5d26744`
       **완료 기준**: vitest api 초록 · 권한 2단계(owner/member) 검사 · 응답 형식 SPEC §5 준수
@@ -132,7 +133,7 @@
       게이트 둘(`principles.ps1` · `test/hooks.test.ts`)이 그 경계를 재고, 선언을 지우거나
       선언을 ignore 밖으로 옮기면 **둘 다 빨개지는 것을 봤다.**
       🔴 **남은 구멍**: `workflow` 항목이 없으면 `workflow.md` 가 안 나가고, 그러면
-      **agent 가 `progress` 를 배우지 못한다** (FINDINGS 43 — 다음 바퀴의 첫 줄)
+      **agent 가 `progress` 를 배우지 못한다** (FINDINGS 43 — 다음 바퀴의 첫 줄) → ✅ 43 은 `bc08125` 로 닫혔다
 
 ## P3 — 서버 AI (SPEC 9/10~9/11)
 
@@ -150,7 +151,8 @@
       `AiConflictOutput`(§7.2 출력 계약) · `CONFLICT_SEVERITIES`. 시험 24개.
       빈도 상한을 정했다 — 프로젝트당 시간당 10회, 세는 단위는 **탐지 한 번** (FINDINGS 51 닫음).
       🔴 **남은 구멍**: 부르는 자리가 없고 `conflicts` 표가 `a_item_id`·`severity` 를
-      담지 못한다 (FINDINGS **54** — 25·29 와 한 묶음, 주인은 P3 둘째 행).
+      담지 못한다 (FINDINGS **54** — 25·29 와 한 묶음, 주인은 P3 둘째 행). → ✅ 54 `8cde1f5`(P3 둘째 행 ⓪) ·
+      25 `a201a51` · 29 는 아직 대기(대장).
       ⚠ **API 키가 없어 스텁으로만 쟀다** — 진짜 응답은 못 봤다.
       🔴 **①②③이 다 끝났는데도 이 행은 열려 있다.** 완료 기준(「paylab 문서 → 항목 12 +
       충돌 3」)은 **진짜 키와 부르는 라우트**가 있어야 잴 수 있다. 키는 사람이 주고
@@ -251,7 +253,8 @@
       확인했다). 눈으로 읽은 것: `docs/evidence/2026-09-04-resolve-effect/` — **결정 전
       CLAUDE.md 에 모순되는 `must` 두 줄이 나란히** 있었다. 시험 307→**313**.
       🔴 **남은 것: 세 길 중 하나**(zip — FINDINGS 26+67 ① · SPEC §11 상한이 먼저다) ·
-      실패한 job 재시도 (**59**) · **화면이 「A가 맞음 → B 폐기」를 안 알린다** (FINDINGS **74**).
+      실패한 job 재시도 (**59**) · **화면이 「A가 맞음 → B 폐기」를 안 알린다** (FINDINGS **74**). → 59 ✅ `175d339` ·
+      74 ✅ `094102b` · zip(26 · 67 ①)은 아직 남았다.
       ⑧ ✅ **초안을 승인하는 문** (`1aebc22` · FINDINGS **79**) — 화면에는 항목의 상태를 바꿀
       문이 **하나도 없었다.** 라우트가 `PATCH /context-items/{uuid}` 인데 항목을 내는 문이
       돌려주는 `id` 는 `public_id` 라 **화면이 부를 수가 없었다.** 문을
@@ -344,7 +347,7 @@
       버튼이 남고(API 시험 빨감) · 화면에서 충돌 수를 행마다 더하면 「3」이 「6」이 된다.
       🔴 재다가 나온 것: **Manifest 마일스톤에 `due` 가 없다** (FINDINGS **111** — 계약과
       Pack 본문에는 있는데 Manifest 만 안 나른다) · **화면 9 가 아직 없어 `SYNC_CHIP` 5종을
-      그리는 곳이 0곳이다** (FINDINGS **110** — 주인은 이 Phase 둘째 행).
+      그리는 곳이 0곳이다** (FINDINGS **110** — 주인은 이 Phase 둘째 행). → 111 ✅ `4109f5e` · 110 ✅ `8c3e8c5`.
       ⚠ **브라우저 캡처는 아직 없다** — 이 환경에 브라우저가 없다. 눈 판정은 마크업을
       읽는 시험 + 위 덤프로 대신했다.
       ② ✅ **웹 화면 6 — Proposals 목록·상세** (`e1e79d5` · 56바퀴) — `…/proposals` · `…/proposals/[id]`.
@@ -374,9 +377,10 @@
       시험이 빨개진다 (둘은 사람이 할 일이 다르다).
       🔴 재다가 넷 나왔다: **작성자 이름을 내는 문이 없다**(FINDINGS **113**) ·
       **항목별 승인/거절을 담을 자리가 서버에 없다**(**114**) · **목록 거르개가 없다**(**112**) ·
-      **CLI 가 찍는 제안 주소가 앱에 없는 주소다**(**115**).
+      **CLI 가 찍는 제안 주소가 앱에 없는 주소다**(**115**). → 넷 다 닫혔다: 113 ✅ `aee5de2` ·
+      114 ✅ `e7e0513` · 112 ✅ `25b9bad` · 115 ✅ `4d0ba9a`.
 - [x] **웹 화면 9 · 게스트 데모 · 랜딩 v1** — `8c3e8c5` `aee5de2` `8faad6a` `8e5d269` `bd6ddf3`
-      **완료 기준**: 🔴 **GATE 3** — 시크릿 창에서 링크만으로 3분 체험 → ✅ `bd6ddf3` (105바퀴 · 아래 ⑤)
+      **완료 기준**: 🔴 **GATE 3** — 시크릿 창에서 링크만으로 3분 체험 → ✅ `bd6ddf3` (105바퀴 · 아래 P5 첫 행 ⑥)
       → ① **화면 9(`…/sync`) 는 됐다** (`8c3e8c5` · 57바퀴). 팀원|기기|버전|상태|
       마지막 보고|적용 방식 표 · 상태 요약 · 각주. `SYNC_CHIP` 5종이 **처음으로 그려진다**
       (FINDINGS 110 — 표는 있었는데 읽는 화면이 0곳이었다).
@@ -426,6 +430,9 @@
       → ④ 남은 것: **GATE 3 을 사람이 시크릿 창에서 한 번 밟는다** (`pnpm --filter web demo:db`
       → `http://localhost:3000/`) · `/demo/ai-once`(P3 · FINDINGS 117 · 키는 2026-09-06 Gemini 로 꽂혔다 — 79바퀴) ·
       production 시드(Cron · **120** · P5 둘째 행).
+      → ✅ 셋 다 됐다 (2026-09-15 대조): GATE 3 는 관통이 매 바퀴 밟는다(`bd6ddf3` · 아래 P5 첫 행 ⑥) ·
+      `/demo/ai-once` 는 2026-09-13 `5dc890b`·`f1286b0` 로 섰다(117 은 `ask` 가 없어서 대기) · production 시드는 120 ✅(63바퀴) ·
+      2026-09-10 production 첫 리셋 7.6초.
       ⚠ 화면 9 의 **질의창(§7.3)은 안 만들었다** — 부르는 문(`POST …/ask`)이 0곳이고
       §14 **절삭 순서 1번**이다 (FINDINGS **117**). 누르면 아무 일도 안 하는 입력칸을
       두지 않았다. GATE 3 은 질의창 없이도 선다
@@ -443,7 +450,8 @@
       (`docs/evidence/2026-09-06-zip/zip.txt`). 🔴 시험이 잡은 것: DB jsonb 가 Manifest 의
       키를 제 순서로 늘어놓아 zip 안 manifest.json 이 플러그인 것과 **글자가 달랐다** →
       계약으로 되판 뒤 적는다. ⚠ `manual` 을 **보고하는** 쪽(플러그인 `status`)은 아직
-      없다 — FINDINGS 69 는 그대로 대기이고 주인은 플러그인을 만지는 바퀴다.
+      없다 — FINDINGS 69 는 그대로 대기이고 주인은 플러그인을 만지는 바퀴다. → ✅ 69 는 `9dd032b`(2026-09-08)로
+      닫혔다 — 플러그인 `judge()` 가 `manual` 을 찍는다.
       → ② **AGENTS/cursor 타깃은 됐다** (61바퀴 · 템플릿 1.2 → 1.3 · FINDINGS 7 닫음).
       `DOCS` 표에 **거울 문서** 둘(`agents` → `AGENTS.md` · `cursor` → `.cursor/rules/contextops.mdc`)
       — partition 에 줄을 더하지 않고 `compose` 가 원본 문서들의 블록을 **그대로** 모은다
@@ -456,19 +464,19 @@
       `progress` 보고 · 17줄) — 손으로 쓴 줄이 0 이고, 관통이 매번 다시 녹화해 대조한다(`t_ms` 제외).
       `<TerminalReplay>` 가 랜딩 C-3 에 섰고 오른쪽 Roadmap 미니 패널은 왼쪽 줄을 읽어서 바뀐다
       (근거 0/3 → 1/3 · 마일스톤은 씨앗의 PL-M1 과 글자 그대로). 계약 `ReplayFrames` 는 schema 에.
-      ⚠ 스텝 썸네일(C-2)은 **B-2 「제품 화면」이 대신했다** (104바퀴 · 아래 ③) — 같은 캡처를
+      ⚠ 스텝 썸네일(C-2)은 **B-2 「제품 화면」이 대신했다** (104바퀴 · 아래 ⑤) — 같은 캡처를
       두 곳에 흩지 않는다.
-      → ③ **관통이 이제 진짜 화면을 찍는다** (103바퀴 · `f29133f`). `shots` 단계가 아홉 바퀴 만에
+      → ④ **관통이 이제 진짜 화면을 찍는다** (103바퀴 · `f29133f`). `shots` 단계가 아홉 바퀴 만에
       켜졌고(`apps/web/e2e` · CDP 헤드리스 Chrome · 의존성 0 · 37검사), `shotcopy` 가 세 장을
       `apps/web/public/shots/` 로 옮긴다(10검사 · `manifest.json`). 관통 1119 → **1172검사 · SKIP 0**.
-      → ③ **랜딩이 그 manifest 를 읽는다 — FINDINGS 131 닫음** (104바퀴 · `8e5d269`). 히어로 바로
+      → ⑤ **랜딩이 그 manifest 를 읽는다 — FINDINGS 131 닫음** (104바퀴 · `8e5d269`). 히어로 바로
       아래에 B-2 「제품 화면」 절. **화면 코드에 파일 이름이 0건**이고 목록의 정본은 `e2e/plan.ts` 의
       `PUBLISHED` 하나다 — 거기 한 줄을 더하고 관통을 돌리면 랜딩이 따라온다(격자도 칸 수가 아니라
       `auto-fit`/`--shot-min`). 모양의 정본은 schema 의 `ShotsManifest` 하나이고 **쓰는 쪽과 읽는 쪽이
       같이 본다.** 게이트 24개(`web-landing-shots.test.ts`) · 관통 1172 → **1199검사**.
       **눈으로 봤다** — `docs/evidence/2026-09-07-landing-shots/`: 1440×900 의 **접히기 전**에 캡처
       세 장이 보인다 (이 항목의 증상이 사라졌다는 근거) · 375px 한 열 · accent 여전히 하나.
-      → ⑤ **GATE 3 을 관통이 매 바퀴 밟는다 — 이 행을 닫는다** (105바퀴 · `bd6ddf3`).
+      → ⑥ **GATE 3 을 관통이 매 바퀴 밟는다 — 이 행을 닫는다** (105바퀴 · `bd6ddf3`).
       「사람이 시크릿 창에서 한 번 밟는다」로 두면 무인 루프는 못 닫고, 사람이 밟아도 **다음에
       깨지면 아무도 모른다.** 그래서 새 하네스를 만들지 않고 관통의 `shots` 단계를 늘렸다
       (`apps/web/e2e/gate3.ts` · 걸음표 하나가 정본 · `GATE3_SCREENS` 에 화면 `path` 네 줄뿐이고
@@ -485,13 +493,15 @@
       컴파일이라 게이트가 아무 말도 못 한다). **production 에서의 완주는 P5 첫 행의 몫**이다.
       ⚠ 첫 걸음이 내려앉는 곳이 `entry_path`(= Context)라 둘째 걸음은 **같은 화면의 링크**를 누른다 —
       링크가 도는지는 재지만 「다른 화면에서 왔다」는 아니다. 화면 표의 차례를 바꾸지 않으려고 그대로 뒀다.
-- [ ] **Vercel production · Cron · 보안 캡처 증거 · 새 PC fresh install**
-      **완료 기준**: production 으로 발표 시나리오 1회 완주
+- [x] **Vercel production · Cron · 보안 캡처 증거(관통 쪽)** — `9c84aa9` `375be95` (2026-09-10 첫 배포 · 아래 ⑥) · 새 PC fresh install 은 이 Phase 끝의 🙋 행으로 뗐다
+      **완료 기준**: production 으로 발표 시나리오 1회 완주 → ✅ `verify:prod` 가 production 에서 GATE 3(빈 창 · 링크만 · 3분)까지
+      44 passed / 0 failed(2026-09-10) → 47 / 0(2026-09-12 · 09-13) · 로그인 → 팀 → 발행 한 바퀴도 2026-09-15 production 에서 돌았다
+      (`docs/evidence/2026-09-13-final-audit/README.md`)
       → ① **Cron 의 코드 쪽은 됐다** (63바퀴 · FINDINGS 120 닫음). `GET /cron/demo-reset` 이
       데모 테넌트를 **지우고 다시 심는다** (`lib/demo/reset.ts` · `teardown.ts`) — `CRON_SECRET`
       자물쇠 뒤(`lib/api/cron.ts` · 없으면 401), 심다가 던지면 다시 지운다. 시드 둘이 `scripts/`
       에서 제품 코드(`src/lib/demo/`)로 올라왔고 `test/helpers` 의존이 0 이 됐다(시험이 센다).
-      `apps/web/vercel.json` 에 cron 둘(health 6시간 · demo-reset 18:00 UTC = 03:00 KST —
+      `apps/web/vercel.json` 에 cron 둘(health ~~6시간~~ → 하루 1회 `0 21 * * *` · `9c84aa9` — Hobby 한도 · demo-reset 18:00 UTC = 03:00 KST —
       시험이 `DEMO_TENANT.resetAt` 과 대조). 픽스처는 `next.config.ts` 의
       `outputFileTracingIncludes` 로 배포 함수에 싣는다. 시험 14개 (`demo-reset` · `-rollback`).
       → ② **보안 캡처 증거의 코드 쪽 절반은 됐다** (64바퀴 · FINDINGS 124 닫음).
@@ -525,6 +535,7 @@
       Vercel 연결(Root Directory `apps/web`) → `.env.vercel` 을 Import → 배포 → 첫 리셋을 손으로 한 번
       (`curl -H "Authorization: Bearer $CRON_SECRET" …/api/v1/cron/demo-reset`) → 걸음 ⑥ 의 검증기
       → 보안 캡처 · fresh install.
+      → ✅ Vercel 연결 · Import · 배포 · 첫 리셋 · 검증기는 2026-09-10 에 됐다(아래 ⑥) — 보안 캡처(네트워크 탭) · fresh install 은 이 Phase 끝의 🙋 행.
       → ⑤ **배포를 막던 코드 4건을 고쳤다** (2026-09-09 · 사람 세션 · 대회 감사). 그대로 올렸으면
       첫 배포가 실패할 값이 셋 있었다: health cron `0 */6`(Vercel Hobby 는 하루 1회가 상한 → 배포 거부 ·
       그 값을 `demo-reset.test.ts` 가 `toBe` 로 잠가 두고 있었다) · 리전 미지정(기본 iad1 에서 서울 DB 를
@@ -537,12 +548,31 @@
       `db:migrate` 가 `rls N/N` 을 찍고 다르면 FAIL. `docs/DEPLOY.md` 에 「가장 빠른 길」 순서표 ·
       Supabase Auth 걸음(GitHub provider 켜기 · Redirect URL · Data API 끄기) · Hobby 한도 표.
       🙋 **남은 것은 전부 계정이다** — `docs/DEPLOY.md` 의 🙋 걸음. 나머지 대회 일감은 `docs/feedback/INBOX.md` 맨 위.
+      → ✅ 그 계정 걸음도 2026-09-10 에 됐다 (아래 ⑥).
+      → ⑥ **배포됐다 — 이 행을 닫는다** (2026-09-10 · 사람 세션 · `375be95`). <https://contextops-rosy.vercel.app> · Vercel 연결(Root `apps/web`) ·
+      env · 마이그레이션 0009 · 첫 리셋 200 · 7.6초 · `verify:prod` 44 passed / 0 failed · GATE 3 캡처 5장 (`docs/evidence/2026-09-10-production/`).
+      그 뒤: 2026-09-12 보안 3건 배포 · 마이그레이션 0010 · `verify:prod` 47/0 · 2026-09-13 watch-prod 가 변수 없이 production 을 잰다(`a078f96`).
+      ⚠ 브라우저 네트워크 탭 캡처(③ 끝의 🙋 · `docs/KNOWN_LIMITATIONS.md`)는 아직 저장소에 없다 — 아래 🙋 행에 같이 적었다.
+- [ ] 🙋 **새 PC fresh install · 플러그인 Skill 실기** — 사람만 한다 (새 기계 · 진짜 Claude Code 세션)
+      **완료 기준**: 새 저장소에서 `claude plugin marketplace add rhdqngusanr/contextops` → `install` → `/contextops:setup`(Sync 화면
+      [기기 추가]가 준 한 줄) → `/contextops:sync` → 작업 뒤 `/contextops:progress` 가 production Roadmap 을 움직인다 · transcript 를 `docs/evidence/` 에.
+      방법은 `docs/evidence/2026-09-13-final-audit/README.md` 표. 된 것: 격리 설정에서 add → install → `✔ enabled` 까지
+      (`docs/evidence/2026-09-13-plugin-install/` · FINDINGS 173) — Skill 이 세션 안에서 도는 것은 아직 아무도 안 봤다.
+      원하면 같이: 브라우저 네트워크 탭 캡처(P1 · 위 행 ③).
+- [ ] 🙋 **9/18 저녁 동결** — `release` 브랜치를 Vercel Production Branch 로 · Preview 배포 끄기 · `loop/STOP` 유지
+      (`docs/DEPLOY.md` 「심사 기간 런북」 · INBOX B6). 그 뒤엔 main 에 push 해도 production 이 안 바뀐다.
+- [ ] 🙋 **9/19 `verify:prod` 한 번** — 수정 마감(9/20 23:59:59) 전날
+      `pnpm --filter web verify:prod -- --url https://contextops-rosy.vercel.app` 이 0 failed (`docs/DEPLOY.md` 「심사 기간 런북」) · 그 뒤 코드가 바뀌면 그때마다.
 
 ## P6 — 발표 (SPEC 9/16~9/17)
 
-- [ ] **2분 영상 · 슬라이드 · 리허설**
-- [ ] **제출서 · README · KNOWN_LIMITATIONS**
-      **완료 기준**: 제출 가능
+- [x] **2분 영상 · 슬라이드 · 리허설** — 하지 않기로 닫음 (2026-09-14 사용자 결정)
+      → 쇼츠 mp4 는 만들었지만 올리지 않는다. 대회 규정에도 실제 제출 폼(일곱 칸)에도 영상·슬라이드 칸이 없다
+      (`docs/SUBMISSION.md` 「대회 규정 원문」·「제출 폼 원문」 · `docs/evidence/2026-09-14-submission-form/`).
+      컷 표·대본·슬라이드 뼈대는 `docs/PITCH.md` 에 남는다 · 본선(발표 전달력)에 오르면 그때 새 행으로 연다.
+- [x] **제출서 · README · KNOWN_LIMITATIONS** — `0eec8e5` `49c90c9` `95d135a`
+      **완료 기준**: 제출 가능 → ✅ 2026-09-14 실제 폼 일곱 칸으로 제출했다 · 2026-09-15 사용자가 접수 완료를 확인 ·
+      9/20 23:59:59 까지는 고칠 수 있다(고치면 다시 [과제 제출하기])
       → ① **README · KNOWN_LIMITATIONS 의 본문은 됐다** (66바퀴 `0dc2e93` · FINDINGS 122 의 본문 쪽). README 는
       「이 저장소에는 루프와 명세만 있다」던 옛 문장을 지우고 **지금 도는 것**을 적었다 — 신뢰 경계 7줄에
       「무엇이 잰다」 칸 · Before/After(랜딩 표와 글자 그대로) · 설치 4줄 · CLI 8 · 검사 층 · 저장소 지도.
@@ -559,6 +589,8 @@
       README 머리 · 제출서 🙋 표는 글자 그대로 적되 `readme.test.ts` ①-B 가 세 곳 동일 · origin 동일을 센다. `<marketplace>` 는 못 채웠다(FINDINGS **140** ·
       저장소에 마켓플레이스 목록이 없다 · P5 둘째 행의 몫).
       → 남은 것은 🙋: production URL(P5 셋째 행) · 영상·슬라이드 링크 (첫 행이 끝나야). 그 둘이 오면 제출서 🙋 표 · README 머리에 적고 행을 닫는다.
+      → ✅ production URL 은 `375be95`(2026-09-10)로 제출서 🙋 표 · README 머리에 들어갔다(P5 에 셋째 행은 없었다 — Vercel 행이다) ·
+      영상·슬라이드는 올리지 않기로 했다(첫 행 · 2026-09-14) · 그래서 이 행을 닫는다.
 
 ---
 
