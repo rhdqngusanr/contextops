@@ -1,4 +1,4 @@
-# DEPLOY — production 을 세우는 절차 (PLAN P5 첫 행)
+# DEPLOY — production 을 세우는 절차 (PLAN P5 · production 행)
 
 > **이 파일이 배포 절차의 정본이다.** 지금까지 이 절차는 `.env.example` 의 주석 ·
 > `apps/web/src/lib/api/vercel.ts` 머리 주석 · `docs/PLAN.md` 의 P5 행에 **흩어져** 있었다 (`vercel.json` 자체에는 주석을 둘 수 없다 — Vercel 이 모르는 키를 거부한다 · 2026-09-10).
@@ -18,7 +18,7 @@
 
 **`pnpm --filter web verify:prod -- --url https://<production>` 이 `0 failed` 다.**
 
-✅ **2026-09-10 충족** — <https://contextops-rosy.vercel.app> · 44 passed · 0 failed · 첫 리셋 7.6초 · 근거 `docs/evidence/2026-09-10-production/`. 밟으며 만난 것 둘은 그 README 에 적었다 (`vercel.json` 의 `_comment` 거부 · Import 가 자동 감지한 빈 env). 남은 손 걸음은 ⑥-b 의 로그인 실측과 GitHub 변수 **PROD_ORIGIN** 이다.
+✅ **2026-09-10 충족** — <https://contextops-rosy.vercel.app> · 44 passed · 0 failed · 첫 리셋 7.6초 · 근거 `docs/evidence/2026-09-10-production/`. 밟으며 만난 것 둘은 그 README 에 적었다 (`vercel.json` 의 `_comment` 거부 · Import 가 자동 감지한 빈 env). ⑥-b 의 로그인은 2026-09-15 production 에서 한 바퀴 돌았다(로그인 → 팀 → 문서 → 발행 · `docs/evidence/2026-09-13-final-audit/README.md`). 남은 손 걸음은 watch-prod 의 실패 메일을 한 번 받아 보는 것이다(아래 「심사 기간 런북」).
 
 그 명령이 재는 것은 `apps/web/e2e/production.ts` 의 머리말에 있다 — 배포만이 증명하는
 넷(DB 에 닿는가 · Cron 자물쇠가 걸렸나 · 데모가 심어졌나 · GATE 3 가 production 속도로도
@@ -31,12 +31,12 @@
 | # | 걸음 | 누가 | 예상 | 끝났다는 증거 |
 |---|---|---|---|---|
 | 0 | **코드 쪽 조건은 이미 저장소에 있다** — cron 하루 1회 · 함수 리전 서울 · 오래 도는 문의 시간 상한 · RLS(마이그레이션 0008). 정본은 `apps/web/vercel.json` 과 `apps/web/src/lib/api/vercel.ts`. CI 초록을 확인하고 push | Claude → 사람 push | 10분 | origin/main == 로컬 |
-| 1 | ① Supabase 상태 — `pnpm --filter web db:status` 가 pending 0 · rls 18/18 | 사람 | 10분 (pending 이면 +10분) | 그 출력 |
+| 1 | ① Supabase 상태 — `pnpm --filter web db:status` 가 pending 0 · rls 19/19 | 사람 | 10분 (pending 이면 +10분) | 그 출력 |
 | 2 | ①-b 🙋 Supabase Auth 걸음 넷 + Data API 끄기 | 사람 | 30분 | GitHub 공급자 ON · URL 등록 · Data API OFF |
 | 3 | ② 🙋 Vercel Import (Root Directory `apps/web` · Fluid compute 켜짐 확인) | 사람 | 20분 + 첫 빌드 | 프로젝트 생성 |
 | 4 | ③ 🙋 환경변수 Import | 사람 | 10분 | 여덟 키 |
 | 5 | ④ 첫 배포 로그 — 실패하면 원인 한 줄을 `docs/STATUS.md` 에 적고 재배포 (흔한 원인은 아래 ④) | 사람 | 30분~2시간 | production URL |
-| 6 | ⑤ 🙋 첫 데모 리셋 curl + 소요 초 기록 | 사람 | 10분 | `items` 27 |
+| 6 | ⑤ 🙋 첫 데모 리셋 curl + 소요 초 기록 | 사람 | 10분 | `items` 30 (승인 27 + 초안 3) |
 | 7 | ⑥ 검증기 0 failed | 사람 | 10분 | verify.json |
 | 8 | ⑥-b anon 키 REST 거부 확인 · 로그인 실측(GitHub → 팀 생성 201) | 사람 | 20분 | 캡처 2장 |
 | 9 | ⑦ 근거 복사 · `docs/SUBMISSION.md`·README 머리에 URL | 사람 + Claude | 20분 | 🙋 표에 https:// |
@@ -52,7 +52,7 @@
 |---|---|---|
 | Cron | **하루 1회 이하** · 정각이 아니라 그 시간 안 임의 분(최대 59분 늦음) | health 21:00 UTC · demo-reset 18:00 UTC (`apps/web/vercel.json`). 예전 health `0 */6` 은 배포 자체가 거부될 값이었다 — 시험 ⑥이 「분·시 칸이 숫자 하나」를 잰다 |
 | 함수 리전 | 하나 | 서울 icn1 — Supabase 와 같은 도시. 정본은 `apps/web/src/lib/api/vercel.ts` |
-| 함수 시간 | Fluid compute **켜짐**: 기본·최대 300초 · 꺼짐: 60초 | 오래 도는 문 4개(데모 리셋 · 문서 구조화 · batch-draft · job 재시도)가 300. **Fluid 가 꺼져 있으면 300 이 배포를 거부한다** — ② 에서 켠다(새 프로젝트는 기본 켜짐) |
+| 함수 시간 | Fluid compute **켜짐**: 기본·최대 300초 · 꺼짐: 60초 | 오래 도는 문 5개(데모 리셋 · 문서 구조화 · batch-draft · job 재시도 · 가져오기의 후보 받기)가 300. **Fluid 가 꺼져 있으면 300 이 배포를 거부한다** — ② 에서 켠다(새 프로젝트는 기본 켜짐) |
 | 상업 이용 | 비상업 한정 | 제출서의 사업 모델은 「가설」로만 · 가격·결제 문구 0건 |
 
 ---
@@ -62,13 +62,13 @@
 ### ① Supabase — 이미 있다
 
 프로젝트는 이미 서 있고 마이그레이션도 돌았다 (71바퀴 `adac632` · PostgreSQL 17.6 ·
-**표 18 · 인덱스 8**). 2026-09-09 에 **RLS 를 켜는 마이그레이션 0008** 이 생겼으므로 배포 전에 한 번 더 본다:
+그때 **표 18 · 인덱스 8** · 지금은 마이그레이션 0010 이 `rate_hits` 를 더해 표 19 · 인덱스 9). 2026-09-09 에 **RLS 를 켜는 마이그레이션 0008** 이 생겼으므로 배포 전에 한 번 더 본다:
 
 ```bash
 pnpm --filter web db:status
 ```
 
-`pending 0` 과 `rls 18/18 표에 켜짐` 이어야 한다. pending 이 있으면 적용한다:
+`pending 0` 과 `rls 19/19 표에 켜짐` 이어야 한다. pending 이 있으면 적용한다:
 
 ```bash
 pnpm --filter web db:migrate
@@ -94,7 +94,7 @@ select tablename, tableowner from pg_tables where schemaname = 'public';
 
 2026-09-09 에 공개 엔드포인트로 실측한 이 프로젝트의 상태: **GitHub 로그인 공급자가 꺼져 있고**(이메일만 켜짐) ·
 **서명키는 ES256** 하나 · **Data API 가 열려 있어 anon 키로 REST 가 200** 을 준다(표는 비어 있었다).
-로그인 화면의 유일한 파란 버튼이 지금 죽어 있는 상태라, 이 걸음 없이는 ⑥-b 가 반드시 빨갛다.
+그때는 로그인 화면의 유일한 파란 버튼이 죽어 있었고, 이 걸음 없이는 ⑥-b 가 반드시 빨갰다. ✅ 2026-09-10 배포 때 GitHub 공급자를 켜고 Data API 를 껐다 — verify:prod 가 둘 다 잰다.
 
 | 걸음 | 어디 | 무엇 |
 |---|---|---|
@@ -130,9 +130,9 @@ Vercel → Project → Settings → Environment Variables → **Import `.env`** 
 | `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 로그인 화면이 못 선다 |
 | `SUPABASE_JWT_SECRET` | 게스트·시드 세션(우리가 HS256 으로 서명)이 **하나도 통과하지 못한다** — `/demo` 가 죽는다. 조용히 통과시키지 않는 것이 의도다. 사람의 로그인 토큰이 ES256 이면 그쪽은 JWKS 로 확인한다(①-b) |
 | `CRON_SECRET` | 데모 리셋 문이 **401** 이다 (의도) — 넣어야 ⑤ 를 부를 수 있다 |
-| `GEMINI_API_KEY` · `GEMINI_MODEL` · `AI_DAILY_BUDGET_USD` | 서버측 AI job 이 실패로 끝난다 (P3 · 키 없음을 화면이 말하게 하는 것은 INBOX 고장 9) |
+| `GEMINI_API_KEY` · `GEMINI_MODEL` · `AI_DAILY_BUDGET_USD` | 키가 없으면 서버측 AI job 이 AI_NOT_CONFIGURED 로 끝나고 화면이 그 사실을 말한다 (P3). 모델과 하루 예산은 코드에 기본값이 있지만(gemini-3.5-flash · $3), 배포 값을 이 파일에서 눈에 보이게 고정하려고 넣는다 |
 
-**넣지 않는 것 둘** — `.env.example` 의 키는 여기서 전부 한 번씩 결정된다
+**넣지 않는 것 여섯** — `.env.example` 의 키는 여기서 전부 한 번씩 결정된다
 (`apps/web/test/deploy-doc.test.ts` 가 「결정 안 된 키」를 FAIL 로 만든다. 새 변수가 생기면
 배포에 넣을지 말지를 **여기서** 정하게 하는 자리다):
 
@@ -141,7 +141,7 @@ Vercel → Project → Settings → Environment Variables → **Import `.env`** 
 | `SUPABASE_SERVICE_ROLE_KEY` | 코드에 소비처가 **0곳**이다 — 안 쓰는 최고 권한 키가 배포 환경에 남는다 (`.env.vercel` 의 마지막 절) |
 | `AI_MAX_INPUT_TOKENS` | 기본값이 있다 (`src/lib/ai/features.ts` 의 `DEFAULT_MAX_INPUT_TOKENS`). 바꿀 이유가 생기면 그때 넣는다 |
 | `AI_PROJECT_DAILY_BUDGET_USD` | 기본값이 있다 (`src/lib/ai/features.ts` 의 DEFAULT_PROJECT_DAILY_BUDGET_USD = $1 · 전역 $3 안의 프로젝트별 이중 상한 · INBOX H11). 심사 기간에 한 프로젝트가 하루 열두 장 넘게 구조화하면 그때 올린다 |
-| `AI_MONTHLY_BUDGET_USD` | 기본값이 있다 (`src/lib/ai/features.ts` 의 DEFAULT_MONTHLY_BUDGET_USD = **0** · 한 달 청구서의 천장 · 2026-09-11). 하루 $3 × 30 = $90 을 이 값이 막는다 — 낮추고 싶을 때만 넣는다, 올리는 건 사용자가 정한다 |
+| `AI_MONTHLY_BUDGET_USD` | 기본값이 있다 (`src/lib/ai/features.ts` 의 DEFAULT_MONTHLY_BUDGET_USD = **$10** · 한 달 청구서의 천장 · 2026-09-11). 하루 $3 × 30 = $90 을 이 값이 막는다 — 낮추고 싶을 때만 넣는다, 올리는 건 사용자가 정한다 |
 | `AI_DISABLED` | 넣지 않는다 — **비상시에만** `1`. 서버측 LLM 을 한 번도 안 부른다 (배포 없이 환경변수만으로 즉시 · health 의 `ai_budget.disabled` 로 보인다). 검사와 예약이 advisory lock 안에서 한 트랜잭션이라 동시 요청도 천장을 못 뚫는다 |
 | `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` | 비우면 이메일 매직링크 문이 **숨겨진다** — 기본 SMTP 는 팀 멤버 주소로만 보내서 심사위원에게는 안 간다. 커스텀 SMTP(Resend 등)를 붙인 뒤에만 `1` 로 |
 
@@ -162,7 +162,7 @@ Cron 은 매일 18:00 UTC(= 03:00 KST) 즈음에만 돈다. **그때까지 기�
 time curl -H "Authorization: Bearer $CRON_SECRET" https://<production>/api/v1/cron/demo-reset
 ```
 
-응답은 `{team_slug, existed, official_version, items, members, devices, reports, progress, proposals}` 다.
+응답은 `{team_slug, existed, swept_rate_hits, official_version, items, members, devices, reports, progress, proposals}` 다.
 `items` 가 0 이면 심기가 안 된 것이다 — 그 문은 심다가 던지면 **다시 지운다**
 (반쯤 심긴 데모보다 없는 데모가 낫다). **소요 초를 적어 둔다** — 300 의 1/3(100초)을 넘으면 씨앗의 기기·보고
 루프를 병렬화한다(INBOX 블로커 2). 500 이고 함수 로그가 `fixtures` 경로를 못 찾는다고 하면 `next.config.ts` 의
@@ -211,7 +211,7 @@ README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 �
 
 ---
 
-## 심사 기간 런북 (9/20 제출 ~ 심사 종료)
+## 심사 기간 런북 (2026-09-14 제출 · 9/20 수정 마감 ~ 심사 종료)
 
 **지키는 것은 하나다 — `https://<production>/demo` 가 열린다.** 규정상 심사 기간에 링크가 안 열리면 심사에서 제외될 수 있다 (`docs/SUBMISSION.md` 「대회 규정 원문」).
 
@@ -219,7 +219,7 @@ README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 �
 |---|---|---|
 | `.github/workflows/watch-prod.yml` | 30분마다 `/` · `/api/v1/health`(db·ai) · `POST /api/v1/demo/session` 을 두드리고 하나라도 아니면 **실패 메일** | 이 저장소는 변수 없이도 제출서의 production URL 을 잰다 (2026-09-13 전에는 변수가 없어 **모든 실행이 건너뛰며 초록**이었다 · 기본 origin 과 제출서가 같은지 `apps/web/test/watch-prod.test.ts` 가 잰다) · 한 번은 `workflow_dispatch` 로 돌려 로그에 `GET / → 200` 이 찍히는지 보고, 저장소 Variables 에 틀린 **PROD_ORIGIN** 을 넣어 실패 메일이 오는지 확인한 뒤 변수를 지운다 · ⚠ GitHub 의 schedule 은 30분을 약속하지 않는다 — 실측 간격은 몇 시간이었다 |
 | `apps/web/src/lib/demo/reset.ts` (03:00 KST) | `demo-next` 옆자리에 끝까지 심은 뒤에야 옛 팀을 지우고 slug 를 바꾼다 — **심기가 죽으면 어제 데모가 그대로** | 실패 메일을 받으면 `GET /api/v1/cron/demo-reset`(`CRON_SECRET` Bearer)을 손으로 한 번 더 부른다 |
-| `verify:prod` | 배포 직후·릴리즈 뒤 한 번 — Supabase 공급자·JWKS·anon 거부·로그인 버튼·health.ai 까지 | 제출 전날(9/19) 한 번, 제출 뒤 코드가 바뀌면 그때마다 |
+| `verify:prod` | 배포 직후·릴리즈 뒤 한 번 — Supabase 공급자·JWKS·anon 거부·로그인 버튼·health.ai 까지 | 수정 마감 전날(9/19) 한 번, 그 뒤 코드가 바뀌면 그때마다 |
 | 동결 | `release` 브랜치를 Production Branch 로 · Preview 배포 끄기 · 루프 STOP | 9/18 저녁 (INBOX 블로커 6) — 심사 기간엔 main 에 push 해도 production 이 안 바뀐다 |
 | AI 청구서의 천장 (`withBudget()` · 2026-09-11) | 이번 달 장부 + 예약이 `AI_MONTHLY_BUDGET_USD`(기본 **$10**)를 넘으면 호출이 안 나간다 — 검사·예약이 advisory lock 안이라 동시 요청도 못 뚫는다. `/api/v1/health` 의 `ai_budget.spent_month_usd` 가 지금까지 쓴 값 | Google Cloud 결제 → 예산·알림에 **$10 알림** 하나 (우리 문 밖의 두 번째 눈) · 심사 기간에 지출이 튀면 Vercel env 에 `AI_DISABLED=1` 을 넣고 Redeploy 없이 확인(서버리스는 다음 요청부터 읽는다) · 천장을 올릴 일은 없다 |
 
@@ -231,9 +231,9 @@ README 와 글자 그대로 같다 (`test/readme.test.ts` 가 잰다). 셋째 �
 
 | 무엇 | 어디 |
 |---|---|
-| 보안 캡처 증거 (브라우저 네트워크 탭) | `docs/PLAN.md` P5 첫 행 ② · `docs/evidence/2026-09-06-p1-payload/` |
+| 보안 캡처 증거 (브라우저 네트워크 탭) | `docs/PLAN.md` P5 production 행 ② · `docs/evidence/2026-09-06-p1-payload/` |
 | Vercel 함수 로그가 `src/lib/api/log.ts` 의 필드만 남기는가 | `docs/KNOWN_LIMITATIONS.md` |
 | `queued` 로 남는 job 이 실제로 생기는가 | `docs/feedback/FINDINGS.md` 156 |
-| 제출서의 production URL | `docs/SUBMISSION.md` 의 🙋 자리 |
+| ✅ 제출서의 production URL — 2026-09-10 에 채웠다 | `docs/SUBMISSION.md` 의 🙋 표 |
 | 심사 기간 링크 유지 — 매일 `/demo` 가 열리는지 · 리셋 실패 시 대응 | 아래 「심사 기간 런북」 — 감시는 `.github/workflows/watch-prod.yml`(30분 예약 · 변수 없이 제출서의 production URL) · 리셋은 옆자리에 심고 바꾸므로 실패해도 어제 데모가 산다 (`apps/web/src/lib/demo/reset.ts`) — 그래도 아침에 `https://<production>/api/v1/health` 와 `/demo` 를 눈으로 |
 | 제출 뒤 동결 — `release` 브랜치를 Production Branch 로 · Preview 배포 끄기 · 루프 STOP | INBOX 블로커 6 (9/18 저녁) |

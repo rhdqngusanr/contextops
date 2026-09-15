@@ -125,7 +125,7 @@ export const LANDING_EN: LandingText = {
     steps: [
       {
         head: 'Bring it in and sort it out',
-        body: 'Paste goal documents and meeting notes, or answer ten questions, and the AI proposes rules and milestones — then turns anything that contradicts itself into a question. People make the decisions.',
+        body: 'Paste goal documents and meeting notes and the AI proposes rules and milestones — then turns anything that contradicts itself into a question. No documents yet? Answer ten questions to start. People make the decisions.',
         plain: 'Collect what the team has to follow from scattered documents, meetings and code. Anything that disagrees comes back as a card to answer.',
         actors: ['Team lead · browser', 'AI · proposals and questions only'],
       },

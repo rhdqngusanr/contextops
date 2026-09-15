@@ -9,6 +9,7 @@ import {
   AI_USE, BEFORE_AFTER, HOW_IT_WORKS, INSTALL_STEPS, LANDING_FOOT, LANDING_HEAD, Landing, REPLAY_FRAMES,
   TERMINAL_REPLAY, TRUST_BOUNDARY, WHY_NOT_GIT, skillNamesIn,
 } from '../src/components/landing'
+import { LANDING_EN } from '../src/components/landing.en'
 import { SUBMISSION_IDENTITY } from '../src/lib/web/submission'
 import { LOCALE_LABEL, LOCALES } from '../src/lib/i18n/locale'
 import { DEMO_PROPOSALS } from '../src/lib/demo/seed-demo'
@@ -56,6 +57,34 @@ function retryDraft() {
   if (!found) throw new Error(`씨앗에 ${BEFORE_AFTER.after.itemId} 가 없다`)
   return { ...found, retryText }
 }
+
+// ---------------------------------------------------------------------
+//  🔴 기본 질문의 답은 AI 를 거치지 않는다 — 첫 걸음이 그렇게 말하지 않는다 (FINDINGS 176 · 178)
+//
+//  ★ 왜 게이트인가 — 같은 틀린 말이 **두 번** 나왔다. 176 은 처음 세팅 안내의 시안 문장(「질문에 답하면 AI 가
+//    규칙 후보를 만든다」)에서, 178 은 랜딩 「어떻게 동작하나요」 첫 걸음(README · 제출서가 글자 그대로 옮긴다)에서.
+//    README 시험은 세 곳이 **같은 글자**인지만 재서, 셋이 같이 틀리면 초록이었다.
+//  재는 것 둘: ① 문장의 근거 — 답을 받는 문과 초안을 짓는 모듈이 서버측 AI 를 부르지 않는다
+//             ② 한·영 첫 걸음이 「질문에 답하면 → AI」로 잇지 않는다
+// ---------------------------------------------------------------------
+describe('🔴 기본 질문의 답은 AI 를 거치지 않는다 — 랜딩 첫 걸음이 그렇게 말하지 않는다 (FINDINGS 176 · 178)', () => {
+  it('답을 받는 문(`POST /projects/{id}/questions`)과 초안을 짓는 모듈이 서버측 AI 를 부르지 않는다', () => {
+    const sources = [
+      join(webRoot, 'src', 'app', 'api', 'v1', 'projects', '[id]', 'questions', 'route.ts'),
+      join(webRoot, 'src', 'lib', 'api', 'answer-slot.ts'),
+      join(webRoot, 'src', 'lib', 'api', 'answer.ts'),
+    ]
+    for (const file of sources) expect(readFileSync(file, 'utf8'), file).not.toMatch(/lib\/ai\/|withBudget|startJob|createJob/)
+  })
+
+  it('「어떻게 동작하나요」 첫 걸음이 질문에 답한 것을 AI 의 입력으로 말하지 않는다 (한·영)', () => {
+    const ko = HOW_IT_WORKS.steps[0].body
+    expect(ko).not.toMatch(/질문[^.]{0,12}답하면[^.]*AI/)
+    expect(ko).toContain('문서가 없으면')
+    const en = LANDING_EN.how.steps[0]!.body
+    expect(en).not.toMatch(/answer[^.]*questions[^.—]*,? and the AI/i)
+  })
+})
 
 describe('🔴 ① 랜딩은 정적이다 — 세션을 읽지 않는다', () => {
   it.each(['src/app/page.tsx', 'src/components/landing.tsx'])('%s 에 클라이언트 코드가 없다', (file) => {

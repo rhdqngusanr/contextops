@@ -15,8 +15,8 @@
   「규칙대로 썼을 때 파이프라인이 본문을 안 나른다」를 잰다. **붙여 넣은 코드를 서버가 거절하는 검사는 없다**
   (`docs/evidence/2026-09-06-p1-payload/p1-payload.md` §7).
 - **P1 근거는 배포에서 찍은 것이 아니다.** 소켓은 진짜지만 서버는 관통이 띄운 짧은 것이고 DB 는 PGlite 다.
-  Vercel 의 함수 로그가 실제로 `apps/web/src/lib/api/log.ts` 의 필드만 남기는지는 🙋 배포 뒤 첫 요청에서 본다.
-  브라우저 네트워크 탭 캡처도 그때다.
+  production(2026-09-10~)의 Vercel 함수 로그가 실제로 `apps/web/src/lib/api/log.ts` 의 필드만 남기는지는 🙋 아직 열어 보지 않았다.
+  브라우저 네트워크 탭 캡처도 아직이다.
 - **팀장이 올리는 문서 원문은 서버에 간다.** `POST /documents` 의 `content` 는 의도한 것이다 — 코드가 아니라
   팀장이 등록하는 규칙 문서다 (SPEC §5). 「서버는 코드 본문을 받지 않는다」는 저장소 파일에 대한 말이지
   팀장이 붙여 넣는 문서에 대한 말이 아니다.
@@ -28,7 +28,8 @@
 - **production 은 Vercel Hobby 위다** (<https://contextops-rosy.vercel.app> · 2026-09-10 첫 배포 · `docs/evidence/2026-09-10-production/`).
   배포에서만 볼 수 있던 셋은 그날 쟀다 — 함수가 `fixtures/` 를 찾았고(첫 리셋 200) · 데모 리셋은 **7.6초**였고 ·
   Root Directory `apps/web` 이 `vercel.json` 을 읽었다(Cron 둘 · 리전 icn1). Hobby 의 한도는 그대로 남는다: cron 하루 1회
-  (정각이 아니라 그 시간 안 임의 분) · 함수 300초 · 비상업 이용. 실제 GitHub 로그인 → 팀 생성 201 은 🙋 사람이 손으로 잰다.
+  (정각이 아니라 그 시간 안 임의 분) · 함수 300초 · 비상업 이용. 실제 GitHub 로그인 → 팀 → 문서 → AI 정리 → 승인 → 발행은 2026-09-15 production 에서 한 바퀴 돌았다
+  (로그인은 사람, 나머지는 Claude in Chrome · `docs/evidence/2026-09-13-final-audit/README.md`) — 팀 생성 201 의 네트워크 캡처와 사람 손 스톱워치는 🙋 아직이다.
 - **기기 토큰이 `/contextops:setup` 의 인자로 Claude Code 를 지난다.** 웹이 준 한 줄을 사람이 Claude Code 에 붙여 넣고 Skill 이
   CLI 를 부르므로, 그 토큰 문자열은 사용자 자신의 모델 컨텍스트(그 세션의 대화)에 한 번 실린다. 서버에는 해시만 남고 저장은
   `~/.contextops/credentials.json`(저장소 밖)뿐이다. 터미널에 직접 치는 길(`node <플러그인 경로>/bin/contextops-cli.mjs setup …`)은
@@ -38,7 +39,7 @@
   ⚠ **`claude plugin install` 은 로드까지만 쟀다** (2026-09-13 · `docs/evidence/2026-09-13-plugin-install/`) — 그날 처음 깔아 보니
   플러그인이 **로드에 실패**하고 있었고(`plugin.json` 이 표준 hooks 파일을 한 번 더 선언했다) 고친 뒤 `✔ enabled` 까지 봤다.
   깐 플러그인의 Skill 을 진짜 Claude Code 세션에서 돌려 `/contextops:setup` → `sync` → `progress` 가 서버와 말하는 걸음은
-  🙋 사람 몫이다 (PLAN P5 둘째 행). 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는
+  🙋 사람 몫이다 (PLAN P5 · 새 PC 행). 관통과 근거(`docs/evidence/2026-09-03-plugin/setup-new-repo.md`)는
   `node plugin/contextops/bin/contextops-cli.mjs` 를 직접 부른다.
 - **이메일 매직링크 문은 숨겨져 있다** — Supabase 기본 SMTP 는 프로젝트 팀 멤버 주소로만 보내고 시간당 몇 통이라,
   심사위원이 눌러도 메일이 오지 않는다. 그래서 `NEXT_PUBLIC_AUTH_EMAIL_LOGIN` 이 비어 있으면 로그인 화면이 그 문 대신
@@ -77,7 +78,7 @@
   서야 한다 (`apps/web/src/app/t/[team]/p/[project]/import/page.tsx` 머리).
 - **sync 상태 `manual` 을 사람이 실제로 밟은 적은 없다.** 찍는 쪽은 생겼다 — `judge()` 가 「우리 캐시에 그 버전의
   자취가 없는데 파일은 Manifest 와 다 맞다」를 `manual` 로 본다 (`9dd032b`). 다만 **zip 을 받아 손으로 푼 뒤
-  `status` 를 부르는 걸음**은 시험 안에서만 돌았다 — 사람이 브라우저로 zip 을 내려받아 밟는 것은 🙋 배포 뒤다.
+  `status` 를 부르는 걸음**은 시험 안에서만 돌았다 — 사람이 production 에서 zip 을 내려받아 밟는 것은 🙋 아직이다.
 - **Claude가 지침을 100% 따른다고 보장하지 않는다** — Pack은 컨텍스트지 강제가 아니다.
 - **Codex / Cursor는 출력 파일만** 지원한다 — `AGENTS.md` · `.cursor/rules/contextops.mdc` 는 `CLAUDE.md` 와 본문이
   byte 로 같은 거울 문서다 (`packages/schema/src/manifest.ts` 의 `PACK_TARGETS`). 훅·Skill 연동은 없다.
@@ -85,18 +86,18 @@
 - **개인 Memory와의 로컬 충돌 검사 미구현** — 플러그인은 Memory 를 읽지 않는다 (P1 · 근거 문서 §6). 그래서
   「내 Memory 와 팀 규칙이 어긋난다」를 알려 줄 수도 없다.
 - **단일 OS 설치 검증** — 관통과 `docs/evidence/2026-09-03-plugin/setup-new-repo.md` 는 Windows 개발 기계에서
-  돌았다. macOS·Linux 에서의 fresh install 은 🙋 새 PC 에서 본다 (PLAN P5 둘째 행).
-- **브라우저 e2e 는 캡처와 배포 검증까지다 — 사람처럼 클릭해 가며 흐름을 밟는 시나리오는 없다.** `apps/web/e2e/` 는
+  돌았다. macOS·Linux 에서의 fresh install 은 🙋 새 PC 에서 본다 (PLAN P5 · 새 PC 행).
+- **브라우저 e2e 는 캡처 · 게스트 코스 · 배포 검증까지다 — 가져오기부터 발행까지를 클릭으로 잇는 시나리오는 없다.** `apps/web/e2e/` 는
   헤드리스 Chrome 을 CDP 로 직접 몰아(Playwright 없이) 화면 9개를 찍고(`shots.ts` · 관통 `shots` 단계) GATE 3 을
   재고(`gate3.ts`) 배포를 두드린다(`production.ts`). 「import → review → publish → pack explorer」를 한 세션의 클릭으로
   잇는 시험은 없다 — 그 흐름은 API 시험(`apps/web/test/`)과 SSR 로 그려 읽는 화면 시험이 나눠 잰다 (INBOX G15).
-- **뉴트럴 모노크롬 한 벌(라이트) 고정 — 다크 모드가 없다.** (2026-09-10 까지는 다크 한 벌이었다)
-  ★ 왜 — 두 벌을 만들면 두 벌 다 어중간해진다. 18일에 한 벌을 제대로 하는 편이 낫다.
+- **뉴트럴 모노크롬 한 벌(라이트) 고정 — 다크 모드가 없다.**
+  ★ 왜 — 두 벌을 만들면 두 벌 다 어중간해진다. 대회 기간에는 한 벌을 제대로 하는 편이 낫다고 골랐다.
   토큰은 `docs/DESIGN_BRIEF.md` §3 한 곳에 있어서, 나중에 다크를 더할 때 고칠 자리는 한 곳이다
 
 ## 개발 루프
 
-- **Windows PowerShell 5.1 전용이다.** `loop/*.ps1` 은 작업 스케줄러에 기대고 있어서
+- **Windows PowerShell 5.1 전용이다.** `loop/*.ps1` 은 PowerShell 창(`Start-Process`)과 작업 스케줄러 등록(install · stop · status)에 기대고 있어서
   macOS·Linux에서 돌지 않는다.
   ★ 왜 포팅하지 않았나 — 한 개념을 두 파일로 나누면 **반드시 갈라진다.** 루프는
   제품이 아니라 우리가 이 저장소를 만드는 도구라, 우리가 쓰는 OS 하나만 지원한다.

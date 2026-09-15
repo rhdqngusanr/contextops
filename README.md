@@ -10,10 +10,9 @@ ContextOps는 흩어진 규칙을 모아 **팀장이 승인한 하나로** 만�
 **팀장은 브라우저에서 15분, 개발자는 명령 한 줄.** 그게 전부입니다.
 
 <sub>
-<b>Wanted AI Championship 2026</b> 출품작 · 제출 2026-09-20 · 개발 1인 + Claude Code<br>
-<a href="https://contextops-rosy.vercel.app/demo"><b>샘플 팀으로 둘러보기</b></a> (로그인 없이 · 매일 03:00 초기화) · 팀명 <b>퇴직했는데저좀이직시켜주세요</b> · <a href="https://github.com/rhdqngusanr/contextops">공개 저장소</a> (MIT) ·
-지금 되는 것과 안 되는 것은 <a href="docs/KNOWN_LIMITATIONS.md">여기</a>에 정직하게 적었습니다<br>
-<i>팀명·저장소 주소의 정본은 <code>apps/web/src/components/landing.tsx</code> 의 <code>SUBMISSION_IDENTITY</code> 하나이고, 이 README·제출서와 같은 글자인지 시험이 잽니다.</i>
+<b>Wanted AI Championship 2026</b> 출품작 · 2026-09-14 제출 · 개발 1인 + Claude Code<br>
+<a href="https://contextops-rosy.vercel.app/demo"><b>샘플 팀으로 둘러보기</b></a> (로그인 없이 · 매일 새벽 3시쯤 초기화) · 팀명 <b>퇴직했는데저좀이직시켜주세요</b> · <a href="https://github.com/rhdqngusanr/contextops">공개 저장소</a> (MIT) ·
+지금 되는 것과 안 되는 것은 <a href="docs/KNOWN_LIMITATIONS.md">여기</a>에 정직하게 적었습니다
 </sub>
 
 ---
@@ -84,7 +83,7 @@ AI 코딩 도구는 **팀 규칙이 적힌 파일**을 읽고 답합니다. 문�
 
 | | |
 |---|---|
-| **가져와서 정리한다** | 목표 문서·회의록을 붙여 넣거나 질문 10개에 답하면, AI 가 규칙·마일스톤 후보를 뽑고 서로 어긋난 것을 찾아 질문으로 만듭니다. 결정은 사람이 합니다. |
+| **가져와서 정리한다** | 목표 문서·회의록을 붙여 넣으면 AI 가 규칙·마일스톤 후보를 뽑고 서로 어긋난 것을 찾아 질문으로 만듭니다. 문서가 없으면 질문 10개에 답해 시작합니다. 결정은 사람이 합니다. |
 | **승인해서 발행한다** | 팀장이 승인한 항목만 CLAUDE.md 한 벌로 묶여 버전이 붙습니다. 모든 팀원의 Claude Code 가 같은 버전을 받고, 받은 파일이 정말 같은지 확인표(해시)로 검증됩니다. 승인 뒤에는 AI 가 끼어들지 않습니다. |
 | **진행이 근거와 함께 보인다** | 개발자의 AI 가 작업을 마치면 어떤 파일을 고쳤는지 보고합니다. 로드맵은 마일스톤 단위로 채워지고, 완료 판정은 사람이 합니다. |
 
@@ -186,7 +185,7 @@ Claude Code 용 `CLAUDE.md` 묶음 · `AGENTS.md` · Cursor 규칙 파일이고,
 
 <br>
 
-[`tools/principles.ps1`](tools/principles.ps1) 이 매 커밋마다 **기계로 셉니다.**
+[`tools/principles.ps1`](tools/principles.ps1) 과 시험(`tools/ci.ps1`)이 커밋할 때마다 **기계로 셉니다** — P7 의 「줄마다 태그」는 컴파일러 시험(`packages/compiler/test/traceability.test.ts`)이 잽니다.
 문서에 적는 것만으로는 안 지켜지기 때문입니다.
 
 | # | 원칙 | 무엇이 잰다 |
@@ -196,7 +195,7 @@ Claude Code 용 `CLAUDE.md` 묶음 · `AGENTS.md` · Cursor 규칙 파일이고,
 | **P3** | 서버측 LLM은 **우리 API 키**로만 · 4개 기능 한정 · 일일 예산·rate limit | 모든 호출이 `withBudget()` 경유 |
 | **P4** | **승인 이후 파이프라인에는 LLM이 없습니다.** 같은 snapshot → byte-identical Pack | 컴파일러에 시각·난수·네트워크 0건 · golden 3종 · 항목 순서를 셔플해도 같은 byte |
 | **P5** | 진행은 **마일스톤 단위만.** 개인 생산성 점수·순위를 만들지 않습니다 | 기계로 못 잽니다 — 눈 판정 항목 |
-| **P6** | Hook은 **사용자의 파일을 변경하지 않습니다.** 변경은 사용자가 `/contextops:sync` 를 실행할 때만 | 훅이 쓰는 경로는 `hooks.json` 의 `_writes` 에 선언한 git-ignore 경로뿐 · 훅을 프로세스로 돌린 뒤 바이트 대조 |
+| **P6** | Hook은 **사용자의 파일을 변경하지 않습니다.** Pack 이 놓는 규칙 파일(`CLAUDE.md` 등)을 바꾸는 것은 사용자가 `/contextops:sync` 를 실행할 때뿐 | 훅이 쓰는 경로는 `hooks.json` 의 `_writes` 에 선언한 git-ignore 경로뿐 · 훅을 프로세스로 돌린 뒤 바이트 대조 |
 | **P7** | 모든 Pack 줄은 항목 ID → 원문(문서 offset 또는 `path:line`)으로 **역추적**됩니다 | Pack 전 줄에 `<!-- ctx:… -->` 태그 · 태그 없는 줄이 하나라도 있으면 실패 |
 
 전문은 [`docs/SPEC.md`](docs/SPEC.md) §0.1. **P1 의 근거 문서**는
@@ -216,13 +215,13 @@ Claude Code 용 `CLAUDE.md` 묶음 · `AGENTS.md` · Cursor 규칙 파일이고,
 
 | 무엇 | 어디서 보나 |
 |---|---|
-| 서로 어긋난 것을 AI가 찾아 **카드로 물어보는** 화면 — AI 제안 카드 3장은 2026-09-07 실측의 기록이고 카드가 그렇게 말합니다. 맨 위 **[AI 에게 지금 직접 찾게 해 보기]** 는 AI 가 지금 도는 장면입니다 (저장되지 않음) | `정리` |
+| 서로 어긋난 것을 AI가 찾아 **카드로 물어보는** 화면 — AI 제안 카드 3장은 2026-09-07 실측(아래 표의 충돌 5건 중 셋)의 기록이고 카드가 그렇게 말합니다. 맨 위 **[AI 에게 지금 직접 찾게 해 보기]** 는 AI 가 지금 도는 장면입니다 (저장되지 않음) | `정리` |
 | 팀이 승인한 규칙 목록과 **버전 발행** | `Context` |
 | 각 문장이 **어느 문서 몇 줄에서 왔는지** | `Pack Explorer` |
 | 계획이 **어디까지 왔는지 · 근거는 무엇인지** | `Roadmap` |
 | 팀원별로 **최신 버전을 받았는지** | `Sync` |
 
-읽기 전용이고 매일 새벽 3시에 처음 상태로 돌아갑니다. 마음껏 눌러보셔도 됩니다.
+읽기 전용이고 매일 새벽 3시쯤 처음 상태로 돌아갑니다. 마음껏 눌러보셔도 됩니다.
 
 > 랜딩 화면의 터미널 재생은 **꾸며낸 화면이 아닙니다.** 실제로 프로그램을 돌려 나온
 > 출력을 그대로 녹화한 것입니다 (`fixtures/replay/sync.json`).
@@ -246,14 +245,15 @@ claude plugin install contextops                                 # 자동으로 
 
 그 다음은 팀장이 웹에서 승인하고, 개발자는 /contextops:sync 로 받습니다.
 
-`setup` 이 남기는 것은 둘뿐입니다 — `<repo>/.contextops/project.json`(커밋 · secret 없음) 과
+`setup` 이 남기는 것은 셋입니다 — `<repo>/.contextops/project.json`(커밋 · secret 없음) · `<repo>/.contextops/.gitignore`(캐시·백업을 커밋하지 않게) ·
 `~/.contextops/credentials.json`(0600 · 저장소 밖). 토큰은 웹에서 발급해 붙여 넣습니다.
 
 | CLI | 하는 일 |
 |---|---|
+| `setup` | Sync 화면이 준 한 줄(서버 주소 · 프로젝트 · 토큰 · 기기 id)로 이 저장소를 프로젝트에 잇는다 — 서버에 닿는지 먼저 확인하고 위 세 파일을 쓴다 |
 | `scan` | 저장소를 결정론으로 훑어 `.contextops/cache/scan.json` 을 만든다 — 경로·언어·env **키 이름**만. 본문 없음 |
 | `validate <json>` | 초안·제안 JSON 이 계약과 맞는지 네트워크 없이 판다 (번들에 같은 Zod 가 들어 있다) |
-| `upload-draft` | 초안을 올린다. `--dry-run` 이면 보낼 payload 를 그대로 보여 주고 보내지 않는다 |
+| `upload-draft` | 초안을 올린다. `--dry-run` 이면 보내지 않고 보낼 내용의 요약만 보여 준다 |
 | `status` | 무엇이 적용돼 있나 — applied / outdated / modified. 파일을 안 바꾼다 |
 | `sync` | 발행된 Pack 을 적용한다 — backup → atomic rename → 적용 뒤 hash 재검증 → 실패하면 전부 복원 |
 | `propose` | 변경 제안을 공식 버전 기준으로 올린다 (근거는 `path:line`) |
@@ -320,7 +320,7 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `plugin/contextops/` | Claude Code 플러그인 — `skills/` 5 · `hooks/hooks.json` · `scripts/` 훅 2 · `bin/contextops-cli.mjs` 단일 번들 |
 | `plugin/contextops/src/cli/` | CLI 소스 — 명령 표 하나(`commands.ts`) · exit 코드 표 하나 |
 | `plugin/contextops/schemas/` | `packages/schema` 에서 낸 JSON Schema (로컬 검증용) |
-| `fixtures/paylab-api/` | 샘플 저장소 (TS 48파일 · 의도된 어긋남 3곳) — 값이 든 secret 은 0건 |
+| `fixtures/paylab-api/` | 샘플 저장소 (TS 42파일 · 의도된 어긋남 3곳) — 값이 든 secret 은 0건 |
 | `fixtures/paylab-docs/` | 팀장 문서 + 폐기 로드맵 1개 |
 | `fixtures/replay/` | 랜딩 터미널 재생 녹화 — 관통이 매번 다시 녹화해 대조한다 |
 | `fixtures/seed/` | 데모 테넌트 시드 |
@@ -339,11 +339,11 @@ powershell -ExecutionPolicy Bypass -File tools/walkthrough.ps1 # 관통 시나�
 | `docs/evidence/` | 바퀴마다 남긴 근거 — 캡처 · 덤프 · 관통 산출물 복사본 |
 | `docs/history/` | STATUS 에서 내려온 지난 바퀴 기록 |
 | `docs/KNOWN_LIMITATIONS.md` | 알려진 한계 — 지금 안 되는 것 |
-| `docs/SUBMISSION.md` | 제출서 원문 — 랜딩·README 와 같은 문장인지 시험이 잰다 · 🙋 자리(production URL · 영상 · 슬라이드) |
+| `docs/SUBMISSION.md` | 제출서 원문(실제 제출 폼 일곱 칸 · 2026-09-14 제출) — 랜딩·README 와 같은 문장인지 시험이 잰다 |
 | `CLAUDE.md` | 저장소 개발 규칙 — 사람과 AI 세션이 같이 지킨다 |
 | `LICENSE` | MIT |
 
-의존 방향은 한쪽입니다: `schema ← compiler ← web / plugin`. 패키지는 `index.ts` 하나로만 내보냅니다.
+의존 방향은 한쪽입니다: `schema ← compiler ← web / plugin`. 패키지는 `package.json` 의 `exports` 에 적힌 문으로만 내보냅니다(대개 `index.ts` 하나 · 컴파일러만 브라우저용 `./tag` 를 하나 더).
 
 ### 기술 스택
 
@@ -374,11 +374,11 @@ AI 는 **사람이 결정하기 전** 단계에만 있습니다 — 서버쪽 �
 
 ---
 
-## 🔁 이 저장소는 자율 루프가 만듭니다
+## 🔁 이 저장소는 자율 루프로 만들었습니다
 
-개발 자체가 **루프 엔지니어링**으로 돌아갑니다. 한 바퀴마다 새 헤드리스 Claude Code
+개발은 **루프 엔지니어링**으로 했습니다. 한 바퀴마다 새 헤드리스 Claude Code
 세션이 열려서, 문서에서 이번에 뭘 할지 읽고, **하나만** 고치고, 검사하고, 커밋하고,
-다음 바퀴를 위한 기록을 남깁니다.
+다음 바퀴를 위한 기록을 남깁니다. 루프는 2026-09-07 에 멈췄고, 그 뒤의 다듬기는 사람이 Claude Code 세션으로 같은 문서를 읽으며 이어 갔습니다.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/loop-cycle-dark.svg">
@@ -389,6 +389,8 @@ AI 는 **사람이 결정하기 전** 단계에만 있습니다 — 서버쪽 �
 P2 위반이 아닙니다 — `loop/`·`tools/` 는 배포되는 제품이 아니라 우리 자신의 구독으로 이 저장소를 만드는 개발 도구입니다.
 
 자세히: [`loop/README.md`](loop/README.md) · 한 바퀴의 전부: [`loop/PROMPT.md`](loop/PROMPT.md)
+
+⚠ `start` 는 바퀴마다 커밋을 `main` 에 **자동으로 push** 합니다(루프 설정 env.ps1 의 AutoPush) — 이 저장소의 `main` 은 production 배포와 이어져 있으니, 옮겨 쓸 때는 포크에서 그 설정부터 보세요.
 
 ```bash
 powershell -ExecutionPolicy Bypass -File loop/ctl.ps1 install
@@ -403,6 +405,9 @@ powershell -ExecutionPolicy Bypass -File loop/ctl.ps1 start
 기여하기 전에 [`CLAUDE.md`](CLAUDE.md) 를 읽어 주세요 — 사람과 AI 세션이 함께 지키는 저장소 규칙입니다.
 특히 **P1~P7 을 어기는 PR 은 받지 않습니다.** 확장은 「표에 한 줄」이어야 합니다 — 타입·명령·기능을 더하는 절차는
 그 표 옆 주석에 적혀 있습니다.
+
+여러 문서에 같은 글자로 서는 값은 정본이 한 곳입니다. 예를 들어 팀명·저장소 주소는 `apps/web/src/lib/web/submission.ts` 의
+`SUBMISSION_IDENTITY` 이고, README·제출서·랜딩이 같은 글자인지 `apps/web/test/readme.test.ts` 가 잽니다.
 
 **알려진 한계**는 [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) 에 정직하게 적습니다.
 

@@ -38,10 +38,10 @@
 | 언제 | 무엇 | 방법 · 완료 기준 |
 |---|---|---|
 | ✅ 9/15 | **참가 접수** — **완료** (사용자 확인 · 과제는 9/14 에 제출 · 폼 캡처 ✅ 9/14) | 실제 폼(일곱 칸 · AI 500자 · 16:9 스크린샷 필수)으로 `docs/SUBMISSION.md` 「제출 폼 원문」과 스크린샷 다섯 장을 맞췄다(`docs/evidence/2026-09-14-submission-form/`) · 9/20 23:59:59 전까지 고칠 수 있다 — 고치면 다시 **[과제 제출하기]** (임시저장은 제출이 아니다) |
-| 오늘 | 이 점검의 커밋을 **push → 배포 확인** | `pnpm --filter web verify:prod -- --url https://contextops-rosy.vercel.app` 0 failed |
-| push 뒤 | 감시가 진짜 도는지 | GitHub Actions → watch-prod → Run workflow → 로그에 `GET / → 200` · 한 번은 틀린 `PROD_ORIGIN` 변수로 실패 메일 확인 뒤 변수 삭제 |
-| 9/14 | **플러그인 실기** — 로드 고장은 고쳤지만 Skill 이 실제 세션에서 도는 것은 **아직 아무도 안 봤다** | 새 저장소에서 `claude plugin marketplace add rhdqngusanr/contextops` → `install` → `/contextops:setup`(Sync 화면 [기기 추가]가 준 줄) → `/contextops:sync` → 작업 뒤 `/contextops:progress` 가 production Roadmap 을 움직이는지 · GIF 셋(`docs/PITCH.md` §3) |
-| ◐ 9/15 | production **로그인 → 팀 → 문서 → AI 정리 → 승인 → 발행** 을 스톱워치로 — **한 바퀴는 돌았다**(06:24~06:35 KST · 로그인은 사용자, 나머지는 Claude in Chrome · 팀 `mukteam` 에 v1.0.0 발행까지) · 사람 손 스톱워치는 아직 | 「팀장은 브라우저에서 15분」의 유일한 근거 (`docs/PITCH.md` §4) · 막힌 곳 둘(웹 가져오기에 충돌 탐지 없음 · 둘째 문서를 올리면 첫 문서 후보가 사라짐)은 `docs/feedback/FINDINGS.md` 174 로 고쳤다 — **배포 뒤 같은 한 바퀴를 다시 돌려 충돌 카드가 뜨는지 본다** |
+| ✅ 9/13 | 이 점검의 커밋을 **push → 배포 확인** — Vercel success · `verify:prod` 47 passed / 0 failed (`docs/STATUS.md`) | `pnpm --filter web verify:prod -- --url https://contextops-rosy.vercel.app` 0 failed |
+| ◐ push 뒤 | 감시가 진짜 도는지 — 수동 dispatch 로그의 `GET / → 200` 은 ✅ · 실패 메일은 🙋 아직 | GitHub Actions → watch-prod → Run workflow → 로그에 `GET / → 200` · 한 번은 틀린 `PROD_ORIGIN` 변수로 실패 메일 확인 뒤 변수 삭제 |
+| 🙋 9/18 전 | **플러그인 실기** — 로드 고장은 고쳤지만 Skill 이 실제 세션에서 도는 것은 **아직 아무도 안 봤다** | 새 저장소에서 `claude plugin marketplace add rhdqngusanr/contextops` → `install` → `/contextops:setup`(Sync 화면 [기기 추가]가 준 줄) → `/contextops:sync` → 작업 뒤 `/contextops:progress` 가 production Roadmap 을 움직이는지 · GIF 셋(`docs/PITCH.md` §3) |
+| ◐ 9/15 | production **로그인 → 팀 → 문서 → AI 정리 → 승인 → 발행** 을 스톱워치로 — **한 바퀴는 돌았다**(06:24~06:35 KST · 로그인은 사용자, 나머지는 Claude in Chrome · 팀 `mukteam` 에 v1.0.0 발행까지) · 사람 손 스톱워치는 아직 | 「팀장은 브라우저에서 15분」의 유일한 근거 (`docs/PITCH.md` §4) · 막힌 곳 둘(웹 가져오기에 충돌 탐지 없음 · 둘째 문서를 올리면 첫 문서 후보가 사라짐)은 `docs/feedback/FINDINGS.md` 174 로 고쳤다 — ✅ 9/15 배포 뒤 확인용 프로젝트 `mukteam/detect` 에서 다시 돌려 충돌 카드 4장이 떴다 (FINDINGS 174 · 175) |
 | ✅ 9/14 | Vercel env `DATABASE_URL` 의 포트가 **6543**(Transaction pooler)인지 — **6543 이었다** (사용자 확인) | 5432(Session)면 풀 크기에 묶여 몰릴 때 500 · 바꿀 것 없음 |
 | ✅ 9/14 | Gemini **Tier 1** — **이미 유료였다** (사용자 확인) | 사이트 고지가 「무료 요금제라 Google 이 제품 개선에 쓸 수 있다」로 사실보다 나쁘게 말하던 것을 `apps/web/src/lib/web/privacy.ts` 의 `GEMINI_DATA_TIER='paid'` 로 바로잡았다 · production `/privacy` 한·영 확인 (`41de61b`) |
 | — 9/14 | **영상 링크** — 쇼츠 mp4 는 있지만 **올리지 않기로 했다** (사용자 결정) | 규정상 필수가 아니다(제출물은 링크 · 문제 · AI 활용 · AI 툴 넷) · 마음이 바뀌면 유튜브 업로드 → `docs/SUBMISSION.md` 🙋 표 |
