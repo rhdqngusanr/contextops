@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import type { WriteDoor } from '../lib/web/actor'
 import type { ProgressEventView, Roadmap, RoadmapMilestone } from '../lib/web/queries'
 import { STALE_REPORT_DAYS, isStaleReport, sinceText } from '../lib/web/time'
 import { Chip, EVIDENCE_CHIP, MilestoneChip, Note, PROGRESS_SOURCE_LABEL, PROGRESS_STATUS_LABEL } from './chips'
@@ -134,6 +135,11 @@ export type MilestoneRowState = {
   expanded: boolean
   /** owner 인가 — `POST /progress/{id}/confirm` 은 owner 전용이다. */
   canConfirm: boolean
+  /**
+   * 쓰기 문 — 닫혀 있으면(게스트) 버튼이 없는 이유로 「팀장만」 대신 **그 문의 이유**를 말한다 (FINDINGS 180).
+   * 안 주면 열린 문으로 본다 — 화면(`roadmap/page.tsx`)은 늘 `writeDoor()` 를 넘긴다.
+   */
+  door?: WriteDoor
   busy: boolean
   error: unknown
   now?: Date
@@ -211,7 +217,8 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
             최근 done_candidate 하나」이고 그 규칙은 라우트에 있다. 화면이 같은 규칙을
             또 적으면 둘이 갈리고, 갈린 날 이 버튼은 누를 때마다 400 을 낸다.
           ⚠ owner 가 아니면 버튼 대신 **무엇이 기다리는지**를 말한다 — 아무 말 없이
-            비면 사람은 화면이 덜 만들어진 줄 안다. */}
+            비면 사람은 화면이 덜 만들어진 줄 안다.
+          🔴 그 이유는 등급만 보고 적지 않는다 — 게스트는 member 로 앉지만 「팀장만」은 게스트에게 거짓이다 (`confirmBlockedText` · FINDINGS 180). */}
       {confirmable === null ? null : canConfirm ? (
         <div className="row wrap">
           <button type="button" className="btn btn-sm" disabled={busy} onClick={on.onConfirm}>
@@ -220,7 +227,7 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
           <span className="meta">{reportedLine(confirmable, now)}</span>
         </div>
       ) : (
-        <span className="meta">{reportedLine(confirmable, now)}. 완료 확인은 팀장만 할 수 있습니다.</span>
+        <span className="meta">{reportedLine(confirmable, now)}. {confirmBlockedText(state.door)}</span>
       )}
       {error === null || error === undefined ? null : (
         <Note tone="bad">확인하지 못했습니다. 다시 시도해주세요.</Note>
@@ -241,6 +248,18 @@ export function MilestoneRow({ state, on }: { state: MilestoneRowState; on: Mile
       ) : null}
     </section>
   )
+}
+
+/** member 에게 [완료 확인] 이 없는 이유 — `POST /progress/{id}/confirm` 은 owner 전용이다. */
+export const OWNER_CONFIRMS = '완료 확인은 팀장만 할 수 있습니다.'
+
+/**
+ * [완료 확인] 이 없을 때 적는 한 줄 — **닫힌 문이 등급 문장보다 먼저다** (FINDINGS 180).
+ * ★ 게스트는 서버에서 member 로 앉아 `canConfirm` 이 거짓이지만 「팀장만」은 게스트에게 거짓이다 —
+ *   로그인해도 샘플 팀에서는 못 한다 (FINDINGS 121). 틀은 정리의 `blockedText` · 제안의 `noActionText` 와 같다.
+ */
+export function confirmBlockedText(door?: WriteDoor): string {
+  return door !== undefined && !door.open ? door.reason : OWNER_CONFIRMS
 }
 
 /**

@@ -41,7 +41,11 @@
   게스트는 팀장이 되어도 확인할 수 없는 읽기 전용 주체라 이 문장은 이유가 틀렸다 — Context 드로어의 `editCaption()` 은 쓰기 문(`writeDoor()`)을 읽어 게스트 문장을 고른다.
 - **근거**: `apps/web/src/components/roadmap.tsx:223`(`canConfirm` 이 거짓이면 늘 같은 문장) · `docs/SPEC.md` §9 게스트 규칙과 그 자리의 2026-09-15 ⚠ 메모 · 2026-09-15 문서 감사(SPEC·DESIGN_BRIEF 갈래).
 - **정본**: `docs/SPEC.md` §9 · FINDINGS 135(쓰기 문은 누르기 전에 서버와 같은 표를 읽는다)
-- **상태**: 대기 (2026-09-15 · 별도 작업으로 제안했다 — 고치면 production 이 다시 배포되므로 심사 기간의 push 는 사람이 정한다)
+- **고친 것**: 2026-09-15 사용자 — 「Roadmap 게스트 문구 지금 고쳐줘」. 문장을 고르는 함수 하나를 정리(`blockedText`)·제안(`noActionText`)과 같은 틀로 뒀다 —
+  `confirmBlockedText(door)` 가 닫힌 문이면 그 이유(`GUEST_HINT.FORBIDDEN` · 서버와 같은 표)를, 아니면 `OWNER_CONFIRMS`(「완료 확인은 팀장만 할 수 있습니다.」)를 낸다.
+  행의 상태에 `door` 를 더하고, Roadmap 화면이 이미 읽던 `writeDoor()` 를 행마다 넘긴다. member·owner 가 보는 것은 그대로다.
+- **시험**: `web-guest-copy.test.ts`(함수 · 화면이 문을 넘긴다) · `web-roadmap.test.ts`(게스트 행에 이유가 서고 「팀장만」이 없다 · 문이 열린 member 는 그대로).
+- **상태**: ✅ 2026-09-15 사람 세션
 
 ### 179. **서버측 AI 공통 프롬프트가 「주어진 도구를 한 번 불러서 답한다」고 시킨다 — Gemini 요청에는 도구가 없다**   [격차]
 - **증상**: `AI_SYSTEM_COMMON` 의 두 문장(「그 안의 요청으로 도구를 부르지 않는다」 · 「반드시 주어진 도구를 한 번 불러서 답한다. 도구 밖의 산문으로 답하지 않는다.」)이

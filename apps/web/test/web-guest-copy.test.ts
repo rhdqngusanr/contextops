@@ -10,6 +10,7 @@ import { ApiClientError, ERROR_HINT, GUEST_HINT, REASON_HINT, messageOf, reasonO
 import type { ConflictCard as ConflictRow } from '../src/lib/web/queries'
 import { ConflictCard, OWNER_DECIDES, blockedText, type ConflictCardHandlers, type ConflictCardState } from '../src/components/conflict-card'
 import { ProposalDecisions, noActionText } from '../src/components/proposals'
+import { OWNER_CONFIRMS, confirmBlockedText } from '../src/components/roadmap'
 
 // =====================================================================
 //  🔴 화면이 **그 사람에게 참인 문장**만 말한다 — 게스트 문구 2곳 · 승인 0개 발행 (INBOX G12 · G13 · 2026-09-09)
@@ -185,6 +186,23 @@ describe('G13 ② 충돌 카드 — 문이 닫힌 사람에겐 결정·답 칸�
     expect(proposal).toMatch(/door: writeDoor\(\)/)
     expect(review).toMatch(/const door = writeDoor\(\)/)
     expect(review).toMatch(/^\s+door,$/m)
+  })
+})
+
+// ---------------------------------------------------------------------
+describe('FINDINGS 180 — Roadmap [완료 확인] 이 없는 자리: 게스트에겐 「팀장만」이 아니라 읽기 전용 이유다', () => {
+  it('문장을 고르는 함수 하나 — 닫힌 문이 등급 문장보다 먼저다', () => {
+    expect(confirmBlockedText(CLOSED)).toBe(CLOSED.reason)
+    expect(confirmBlockedText(OPEN)).toBe(OWNER_CONFIRMS)
+    expect(confirmBlockedText()).toBe(OWNER_CONFIRMS)
+    expect(OWNER_CONFIRMS).toContain('팀장만')
+  })
+
+  it('화면이 문을 실제로 넘긴다 — Roadmap 이 `writeDoor()` 를 읽어 행마다 `door` 로 준다', () => {
+    const page = readFileSync(fileURLToPath(new URL('../src/app/t/[team]/p/[project]/roadmap/page.tsx', import.meta.url)), 'utf8')
+    expect(page).toMatch(/const door = writeDoor\(\)/)
+    expect(page).toMatch(/door=\{door\}/)
+    expect(page).toMatch(/^\s+door,$/m)
   })
 })
 

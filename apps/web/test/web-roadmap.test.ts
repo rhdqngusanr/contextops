@@ -10,6 +10,7 @@ import {
 import { EVIDENCE_CHIP, MILESTONE_CHIP, PROGRESS_SOURCE_LABEL } from '../src/components/chips'
 import { CODE_STAYS_LOCAL } from '../src/components/evidence'
 import { STALE_REPORT_DAYS } from '../src/lib/web/time'
+import { GUEST_HINT } from '../src/lib/web/api'
 import type { ProgressEventView, Roadmap, RoadmapMilestone } from '../src/lib/web/queries'
 
 // =====================================================================
@@ -161,6 +162,27 @@ describe('없는 문을 그리지 않는다 — [완료 확인]', () => {
     //  팀원·게스트도 **무엇이 · 언제** 보고했는지 본다 — 팀장 쪽 문장에만 시각이 있었다 (2026-09-11).
     expect(html).toContain(`${PROGRESS_SOURCE_LABEL.agent}: 「`)
     expect(html).toContain('8분 전')
+  })
+
+  it('🔴 게스트(닫힌 문)에게는 「팀장만」 대신 읽기 전용 이유가 나온다 (FINDINGS 180)', () => {
+    const reason = GUEST_HINT.FORBIDDEN!
+    const html = row({
+      canConfirm: false,
+      door: { open: false, reason },
+      milestone: milestone({ status: 'done_candidate', confirmable: event({ status: 'done_candidate' }) }),
+    })
+    expect(html).toContain(reason)
+    expect(html).not.toContain('팀장만')
+    expect(html).not.toContain('>완료 확인<')
+    //  무엇이 · 언제 보고했는지는 게스트도 그대로 본다.
+    expect(html).toContain(`${PROGRESS_SOURCE_LABEL.agent}: 「`)
+    expect(html).toContain('8분 전')
+    //  문이 열린 member 는 예전 그대로다 — 문이 갈랐지 등급이 가른 것이 아니다.
+    expect(row({
+      canConfirm: false,
+      door: { open: true },
+      milestone: milestone({ status: 'done_candidate', confirmable: event({ status: 'done_candidate' }) }),
+    })).toContain('팀장만')
   })
 
   it('확정하는 중에는 버튼이 잠기고, 실패하면 다음 걸음을 말한다', () => {

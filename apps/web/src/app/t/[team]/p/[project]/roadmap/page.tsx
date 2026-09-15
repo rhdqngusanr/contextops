@@ -6,7 +6,7 @@ import {
   REALTIME_POLL_MS, confirmProgress, fetchRoadmap,
   type ProgressEventView, type ProjectRef,
 } from '../../../../../../lib/web/queries'
-import { writeDoor } from '../../../../../../lib/web/actor'
+import { writeDoor, type WriteDoor } from '../../../../../../lib/web/actor'
 import { useMilestoneTitles } from '../../../../../../lib/web/milestone-titles'
 import { usePolling } from '../../../../../../lib/web/use-async'
 import { ProjectGate } from '../../../../../../components/project-gate'
@@ -38,13 +38,14 @@ export default function RoadmapPage({ params }: { params: Promise<{ team: string
   const { team, project } = use(params)
   //  쓰기 문 — 등급(owner)과 별개로 주체 종류(게스트)를 표에서 읽는다 (INBOX H7). 게스트는 등급이 member 라 여기서는
   //  이미 버튼이 없지만, 쓰기 화면은 전부 같은 문을 지난다 — `test/web-write-door.test.ts` 가 그것을 센다.
+  //  🔴 버튼이 없는 자리의 **이유 한 줄**도 이 문이 고른다 — 게스트에게 「팀장만」을 내지 않는다 (FINDINGS 180).
   const door = writeDoor()
   return (
     <ProjectGate team={team} project={project}>
       {({ team: t, project: p }) => (
         //  🔴 확정은 owner 만이다 (`POST /progress/{id}/confirm`). 화면이 그것을 알아야
         //     member 에게 누를 때마다 403 을 내는 버튼을 그리지 않는다.
-        <RoadmapView base={`/t/${team}/p/${project}`} project={p} canConfirm={t.role === 'owner' && door.open} />
+        <RoadmapView base={`/t/${team}/p/${project}`} project={p} canConfirm={t.role === 'owner' && door.open} door={door} />
       )}
     </ProjectGate>
   )
@@ -54,10 +55,13 @@ function RoadmapView({
   base,
   project,
   canConfirm,
+  door,
 }: {
   base: string
   project: ProjectRef
   canConfirm: boolean
+  /** 버튼이 없을 때의 이유를 고른다 — 게스트면 「팀장만」이 아니라 읽기 전용 이유다 (FINDINGS 180). */
+  door: WriteDoor
 }) {
   const road = usePolling(() => fetchRoadmap(project.id), [project.id], () => REALTIME_POLL_MS)
   //  마일스톤 **제목** — 로드맵 응답은 id(`PL-M1`)만 나른다 (정본은 Manifest). 찾는 법의 정본은
@@ -130,6 +134,7 @@ function RoadmapView({
                       title: titles[m.milestone] ?? null,
                       expanded: expanded[m.milestone] ?? false,
                       canConfirm,
+                      door,
                       busy: busy === m.milestone,
                       error: errors[m.milestone] ?? null,
                     }}
