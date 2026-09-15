@@ -1225,7 +1225,7 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
     expect(await db.select().from(aiJobs).where(eq(aiJobs.feature, 'conflict'))).toHaveLength(1)
   })
 
-  it('🔴 그 탐지가 돌면 정리 화면이 읽는 카드가 생긴다 — 플러그인 없이 문서 → 후보 → 충돌 카드 (FINDINGS 174)', async () => {
+  it('🔴 그 탐지가 돌면 정리 화면이 읽는 카드가 생긴다 — 플러그인 없이 문서 → 후보 → 충돌 카드 · 질문에 항목 id 가 없다 (FINDINGS 174 · 175)', async () => {
     const { owner, projectId } = await seed()
     const job = await structured(owner, projectId)
     const data = await dataOf(await accept(owner, projectId, job.id, ['item_doc_retry', 'item_doc_card']))
@@ -1236,7 +1236,8 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
           kind: 'contradiction',
           a_item_id: 'item_doc_retry',
           b_item_id: 'item_doc_card',
-          question: '두 규칙 중 어느 쪽을 따르나?',
+          //  진짜 모델은 이렇게 적는다 — 2026-09-15 production 「신규 정책(item_refund_within_24_hours)과 …」.
+          question: "신규 정책(item_doc_retry)과 'item_doc_card' 중 어느 쪽을 따르나?",
           severity: 'high',
         }],
       },
@@ -1246,9 +1247,14 @@ describe('🔴 구조화 후보는 **고른 것만** 항목이 된다 (SPEC §7.
     const list = (await dataOf(await listConflicts(
       req('GET', `/api/v1/projects/${projectId}/conflicts`, { auth: owner }),
       params({ id: projectId }),
-    ))).conflicts as { kind: string; a_item_id: string; b_item_id: string }[]
+    ))).conflicts as { kind: string; a_item_id: string; b_item_id: string; question: string }[]
+    //  🔴 **저장된 행**의 문장이 이미 이름이다 (FINDINGS 175) — 짝을 가리키는 칸은 그대로 id 다.
     expect(list.filter((c) => c.kind === 'contradiction')).toEqual([
-      expect.objectContaining({ a_item_id: 'item_doc_retry', b_item_id: 'item_doc_card' }),
+      expect.objectContaining({
+        a_item_id: 'item_doc_retry',
+        b_item_id: 'item_doc_card',
+        question: '신규 정책(「재시도 정책」)과 「카드 원본 금지」 중 어느 쪽을 따르나?',
+      }),
     ])
   })
 

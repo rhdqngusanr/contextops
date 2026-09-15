@@ -20,6 +20,7 @@ import {
   CONFLICT_MAX_CANDIDATES,
   CONFLICT_RETRIES,
   detectConflicts,
+  nameItemsInQuestion,
 } from '../src/lib/ai/conflict'
 import type { Db } from '../src/db/client'
 
@@ -290,6 +291,32 @@ describe('후보를 고르는 규칙 (SPEC §7.2 「같은 type 의 기존 activ
     expect(sent.length).toBe(1)
     expect(sent[0]!.user).toContain('item_alpha')
     expect(sent[0]!.user).toContain('item_beta')
+  })
+})
+
+// ---------------------------------------------------------------------
+describe('🔴 질문 문장 안의 항목 id 는 제목으로 바뀐다 — 저장되는 카드도 게스트 체험도 같은 자리를 지난다 (FINDINGS 175)', () => {
+  it('따옴표째 바꾸고, 긴 id 먼저, 표에 없는 id 는 건드리지 않는다 (지어내지 않는다)', () => {
+    const names = new Map([['item_policy_refund', '환불은 24시간'], ['item_policy_refund_escalation', '에스컬레이션']])
+    expect(nameItemsInQuestion("'item_policy_refund'와 item_policy_refund_escalation, 그리고 item_policy_refund_v2", names))
+      .toBe('「환불은 24시간」와 「에스컬레이션」, 그리고 item_policy_refund_v2')
+    expect(nameItemsInQuestion('id 가 없는 질문은 그대로입니다.', names)).toBe('id 가 없는 질문은 그대로입니다.')
+  })
+
+  it('🔴 `detectConflicts` 가 낸 질문에 id 가 없다 — 바뀐 항목도 견줄 상대도 제목으로, 짝을 가리키는 칸은 그대로 id 다', async () => {
+    await seedPair()
+    stubAi(() => ({
+      input: { conflicts: [conflict({ question: "신규 정책(item_changed)과 'item_old'가 기한을 다르게 말합니다. 어느 쪽인가요?" })] },
+    }))
+
+    const out = await detectConflicts({ projectId: PROJECT, changedItemIds: ['item_changed'], now: NOW })
+    expect(out.conflicts).toEqual([expect.objectContaining({
+      a_item_id: 'item_changed',
+      b_item_id: 'item_old',
+      question: '신규 정책(「환불 SLA 24시간」)과 「환불 SLA 72시간」가 기한을 다르게 말합니다. 어느 쪽인가요?',
+    })])
+    //  모델에게 보낸 프롬프트는 그대로 id 로 가리킨다 — 바꾸는 것은 **돌아온 문장**뿐이다.
+    expect(sent[0]!.user).toContain('[item_changed]')
   })
 })
 

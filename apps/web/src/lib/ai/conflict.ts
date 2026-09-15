@@ -314,9 +314,37 @@ async function sameTypeCandidates(projectId: string, types: readonly ItemType[],
 }
 
 /**
+ * 모델이 질문 문장 안에서 항목을 **id 로** 부른 자리(`'item_try_float_money'는 …` · `신규 정책(item_refund_within_24_hours)과 …`)를
+ * 「제목」으로 바꾼다 — 화면에 id 가 서지 않게.
+ *
+ * ★ 왜 — 진짜 모델은 질문에 id 를 그대로 적는다. 2026-09-13 게스트 체험(§7.4)에서 먼저 봤고, 2026-09-15 production 정리 화면의
+ *   「AI 가 올린 질문」에 `item_refund_within_24_hours` 가 그대로 떴다 (FINDINGS 175). 비개발자에게 그 낱말은 뜻이 없다.
+ *   **모델이 고른 낱말은 그대로 두고 가리킨 대상의 이름만** 바꾼다 — 기록 카드도 같은 예외를 적어 두었다(`lib/demo/seed.ts` 의
+ *   `RECORDED_CONFLICTS` 주석).
+ * ★ 왜 여기인가 — 탐지 문이 둘(§7.2 저장 · §7.4 체험)이고 둘 다 `askModel` 을 지난다. 이 함수가 체험 라우트에만 있던 동안
+ *   저장되는 카드는 id 를 그대로 담았다 — 한 문에서만 고친 것이 곧 그 고장이었다.
+ * ⚠ 긴 id 부터 바꾼다 — `item_policy_refund` 를 먼저 바꾸면 `item_policy_refund_escalation` 이 「…」_escalation 으로 깨진다.
+ * ⚠ 따옴표로 감싼 id 는 따옴표째 바꾸고, 표에 없는 id(앞뒤가 id 글자로 이어진 것 포함)는 건드리지 않는다 — 지어내지 않는다.
+ * ⚠ 바꾼 문장은 500자(`Question`)를 넘을 수 있다 — 그 상한은 **모델 출력**의 계약이고, 저장 칸(`text`)과 화면에는 상한이 없다.
+ */
+export function nameItemsInQuestion(question: string, titles: ReadonlyMap<string, string>): string {
+  let out = question
+  for (const id of [...titles.keys()].sort((a, b) => b.length - a.length)) {
+    const name = `「${titles.get(id)}」`
+    //  id 는 `item_[a-z0-9_]` 모양뿐이라(`ItemId`) 정규식에 그대로 넣어도 특수문자가 없다.
+    out = out
+      .replace(new RegExp(`['"‘“\`]${id}['"’”\`]`, 'g'), name)
+      .replace(new RegExp(`(?<![a-z0-9_])${id}(?![a-z0-9_])`, 'g'), name)
+  }
+  return out
+}
+
+/**
  * LLM 왕복 한 번(+재시도 `CONFLICT_RETRIES`) — 부르고 · Zod 로 다시 판다. **예산 문 안에서만 부른다** (P3).
  * ★ 왜 따로 뺐나 — 탐지 문이 둘이 됐다(§7.2 · §7.4). 프롬프트와 검증이 두 벌이면 데모가 제품과 다른 AI 를 보여 준다.
  *   두 문이 다른 것은 **어느 예산 줄을 지나나**(`withBudget('conflict'|'demo')`)와 무엇을 「바뀐 항목」으로 삼나뿐이다.
+ * 🔴 낸 질문 문장의 항목 id 는 여기서 제목으로 바뀐다 (`nameItemsInQuestion` · FINDINGS 175). 짝을 가리키는 칸(`a_item_id`·`b_item_id`)은
+ *    그대로 id 다 — 바뀌는 것은 사람이 읽는 문장뿐이고, 역추적(P7)은 칸이 잇는다.
  */
 async function askModel(
   changed: readonly ItemBrief[],
@@ -328,6 +356,8 @@ async function askModel(
   let outputTokens = 0
   let model = currentModel()
   let complaint: string | undefined
+  //  모델이 가리킬 수 있는 항목은 프롬프트에 실린 것뿐이다(`known`) — 이름표도 같은 범위다.
+  const titles = new Map([...changed, ...candidates].map((i) => [i.id, i.title]))
 
   for (let attempt = 0; attempt <= CONFLICT_RETRIES; attempt++) {
     const call = await callModel(toolRequest(changed, candidates, complaint))
@@ -338,7 +368,9 @@ async function askModel(
     try {
       //  🔴 잘린 응답은 계약 위반보다 먼저 가른다 — `structure.ts` 와 같은 판단 (FINDINGS 144).
       if (call.truncated) throw new OutputInvalid(OUTPUT_TRUNCATED_COMPLAINT)
-      return { value: convert(call.value, known, changedIds), model, inputTokens, outputTokens }
+      const value = convert(call.value, known, changedIds)
+        .map((c) => ({ ...c, question: nameItemsInQuestion(c.question, titles) }))
+      return { value, model, inputTokens, outputTokens }
     } catch (err) {
       if (!(err instanceof OutputInvalid)) throw err
       complaint = err.message

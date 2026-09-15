@@ -33,6 +33,20 @@
 > Supabase · GitHub 와 나란히 놓고 본 뒤 고른 것. 고장이 아니라 「있으면 점수가 갈리는 것」이라 전부 [격차]이고, INBOX 순서
 > 3(126) → 4(구멍 → 격차) 뒤에 **한 바퀴에 하나**다. 주인은 전부 PLAN **P4 둘째 행**(웹 화면 9 · 게스트 데모 · 랜딩 v1).
 
+### 175. **production 충돌 카드의 「AI 가 올린 질문」에 항목 id 가 그대로 뜬다** — id→제목 변환이 게스트 체험 라우트에만 있었다   [격차] ✅
+- **증상**: 정리 화면 탐지 카드의 「AI 가 올린 질문」 문단이 모델 문장을 그대로 그려 `…신규 정책(item_refund_within_24_hours)과 기한을
+  따로 두지 않는다는 기존 정책(item_refund_process_policy)이…` 처럼 id 가 보인다. 비개발자(팀장·심사위원)에게 그 낱말은 뜻이 없다.
+- **근거**: 2026-09-15 production `mukteam/detect` 재확인(174)에서 난 충돌 4건의 `question` 이 전부 id 를 담았다.
+  `components/conflict-card.tsx` 의 「AI 가 올린 질문」은 `conflict.question` 을 그대로 그린다. 변환 함수 `nameItemsInQuestion` 은
+  `lib/demo/ai-presets.ts` 에 있었고 부르는 곳은 `POST /demo/ai-once` 하나였다 — 2026-09-13 게스트 체험을 만들 때 그 문에서만 고쳤다.
+- **정본**: `docs/SPEC.md` §7.2 · §7.4
+- **고친 것**: 변환을 두 탐지 문이 같이 지나는 `lib/ai/conflict.ts` 의 `askModel` 로 옮겼다 — 저장되는 카드(§7.2)와 체험(§7.4)이 같은
+  자리에서 이름을 받는다. 체험 라우트에서 따로 부르던 줄은 지웠다(두 번 바꾸지 않게). 짝을 가리키는 칸은 그대로 id 다.
+  ⚠ 이미 저장된 행은 안 바뀐다 — production 에서 id 를 담은 행은 확인용 프로젝트 `mukteam/detect` 의 4건뿐이다.
+- **시험**: `ai-conflict.test.ts` 에 변환 규칙(따옴표째 · 긴 id 먼저 · 모르는 id 그대로 — `web-demo-ai-once.test.ts` 에서 옮김)과
+  `detectConflicts` 결과의 문장 · `ai-job.test.ts` 가 **저장된 행**의 문장이 이름인지 잰다 · `api-demo-ai-once.test.ts` 는 고치지 않고 초록(체험 출력이 같다).
+- **상태**: ✅ 2026-09-15 사람 세션
+
 ### 174. **웹에서 문서를 가져온 팀에는 충돌 탐지가 안 돌고, 둘째 문서를 올리면 첫 문서의 후보가 화면에서 사라진다**   [고장] ✅
 - **증상**: ① 화면 3 에서 문서를 올려 후보를 받아도(`POST /projects/{id}/jobs/{jobId}/items`) §7.2 탐지 job 이 안 선다 —
   탐지를 시작하는 문은 플러그인의 `batch-draft` 하나였고(`review/page.tsx` 의 `DetectionPanel` 주석이 그렇게 적었다), 그래서
